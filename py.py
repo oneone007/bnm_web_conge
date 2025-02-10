@@ -1,0 +1,730 @@
+import oracledb
+from flask import Flask, jsonify, request, send_file
+from flask_cors import CORS
+import logging
+import pandas as pd
+from io import BytesIO
+from openpyxl import Workbook
+from openpyxl.styles import PatternFill, Font
+from openpyxl.worksheet.table import Table, TableStyleInfo
+from datetime import datetime
+
+app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Configure Oracle database connection pool
+DB_POOL = oracledb.create_pool(
+    user="compiere",
+    password="compiere",
+    dsn="192.168.1.213/compiere",
+    min=2,
+    max=10,
+    increment=1
+)
+
+# Fetch reserved data from Oracle DB
+def fetch_reserved_data():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+            SELECT 
+                us.name AS OPERATEUR,
+                co.documentno AS NDOCUMENT,
+                m.name AS PRODUCT,
+                co.dateordered AS DATECOMMANDE,
+                s.qtyreserved AS TOTALRESERVE,
+                cl.qtyreserved AS QTYRESERVE,
+                l.name AS NAME,
+                CASE
+                    WHEN co.docstatus = 'CO' THEN 'prepared'
+                    ELSE 'not prepared'
+                END AS STATUS
+            FROM
+                m_storage s
+            INNER JOIN c_orderline cl
+                ON cl.m_attributesetinstance_id = s.m_attributesetinstance_id
+            INNER JOIN c_order co
+                ON co.c_order_id = cl.c_order_id
+            INNER JOIN m_product m
+                ON m.m_product_id = s.m_product_id
+            INNER JOIN ad_user us
+                ON us.ad_user_id = co.salesrep_id
+            JOIN XX_Laboratory l
+                ON l.XX_Laboratory_ID = m.XX_Laboratory_ID
+            WHERE
+                cl.qtyreserved != 0
+                AND co.c_doctypetarget_id = 1000539
+                AND cl.m_product_id = s.m_product_id
+                AND co.ad_org_id = 1000000
+                AND s.qtyonhand > 0
+                AND s.qtyreserved > 0
+            FETCH FIRST 1048575 ROWS ONLY
+            """
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            data = [dict(zip(columns, row)) for row in rows]
+            return data
+    except Exception as e:
+        logger.error(f"Error fetching reserved data: {e}")
+        return {"error": "An error occurred while fetching reserved data."}
+
+# Fetch remise data from Oracle DB
+def fetch_remise_data():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+            WITH LastFournisseur AS (
+                SELECT
+                    cf.m_product_id,
+                    cf.c_bpartner_id,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY cf.m_product_id
+                        ORDER BY cf.dateinvoiced DESC
+                    ) AS rn
+                FROM
+                    xx_ca_fournisseur_facture cf
+            )
+            SELECT
+                mp.name AS product,
+                md.name AS reward,
+                l.name AS laboratory_name,
+                cb.name AS fournisseur,
+                CBG.NAME AS Type_Client
+            FROM
+                m_product mp
+                INNER JOIN C_BPartner_Product cbp ON mp.m_product_id = cbp.m_product_id
+                INNER JOIN  C_BP_Group CBG  ON CBG.C_BP_Group_ID = CBP.C_BP_Group_ID
+                JOIN XX_Laboratory l ON l.XX_Laboratory_ID = mp.XX_Laboratory_ID
+                JOIN LastFournisseur lf ON mp.m_product_id = lf.m_product_id AND lf.rn = 1
+                JOIN c_bpartner cb ON cb.c_bpartner_id = lf.c_bpartner_id
+                INNER JOIN M_DiscountSchema md ON cbp.M_DiscountSchema_id = md.M_DiscountSchema_id
+            WHERE
+                cbp.C_BPartner_Product_id IS NOT NULL
+                AND cbp.m_discountschema_id IS NOT NULL
+            ORDER BY
+                mp.name
+            FETCH FIRST 1048575 ROWS ONLY
+            """
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            data = [dict(zip(columns, row)) for row in rows]
+            return data
+    except Exception as e:
+        logger.error(f"Error fetching remise data: {e}")
+        return {"error": "An error occurred while fetching remise data."}
+
+# Fetch marge data from Oracle DB
+def fetch_marge_data():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+            SELECT
+    *
+FROM
+    (
+        SELECT
+            "source"."FOURNISSEUR" "FOURNISSEUR",
+            "source"."PRODUCT" "PRODUCT",
+            "source"."P_ACHAT" "P_ACHAT",
+            "source"."P_VENTE" "P_VENTE",
+            "source"."REM_ACHAT" "REM_ACHAT",
+            "source"."REM_VENTE" "REM_VENTE",
+            "source"."BON_ACHAT" "BON_ACHAT",
+            "source"."BON_VENTE" "BON_VENTE",
+            "source"."REMISE_AUTO" "REMISE_AUTO",
+            "source"."BONUS_AUTO" "BONUS_AUTO",
+            "source"."P_REVIENT" "P_REVIENT",
+            "source"."MARGE" "MARGE",
+            "source"."LABO" "LABO",
+            "source"."LOT" "LOT",
+            "source"."QTY" "QTY"
+        FROM
+            (
+                SELECT
+                    DISTINCT fournisseur,
+                    product,
+                    p_achat,
+                    p_vente,
+                    round(rem_achat, 2) AS rem_achat,
+                    rem_vente,
+                    round(bon_achat, 2) AS bon_achat,
+                    bon_vente,
+                    remise_auto,
+                    bonus_auto,
+                    round(p_revient, 2) AS p_revient,
+                    LEAST(round((marge), 2), 100) AS marge,  -- Cap margin at 100%
+                    labo,
+                    lot,
+                    qty
+                FROM
+                    (
+                        SELECT
+                            d.*,
+                            LEAST(
+                                round(
+                                    (((ventef - ((ventef * nvl(rma, 0)) / 100))) - p_revient) / p_revient * 100,
+                                    2
+                                ), 
+                                100
+                            ) AS marge  -- Ensure margin does not exceed 100%
+                        FROM
+                            (
+                                SELECT
+                                    det.*,
+                                    (det.p_achat - ((det.p_achat * det.rem_achat) / 100)) / (1 + (det.bon_achat / 100)) p_revient,
+                                    (
+                                        det.p_vente - ((det.p_vente * nvl(det.rem_vente, 0)) / 100)
+                                    ) / (
+                                        1 + (
+                                            CASE
+                                                WHEN det.bna > 0 THEN det.bna
+                                                ELSE det.bon_vente
+                                            END / 100
+                                        )
+                                    ) ventef
+                                FROM
+                                    (
+                                        SELECT
+                                            p.name product,
+                                            (
+                                                SELECT
+                                                    NAME
+                                                FROM
+                                                    XX_Laboratory
+                                                WHERE
+                                                    XX_Laboratory_id = p.XX_Laboratory_id
+                                            ) labo,
+                                            mst.qtyonhand qty,
+                                            mati.value fournisseur,
+                                            mats.guaranteedate,
+                                            md.name remise_auto,
+                                            sal.description bonus_auto,
+                                            md.flatdiscount rma,
+                                            TO_NUMBER(
+                                                CASE
+                                                    WHEN REGEXP_LIKE(sal.name, '^[0-9]+$') THEN sal.name
+                                                    ELSE NULL
+                                                END
+                                            ) AS bna,
+                                            (
+                                                SELECT
+                                                    valuenumber
+                                                FROM
+                                                    m_attributeinstance
+                                                WHERE
+                                                    m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                    AND m_attribute_id = 1000501
+                                            ) p_achat,
+                                            (
+                                                SELECT
+                                                    valuenumber
+                                                FROM
+                                                    m_attributeinstance
+                                                WHERE
+                                                    m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                    AND m_attribute_id = 1001009
+                                            ) rem_achat,
+                                            (
+                                                SELECT
+                                                    valuenumber
+                                                FROM
+                                                    m_attributeinstance
+                                                WHERE
+                                                    m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                    AND m_attribute_id = 1000808
+                                            ) bon_achat,
+                                            (
+                                                SELECT
+                                                    valuenumber
+                                                FROM
+                                                    m_attributeinstance
+                                                WHERE
+                                                    m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                    AND m_attribute_id = 1000502
+                                            ) p_vente,
+                                            (
+                                                SELECT
+                                                    valuenumber
+                                                FROM
+                                                    m_attributeinstance
+                                                WHERE
+                                                    m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                    AND m_attribute_id = 1001408
+                                            ) rem_vente,
+                                            (
+                                                SELECT
+                                                    valuenumber
+                                                FROM
+                                                    m_attributeinstance
+                                                WHERE
+                                                    m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                    AND m_attribute_id = 1000908
+                                            ) bon_vente,
+                                            (
+                                                SELECT
+                                                    lot
+                                                FROM
+                                                    m_attributesetinstance
+                                                WHERE
+                                                    m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                            ) lot
+                                        FROM
+                                            m_product p
+                                            INNER JOIN m_storage mst ON p.m_product_id = mst.m_product_id
+                                            INNER JOIN m_attributeinstance mati ON mst.m_attributesetinstance_id = mati.m_attributesetinstance_id
+                                            INNER JOIN m_attributesetinstance mats ON mst.m_attributesetinstance_id = mats.m_attributesetinstance_id
+                                            LEFT JOIN C_BPartner_Product cp ON cp.m_product_id = p.m_product_id
+                                                OR cp.C_BPartner_Product_id IS NULL
+                                            LEFT JOIN M_DiscountSchema md ON cp.M_DiscountSchema_id = md.M_DiscountSchema_id
+                                            LEFT JOIN XX_SalesContext sal ON p.XX_SalesContext_ID = sal.XX_SalesContext_ID
+                                        WHERE
+                                            mati.m_attribute_id = 1000508
+                                            AND mst.m_locator_id IN (1000614, 1001135)
+                                            AND mst.qtyonhand != 0
+                                        ORDER BY
+                                            p.name
+                                    ) det
+                                WHERE
+                                    det.rem_achat < 200
+                            ) d
+                    )
+                GROUP BY
+                    fournisseur,
+                    product,
+                    p_achat,
+                    p_vente,
+                    rem_achat,
+                    rem_vente,
+                    bon_achat,
+                    bon_vente,
+                    remise_auto,
+                    bonus_auto,
+                    p_revient,
+                    marge,
+                    labo,
+                    lot,
+                    qty
+                ORDER BY
+                    fournisseur
+            ) "source"
+    )
+WHERE
+    rownum <= 1048575
+
+            """
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            data = [dict(zip(columns, row)) for row in rows]
+            return data
+    except Exception as e:
+        logger.error(f"Error fetching marge data: {e}")
+        return {"error": "An error occurred while fetching marge data."}
+
+# Fetch bonus data from Oracle DB
+def fetch_bonus_data():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+            SELECT DISTINCT 
+                mp.name AS product,
+                (SELECT description 
+                 FROM XX_SalesContext xsc 
+                 WHERE mp.XX_SalesContext_id = xsc.XX_SalesContext_id) AS bonus,
+                l.name AS laboratory_name,
+                cbp.name AS fournisseur
+            FROM 
+                m_product mp
+            JOIN XX_Laboratory l ON l.XX_Laboratory_ID = mp.XX_Laboratory_ID
+            JOIN m_storage s ON s.m_product_id = mp.m_product_id
+            JOIN M_ATTRIBUTEINSTANCE asi ON s.M_ATTRIBUTESETINSTANCE_ID = asi.M_ATTRIBUTESETINSTANCE_ID
+            JOIN c_bpartner cbp ON cbp.c_bpartner_id = ValueNUMBER_of_ASI('Fournisseur', asi.m_attributesetinstance_id)
+            WHERE 
+                mp.xx_salescontext_id NOT IN (1000000, 1000100)
+                AND mp.ad_org_id = 1000000
+            ORDER BY 
+                mp.name
+            FETCH FIRST 1048575 ROWS ONLY
+            """
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            data = [dict(zip(columns, row)) for row in rows]
+            return data
+    except Exception as e:
+        logger.error(f"Error fetching bonus data: {e}")
+        return {"error": "An error occurred while fetching bonus data."}
+
+
+
+# Test database connection
+def test_db_connection():
+    try:
+        with DB_POOL.acquire() as connection:
+            logger.info("Database connection successful.")
+        return True
+    except Exception as e:
+        logger.error(f"Database connection failed: {str(e)}")
+        return False
+    
+
+
+
+# Route to fetch reserved data
+@app.route('/fetch-reserved-data', methods=['GET'])
+def fetch_reserved():
+    if not test_db_connection():
+        return jsonify({"error": "Failed to connect to the database."}), 500
+    data = fetch_reserved_data()
+    return jsonify(data)
+
+# Route to fetch remise data
+@app.route('/fetch-remise-data', methods=['GET'])
+def fetch_remise():
+    if not test_db_connection():
+        return jsonify({"error": "Failed to connect to the database."}), 500
+    data = fetch_remise_data()
+    return jsonify(data)
+
+# Route to fetch marge data
+@app.route('/fetch-data', methods=['GET'])
+def fetch_marge():
+    if not test_db_connection():
+        return jsonify({"error": "Failed to connect to the database."}), 500
+    data = fetch_marge_data()
+    return jsonify(data)
+
+
+# Route to fetch bonus data
+@app.route('/fetch-bonus-data', methods=['GET'])
+def fetch_bonus():
+    if not test_db_connection():
+        return jsonify({"error": "Failed to connect to the database."}), 500
+    data = fetch_bonus_data()
+    return jsonify(data)
+
+# Route to download Excel for reserved data
+@app.route('/download-reserved-excel', methods=['GET'])
+def download_reserved_excel():
+    reserve_value = request.args.get("reserve", "RESERVE")
+    data = fetch_reserved_data()
+    return generate_excel(data, reserve_value)
+
+# Route to download Excel for remise data
+@app.route('/download-remise-excel', methods=['GET'])
+def download_remise_excel():
+    remise_value = request.args.get("remise", "REMISE")
+    data = fetch_remise_data()
+    return generate_excel(data, remise_value)
+
+
+# Route to download Excel for bonus data
+@app.route('/download-bonus-excel', methods=['GET'])
+def download_bonus_excel():
+    bonus_value = request.args.get("bonus", "BONUS")
+    data = fetch_bonus_data()
+    return generate_excel(data, bonus_value)
+
+
+# Route to download Excel for marge data
+@app.route('/download-marge-excel', methods=['GET'])
+def download_marge_excel():
+    data = fetch_marge_data()  # Fetch all data
+    filters = {
+        "fournisseur": request.args.get("fournisseur", "").strip(),
+        "product": request.args.get("product", "").strip(),
+        "marge": request.args.get("marge", "").strip(),
+    }
+
+    # Apply filters if provided
+    if filters["fournisseur"]:
+        data = [row for row in data if filters["fournisseur"].lower() in row["FOURNISSEUR"].lower()]
+    if filters["product"]:
+        data = [row for row in data if filters["product"].lower() in row["PRODUCT"].lower()]
+    if filters["marge"]:
+        try:
+            marge_value = float(filters["marge"])
+            data = [row for row in data if float(row["MARGE"]) >= marge_value]
+        except ValueError:
+            return jsonify({"error": "Invalid marge value"}), 400
+
+    return generate_excel_marge(data, filters)
+
+#----------------------------
+def generate_excel_marge(data, filters):
+    if not data:
+        return {"error": "No data available"}, 400
+
+    df = pd.DataFrame(data)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Filtered Data"
+
+    # Apply header styles
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+    ws.append(df.columns.tolist())
+    
+    for cell in ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Append data with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Generate filename dynamically based on filters (include values)
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    filter_text = "_".join([f"{k}-{v}" for k, v in filters.items() if v])  # Include values
+    filename = f"Marge_{filter_text}_{today_date}.xlsx" if filter_text else f"Marge_{today_date}.xlsx"
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+# Helper function to generate Excel file
+def generate_excel(data, value):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "All Data"
+
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    ws.append(df.columns.tolist())
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+    ws.auto_filter.ref = ws.dimensions
+
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    table = Table(displayName="DataTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    filename = f"{value}_{today_date}.xlsx"
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+def fetch_filtred_emplacment_from_db():
+    try:
+        # Fetch emplacement data
+        emplacements_data = fetch_emplacment_data()
+
+        # Extract emplacement values
+        emplacements = [entry["EMPLACEMENT"] for entry in emplacements_data]
+
+        # Build the emplacement filter dynamically
+        emplacement_filter = ""
+        if emplacements:
+            emplacement_values = "', '".join(emplacements)  # Convert list to SQL format
+            emplacement_filter = f"AND ml.value IN ('{emplacement_values}')"
+
+        # Define the SQL query with dynamic emplacement filtering
+        query = f"""
+        SELECT 
+            mati.value AS fournisseur, 
+            m.name,  
+            SUM(m_storage.qtyonhand) AS qty,
+            SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand) AS prix,
+            SUM(m_storage.qtyonhand - m_storage.QTYRESERVED) AS qty_dispo, 
+            SUM(M_ATTRIBUTEINSTANCE.valuenumber * (m_storage.qtyonhand - m_storage.QTYRESERVED)) AS prix_dispo,
+            ml.M_Locator_ID AS locatorid,
+            m.m_product_id AS productid,
+            1 AS sort_order
+        FROM 
+            M_ATTRIBUTEINSTANCE
+        JOIN 
+            m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
+        JOIN 
+            M_PRODUCT m ON m.M_PRODUCT_id = m_storage.M_PRODUCT_id
+        JOIN 
+            M_Locator ml ON ml.M_Locator_ID = m_storage.M_Locator_ID
+        INNER JOIN 
+            m_attributeinstance mati ON m_storage.m_attributesetinstance_id = mati.m_attributesetinstance_id
+        WHERE 
+            M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
+            AND m_storage.qtyonhand > 0
+            AND mati.m_attribute_id = 1000508
+            AND m_storage.AD_Client_ID = 1000000
+            {emplacement_filter}  -- Dynamically added emplacement filter
+        GROUP BY 
+            m.name, mati.value, m.m_product_id, ml.M_Locator_ID
+        ORDER BY 
+            fournisseur, name
+        """
+
+        # Execute the query
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            data = [dict(zip(columns, row)) for row in rows]
+
+        return data
+
+    except Exception as e:
+        logger.error(f"Error fetching data: {e}")
+        return {"error": "An error occurred while fetching data."}
+
+
+
+def fetch_emplacment_data():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+            SELECT ml.value AS EMPLACEMENT
+            FROM M_Locator ml
+            JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
+            WHERE m.ISACTIVE = 'Y'
+                AND m.AD_Client_ID = 1000000
+                AND ml.ISACTIVE = 'Y'
+                AND ml.AD_Client_ID = 1000000
+            ORDER BY m.value
+            """
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            data = [dict(zip(columns, row)) for row in rows]
+            return data
+    except Exception as e:
+        logger.error(f"Error fetching remise data: {e}")
+        return {"error": "An error occurred while fetching emplacement data."}
+    
+@app.route('/fetch-emplacement-data', methods=['GET'])
+def fetch_data():
+    data = fetch_emplacment_data()
+    return jsonify(data)
+
+@app.route('/fetch-data-stock', methods=['GET'])
+def fetch_stock_data():
+    data = fetch_filtred_emplacment_from_db()
+    return jsonify(data)
+
+# Route to download Excel for bonus data
+@app.route('/download-stock-excel', methods=['GET'])
+def download_stock_excel():
+    stock_value = request.args.get("stock", "STOCK")
+    filters = {
+        "locatorid": request.args.get("locatorid"),
+        "locatorname": request.args.get("locatorname"),  # Capture the name
+        "fournisseur": request.args.get("fournisseur"),
+        "name": request.args.get("name")
+    }
+
+    data = fetch_filtred_emplacment_from_db()
+
+    # Apply filters
+    if filters["locatorid"]:
+        data = [row for row in data if str(row["LOCATORID"]) == filters["locatorid"]]
+    if filters["fournisseur"]:
+        data = [row for row in data if filters["fournisseur"].lower() in row["FOURNISSEUR"].lower()]
+    if filters["name"]:
+        data = [row for row in data if filters["name"].lower() in row["NAME"].lower()]
+
+    # Generate filename with filter values
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    location_part = f"_{filters['locatorname']}" if filters["locatorname"] else ""
+    filter_values = "_".join([f"{key}-{value}" for key, value in filters.items() if value and key != "locatorname"])
+    
+    filename = f"{stock_value}_{today_date}{location_part}.xlsx" if not filter_values else f"{stock_value}_{today_date}{location_part}_{filter_values}.xlsx"
+
+    return generate_excel_stock(data, filename)
+
+
+
+
+# Helper function to generate Excel file
+def generate_excel_stock(data, filename):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Filtered Data"
+
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    ws.append(df.columns.tolist())
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+    ws.auto_filter.ref = ws.dimensions
+
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    table = Table(displayName="DataTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+
+
+
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)

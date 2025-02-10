@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .sidebar {
+            min-width: 250px;
+            max-width: 250px;
+            background-color: #f9fafb;
+            border-right: 1px solid #e5e7eb;
+        }
+        .content {
+            overflow-x: auto;
+        }
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+        .table-header {
+            background-color: #f3f4f6;
+            text-align: left;
+        }
+        .table-row:nth-child(odd) {
+            background-color: #f9fafb;
+        }
+    </style>
+</head>
+<body class="flex h-screen">
+    <!-- Sidebar -->
+    <div class="sidebar p-4">
+        <h1 class="text-xl font-bold mb-6">Collections</h1>
+        <nav>
+            <ul>
+                <li class="mb-3"><a href="#" class="text-blue-600 hover:underline">Accueil</a></li>
+                <li class="mb-3"><a href="#" class="hover:underline">Parcourir les données</a></li>
+                <li class="mb-3"><a href="#" class="hover:underline">Nos analyses</a></li>
+                <li class="mb-3"><a href="#" class="hover:underline">Votre collection personnelle</a></li>
+                <li class="mb-3"><a href="#" class="hover:underline">PRODUITS</a></li>
+                <li class="mb-3"><a href="#" class="hover:underline">RECAPS</a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-grow p-4">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-semibold">Product</h2>
+            <button class="bg-blue-600 text-white px-4 py-2 rounded">+ Nouveau</button>
+        </div>
+
+        <!-- Filters -->
+        <div class="grid grid-cols-4 gap-4 mb-4">
+            <select class="border px-3 py-2">
+                <option>Produit</option>
+                <option>Option 1</option>
+                <option>Option 2</option>
+            </select>
+            <select class="border px-3 py-2">
+                <option>Fournisseur</option>
+                <option>Option 1</option>
+                <option>Option 2</option>
+            </select>
+            <select class="border px-3 py-2">
+                <option>Marge</option>
+                <option>Option 1</option>
+                <option>Option 2</option>
+            </select>
+            <select class="border px-3 py-2">
+                <option>Labo</option>
+                <option>Option 1</option>
+                <option>Option 2</option>
+            </select>
+        </div>
+
+        <!-- Data Table -->
+        <div class="table-container rounded-lg bg-white shadow-md">
+            <table class="min-w-full border-collapse text-sm text-left">
+                <thead>
+                    <tr class="table-header">
+                        <th class="border border-gray-300 px-4 py-2">Fournisseur</th>
+                        <th class="border border-gray-300 px-4 py-2">Produit</th>
+                        <th class="border border-gray-300 px-4 py-2">P_Achat</th>
+                        <th class="border border-gray-300 px-4 py-2">P_Vente</th>
+                        <th class="border border-gray-300 px-4 py-2">REM_ACHAT</th>
+                        <th class="border border-gray-300 px-4 py-2">REM_VENTE</th>
+                        <th class="border border-gray-300 px-4 py-2">BON_ACHAT</th>
+                        <th class="border border-gray-300 px-4 py-2">BON_VENTE</th>
+                        <th class="border border-gray-300 px-4 py-2">REMISE_AUTO</th>
+                        <th class="border border-gray-300 px-4 py-2">BONUS_AUTO</th>
+                        <th class="border border-gray-300 px-4 py-2">P_REVIENT</th>
+                        <th class="border border-gray-300 px-4 py-2">MARGE</th>
+                        <th class="border border-gray-300 px-4 py-2">LABO</th>
+                        <th class="border border-gray-300 px-4 py-2">LOT</th>
+                        <th class="border border-gray-300 px-4 py-2">QTY</th>
+                    </tr>
+                </thead>
+                <tbody id="data-table">
+                    <!-- Dynamic Rows -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="mt-4 flex justify-center space-x-2" id="pagination"></div>
+
+        <script>
+            let currentPage = 1;
+            const rowsPerPage = 20;
+        
+            async function fetchData() {
+                try {
+                    const response = await fetch('http://127.0.0.1:5000/fetch-data');
+                    if (!response.ok) throw new Error('Network response was not ok');
+        
+                    const data = await response.json();
+                    const tableBody = document.getElementById("data-table");
+                    const paginationContainer = document.getElementById("pagination");
+        
+                    function renderTablePage(page) {
+                        const start = (page - 1) * rowsPerPage;
+                        const end = start + rowsPerPage;
+                        const pageData = data.slice(start, end);
+                        
+                        tableBody.innerHTML = ""; // Clear previous rows
+        
+                        pageData.forEach(row => {
+                            const tr = document.createElement("tr");
+                            tr.classList.add('table-row');
+                            tr.innerHTML = `
+                                <td class="border px-4 py-2">${row.FOURNISSEUR || ''}</td>
+                                <td class="border px-4 py-2">${row.PRODUCT || ''}</td>
+                                <td class="border px-4 py-2">${row.P_ACHAT || ''}</td>
+                                <td class="border px-4 py-2">${row.P_VENTE || ''}</td>
+                                <td class="border px-4 py-2">${row.REM_ACHAT || ''}</td>
+                                <td class="border px-4 py-2">${row.REM_VENTE || ''}</td>
+                                <td class="border px-4 py-2">${row.BON_ACHAT || ''}</td>
+                                <td class="border px-4 py-2">${row.BON_VENTE || ''}</td>
+                                <td class="border px-4 py-2">${row.REMISE_AUTO || ''}</td>
+                                <td class="border px-4 py-2">${row.BONUS_AUTO || ''}</td>
+                                <td class="border px-4 py-2">${row.P_REVIENT || ''}</td>
+                                <td class="border px-4 py-2">${row.MARGE || ''}</td>
+                                <td class="border px-4 py-2">${row.LABO || ''}</td>
+                                <td class="border px-4 py-2">${row.LOT || ''}</td>
+                                <td class="border px-4 py-2">${row.QTY || ''}</td>
+                            `;
+                            tableBody.appendChild(tr);
+                        });
+                    }
+        
+                    function renderPagination() {
+                        const totalPages = Math.ceil(data.length / rowsPerPage);
+                        paginationContainer.innerHTML = ""; // Clear previous pagination
+        
+                        // "First" button
+                        const firstPageButton = document.createElement("button");
+                        firstPageButton.innerText = "First";
+                        firstPageButton.classList.add("px-4", "py-2", "bg-gray-300", "rounded", "hover:bg-gray-400");
+                        firstPageButton.addEventListener("click", () => {
+                            currentPage = 1;
+                            renderTablePage(currentPage);
+                            renderPagination();
+                        });
+                        paginationContainer.appendChild(firstPageButton);
+        
+                        // "Previous" button
+                        const prevPageButton = document.createElement("button");
+                        prevPageButton.innerText = "<";
+                        prevPageButton.classList.add("px-4", "py-2", "bg-gray-300", "rounded", "hover:bg-gray-400");
+                        prevPageButton.disabled = currentPage === 1;
+                        prevPageButton.addEventListener("click", () => {
+                            if (currentPage > 1) {
+                                currentPage--;
+                                renderTablePage(currentPage);
+                                renderPagination();
+                            }
+                        });
+                        paginationContainer.appendChild(prevPageButton);
+        
+                        // Page buttons
+                        // Page buttons - show only the current page number
+                            const pageButton = document.createElement("button");
+                            pageButton.innerText = currentPage;
+                            pageButton.classList.add("px-4", "py-2", "bg-blue-500", "text-white", "rounded");
+
+                            // Disable further clicks on the current page button
+                            pageButton.disabled = true;
+
+                            paginationContainer.appendChild(pageButton);
+
+        
+                        // "Next" button
+                        const nextPageButton = document.createElement("button");
+                        nextPageButton.innerText = ">";
+                        nextPageButton.classList.add("px-4", "py-2", "bg-gray-300", "rounded", "hover:bg-gray-400");
+                        nextPageButton.disabled = currentPage === totalPages;
+                        nextPageButton.addEventListener("click", () => {
+                            if (currentPage < totalPages) {
+                                currentPage++;
+                                renderTablePage(currentPage);
+                                renderPagination();
+                            }
+                        });
+                        paginationContainer.appendChild(nextPageButton);
+        
+                        // "Last" button
+                        const lastPageButton = document.createElement("button");
+                        lastPageButton.innerText = "Last";
+                        lastPageButton.classList.add("px-4", "py-2", "bg-gray-300", "rounded", "hover:bg-gray-400");
+                        lastPageButton.addEventListener("click", () => {
+                            currentPage = totalPages;
+                            renderTablePage(currentPage);
+                            renderPagination();
+                        });
+                        paginationContainer.appendChild(lastPageButton);
+                    }
+        
+                    renderTablePage(currentPage);
+                    renderPagination();
+        
+                } catch (error) {
+                    console.error("Error fetching data:", error);
+                }
+            }
+        
+            // Fetch data on page load
+            window.onload = fetchData;
+        </script>
+        
+    </div>
+</body>
+</html>
+
+********************************
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .sidebar {
+            min-width: 250px;
+            max-width: 250px;
+            background-color: #f9fafb;
+            border-right: 1px solid #e5e7eb;
+        }
+        .content {
+            overflow-x: auto;
+        }
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+        .table-header {
+            background-color: #f3f4f6;
+            text-align: left;
+        }
+        .table-row:nth-child(odd) {
+            background-color: #f9fafb;
+        }
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .dropdown-content input {
+            width: 100%;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+        .dropdown-content a {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+        .dropdown-content a:hover {
+            background-color: #f1f1f1;
+        }
+        .show {
+            display: block;
+        }
+    </style>
+</head>
+<body class="flex h-screen">
+    <!-- Sidebar -->
+    <div class="sidebar p-4">
+        <h1 class="text-xl font-bold mb-6">Collections</h1>
+        <nav>
+            <ul>
+                <li class="mb-3"><a href="#" class="text-blue-600 hover:underline">Accueil</a></li>
+                <li class="mb-3"><a href="#" class="hover:underline">Parcourir les données</a></li>
+                <li class="mb-3"><a href="#" class="hover:underline">Nos analyses</a></li>
+                <li class="mb-3"><a href="#" class="hover:underline">Votre collection personnelle</a></li>
+                <li class="mb-3"><a href="#" class="hover:underline">PRODUITS</a></li>
+                <li class="mb-3"><a href="#" class="hover:underline">RECAPS</a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-grow p-4">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-semibold">Product</h2>
+            <button class="bg-blue-600 text-white px-4 py-2 rounded">+ Nouveau</button>
+        </div>
+
+        <!-- Filters -->
+        <div class="grid grid-cols-4 gap-4 mb-4">
+            <div class="dropdown">
+                <button onclick="toggleDropdown('product')" class="border px-3 py-2 w-full text-left">Produit</button>
+                <div id="dropdown-product" class="dropdown-content">
+                    <input type="text" placeholder="Search..." oninput="filterDropdown('product')">
+                    <div id="options-product"></div>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button onclick="toggleDropdown('supplier')" class="border px-3 py-2 w-full text-left">Fournisseur</button>
+                <div id="dropdown-supplier" class="dropdown-content">
+                    <input type="text" placeholder="Search..." oninput="filterDropdown('supplier')">
+                    <div id="options-supplier"></div>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button onclick="toggleDropdown('lot')" class="border px-3 py-2 w-full text-left">LOT</button>
+                <div id="dropdown-lot" class="dropdown-content">
+                    <input type="text" placeholder="Search..." oninput="filterDropdown('lot')">
+                    <div id="options-lot"></div>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button onclick="toggleDropdown('margin')" class="border px-3 py-2 w-full text-left">Marge</button>
+                <div id="dropdown-margin" class="dropdown-content">
+                    <input type="text" placeholder="Search..." oninput="filterDropdown('margin')">
+                    <div id="options-margin"></div>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button onclick="toggleDropdown('lab')" class="border px-3 py-2 w-full text-left">Labo</button>
+                <div id="dropdown-lab" class="dropdown-content">
+                    <input type="text" placeholder="Search..." oninput="filterDropdown('lab')">
+                    <div id="options-lab"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search -->
+        <div class="mb-4">
+            <input type="text" id="search-input" class="border px-3 py-2 w-full" placeholder="Search...">
+        </div>
+
+        <!-- Data Table -->
+        <div class="table-container rounded-lg bg-white shadow-md">
+            <table class="min-w-full border-collapse text-sm text-left">
+                <thead>
+                    <tr class="table-header">
+                        <th class="border border-gray-300 px-4 py-2">Fournisseur</th>
+                        <th class="border border-gray-300 px-4 py-2">Produit</th>
+                        <th class="border border-gray-300 px-4 py-2">P_Achat</th>
+                        <th class="border border-gray-300 px-4 py-2">P_Vente</th>
+                        <th class="border border-gray-300 px-4 py-2">REM_ACHAT</th>
+                        <th class="border border-gray-300 px-4 py-2">REM_VENTE</th>
+                        <th class="border border-gray-300 px-4 py-2">BON_ACHAT</th>
+                        <th class="border border-gray-300 px-4 py-2">BON_VENTE</th>
+                        <th class="border border-gray-300 px-4 py-2">REMISE_AUTO</th>
+                        <th class="border border-gray-300 px-4 py-2">BONUS_AUTO</th>
+                        <th class="border border-gray-300 px-4 py-2">P_REVIENT</th>
+                        <th class="border border-gray-300 px-4 py-2">MARGE</th>
+                        <th class="border border-gray-300 px-4 py-2">LABO</th>
+                        <th class="border border-gray-300 px-4 py-2">LOT</th>
+                        <th class="border border-gray-300 px-4 py-2">QTY</th>
+                    </tr>
+                </thead>
+                <tbody id="data-table">
+                    <!-- Dynamic Rows -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="mt-4 flex justify-center space-x-2" id="pagination"></div>
+
+        <script>
+            let currentPage = 1;
+            const rowsPerPage = 20;
+            let allData = [];
+            let filters = {
+                product: '',
+                supplier: '',
+                lot: '',
+                margin: '',
+                lab: ''
+            };
+        
+            async function fetchData() {
+                try {
+                    const response = await fetch('http://127.0.0.1:5000/fetch-data');
+                    if (!response.ok) throw new Error('Network response was not ok');
+        
+                    allData = await response.json();
+                    populateDropdowns(allData);
+                    renderTablePage(currentPage);
+                    renderPagination();
+                } catch (error) {
+                    console.error("Error fetching data:", error);
+                }
+            }
+        
+            function populateDropdowns(data) {
+                const products = [...new Set(data.map(row => row.PRODUCT))];
+                const suppliers = [...new Set(data.map(row => row.FOURNISSEUR))];
+                const lots = [...new Set(data.map(row => row.LOT))];
+                const margins = [...new Set(data.map(row => row.MARGE))];
+                const labs = [...new Set(data.map(row => row.LABO))];
+        
+                populateDropdown('product', products);
+                populateDropdown('supplier', suppliers);
+                populateDropdown('lot', lots);
+                populateDropdown('margin', margins);
+                populateDropdown('lab', labs);
+            }
+        
+            function populateDropdown(type, options) {
+                const dropdown = document.getElementById(`options-${type}`);
+                dropdown.innerHTML = '';
+                options.slice(0, 10).forEach(option => {
+                    const a = document.createElement("a");
+                    a.href = "#";
+                    a.textContent = option;
+                    a.onclick = () => {
+                        filters[type] = option;
+                        document.querySelector(`#dropdown-${type} button`).textContent = option;
+                        closeDropdown(type);
+                        currentPage = 1;
+                        renderTablePage(currentPage);
+                        renderPagination();
+                    };
+                    dropdown.appendChild(a);
+                });
+            }
+        
+            function toggleDropdown(type) {
+                const dropdown = document.getElementById(`dropdown-${type}`);
+                dropdown.classList.toggle("show");
+            }
+        
+            function closeDropdown(type) {
+                const dropdown = document.getElementById(`dropdown-${type}`);
+                dropdown.classList.remove("show");
+            }
+        
+            function filterDropdown(type) {
+                const input = document.querySelector(`#dropdown-${type} input`).value.toLowerCase();
+                const options = document.querySelectorAll(`#dropdown-${type} a`);
+                options.forEach(option => {
+                    if (option.textContent.toLowerCase().includes(input)) {
+                        option.style.display = "block";
+                    } else {
+                        option.style.display = "none";
+                    }
+                });
+            }
+        
+            function filterData(data) {
+                const searchQuery = document.getElementById('search-input').value.toLowerCase();
+        
+                return data.filter(row => {
+                    return (!filters.product || row.PRODUCT === filters.product) &&
+                           (!filters.supplier || row.FOURNISSEUR === filters.supplier) &&
+                           (!filters.lot || row.LOT === filters.lot) &&
+                           (!filters.margin || row.MARGE === filters.margin) &&
+                           (!filters.lab || row.LABO === filters.lab) &&
+                           (Object.values(row).some(value => String(value).toLowerCase().includes(searchQuery)));
+                });
+            }
+        
+            function renderTablePage(page) {
+                const filteredData = filterData(allData); // Apply filter
+                const start = (page - 1) * rowsPerPage;
+                const end = start + rowsPerPage;
+                const pageData = filteredData.slice(start, end);
+        
+                const tableBody = document.getElementById("data-table");
+                tableBody.innerHTML = ""; // Clear previous rows
+        
+                pageData.forEach(row => {
+                    const tr = document.createElement("tr");
+                    tr.classList.add('table-row');
+                    tr.innerHTML = `
+                        <td class="border px-4 py-2">${row.FOURNISSEUR || ''}</td>
+                        <td class="border px-4 py-2">${row.PRODUCT || ''}</td>
+                        <td class="border px-4 py-2">${row.P_ACHAT || ''}</td>
+                        <td class="border px-4 py-2">${row.P_VENTE || ''}</td>
+                        <td class="border px-4 py-2">${row.REM_ACHAT || ''}</td>
+                        <td class="border px-4 py-2">${row.REM_VENTE || ''}</td>
+                        <td class="border px-4 py-2">${row.BON_ACHAT || ''}</td>
+                        <td class="border px-4 py-2">${row.BON_VENTE || ''}</td>
+                        <td class="border px-4 py-2">${row.REMISE_AUTO || ''}</td>
+                        <td class="border px-4 py-2">${row.BONUS_AUTO || ''}</td>
+                        <td class="border px-4 py-2">${row.P_REVIENT || ''}</td>
+                        <td class="border px-4 py-2">${row.MARGE || ''}</td>
+                        <td class="border px-4 py-2">${row.LABO || ''}</td>
+                        <td class="border px-4 py-2">${row.LOT || ''}</td>
+                        <td class="border px-4 py-2">${row.QTY || ''}</td>
+                    `;
+                    tableBody.appendChild(tr);
+                });
+            }
+        
+            function createPageButton(text, pageNumber) {
+                const button = document.createElement("button");
+                button.innerText = text;
+                button.classList.add("px-4", "py-2", "bg-gray-300", "rounded", "hover:bg-gray-400");
+                button.disabled = pageNumber < 1 || pageNumber > Math.ceil(filterData(allData).length / rowsPerPage);
+                button.addEventListener("click", () => {
+                    currentPage = pageNumber;
+                    renderTablePage(currentPage);
+                    renderPagination();
+                });
+                return button;
+            }
+        
+            function renderPagination() {
+                const filteredData = filterData(allData); // Filtered data for the current search and filters
+                const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+                const paginationContainer = document.getElementById("pagination");
+                paginationContainer.innerHTML = ""; // Clear previous pagination
+        
+                // First and Previous buttons
+                const firstPageButton = createPageButton("First", 1);
+                const prevPageButton = createPageButton("<", currentPage - 1);
+        
+                paginationContainer.appendChild(firstPageButton);
+                paginationContainer.appendChild(prevPageButton);
+        
+                // Current Page Button
+                const pageButton = document.createElement("button");
+                pageButton.innerText = currentPage;
+                pageButton.classList.add("px-4", "py-2", "bg-blue-500", "text-white", "rounded");
+                pageButton.disabled = true;
+                paginationContainer.appendChild(pageButton);
+        
+                // Next and Last buttons
+                const nextPageButton = createPageButton(">", currentPage + 1);
+                const lastPageButton = createPageButton("Last", totalPages);
+        
+                paginationContainer.appendChild(nextPageButton);
+                paginationContainer.appendChild(lastPageButton);
+            }
+        
+            // Event listeners for search input
+            document.getElementById('search-input').addEventListener('input', () => {
+                currentPage = 1;
+                renderTablePage(currentPage);
+                renderPagination();
+            });
+        
+            // Fetch data on page load
+            window.onload = fetchData;
+        </script>
+        
+    </div>
+</body>
+</html>

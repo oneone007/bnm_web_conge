@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table UI</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .table-container {
+            width: 80%;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .dark .table-container {
+            background: #1f2937;
+            color: white;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .dark th, .dark td {
+            border-bottom: 1px solid #374151;
+        }
+        th {
+            background-color: #f1f5f9;
+        }
+        .dark th {
+            background-color: #374151;
+        }
+        tr:hover {
+            background-color: #eef2ff;
+        }
+        .dark tr:hover {
+            background-color: #2d3748;
+        }
+        a {
+            text-decoration: none;
+            color: #2563eb;
+            font-weight: bold;
+        }
+        .dark a {
+            color: #93c5fd;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .sidebar {
+            min-width: 200px;
+            max-width: 250px;
+            background-color: #f9fafb;
+            border-right: 1px solid #e5e7eb;
+            transition: transform 0.3s ease-in-out;
+            position: fixed;
+            height: 100vh;
+            z-index: 40;
+        }
+        .dark .sidebar {
+            background-color: #1f2937;
+            border-right-color: #374151;
+        }
+        .sidebar-hidden {
+            transform: translateX(-100%);
+        }
+        .content {
+            margin-left: 250px;
+            transition: margin-left 0.3s ease-in-out;
+        }
+        .content-full {
+            margin-left: 0;
+        }
+    </style>
+</head>
+<body class="flex h-screen bg-gray-100 dark:bg-gray-900">
+    <button id="sidebarToggle" class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700">☰</button>
+    <button id="themeToggle" class="fixed top-4 right-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700">🌓</button>
+    <div id="sidebar" class="sidebar p-4 bg-gray-50 dark:bg-gray-800">
+        <h1 class="text-xl font-bold mb-6 dark:text-white">📂 Collections</h1>
+        <nav>
+            <ul>
+                <li class="mb-3 flex items-center">
+                    <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                    </svg>
+                    <a href="index.html" class="text-blue-600 hover:underline dark:text-blue-400">Accueil</a>
+                </li>
+                <li class="mb-3 flex items-center">
+                    <svg class="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                    </svg>
+                    <a href="no.html" class="hover:underline dark:text-gray-300">Parcourir les données</a>
+                </li>
+                <li class="mb-3 flex items-center">
+                    <svg class="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                    </svg>
+                    <a href="no.html" class="hover:underline dark:text-gray-300">Nos analyses</a>
+                </li>
+        
+                <li class="mb-3 flex items-center">
+                    <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                    </svg>
+                    <a href="product.html" class="hover:underline dark:text-gray-300">PRODUITS</a>
+                </li>
+                <li class="mb-3 flex items-center">
+                    <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                    </svg>
+                    <a href="no.html" class="hover:underline dark:text-gray-300">RECAPS</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    <div id="content" class="content p-6 w-full">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th><input type="checkbox"></th>
+                        <th>Type</th>
+                        <th>Nom &#9650;</th>
+                        <th>Dernière modification par</th>
+                        <th>Dernière édition à</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr onclick="navigateToPage('etatstock.html')" style="cursor: pointer;">
+                        <td><input type="checkbox"></td>
+                        <td>📄</td>
+                        <td><a href="etatstock.html">ÉTAT DE STOCK</a></td>
+                        <td>abderrahmane</td>
+                        <td>janvier 29, 2025</td>
+                        <td>...</td>
+                    </tr>
+                    <tr onclick="navigateToPage('product.html')" style="cursor: pointer;">
+                        <td><input type="checkbox"></td>
+                        <td>📄</td>
+                        <td><a href="product.html">Produit</a></td>
+                        <td>abderrahmane</td>
+                        <td>janvier 27, 2025</td>
+                        <td>...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        function navigateToPage(page) {
+            window.location.href = page;
+        }
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        const content = document.getElementById('content');
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('sidebar-hidden');
+            content.classList.toggle('content-full');
+        });
+        const themeToggle = document.getElementById('themeToggle');
+        const htmlElement = document.documentElement;
+        themeToggle.addEventListener('click', () => {
+            htmlElement.classList.toggle('dark');
+            localStorage.setItem('darkMode', htmlElement.classList.contains('dark'));
+        });
+        if (localStorage.getItem('darkMode') === 'true') {
+            htmlElement.classList.add('dark');
+        }
+    </script>
+</body>
+</html>

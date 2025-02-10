@@ -1,0 +1,298 @@
+   <!-- Data Table -->
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Produit Réservé</h2>
+        <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
+            <div class="overflow-x-auto">
+                <table class="min-w-full border-collapse text-sm text-left dark:text-white">
+                    <thead>
+                        <tr class="table-header dark:bg-gray-700">
+                            <th data-column="OPERATEUR" onclick="sortTable('OPERATEUR')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">OPERATEUR</th>
+                            <th data-column="NDOCUMENT" onclick="sortTable('NDOCUMENT')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">NDOCUMENT</th>
+                            <th data-column="PRODUCT" onclick="sortTable('PRODUCT')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">PRODUCT</th>
+                            <th data-column="DATECOMMANDE" onclick="sortTable('DATECOMMANDE')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">DATECOMMANDE</th>
+                            <th data-column="TOTALRESRVE" onclick="sortTable('TOTALRESRVE')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">TOTALRESRVE</th>
+                            <th data-column="QTYRESERVE" onclick="sortTable('QTYRESERVE')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">QTYRESERVE</th>
+                            <th data-column="NAME" onclick="sortTable('NAME')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">NAME</th>
+                            <th data-column="STATUS" onclick="sortTable('STATUS')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">STATUS</th>
+   
+                    </thead>
+                    <tbody id="data-table" class="dark:bg-gray-800">
+                        <!-- Dynamic Rows -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
+                <div class="mt-4 flex justify-center space-x-2" id="pagination"></div>
+
+ <script>
+        let currentPage = 1;
+        const rowsPerPage = 10;
+        let allData = [];
+        let filters = {
+            product: '',
+            supplier: '',
+            lot: '',
+            margin: '',
+            lab: ''
+        };
+        let sortColumn = '';
+        let sortDirection = 'asc';
+
+        // Fetch data on page load
+        window.onload = fetchData;
+
+        async function fetchData() {
+            try {
+                const response = await fetch('http://127.0.0.1:5000/fetch-data');
+                if (!response.ok) throw new Error('Network response was not ok');
+
+                allData = await response.json();
+                updateTableAndPagination();
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        }
+
+        function filterDropdown(type) {
+            const searchValue = document.getElementById(`search-${type}`).value.toLowerCase();
+            filters[type] = searchValue;
+            currentPage = 1;
+            updateTableAndPagination();
+        }
+
+        function filterData(data) {
+            return data.filter(row => {
+                return (!filters.product || row.OPERATEUR.toLowerCase().includes(filters.product)) &&
+                       (!filters.supplier || row.PRODUCT.toLowerCase().includes(filters.supplier)) &&
+                       (!filters.lot || row.DATECOMMANDE.toLowerCase().includes(filters.lot)) &&
+                       (!filters.margin || row.NAME.toLowerCase().includes(filters.margin)) &&
+                       (!filters.lab || row.STATUS.toLowerCase().includes(filters.lab));
+            });
+        }
+
+        function sortTable(column) {
+    if (sortColumn === column) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortColumn = column;
+        sortDirection = 'asc';
+    }
+
+    // Remove arrows from all headers
+    document.querySelectorAll('th').forEach(th => {
+        const content = th.innerText.replace(/ ↑| ↓/g, '');
+        th.innerText = content;
+    });
+
+    // Add arrow to current sorted column
+    const currentHeader = document.querySelector(`th[data-column="${column}"]`);
+    if (currentHeader) {
+        const arrow = sortDirection === 'asc' ? ' ↑' : ' ↓';
+        currentHeader.innerText += arrow;
+    }
+
+    updateTableAndPagination();
+}
+
+        function updateTableAndPagination() {
+            renderTablePage(currentPage);
+            renderPagination();
+        }
+
+        function renderTablePage(page) {
+            let filteredData = filterData(allData);
+
+            // Sort data
+            if (sortColumn) {
+                filteredData.sort((a, b) => {
+                    if (a[sortColumn] < b[sortColumn]) return sortDirection === 'asc' ? -1 : 1;
+                    if (a[sortColumn] > b[sortColumn]) return sortDirection === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            const start = (page - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const pageData = filteredData.slice(start, end);
+
+            const tableBody = document.getElementById("data-table");
+            tableBody.innerHTML = "";
+
+            pageData.forEach(row => {
+                const tr = document.createElement("tr");
+                tr.classList.add('table-row', 'dark:bg-gray-700');
+                tr.innerHTML = `
+                    <td class="border px-4 py-2 dark:border-gray-600">${row.OPERATEUR || ''}</td>
+                    <td class="border px-4 py-2 dark:border-gray-600">${row.NDOCUMENT || ''}</td>
+                    <td class="border px-4 py-2 dark:border-gray-600">${row.PRODUCT || ''}</td>
+                    <td class="border px-4 py-2 dark:border-gray-600">${row.DATECOMMANDE || ''}</td>
+                    <td class="border px-4 py-2 dark:border-gray-600">${row.TOTALRESRVE || ''}</td>
+                    <td class="border px-4 py-2 dark:border-gray-600">${row.QTYRESERVE || ''}</td>
+                    <td class="border px-4 py-2 dark:border-gray-600">${row.NAME || ''}</td>
+                    <td class="border px-4 py-2 dark:border-gray-600">${row.STATUS || ''}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        function createPageButton(text, pageNumber) {
+            const button = document.createElement("button");
+            button.innerText = text;
+            button.classList.add("px-4", "py-2", "bg-gray-300", "rounded", "hover:bg-gray-400", "dark:bg-gray-700", "dark:text-white");
+            button.disabled = pageNumber < 1 || pageNumber > Math.ceil(filterData(allData).length / rowsPerPage);
+            button.addEventListener("click", () => {
+                currentPage = pageNumber;
+                updateTableAndPagination();
+            });
+            return button;
+        }
+
+        function renderPagination() {
+            const filteredData = filterData(allData);
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+            const paginationContainer = document.getElementById("pagination");
+            paginationContainer.innerHTML = "";
+
+            // First and Previous buttons
+            const firstPageButton = createPageButton("First", 1);
+            const prevPageButton = createPageButton("<", currentPage - 1);
+
+            paginationContainer.appendChild(firstPageButton);
+            paginationContainer.appendChild(prevPageButton);
+
+            // Current Page Button
+            const pageButton = document.createElement("button");
+            pageButton.innerText = currentPage;
+            pageButton.classList.add("px-4", "py-2", "bg-blue-500", "text-white", "rounded", "dark:bg-blue-600");
+            pageButton.disabled = true;
+            paginationContainer.appendChild(pageButton);
+
+            // Next and Last buttons
+            const nextPageButton = createPageButton(">", currentPage + 1);
+            const lastPageButton = createPageButton("Last", totalPages);
+
+            paginationContainer.appendChild(nextPageButton);
+            paginationContainer.appendChild(lastPageButton);
+        }
+
+        // Sidebar Toggle Functionality
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        const content = document.getElementById('content');
+
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('sidebar-hidden');
+            content.classList.toggle('content-full');
+        });
+
+        // Dark/Light Mode Toggle Functionality
+        const themeToggle = document.getElementById('themeToggle');
+        const htmlElement = document.documentElement;
+
+        themeToggle.addEventListener('click', () => {
+            htmlElement.classList.toggle('dark');
+            // Save the theme preference in localStorage
+            const isDarkMode = htmlElement.classList.contains('dark');
+            localStorage.setItem('darkMode', isDarkMode);
+        });
+
+        // Check for saved theme preference
+        const savedDarkMode = localStorage.getItem('darkMode'); 
+        if (savedDarkMode === 'true') {
+            htmlElement.classList.add('dark');
+        } else {
+            htmlElement.classList.remove('dark');
+        }
+        // Toggle the visibility of the options menu
+document.getElementById("optionsToggle").addEventListener("click", function() {
+    const optionsMenu = document.getElementById("optionsMenu");
+    optionsMenu.classList.toggle("hidden");
+});
+
+      
+    </script>
+
+
+
+
+
+    import oracledb
+from flask import Flask, jsonify, request
+from flask_cors import CORS  # Import CORS
+import logging
+
+app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Configure Oracle database connection pool
+DB_POOL = oracledb.create_pool(
+    user="compiere",
+    password="compiere",
+    dsn="192.168.1.213/compiere",
+    min=2,
+    max=10,
+    increment=1
+)
+
+# Fetch data from Oracle DB
+def fetch_data_from_db():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            # Define your SQL query here
+            query = """
+            SELECT 
+    us.name AS OPERATEUR,
+    co.documentno AS NDOCUMENT,
+    m.name AS PRODUCT,
+    co.dateordered AS DATECOMMANDE,
+    s.qtyreserved AS TOTALRESERVE,
+    cl.qtyreserved AS QTYRESERVE,
+    l.name AS NAME,
+    CASE
+        WHEN co.docstatus = 'CO' THEN 'prepared'
+        ELSE 'not prepared'
+    END AS STATUS
+FROM
+    m_storage s
+INNER JOIN c_orderline cl
+    ON cl.m_attributesetinstance_id = s.m_attributesetinstance_id
+INNER JOIN c_order co
+    ON co.c_order_id = cl.c_order_id
+INNER JOIN m_product m
+    ON m.m_product_id = s.m_product_id
+INNER JOIN ad_user us
+    ON us.ad_user_id = co.salesrep_id
+JOIN XX_Laboratory l
+    ON l.XX_Laboratory_ID = m.XX_Laboratory_ID
+WHERE
+    cl.qtyreserved != 0
+    AND co.c_doctypetarget_id = 1000539
+    AND cl.m_product_id = s.m_product_id
+    AND co.ad_org_id = 1000000
+    AND s.qtyonhand > 0
+    AND s.qtyreserved > 0
+FETCH FIRST 1048575 ROWS ONLY
+
+            """
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            data = [dict(zip(columns, row)) for row in rows]
+            return data
+    except Exception as e:
+        logger.error(f"Error fetching data: {e}")
+        return {"error": "An error occurred while fetching data."}
+
+@app.route('/fetch-data', methods=['GET'])
+def fetch_data():
+    data = fetch_data_from_db()
+    return jsonify(data)
+
+if __name__ == "__main__":
+    app.run(debug=True)

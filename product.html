@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+     
+        .table-container {
+    max-height: 400px;
+    overflow-y: auto; /* Enables vertical scrolling if needed */
+    overflow-x: auto; /* Enables horizontal scrolling if needed */
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.table-container table {
+    width: 100%;
+    table-layout: auto; /* Allows columns to resize dynamically */
+    min-width: 100%; /* Ensures the table doesn't shrink too much */
+    max-width: 100%; /* Prevents overflow beyond the container */
+    border-collapse: collapse;
+}
+
+thead {
+    position: sticky;
+    top: 0;
+    background-color: #f3f4f6;
+    z-index: 10;
+}
+
+th, td {
+    white-space: nowrap; /* Prevents text wrapping */
+    text-align: left;
+    padding: 10px;
+    border: 1px solid #ddd;
+}
+
+.dark .table-container {
+    border-color: #374151;
+}
+
+.dark .table-header {
+    background-color: #374151;
+    color: #f9fafb; /* White text in dark mode */
+}
+
+.dark .table-row:nth-child(odd) {
+    background-color: #1f2937;
+    color: #f9fafb; /* White text on dark background */
+}
+
+.dark .table-row:nth-child(even) {
+    background-color: #474d53;
+    color: #ececec;
+}
+
+
+.table-wrapper {
+    display: flex;
+    justify-content: space-between; /* Ensures tables are spaced apart */
+    gap: 20px; /* Adds spacing between tables */
+}
+
+.paginatio-wrapper {
+    display: flex;
+    justify-content: center; 
+    /* Ensures tables are spaced apart */
+    gap: 250px; /* Adds spacing between tables */
+}
+.download-wrapper {
+    display: flex;
+    
+    /* Ensures tables are spaced apart */
+    gap: 550px; /* Adds spacing between tables */
+}
+.title-wrapper{
+    display: flex;
+    
+    /* Ensures tables are spaced apart */
+    gap: 730px; /* Adds spacing between tables */
+}
+
+
+
+
+
+
+        .sidebar {
+            min-width: 200px;
+            max-width: 250px;
+            background-color: #f9fafb;
+            border-right: 1px solid #e5e7eb;
+            transition: transform 0.3s ease-in-out;
+            position: fixed;
+            height: 100vh;
+            z-index: 40;
+        }
+
+        .sidebar-hidden {
+            transform: translateX(-100%);
+        }
+
+        .content {
+            margin-left: 250px; /* Adjust this value based on the sidebar width */
+            transition: margin-left 0.3s ease-in-out;
+            width: calc(100% - 250px); /* Adjust this value based on the sidebar width */
+        }
+
+        .content-full {
+            margin-left: 0;
+            width: 100%;
+        }
+
+        .table-header {
+            background-color: #f3f4f6;
+            text-align: left;
+            color: #000; /* Default text color */
+            position: sticky; top: 0;
+        }
+
+        .table-row {
+            color: #000; /* Default black text */
+        }
+
+        .table-row:nth-child(odd) {
+            background-color: #f9fafb;
+        }
+
+        /* Dark mode styles */
+        .dark .sidebar {
+            background-color: #1f2937;
+            border-right-color: #374151;
+        }
+
+   
+
+        .dark body {
+            background-color: #111827;
+            color: #010911;
+        }
+
+    
+  
+
+
+    </style>
+</head>
+<body class="flex h-screen bg-gray-100 dark:bg-gray-900">
+    <!-- Sidebar Toggle Button -->
+    <button id="sidebarToggle" class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700">
+        ☰
+    </button>
+
+    <!-- Dark/Light Mode Toggle Button -->
+    <button id="themeToggle" class="fixed top-4 right-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700">
+        🌓
+    </button>
+
+    <!-- Sidebar -->
+    <div id="sidebar" class="sidebar p-4 bg-gray-50 dark:bg-gray-800">
+        <h1 class="text-xl font-bold mb-6 dark:text-white">📂 Collections</h1>
+        <nav>
+            <ul>
+                <li class="mb-3 flex items-center">
+                    <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                    </svg>
+                    <a href="index.html" class="text-blue-600 hover:underline dark:text-blue-400">Accueil</a>
+                </li>
+                <li class="mb-3 flex items-center">
+                    <svg class="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                    </svg>
+                    <a href="no.html" class="hover:underline dark:text-gray-300">Parcourir les données</a>
+                </li>
+                <li class="mb-3 flex items-center">
+                    <svg class="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                    </svg>
+                    <a href="no.html" class="hover:underline dark:text-gray-300">Nos analyses</a>
+                </li>
+            
+                <li class="mb-3 flex items-center">
+                    <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                    </svg>
+                    <a href="test.html" class="hover:underline dark:text-gray-300">PRODUITS</a>
+                </li>
+                <li class="mb-3 flex items-center">
+                    <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                    </svg>
+                    <a href="no.html" class="hover:underline dark:text-gray-300">RECAPS</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div id="content" class="content flex-grow p-4">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-semibold dark:text-white" style="color: #3373c7;">Product</h2>
+        </div>
+
+        <!-- Filters -->
+        <div class="grid grid-cols-4 gap-4 mb-4">
+            <input type="text" id="search-product" placeholder="Search Produit..." class="border px-3 py-2 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white" oninput="filterDropdown('product')">
+            <input type="text" id="search-supplier" placeholder="Search Fournisseur..." class="border px-3 py-2 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white" oninput="filterDropdown('supplier')">
+        </div>
+        <div>
+            <button id="margeConditionBtn" class="px-4 py-2 bg-blue-500 text-white rounded">Marge Condition</button>
+            <input type="number" id="margeInput" class="ml-2" placeholder="Enter MARGE value" />
+            <input type="color" id="margeColorPicker" class="ml-2" />
+        </div>
+        <br>
+        
+        
+        
+        <button id="downloadExcel" class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
+            <img src="excel.png" alt="Excel Icon" class="w-6 h-6">
+            <span>Download Marge Table</span>
+        </button>
+
+        <br>
+        <br>
+        <!-- Data Table -->
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">MARGE</h2>
+
+        <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
+            <div class="overflow-x-auto">
+                <table class="min-w-full border-collapse text-sm text-left dark:text-white">
+                    <thead>
+                        <tr class="table-header dark:bg-gray-700">
+                            <th data-column="FOURNISSEUR" onclick="sortTable('FOURNISSEUR')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">Fournisseur</th>
+                            <th data-column="PRODUCT" onclick="sortTable('PRODUCT')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">Produit</th>
+                            <th data-column="P_ACHAT" onclick="sortTable('P_ACHAT')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">P_Achat</th>
+                            <th data-column="P_VENTE" onclick="sortTable('P_VENTE')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">P_Vente</th>
+                            <th data-column="REM_ACHAT" onclick="sortTable('REM_ACHAT')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">REM_ACHAT</th>
+                            <th data-column="REM_VENTE" onclick="sortTable('REM_VENTE')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">REM_VENTE</th>
+                            <th data-column="BON_ACHAT" onclick="sortTable('BON_ACHAT')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">BON_ACHAT</th>
+                            <th data-column="BON_VENTE" onclick="sortTable('BON_VENTE')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">BON_VENTE</th>
+                            <th data-column="REMISE_AUTO" onclick="sortTable('REMISE_AUTO')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">REMISE_AUTO</th>
+                            <th data-column="BONUS_AUTO" onclick="sortTable('BONUS_AUTO')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">BONUS_AUTO</th>
+                            <th data-column="P_REVIENT" onclick="sortTable('P_REVIENT')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">P_REVIENT</th>
+                            <th data-column="MARGE" onclick="sortTable('MARGE')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">MARGE</th>
+                            <th data-column="LABO" onclick="sortTable('LABO')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">LABO</th>
+                            <th data-column="LOT" onclick="sortTable('LOT')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">LOT</th>
+                            <th data-column="QTY" onclick="sortTable('QTY')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">QTY</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-table" class="dark:bg-gray-800">
+                        <!-- Dynamic Rows -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+<!-- second table remise aauto  -->
+
+
+        <!-- Pagination -->
+        <div class="mt-4 flex justify-center space-x-2" id="pagination"></div>
+        <br>
+        <div class="download-wrapper">
+      
+        <button id="downloadExcel_REMISE" class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
+            <img src="excel.png" alt="Excel Icon" class="w-6 h-6">
+            <span>Download remise Auto Table</span>
+        </button> <button id="downloadExcel_BONUS" class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
+            <img src="excel.png" alt="Excel Icon" class="w-6 h-6">
+            <span>Download bonus Auto Table</span>
+        </button>
+        </div>
+
+        <br>
+        <div class="title-wrapper">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">REMISE AUTO</h2>
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">BONUS AUTO</h2>
+        </div>
+        <div class="table-wrapper">
+            <!-- First Table -->
+            <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
+
+                <div class="overflow-x-auto">
+                    
+
+                    <table class="min-w-full border-collapse text-sm text-left dark:text-white">
+                        <thead>
+                            <tr class="table-header dark:bg-gray-700">
+                                <th data-column="FOURNISSEUR" onclick="sortRemiseTable('FOURNISSEUR')" class="border px-4 py-2">Fournisseur</th>
+                                <th data-column="LABORATORY_NAME" onclick="sortRemiseTable('LABORATORY_NAME')" class="border px-4 py-2">Laboratory Name</th>
+                                <th data-column="PRODUCT" onclick="sortRemiseTable('PRODUCT')" class="border px-4 py-2">Produit</th>
+                                <th data-column="REWARD" onclick="sortRemiseTable('REWARD')" class="border px-4 py-2">Reward</th>
+                                <th data-column="TYPE_CLIENT" onclick="sortRemiseTable('TYPE_CLIENT')" class="border px-4 py-2">Type Client</th>
+                            </tr>
+                        </thead>
+                        <tbody id="remise-table" class="dark:bg-gray-800"></tbody>
+                    </table>
+                </div>
+                <!-- Pagination for First Table -->
+            </div>
+   
+            <!-- Second Table -->
+
+            <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
+            
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border-collapse text-sm text-left dark:text-white">
+                        <thead>
+                            <tr class="table-header dark:bg-gray-700">
+                                <th data-column="PRODUCT" onclick="sortBonusTable('PRODUCT')" class="border px-4 py-2">Product</th>
+                                <th data-column="BONUS" onclick="sortBonusTable('BONUS')" class="border px-4 py-2">Bonus</th>
+                                <th data-column="LABORATORY_NAME" onclick="sortBonusTable('LABORATORY_NAME')" class="border px-4 py-2">Laboratory Name</th>
+                                <th data-column="FOURNISSEUR" onclick="sortBonusTable('FOURNISSEUR')" class="border px-4 py-2">Fournisseur</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bonus-table" class="dark:bg-gray-800"></tbody>
+                    </table>
+                </div>
+                <!-- Pagination for Second Table -->
+            </div>
+        </div>
+        <div class="paginatio-wrapper">
+
+        <div class="mt-4 flex justify-center space-x-2" id="pagination-remise"></div>
+        <div class="mt-4 flex justify-center space-x-2" id="pagination-bonus"></div>
+</div>
+
+
+
+<button id="downloadExcel_RESERVE" class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
+    <img src="excel.png" alt="Excel Icon" class="w-6 h-6">
+    <span>Download RESERVED PRODUCTS Table</span>
+</button>
+
+
+<!-- Reserver products  Table -->
+<h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Produit Réservé</h2>
+<div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
+    <div class="overflow-x-auto">
+        <table class="min-w-full border-collapse text-sm text-left dark:text-white">
+            <thead>
+                <tr class="table-header dark:bg-gray-700">
+                    <th data-column="OPERATEUR" onclick="sortReservedTable('OPERATEUR')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">OPERATEUR</th>
+                    <th data-column="NDOCUMENT" onclick="sortReservedTable('NDOCUMENT')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">NDOCUMENT</th>
+                    <th data-column="PRODUCT" onclick="sortReservedTable('PRODUCT')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">PRODUCT</th>
+                    <th data-column="DATECOMMANDE" onclick="sortReservedTable('DATECOMMANDE')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">DATE COMMANDE</th>
+                    <th data-column="TOTALRESERVE" onclick="sortReservedTable('TOTALRESERVE')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">TOTAL RESERVE</th>
+                    <th data-column="QTYRESERVE" onclick="sortReservedTable('QTYRESERVE')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">QTY RESERVE</th>
+                    <th data-column="NAME" onclick="sortReservedTable('NAME')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">NAME</th>
+                    <th data-column="STATUS" onclick="sortReservedTable('STATUS')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">STATUS</th>
+                </tr>
+            </thead>
+            <tbody id="reserved-table" class="dark:bg-gray-800">
+                <!-- Dynamic Rows -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination -->
+<div class="mt-4 flex justify-center space-x-2" id="pagination-reserved"></div>
+
+
+
+<br><br><br> <br>
+  <script>
+
+
+let currentPage = 1;
+const rowsPerPage = 10;
+let allData = [];
+let filters = {
+    product: '',
+    supplier: '',
+    lot: '',
+    margin: '',
+    lab: ''
+};
+let sortColumn = '';
+let sortDirection = 'asc';
+
+// Fetch data on page load
+window.onload = () => {
+    fetchData();
+    fetchRemiseData();
+    fetchBonusData();
+    fetchReservedData();
+};
+
+document.getElementById("downloadExcel").addEventListener("click", function () {
+    let table = document.getElementById("data-table");
+    let wb = XLSX.utils.book_new(); // Create a new workbook
+
+    // Convert the HTML table to a worksheet
+    let ws = XLSX.utils.table_to_sheet(table);
+
+    // Rename and set headers (simulating a pivot table header)
+    ws["A1"].v = "Supplier (Fournisseur)";
+    ws["B1"].v = "Product";
+    ws["C1"].v = "Purchase Price (P_ACHAT)";
+    ws["D1"].v = "Selling Price (P_VENTE)";
+    ws["E1"].v = "Discount Purchase (REM_ACHAT)";
+    ws["F1"].v = "Discount Sale (REM_VENTE)";
+    ws["G1"].v = "Purchase Bonus (BON_ACHAT)";
+    ws["H1"].v = "Sale Bonus (BON_VENTE)";
+    ws["I1"].v = "Auto Discount (REMISE_AUTO)";
+    ws["J1"].v = "Auto Bonus (BONUS_AUTO)";
+    ws["K1"].v = "Cost Price (P_REVIENT)";
+    ws["L1"].v = "Margin (MARGE)";
+    ws["M1"].v = "Laboratory (LABO)";
+    ws["N1"].v = "Batch (LOT)";
+    ws["O1"].v = "Quantity (QTY)";
+
+    // Add the worksheet to the workbook
+    XLSX.utils.book_append_sheet(wb, ws, "Filtered Data");
+
+    // Save the file
+    XLSX.writeFile(wb, "Filtered_Data.xlsx");
+});
+
+
+document.getElementById("downloadExcel").addEventListener("click", function () {
+    let fournisseur = document.getElementById("search-supplier").value;
+    let product = document.getElementById("search-product").value;
+    let marge = document.getElementById("margeInput").value;
+
+    let url = `http://127.0.0.1:5000/download-marge-excel?fournisseur=${encodeURIComponent(fournisseur)}&product=${encodeURIComponent(product)}&marge=${encodeURIComponent(marge)}`;
+    window.open(url, "_blank");
+});
+
+document.getElementById("downloadExcel_REMISE").addEventListener("click", function () {
+    window.open("http://127.0.0.1:5000/download-remise-excel", "_blank"); 
+});
+document.getElementById("downloadExcel_BONUS").addEventListener("click", function () {
+    window.open("http://127.0.0.1:5000/download-bonus-excel", "_blank"); 
+});
+document.getElementById("downloadExcel_RESERVE").addEventListener("click", function () {
+    window.open("http://127.0.0.1:5000/download-reserved-excel", "_blank"); 
+});
+
+
+async function fetchData() {
+    try {
+        const response = await fetch('http://127.0.0.1:5000/fetch-data');
+        if (!response.ok) throw new Error('Network response was not ok');
+
+        allData = await response.json();
+        updateTableAndPagination();
+    } catch (error) {
+        console.error("Error fetching data:", error);
+    }
+}
+
+function filterDropdown(type) {
+    const searchValue = document.getElementById(`search-${type}`).value.toLowerCase();
+    filters[type] = searchValue;
+    currentPage = 1;
+    updateTableAndPagination();
+}
+
+function filterData(data) {
+    return data.filter(row => {
+        return (!filters.product || row.PRODUCT.toLowerCase().includes(filters.product)) &&
+               (!filters.supplier || row.FOURNISSEUR.toLowerCase().includes(filters.supplier)); 
+
+    });
+}
+
+function sortTable(column) {
+if (sortColumn === column) {
+sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+} else {
+sortColumn = column;
+sortDirection = 'asc';
+}
+
+// Remove arrows from all headers
+document.querySelectorAll('th').forEach(th => {
+const content = th.innerText.replace(/ ↑| ↓/g, '');
+th.innerText = content;
+});
+
+// Add arrow to current sorted column
+const currentHeader = document.querySelector(`th[data-column="${column}"]`);
+if (currentHeader) {
+const arrow = sortDirection === 'asc' ? ' ↑' : ' ↓';
+currentHeader.innerText += arrow;
+}
+
+updateTableAndPagination();
+}
+
+function updateTableAndPagination() {
+    renderTablePage(currentPage);
+    renderPagination();
+}
+
+let margeValue = '';  // Default value
+let margeColor = '#ffffff'; // Default color
+
+// Add event listener for Marge Condition button and color picker
+document.getElementById('margeConditionBtn').addEventListener('click', () => {
+    margeValue = parseFloat(document.getElementById('margeInput').value); // Get the entered MARGE value as a number
+    margeColor = document.getElementById('margeColorPicker').value; // Get the selected color
+    updateTableAndPagination(); // Re-render the table with the new MARGE value and color
+});
+
+// Update the table rendering logic
+function renderTablePage(page) {
+    let filteredData = filterData(allData);
+
+    // Sort data
+    if (sortColumn) {
+        filteredData.sort((a, b) => {
+            if (a[sortColumn] < b[sortColumn]) return sortDirection === 'asc' ? -1 : 1;
+            if (a[sortColumn] > b[sortColumn]) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
+    const start = (page - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+    const pageData = filteredData.slice(start, end);
+
+    const tableBody = document.getElementById("data-table");
+    tableBody.innerHTML = "";
+
+    pageData.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.classList.add('table-row', 'dark:bg-gray-700');
+
+        // Check if the "MARGE" value is less than the entered value
+        const marge = parseFloat(row.MARGE); // Ensure we're comparing numbers
+        if (margeValue && !isNaN(marge) && marge < margeValue) {
+            tr.style.backgroundColor = margeColor;  // Apply the color to the entire row
+        }
+
+        tr.innerHTML = `
+            <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.PRODUCT || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.P_ACHAT || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.P_VENTE || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.REM_ACHAT || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.REM_VENTE || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.BON_ACHAT || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.BON_VENTE || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.REMISE_AUTO || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.BONUS_AUTO || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.P_REVIENT || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.MARGE || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.LABO || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.LOT || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.QTY || ''}</td>
+        `;
+        tableBody.appendChild(tr);
+    });
+}
+
+
+function createPageButton(text, pageNumber) {
+    const button = document.createElement("button");
+    button.innerText = text;
+    button.classList.add("px-4", "py-2", "bg-gray-300", "rounded", "hover:bg-gray-400", "dark:bg-gray-700", "dark:text-white");
+    button.disabled = pageNumber < 1 || pageNumber > Math.ceil(filterData(allData).length / rowsPerPage);
+    button.addEventListener("click", () => {
+        currentPage = pageNumber;
+        updateTableAndPagination();
+    });
+    return button;
+}
+
+function renderPagination() {
+    const filteredData = filterData(allData);
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+    const paginationContainer = document.getElementById("pagination");
+    paginationContainer.innerHTML = "";
+
+    // First and Previous buttons
+    const firstPageButton = createPageButton("First", 1);
+    const prevPageButton = createPageButton("<", currentPage - 1);
+
+    paginationContainer.appendChild(firstPageButton);
+    paginationContainer.appendChild(prevPageButton);
+
+    // Current Page Button
+    const pageButton = document.createElement("button");
+    pageButton.innerText = currentPage;
+    pageButton.classList.add("px-4", "py-2", "bg-blue-500", "text-white", "rounded", "dark:bg-blue-600");
+    pageButton.disabled = true;
+    paginationContainer.appendChild(pageButton);
+
+    // Next and Last buttons
+    const nextPageButton = createPageButton(">", currentPage + 1);
+    const lastPageButton = createPageButton("Last", totalPages);
+
+    paginationContainer.appendChild(nextPageButton);
+    paginationContainer.appendChild(lastPageButton);
+}
+
+// Sidebar Toggle Functionality
+const sidebarToggle = document.getElementById('sidebarToggle');
+const sidebar = document.getElementById('sidebar');
+const content = document.getElementById('content');
+
+sidebarToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('sidebar-hidden');
+    content.classList.toggle('content-full');
+});
+
+// Dark/Light Mode Toggle Functionality
+const themeToggle = document.getElementById('themeToggle');
+const htmlElement = document.documentElement;
+
+themeToggle.addEventListener('click', () => {
+    htmlElement.classList.toggle('dark');
+    // Save the theme preference in localStorage
+    const isDarkMode = htmlElement.classList.contains('dark');
+    localStorage.setItem('darkMode', isDarkMode);
+});
+
+// Check for saved theme preference
+const savedDarkMode = localStorage.getItem('darkMode');
+if (savedDarkMode === 'true') {
+    htmlElement.classList.add('dark');
+} else {
+    htmlElement.classList.remove('dark');
+}
+
+let currentPageRemise = 1;
+const rowsPerPageRemise = 10;
+let remiseData = [];
+let filtersRemise = {
+    fournisseur: '',
+    laboratoryName: '',
+    product: '',
+    reward: '',
+    typeClient: ''
+};
+let sortColumnRemise = '';
+let sortDirectionRemise = 'asc';
+
+// Fetch data for the second table (remise)
+
+async function fetchRemiseData() {
+    try {
+        const response = await fetch('http://127.0.0.1:5000/fetch-remise-data');
+        if (!response.ok) throw new Error('Network response was not ok');
+
+        remiseData = await response.json();
+        updateRemiseTableAndPagination();
+    } catch (error) {
+        console.error("Error fetching remise data:", error);
+    }
+}
+
+function filterRemiseDropdown(type) {
+    const searchValue = document.getElementById(`search-${type}`).value.toLowerCase();
+    filtersRemise[type] = searchValue;
+    currentPageRemise = 1;
+    updateRemiseTableAndPagination();
+}
+
+function filterRemiseData(data) {
+    return data.filter(row => {
+        return (!filtersRemise.fournisseur || row.FOURNISSEUR.toLowerCase().includes(filtersRemise.fournisseur)) &&
+               (!filtersRemise.laboratoryName || row.LABORATORY_NAME.toLowerCase().includes(filtersRemise.laboratoryName)) &&
+               (!filtersRemise.product || row.PRODUCT.toLowerCase().includes(filtersRemise.product)) &&
+               (!filtersRemise.reward || row.REWARD.toLowerCase().includes(filtersRemise.reward)) &&
+               (!filtersRemise.typeClient || row.TYPE_CLIENT.toLowerCase().includes(filtersRemise.typeClient));
+    });
+}
+
+function sortRemiseTable(column) {
+    if (sortColumnRemise === column) {
+        sortDirectionRemise = sortDirectionRemise === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortColumnRemise = column;
+        sortDirectionRemise = 'asc';
+    }
+
+    // Remove arrows from all headers
+    document.querySelectorAll('th').forEach(th => {
+        const content = th.innerText.replace(/ ↑| ↓/g, '');
+        th.innerText = content;
+    });
+
+    // Add arrow to current sorted column
+    const currentHeader = document.querySelector(`th[data-column="${column}"]`);
+    if (currentHeader) {
+        const arrow = sortDirectionRemise === 'asc' ? ' ↑' : ' ↓';
+        currentHeader.innerText += arrow;
+    }
+
+    updateRemiseTableAndPagination();
+}
+
+function updateRemiseTableAndPagination() {
+    renderRemiseTablePage(currentPageRemise);
+    renderRemisePagination();
+}
+
+function renderRemiseTablePage(page) {
+    let filteredData = filterRemiseData(remiseData);
+
+    // Sort data
+    if (sortColumnRemise) {
+        filteredData.sort((a, b) => {
+            if (a[sortColumnRemise] < b[sortColumnRemise]) return sortDirectionRemise === 'asc' ? -1 : 1;
+            if (a[sortColumnRemise] > b[sortColumnRemise]) return sortDirectionRemise === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
+    const start = (page - 1) * rowsPerPageRemise;
+    const end = start + rowsPerPageRemise;
+    const pageData = filteredData.slice(start, end);
+
+    const tableBody = document.getElementById("remise-table");
+    tableBody.innerHTML = "";
+
+    pageData.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.classList.add('table-row', 'dark:bg-gray-700');
+        tr.innerHTML = `
+            <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.LABORATORY_NAME || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.PRODUCT || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.REWARD || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.TYPE_CLIENT || ''}</td>
+        `;
+        tableBody.appendChild(tr);
+    });
+}
+
+function createRemisePageButton(text, pageNumber) {
+    const button = document.createElement("button");
+    button.innerText = text;
+    button.classList.add("px-4", "py-2", "bg-gray-300", "rounded", "hover:bg-gray-400", "dark:bg-gray-700", "dark:text-white");
+    button.disabled = pageNumber < 1 || pageNumber > Math.ceil(filterRemiseData(remiseData).length / rowsPerPageRemise);
+    button.addEventListener("click", () => {
+        currentPageRemise = pageNumber;
+        updateRemiseTableAndPagination();
+    });
+    return button;
+}
+
+function renderRemisePagination() {
+    const filteredData = filterRemiseData(remiseData);
+    const totalPages = Math.ceil(filteredData.length / rowsPerPageRemise);
+    const paginationContainer = document.getElementById("pagination-remise");
+    paginationContainer.innerHTML = "";
+
+    // First and Previous buttons
+    const firstPageButton = createRemisePageButton("First", 1);
+    const prevPageButton = createRemisePageButton("<", currentPageRemise - 1);
+
+    paginationContainer.appendChild(firstPageButton);
+    paginationContainer.appendChild(prevPageButton);
+
+    // Current Page Button
+    const pageButton = document.createElement("button");
+    pageButton.innerText = currentPageRemise;
+    pageButton.classList.add("px-4", "py-2", "bg-blue-500", "text-white", "rounded", "dark:bg-blue-600");
+    pageButton.disabled = true;
+    paginationContainer.appendChild(pageButton);
+
+    // Next and Last buttons
+    const nextPageButton = createRemisePageButton(">", currentPageRemise + 1);
+    const lastPageButton = createRemisePageButton("Last", totalPages);
+
+    paginationContainer.appendChild(nextPageButton);
+    paginationContainer.appendChild(lastPageButton);
+}
+
+let currentPageBonus = 1;
+const rowsPerPageBonus = 10;
+let bonusData = [];
+let filtersBonus = {
+    product: '',
+    bonus: '',
+    laboratoryName: '',
+    fournisseur: ''
+};
+let sortColumnBonus = '';
+let sortDirectionBonus = 'asc';
+
+// Fetch data for the bonus table
+async function fetchBonusData() {
+    try {
+        const response = await fetch('http://127.0.0.1:5000/fetch-bonus-data');
+        if (!response.ok) throw new Error('Network response was not ok');
+
+        bonusData = await response.json();
+        updateBonusTableAndPagination();
+    } catch (error) {
+        console.error("Error fetching bonus data:", error);
+    }
+}
+
+function filterBonusDropdown(type) {
+    const searchValue = document.getElementById(`search-${type}`).value.toLowerCase();
+    filtersBonus[type] = searchValue;
+    currentPageBonus = 1;
+    updateBonusTableAndPagination();
+}
+
+function filterBonusData(data) {
+    return data.filter(row => {
+        return (!filtersBonus.product || row.PRODUCT.toLowerCase().includes(filtersBonus.product)) &&
+               (!filtersBonus.bonus || row.BONUS.toLowerCase().includes(filtersBonus.bonus)) &&
+               (!filtersBonus.laboratoryName || row.LABORATORY_NAME.toLowerCase().includes(filtersBonus.laboratoryName)) &&
+               (!filtersBonus.fournisseur || row.FOURNISSEUR.toLowerCase().includes(filtersBonus.fournisseur));
+    });
+}
+
+function sortBonusTable(column) {
+    if (sortColumnBonus === column) {
+        sortDirectionBonus = sortDirectionBonus === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortColumnBonus = column;
+        sortDirectionBonus = 'asc';
+    }
+
+    // Remove arrows from all headers
+    document.querySelectorAll('th').forEach(th => {
+        const content = th.innerText.replace(/ ↑| ↓/g, '');
+        th.innerText = content;
+    });
+
+    // Add arrow to current sorted column
+    const currentHeader = document.querySelector(`th[data-column="${column}"]`);
+    if (currentHeader) {
+        const arrow = sortDirectionBonus === 'asc' ? ' ↑' : ' ↓';
+        currentHeader.innerText += arrow;
+    }
+
+    updateBonusTableAndPagination();
+}
+
+function updateBonusTableAndPagination() {
+    renderBonusTablePage(currentPageBonus);
+    renderBonusPagination();
+}
+
+function renderBonusTablePage(page) {
+    let filteredData = filterBonusData(bonusData);
+
+    // Sort data
+    if (sortColumnBonus) {
+        filteredData.sort((a, b) => {
+            if (a[sortColumnBonus] < b[sortColumnBonus]) return sortDirectionBonus === 'asc' ? -1 : 1;
+            if (a[sortColumnBonus] > b[sortColumnBonus]) return sortDirectionBonus === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
+    const start = (page - 1) * rowsPerPageBonus;
+    const end = start + rowsPerPageBonus;
+    const pageData = filteredData.slice(start, end);
+
+    const tableBody = document.getElementById("bonus-table");
+    tableBody.innerHTML = "";
+
+    pageData.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.classList.add('table-row', 'dark:bg-gray-700');
+        tr.innerHTML = `
+            <td class="border px-4 py-2 dark:border-gray-600">${row.PRODUCT || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.BONUS || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.LABORATORY_NAME || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || ''}</td>
+        `;
+        tableBody.appendChild(tr);
+    });
+}
+
+function createBonusPageButton(text, pageNumber) {
+    const button = document.createElement("button");
+    button.innerText = text;
+    button.classList.add("px-4", "py-2", "bg-gray-300", "rounded", "hover:bg-gray-400", "dark:bg-gray-700", "dark:text-white");
+    button.disabled = pageNumber < 1 || pageNumber > Math.ceil(filterBonusData(bonusData).length / rowsPerPageBonus);
+    button.addEventListener("click", () => {
+        currentPageBonus = pageNumber;
+        updateBonusTableAndPagination();
+    });
+    return button;
+}
+
+function renderBonusPagination() {
+    const filteredData = filterBonusData(bonusData);
+    const totalPages = Math.ceil(filteredData.length / rowsPerPageBonus);
+    const paginationContainer = document.getElementById("pagination-bonus");
+    paginationContainer.innerHTML = "";
+
+    // First and Previous buttons
+    const firstPageButton = createBonusPageButton("First", 1);
+    const prevPageButton = createBonusPageButton("<", currentPageBonus - 1);
+
+    paginationContainer.appendChild(firstPageButton);
+    paginationContainer.appendChild(prevPageButton);
+
+    // Current Page Button
+    const pageButton = document.createElement("button");
+    pageButton.innerText = currentPageBonus;
+    pageButton.classList.add("px-4", "py-2", "bg-blue-500", "text-white", "rounded", "dark:bg-blue-600");
+    pageButton.disabled = true;
+    paginationContainer.appendChild(pageButton);
+
+    // Next and Last buttons
+    const nextPageButton = createBonusPageButton(">", currentPageBonus + 1);
+    const lastPageButton = createBonusPageButton("Last", totalPages);
+
+    paginationContainer.appendChild(nextPageButton);
+    paginationContainer.appendChild(lastPageButton);
+}
+
+// Reserved Products Table Script
+
+let reservedData = [];
+let filtersReserved = {};
+let sortColumnReserved = null;
+let sortDirectionReserved = 'asc';
+let currentPageReserved = 1;
+const rowsPerPageReserved = 10;
+
+// Fetch data for the reserved table
+async function fetchReservedData() {
+    try {
+        const response = await fetch('http://127.0.0.1:5000/fetch-reserved-data');
+        if (!response.ok) throw new Error('Network response was not ok');
+
+        reservedData = await response.json();
+        updateReservedTableAndPagination();
+    } catch (error) {
+        console.error("Error fetching reserved data:", error);
+    }
+}
+
+// Filter function for the reserved table
+function filterReservedData(data) {
+    return data.filter(row => {
+        return (!filtersReserved.operateur || row.OPERATEUR.toLowerCase().includes(filtersReserved.operateur)) &&
+               (!filtersReserved.ndocument || row.NDOCUMENT.toLowerCase().includes(filtersReserved.ndocument)) &&
+               (!filtersReserved.product || row.PRODUCT.toLowerCase().includes(filtersReserved.product)) &&
+               (!filtersReserved.datecommande || row.DATECOMMANDE.toLowerCase().includes(filtersReserved.datecommande)) &&
+               (!filtersReserved.totalreserve || row.TOTALRESERVE.toString().includes(filtersReserved.totalreserve)) &&
+               (!filtersReserved.qtyreserve || row.QTYRESERVE.toString().includes(filtersReserved.qtyreserve)) &&
+               (!filtersReserved.name || row.NAME.toLowerCase().includes(filtersReserved.name)) &&
+               (!filtersReserved.status || row.STATUS.toLowerCase().includes(filtersReserved.status));
+    });
+}
+
+// Sorting function
+function sortReservedTable(column) {
+    if (sortColumnReserved === column) {
+        sortDirectionReserved = sortDirectionReserved === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortColumnReserved = column;
+        sortDirectionReserved = 'asc';
+    }
+
+    // Remove arrows from all headers
+    document.querySelectorAll('th').forEach(th => {
+        const content = th.innerText.replace(/ ↑| ↓/g, '');
+        th.innerText = content;
+    });
+
+    // Add arrow to sorted column
+    const currentHeader = document.querySelector(`th[data-column="${column}"]`);
+    if (currentHeader) {
+        const arrow = sortDirectionReserved === 'asc' ? ' ↑' : ' ↓';
+        currentHeader.innerText += arrow;
+    }
+
+    updateReservedTableAndPagination();
+}
+
+// Update the table and pagination
+function updateReservedTableAndPagination() {
+    renderReservedTablePage(currentPageReserved);
+    renderReservedPagination();
+}
+
+// Render a page of reserved data
+function renderReservedTablePage(page) {
+    let filteredData = filterReservedData(reservedData);
+
+    // Sorting logic
+    if (sortColumnReserved) {
+        filteredData.sort((a, b) => {
+            if (a[sortColumnReserved] < b[sortColumnReserved]) return sortDirectionReserved === 'asc' ? -1 : 1;
+            if (a[sortColumnReserved] > b[sortColumnReserved]) return sortDirectionReserved === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
+    const start = (page - 1) * rowsPerPageReserved;
+    const end = start + rowsPerPageReserved;
+    const pageData = filteredData.slice(start, end);
+
+    const tableBody = document.getElementById("reserved-table");
+    tableBody.innerHTML = "";
+
+    pageData.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.classList.add('table-row', 'dark:bg-gray-700');
+        tr.innerHTML = `
+            <td class="border px-4 py-2 dark:border-gray-600">${row.OPERATEUR || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.NDOCUMENT || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.PRODUCT || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.DATECOMMANDE || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.TOTALRESERVE || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.QTYRESERVE || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.NAME || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.STATUS || ''}</td>
+        `;
+        tableBody.appendChild(tr);
+    });
+}
+
+// Create pagination buttons
+function createReservedPageButton(text, pageNumber) {
+    const button = document.createElement("button");
+    button.innerText = text;
+    button.classList.add("px-4", "py-2", "bg-gray-300", "rounded", "hover:bg-gray-400", "dark:bg-gray-700", "dark:text-white");
+    button.disabled = pageNumber < 1 || pageNumber > Math.ceil(filterReservedData(reservedData).length / rowsPerPageReserved);
+    button.addEventListener("click", () => {
+        currentPageReserved = pageNumber;
+        updateReservedTableAndPagination();
+    });
+    return button;
+}
+
+// Render pagination for the reserved table
+function renderReservedPagination() {
+    const filteredData = filterReservedData(reservedData);
+    const totalPages = Math.ceil(filteredData.length / rowsPerPageReserved);
+    const paginationContainer = document.getElementById("pagination-reserved");
+    paginationContainer.innerHTML = "";
+
+    // First and Previous buttons
+    const firstPageButton = createReservedPageButton("First", 1);
+    const prevPageButton = createReservedPageButton("<", currentPageReserved - 1);
+
+    paginationContainer.appendChild(firstPageButton);
+    paginationContainer.appendChild(prevPageButton);
+
+    // Current Page Button
+    const pageButton = document.createElement("button");
+    pageButton.innerText = currentPageReserved;
+    pageButton.classList.add("px-4", "py-2", "bg-blue-500", "text-white", "rounded", "dark:bg-blue-600");
+    pageButton.disabled = true;
+    paginationContainer.appendChild(pageButton);
+
+    // Next and Last buttons
+    const nextPageButton = createReservedPageButton(">", currentPageReserved + 1);
+    const lastPageButton = createReservedPageButton("Last", totalPages);
+
+    paginationContainer.appendChild(nextPageButton);
+    paginationContainer.appendChild(lastPageButton);
+}
+
+// Call fetch function when the page loads
+document.addEventListener("DOMContentLoaded", fetchReservedData);
+
+   
+
+  </script>
+
+</body>
+</html>

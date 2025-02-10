@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+     
+        .table-container {
+    max-height: 400px;
+    overflow-y: auto; /* Enables vertical scrolling if needed */
+    overflow-x: auto; /* Enables horizontal scrolling if needed */
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.table-container table {
+    width: 100%;
+    table-layout: auto; /* Allows columns to resize dynamically */
+    min-width: 100%; /* Ensures the table doesn't shrink too much */
+    max-width: 100%; /* Prevents overflow beyond the container */
+    border-collapse: collapse;
+}
+
+thead {
+    position: sticky;
+    top: 0;
+    background-color: #f3f4f6;
+    z-index: 10;
+}
+
+th, td {
+    white-space: nowrap; /* Prevents text wrapping */
+    text-align: left;
+    padding: 10px;
+    border: 1px solid #ddd;
+}
+.table-container.placement-table {
+    flex: 0.5; /* Makes this table take less space */
+    width: 10px; /* Smaller width for the Emplacement table */
+}
+.dark .table-container {
+    border-color: #374151;
+}
+
+.dark .table-header {
+    background-color: #374151;
+    color: #f9fafb; /* White text in dark mode */
+}
+
+.dark .table-row:nth-child(odd) {
+    background-color: #1f2937;
+    color: #f9fafb; /* White text on dark background */
+}
+
+.dark .table-row:nth-child(even) {
+    background-color: #474d53;
+    color: #ececec;
+}
+
+
+
+
+.paginatio-wrapper {
+    display: flex;
+    justify-content: center; 
+    /* Ensures tables are spaced apart */
+    gap: 250px; /* Adds spacing between tables */
+}
+.download-wrapper {
+    display: flex;
+    
+    /* Ensures tables are spaced apart */
+    gap: 550px; /* Adds spacing between tables */
+}
+.title-wrapper{
+    display: flex;
+    
+    /* Ensures tables are spaced apart */
+    gap: 730px; /* Adds spacing between tables */
+}
+
+
+
+.table-wrapper {
+    display: flex;
+    gap: 20px; /* Space between tables */
+    align-items: flex-start; /* Align tables at the top */
+    justify-content: space-between; /* Ensures tables are spaced apart */
+
+}
+
+.table-container {
+    flex: 1; /* Default full size */
+    min-width: 300px; /* Prevents tables from becoming too small */
+}
+
+
+        .sidebar {
+            min-width: 200px;
+            max-width: 250px;
+            background-color: #f9fafb;
+            border-right: 1px solid #e5e7eb;
+            transition: transform 0.3s ease-in-out;
+            position: fixed;
+            height: 100vh;
+            z-index: 40;
+        }
+
+        .sidebar-hidden {
+            transform: translateX(-100%);
+        }
+
+        .content {
+            margin-left: 250px; /* Adjust this value based on the sidebar width */
+            transition: margin-left 0.3s ease-in-out;
+            width: calc(100% - 250px); /* Adjust this value based on the sidebar width */
+        }
+
+        .content-full {
+            margin-left: 0;
+            width: 100%;
+        }
+
+        .table-header {
+            background-color: #f3f4f6;
+            text-align: left;
+            color: #000; /* Default text color */
+            position: sticky; top: 0;
+        }
+
+        .table-row {
+            color: #000; /* Default black text */
+        }
+
+        .table-row:nth-child(odd) {
+            background-color: #f9fafb;
+        }
+
+        /* Dark mode styles */
+        .dark .sidebar {
+            background-color: #1f2937;
+            border-right-color: #374151;
+        }
+
+   
+
+        .dark body {
+            background-color: #111827;
+            color: #010911;
+        }
+
+    
+  
+
+
+    </style>
+</head>
+<body class="flex h-screen bg-gray-100 dark:bg-gray-900">
+    <!-- Sidebar Toggle Button -->
+    <button id="sidebarToggle" class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700">
+        ☰
+    </button>
+
+    <!-- Dark/Light Mode Toggle Button -->
+    <button id="themeToggle" class="fixed top-4 right-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700">
+        🌓
+    </button>
+
+    <!-- Sidebar -->
+    <div id="sidebar" class="sidebar p-4 bg-gray-50 dark:bg-gray-800">
+        <h1 class="text-xl font-bold mb-6 dark:text-white">📂 Collections</h1>
+        <nav>
+            <ul>
+                <li class="mb-3 flex items-center">
+                    <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                    </svg>
+                    <a href="index.html" class="text-blue-600 hover:underline dark:text-blue-400">Accueil</a>
+                </li>
+                <li class="mb-3 flex items-center">
+                    <svg class="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                    </svg>
+                    <a href="no.html" class="hover:underline dark:text-gray-300">Parcourir les données</a>
+                </li>
+                <li class="mb-3 flex items-center">
+                    <svg class="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                    </svg>
+                    <a href="no.html" class="hover:underline dark:text-gray-300">Nos analyses</a>
+                </li>
+            
+                <li class="mb-3 flex items-center">
+                    <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                    </svg>
+                    <a href="test.html" class="hover:underline dark:text-gray-300">PRODUITS</a>
+                </li>
+                <li class="mb-3 flex items-center">
+                    <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                    </svg>
+                    <a href="no.html" class="hover:underline dark:text-gray-300">RECAPS</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div id="content" class="content flex-grow p-4">
+        <div class="flex justify-center items-center mb-6">
+            <h1 class="text-5xl font-bold dark:text-white text-center text-blue-600 ">
+                📦 Etat de Stock 📦
+            </h1>
+        </div>
+        
+        <!-- Filters -->
+
+        <br>
+ <!-- <div class="placement-dropdown bg-white shadow-md dark:bg-gray-800 rounded-lg p-4 w-80">
+    <label for="emplacement-dropdown" class="block text-sm font-medium text-gray-700 dark:text-white mb-2">
+        Select Emplacement:
+    </label>
+    <select id="emplacement-dropdown" class="w-full border border-gray-300 px-4 py-2 rounded-md dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+        <option value="">Loading...</option> 
+    </select>
+</div> 
+-->
+<label class="text-blue-600" for="locatorDropdown">Select Location:</label>
+<select id="locatorDropdown" class="border px-3 py-2">
+    <option value="">-- Select Location --</option>
+    <option value="1000000">Z-ETAGE</option>
+    <option value="1001130">3-etage</option>
+    <option value="1000614">Préparation</option>
+    <option value="1000514">Depot Cos</option>
+    <option value="1001020">Dépôt Vente</option>
+    <option value="1000212">Dépôt Compensation</option>
+    <option value="1001127">Standard</option>
+    <option value="1001128">Dépot réserve</option>
+    <option value="1001136">Dépot Hangar réserve</option>
+    <option value="1001132">Dépôt Compensation Périmé</option>
+    <option value="1001135">HANGAR</option>
+    <option value="1001129">ARCHIVE PERIME</option>
+    <option value="1000817">PRODUIT NON VENDABLE</option>
+    <option value="1000414">Revignettage Client</option>
+    <option value="1000214">RETOUR FOURNISSEUR</option>
+    <option value="1000213">VIDE</option>
+    <option value="1000209">SV</option>
+    <option value="1000109">CASSE</option>
+    <option value="1000211">MANQUE</option>
+    <option value="1000314">MOYEN GENERAUX</option>
+    <option value="1000210">PERIME</option>
+</select>
+
+        <br><br>
+     
+        <button id="stock" class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
+            <img src="excel.png" alt="Excel Icon" class="w-6 h-6">
+            <span>Download Stock Table</span>
+        </button>
+
+        <br>
+        <br>
+        <!-- Data Table -->
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">MARGE</h2>
+        <div class="table-wrapper">
+        <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
+            <div class="overflow-x-auto">
+                <table class="min-w-full border-collapse text-sm text-left dark:text-white">
+                    <thead>
+                        <tr class="table-header dark:bg-gray-700">
+                            <th data-column="FOURNISSEUR" onclick="sortTable('FOURNISSEUR')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">Fournisseur</th>
+                            <th data-column="NAME" onclick="sortTable('NAME')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">NAME</th>
+                            <th data-column="QTY" onclick="sortTable('QTY')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">QTY</th>
+                            <th data-column="PRIX" onclick="sortTable('PRIX')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">PRIX</th>
+                            <th data-column="QTY_DISPO" onclick="sortTable('QTY_DISPO')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">QTY_DISPO</th>
+                            <th data-column="PRIX_DISPO" onclick="sortTable('PRIX_DISPO')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">PRIX_DISPO</th>
+                            <th data-column="LOCATORID" onclick="sortTable('LOCATORID')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">LOCATORID</th>
+                            <th data-column="PRODUCTID" onclick="sortTable('PRODUCTID')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">PRODUCTID</th>
+                            <th data-column="SORT_ORDER" onclick="sortTable('SORT_ORDER')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">SORT_ORDER</th>
+                    </thead>
+                    <tbody id="data-table" class="dark:bg-gray-800">
+                        <!-- Dynamic Rows -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+<!-- second table remise aauto  -->
+
+
+        </div>
+        <div class="mt-4 flex justify-center space-x-2" id="pagination"></div>
+
+        <!-- Pagination -->
+
+        
+        <br>
+    
+        <br>
+     
+  
+        <script >
+
+let emplacementPage = 1;
+const emplacementRowsPerPage = 10;
+let emplacementData = [];
+let emplacementSortColumn = '';
+let emplacementSortDirection = 'asc';
+
+// Fetch Emplacement data on page load
+window.onload = () => {
+    fetchEmplacementData();
+    fetchData();
+
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+    fetchEmplacementData();
+});
+
+async function fetchEmplacementData() {
+    try {
+        const response = await fetch('http://127.0.0.1:5000/fetch-emplacement-data');
+        if (!response.ok) throw new Error('Network response was not ok');
+
+        const emplacementData = await response.json();
+        updateEmplacementDropdown(emplacementData);
+    } catch (error) {
+        console.error("Error fetching emplacement data:", error);
+        document.getElementById("emplacement-dropdown").innerHTML = `<option value="">Failed to load</option>`;
+    }
+}
+
+function updateEmplacementDropdown(data) {
+    const dropdown = document.getElementById("emplacement-dropdown");
+    dropdown.innerHTML = ""; // Clear existing options
+
+    if (!data || data.length === 0) {
+        dropdown.innerHTML = `<option value="">No data available</option>`;
+        return;
+    }
+
+    data.forEach(item => {
+        const option = document.createElement("option");
+        option.value = item.EMPLACEMENT || "";
+        option.textContent = item.EMPLACEMENT || "Unknown";
+        dropdown.appendChild(option);
+    });
+}
+
+
+let currentPage = 1;
+const rowsPerPage = 10;
+let allData = [];
+let filters = {
+    fournisseur: '',
+    name: '',
+    qty: '',
+    prix: '',
+    qty_dispo: '',
+    prix_dispo: '',
+    locatorid: '',
+    PRODUCTID: '',
+    sort_order: ''
+};
+let sortColumn = '';
+let sortDirection = 'asc';
+
+// Fetch data on page load
+async function fetchData() {
+    try {
+        const response = await fetch('http://127.0.0.1:5000/fetch-data-stock');
+        if (!response.ok) throw new Error('Network response was not ok');
+        allData = await response.json();
+        console.log("Fetched Data:", allData); // Debugging log
+        updateTableAndPagination();
+    } catch (error) {
+        console.error("Error fetching data:", error);
+    }
+}
+
+document.getElementById("stock").addEventListener("click", function () {
+    let params = new URLSearchParams();
+    
+    // Get the selected location
+    let locatorDropdown = document.getElementById("locatorDropdown");
+    let selectedLocatorID = locatorDropdown.value;
+    let selectedLocatorName = locatorDropdown.options[locatorDropdown.selectedIndex].text;
+
+    if (selectedLocatorID) {
+        params.append("locatorid", selectedLocatorID);
+        params.append("locatorname", selectedLocatorName);
+    }
+
+    window.open(`http://127.0.0.1:5000/download-stock-excel?${params.toString()}`, "_blank");
+});
+
+
+function filterDropdown(type) {
+    const searchValue = document.getElementById(`search-${type}`).value.toLowerCase();
+    filters[type] = searchValue;
+    currentPage = 1;
+    updateTableAndPagination();
+}
+
+function filterData(data) {
+    const selectedLocatorID = Number(filters.locatorid); // Convert once for efficiency
+
+    return data.filter(row => {
+        if (!filters.locatorid) return true; // No filter applied, show all
+        return Number(row.LOCATORID) === selectedLocatorID;
+    });
+}
+
+
+
+function sortTable(column) {
+    if (sortColumn === column) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortColumn = column;
+        sortDirection = 'asc';
+    }
+
+    document.querySelectorAll('th').forEach(th => {
+        const content = th.innerText.replace(/ ↑| ↓/g, '');
+        th.innerText = content;
+    });
+    
+    const currentHeader = document.querySelector(`th[data-column="${column}"]`);
+    if (currentHeader) {
+        const arrow = sortDirection === 'asc' ? ' ↑' : ' ↓';
+        currentHeader.innerText += arrow;
+    }
+    
+    updateTableAndPagination();
+}
+document.getElementById("locatorDropdown").addEventListener("change", function () {
+    filters.locatorid = this.value; // Store the selected value in filters
+    currentPage = 1;
+    updateTableAndPagination(); // Refresh the table with the new filter
+});
+
+function updateTableAndPagination() {
+    renderTablePage(currentPage);
+    renderPagination();
+}
+
+function renderTablePage(page) {
+    let filteredData = filterData(allData);
+
+    if (sortColumn) {
+        filteredData.sort((a, b) => {
+            if (a[sortColumn] < b[sortColumn]) return sortDirection === 'asc' ? -1 : 1;
+            if (a[sortColumn] > b[sortColumn]) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
+    const start = (page - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+    const pageData = filteredData.slice(start, end);
+
+    const tableBody = document.getElementById("data-table");
+    tableBody.innerHTML = "";
+
+    pageData.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.classList.add('table-row', 'dark:bg-gray-700');
+
+        tr.innerHTML = `
+            <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.NAME || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.QTY || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.PRIX || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.QTY_DISPO || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.PRIX_DISPO || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.LOCATORID || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.PRODUCTID || ''}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.SORT_ORDER || ''}</td>
+        `;
+        tableBody.appendChild(tr);
+    });
+}
+
+function createPageButton(text, pageNumber) {
+    const button = document.createElement("button");
+    button.innerText = text;
+    button.classList.add("px-4", "py-2", "bg-gray-300", "rounded", "hover:bg-gray-400", "dark:bg-gray-700", "dark:text-white");
+    button.disabled = pageNumber < 1 || pageNumber > Math.ceil(filterData(allData).length / rowsPerPage);
+    button.addEventListener("click", () => {
+        currentPage = pageNumber;
+        updateTableAndPagination();
+    });
+    return button;
+}
+
+function renderPagination() {
+    const filteredData = filterData(allData);
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+    const paginationContainer = document.getElementById("pagination");
+    paginationContainer.innerHTML = "";
+
+    paginationContainer.appendChild(createPageButton("First", 1));
+    paginationContainer.appendChild(createPageButton("<", currentPage - 1));
+
+    const pageButton = document.createElement("button");
+    pageButton.innerText = currentPage;
+    pageButton.classList.add("px-4", "py-2", "bg-blue-500", "text-white", "rounded", "dark:bg-blue-600");
+    pageButton.disabled = true;
+    paginationContainer.appendChild(pageButton);
+
+    paginationContainer.appendChild(createPageButton(">", currentPage + 1));
+    paginationContainer.appendChild(createPageButton("Last", totalPages));
+}
+
+document.getElementById('themeToggle').addEventListener('click', () => {
+    document.documentElement.classList.toggle('dark');
+    localStorage.setItem('darkMode', document.documentElement.classList.contains('dark'));
+});
+
+if (localStorage.getItem('darkMode') === 'true') {
+    document.documentElement.classList.add('dark');
+}
+function navigateToPage(page) {
+            window.location.href = page;
+        }
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        const content = document.getElementById('content');
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('sidebar-hidden');
+            content.classList.toggle('content-full');
+        });
+    
+  
+
+        </script>
+
+
+
+
+<br><br><br> <br>
+
+
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="dashboard">
+    <aside class="sidebar">
+      <div class="logo">dub.</div>
+      <nav>
+        <ul>
+          <li>Overview</li>
+          <li>Insights</li>
+          <li>Sales</li>
+          <li>Portfolio</li>
+          <li>Pending Reviews</li>
+          <li>Referrals</li>
+          <li>Reports</li>
+          <li>Profile</li>
+          <li>Settings</li>
+        </ul>
+      </nav>
+    </aside>
+    <main>
+      <header>
+        <h1>Analytics Overview</h1>
+      </header>
+      <section class="data-graph">
+        <canvas id="dataChart"></canvas>
+      </section>
+      <section class="stats">
+        <div class="stat-card">Sales: <span>+1,479</span></div>
+        <div class="stat-card">Income: <span>+5,793</span></div>
+        <div class="stat-card">Leads: <span>+2,330</span></div>
+      </section>
+      <section class="analytics">
+        <div class="analytics-card">
+          <h3>Customer Analytics</h3>
+          <p>Products Sold: 14,546</p>
+          <p>Customers: 98,248</p>
+        </div>
+        <div class="analytics-card">
+          <h3>Monthly Stats</h3>
+          <canvas id="monthlyChart"></canvas>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
