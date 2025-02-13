@@ -1,0 +1,254 @@
+
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+.table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    /* Enables vertical scrolling if needed */
+    overflow-x: auto;
+    /* Enables horizontal scrolling if needed */
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.table-container table {
+    width: 100%;
+    table-layout: auto;
+    /* Allows columns to resize dynamically */
+    min-width: 100%;
+    /* Ensures the table doesn't shrink too much */
+    max-width: 100%;
+    /* Prevents overflow beyond the container */
+    border-collapse: collapse;
+}
+
+thead {
+    position: sticky;
+    top: 0;
+    background-color: #f3f4f6;
+    z-index: 10;
+}
+
+th,
+td {
+    white-space: nowrap;
+    /* Prevents text wrapping */
+    text-align: left;
+    padding: 10px;
+    border: 1px solid #ddd;
+}
+
+.dark .table-container {
+    border-color: #374151;
+}
+
+.dark .table-header {
+    background-color: #374151;
+    color: #f9fafb;
+    /* White text in dark mode */
+}
+
+
+.dark .table-row:nth-child(odd) {
+    background-color: #1f2937;
+    color: #f9fafb;
+    /* White text on dark background */
+}
+
+.dark .table-row:nth-child(even) {
+    background-color: #474d53;
+    color: #ececec;
+}
+
+
+.table-wrapper {
+    display: flex;
+    justify-content: space-between;
+    /* Ensures tables are spaced apart */
+    gap: 20px;
+    /* Adds spacing between tables */
+}
+
+.paginatio-wrapper {
+    display: flex;
+    justify-content: center;
+    /* Ensures tables are spaced apart */
+    gap: 250px;
+    /* Adds spacing between tables */
+}
+
+.download-wrapper {
+    display: flex;
+
+    /* Ensures tables are spaced apart */
+    gap: 550px;
+    /* Adds spacing between tables */
+}
+
+.title-wrapper {
+    display: flex;
+
+    /* Ensures tables are spaced apart */
+    gap: 730px;
+    /* Adds spacing between tables */
+}
+
+
+
+
+
+
+.sidebar {
+    min-width: 200px;
+    max-width: 250px;
+    background-color: #f9fafb;
+    border-right: 1px solid #e5e7eb;
+    transition: transform 0.3s ease-in-out;
+    position: fixed;
+    height: 100vh;
+    z-index: 40;
+}
+
+.sidebar-hidden {
+    transform: translateX(-100%);
+}
+
+.content {
+    margin-left: 250px;
+    /* Adjust this value based on the sidebar width */
+    transition: margin-left 0.3s ease-in-out;
+    width: calc(100% - 250px);
+    /* Adjust this value based on the sidebar width */
+}
+
+.content-full {
+    margin-left: 0;
+    width: 100%;
+}
+
+.table-header {
+    background-color: #f3f4f6;
+    text-align: left;
+    color: #000;
+    /* Default text color */
+    position: sticky;
+    top: 0;
+}
+
+.table-row {
+    color: #000;
+    /* Default black text */
+}
+
+.table-row:nth-child(odd) {
+    background-color: #f9fafb;
+}
+
+/* Dark mode styles */
+.dark .sidebar {
+    background-color: #1f2937;
+    border-right-color: #374151;
+}
+
+
+
+.dark body {
+    background-color: #111827;
+    color: #010911;
+}
+
+
+/* Dark Mode */
+html.dark .sidebar {
+    background-color: #1f2937;
+    border-right-color: #374151;
+}
+
+html.dark body {
+    background-color: #111827;
+    color: white;
+}
+
+/* Dark Mode Toggle - Styled Checkbox */
+.checkbox {
+    display: none;
+}
+
+/* Toggle Background */
+.checkbox-label {
+    width: 60px;
+    height: 30px;
+    background: #ddd;
+    display: flex;
+    border-radius: 50px;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+    padding: 5px;
+    transition: background 0.3s ease-in-out;
+}
+
+/* Ball as Sun (Default) */
+.ball {
+    width: 22px;
+    height: 22px;
+    background: #facc15;
+    /* Sun color (yellow) */
+    position: absolute;
+    border-radius: 50%;
+    transition: transform 0.3s ease-in-out, background 0.3s ease-in-out;
+    left: 5px;
+    box-shadow: 0 0 5px 2px #facc15;
+    /* Sun glow effect */
+}
+
+/* Add Sun Rays */
+.ball::before {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: inherit;
+    border-radius: 50%;
+    transform: scale(1.4);
+    opacity: 0.5;
+}
+
+/* Moon Shape */
+html.dark .ball {
+    transform: translateX(30px);
+    background: #1e40af;
+    /* Moon color (blue) */
+    box-shadow: none;
+    /* Remove glow */
+}
+
+/* Crescent Moon Effect */
+html.dark .ball::before {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: white;
+    border-radius: 50%;
+    left: 5px;
+    /* Shift left to create crescent effect */
+}
+
+/* Dark Mode Background */
+html.dark .checkbox-label {
+    background: #333;
+}
+
+/* Positioning the Dark Mode Toggle on Top Right */
+#themeSwitcher {
+    position: fixed;
+    top: 10px;
+    right: 20px;
+    z-index: 50;
+}

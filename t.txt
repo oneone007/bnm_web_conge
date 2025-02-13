@@ -1,298 +1,214 @@
-   <!-- Data Table -->
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Produit Réservé</h2>
-        <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
-            <div class="overflow-x-auto">
-                <table class="min-w-full border-collapse text-sm text-left dark:text-white">
-                    <thead>
-                        <tr class="table-header dark:bg-gray-700">
-                            <th data-column="OPERATEUR" onclick="sortTable('OPERATEUR')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">OPERATEUR</th>
-                            <th data-column="NDOCUMENT" onclick="sortTable('NDOCUMENT')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">NDOCUMENT</th>
-                            <th data-column="PRODUCT" onclick="sortTable('PRODUCT')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">PRODUCT</th>
-                            <th data-column="DATECOMMANDE" onclick="sortTable('DATECOMMANDE')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">DATECOMMANDE</th>
-                            <th data-column="TOTALRESRVE" onclick="sortTable('TOTALRESRVE')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">TOTALRESRVE</th>
-                            <th data-column="QTYRESERVE" onclick="sortTable('QTYRESERVE')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">QTYRESERVE</th>
-                            <th data-column="NAME" onclick="sortTable('NAME')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">NAME</th>
-                            <th data-column="STATUS" onclick="sortTable('STATUS')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">STATUS</th>
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+     
+       
+
+
+        .sidebar {
+            min-width: 200px;
+            max-width: 250px;
+            background-color: #f9fafb;
+            border-right: 1px solid #e5e7eb;
+            transition: transform 0.3s ease-in-out;
+            position: fixed;
+            height: 100vh;
+            z-index: 40;
+        }
+
+        .sidebar-hidden {
+            transform: translateX(-100%);
+        }
+
+        .content {
+            margin-left: 250px; /* Adjust this value based on the sidebar width */
+            transition: margin-left 0.3s ease-in-out;
+            width: calc(100% - 250px); /* Adjust this value based on the sidebar width */
+        }
+
+        .content-full {
+            margin-left: 0;
+            width: 100%;
+        }
+
+    
+
+  
+
+
+        /* Dark mode styles */
+        .dark .sidebar {
+            background-color: #1f2937;
+            border-right-color: #374151;
+        }
+
    
-                    </thead>
-                    <tbody id="data-table" class="dark:bg-gray-800">
-                        <!-- Dynamic Rows -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
 
-
-                <div class="mt-4 flex justify-center space-x-2" id="pagination"></div>
-
- <script>
-        let currentPage = 1;
-        const rowsPerPage = 10;
-        let allData = [];
-        let filters = {
-            product: '',
-            supplier: '',
-            lot: '',
-            margin: '',
-            lab: ''
-        };
-        let sortColumn = '';
-        let sortDirection = 'asc';
-
-        // Fetch data on page load
-        window.onload = fetchData;
-
-        async function fetchData() {
-            try {
-                const response = await fetch('http://127.0.0.1:5000/fetch-data');
-                if (!response.ok) throw new Error('Network response was not ok');
-
-                allData = await response.json();
-                updateTableAndPagination();
-            } catch (error) {
-                console.error("Error fetching data:", error);
-            }
+        .dark body {
+            background-color: #111827;
+            color: #010911;
         }
 
-        function filterDropdown(type) {
-            const searchValue = document.getElementById(`search-${type}`).value.toLowerCase();
-            filters[type] = searchValue;
-            currentPage = 1;
-            updateTableAndPagination();
-        }
+    
+  
 
-        function filterData(data) {
-            return data.filter(row => {
-                return (!filters.product || row.OPERATEUR.toLowerCase().includes(filters.product)) &&
-                       (!filters.supplier || row.PRODUCT.toLowerCase().includes(filters.supplier)) &&
-                       (!filters.lot || row.DATECOMMANDE.toLowerCase().includes(filters.lot)) &&
-                       (!filters.margin || row.NAME.toLowerCase().includes(filters.margin)) &&
-                       (!filters.lab || row.STATUS.toLowerCase().includes(filters.lab));
-            });
-        }
 
-        function sortTable(column) {
-    if (sortColumn === column) {
-        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-    } else {
-        sortColumn = column;
-        sortDirection = 'asc';
-    }
+    </style>
+</head>
+<body class="flex h-screen bg-gray-100 dark:bg-gray-900">
+    <!-- Sidebar Toggle Button -->
+    <button id="sidebarToggle" class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700">
+        ☰
+    </button>
 
-    // Remove arrows from all headers
-    document.querySelectorAll('th').forEach(th => {
-        const content = th.innerText.replace(/ ↑| ↓/g, '');
-        th.innerText = content;
-    });
+    <!-- Dark/Light Mode Toggle Button -->
 
-    // Add arrow to current sorted column
-    const currentHeader = document.querySelector(`th[data-column="${column}"]`);
-    if (currentHeader) {
-        const arrow = sortDirection === 'asc' ? ' ↑' : ' ↓';
-        currentHeader.innerText += arrow;
-    }
+<!-- Lamp Animation Button -->
+<div id="lampAnimation" class="fixed top-4 right-4 z-50 w-40 h-40 cursor-pointer"></div>
 
-    updateTableAndPagination();
-}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
 
-        function updateTableAndPagination() {
-            renderTablePage(currentPage);
-            renderPagination();
-        }
+<script>
 
-        function renderTablePage(page) {
-            let filteredData = filterData(allData);
+const lampAnimation = document.getElementById('lampAnimation');
+const htmlElement = document.documentElement;
 
-            // Sort data
-            if (sortColumn) {
-                filteredData.sort((a, b) => {
-                    if (a[sortColumn] < b[sortColumn]) return sortDirection === 'asc' ? -1 : 1;
-                    if (a[sortColumn] > b[sortColumn]) return sortDirection === 'asc' ? 1 : -1;
-                    return 0;
-                });
-            }
-
-            const start = (page - 1) * rowsPerPage;
-            const end = start + rowsPerPage;
-            const pageData = filteredData.slice(start, end);
-
-            const tableBody = document.getElementById("data-table");
-            tableBody.innerHTML = "";
-
-            pageData.forEach(row => {
-                const tr = document.createElement("tr");
-                tr.classList.add('table-row', 'dark:bg-gray-700');
-                tr.innerHTML = `
-                    <td class="border px-4 py-2 dark:border-gray-600">${row.OPERATEUR || ''}</td>
-                    <td class="border px-4 py-2 dark:border-gray-600">${row.NDOCUMENT || ''}</td>
-                    <td class="border px-4 py-2 dark:border-gray-600">${row.PRODUCT || ''}</td>
-                    <td class="border px-4 py-2 dark:border-gray-600">${row.DATECOMMANDE || ''}</td>
-                    <td class="border px-4 py-2 dark:border-gray-600">${row.TOTALRESRVE || ''}</td>
-                    <td class="border px-4 py-2 dark:border-gray-600">${row.QTYRESERVE || ''}</td>
-                    <td class="border px-4 py-2 dark:border-gray-600">${row.NAME || ''}</td>
-                    <td class="border px-4 py-2 dark:border-gray-600">${row.STATUS || ''}</td>
-                `;
-                tableBody.appendChild(tr);
-            });
-        }
-
-        function createPageButton(text, pageNumber) {
-            const button = document.createElement("button");
-            button.innerText = text;
-            button.classList.add("px-4", "py-2", "bg-gray-300", "rounded", "hover:bg-gray-400", "dark:bg-gray-700", "dark:text-white");
-            button.disabled = pageNumber < 1 || pageNumber > Math.ceil(filterData(allData).length / rowsPerPage);
-            button.addEventListener("click", () => {
-                currentPage = pageNumber;
-                updateTableAndPagination();
-            });
-            return button;
-        }
-
-        function renderPagination() {
-            const filteredData = filterData(allData);
-            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-            const paginationContainer = document.getElementById("pagination");
-            paginationContainer.innerHTML = "";
-
-            // First and Previous buttons
-            const firstPageButton = createPageButton("First", 1);
-            const prevPageButton = createPageButton("<", currentPage - 1);
-
-            paginationContainer.appendChild(firstPageButton);
-            paginationContainer.appendChild(prevPageButton);
-
-            // Current Page Button
-            const pageButton = document.createElement("button");
-            pageButton.innerText = currentPage;
-            pageButton.classList.add("px-4", "py-2", "bg-blue-500", "text-white", "rounded", "dark:bg-blue-600");
-            pageButton.disabled = true;
-            paginationContainer.appendChild(pageButton);
-
-            // Next and Last buttons
-            const nextPageButton = createPageButton(">", currentPage + 1);
-            const lastPageButton = createPageButton("Last", totalPages);
-
-            paginationContainer.appendChild(nextPageButton);
-            paginationContainer.appendChild(lastPageButton);
-        }
-
-        // Sidebar Toggle Functionality
-        const sidebarToggle = document.getElementById('sidebarToggle');
-        const sidebar = document.getElementById('sidebar');
-        const content = document.getElementById('content');
-
-        sidebarToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('sidebar-hidden');
-            content.classList.toggle('content-full');
-        });
-
-        // Dark/Light Mode Toggle Functionality
-        const themeToggle = document.getElementById('themeToggle');
-        const htmlElement = document.documentElement;
-
-        themeToggle.addEventListener('click', () => {
-            htmlElement.classList.toggle('dark');
-            // Save the theme preference in localStorage
-            const isDarkMode = htmlElement.classList.contains('dark');
-            localStorage.setItem('darkMode', isDarkMode);
-        });
-
-        // Check for saved theme preference
-        const savedDarkMode = localStorage.getItem('darkMode'); 
-        if (savedDarkMode === 'true') {
-            htmlElement.classList.add('dark');
-        } else {
-            htmlElement.classList.remove('dark');
-        }
-        // Toggle the visibility of the options menu
-document.getElementById("optionsToggle").addEventListener("click", function() {
-    const optionsMenu = document.getElementById("optionsMenu");
-    optionsMenu.classList.toggle("hidden");
+// Load Lottie animation
+let animation = lottie.loadAnimation({
+    container: lampAnimation,
+    renderer: 'svg',
+    loop: false,  // Play only once per click
+    autoplay: false, // Don't autoplay
+    path: 'dark.json' // Ensure dark.json is in the correct directory
 });
 
-      
+let isPlaying = false; // Track animation state
+
+// Function to play animation briefly and stop
+lampAnimation.addEventListener('click', () => {
+    if (isPlaying) {
+        animation.goToAndStop(0, true); // Reset animation to start
+    } else {
+        animation.play(); // Start animation
+
+        // Stop animation after 1 second (adjust timing as needed)
+        setTimeout(() => {
+            animation.pause();
+        }, 2000);
+    }
+    
+    isPlaying = !isPlaying; // Toggle state
+
+    // Toggle dark mode
+    htmlElement.classList.toggle('dark');
+
+    // Save theme preference
+    localStorage.setItem('darkMode', htmlElement.classList.contains('dark'));
+});
+
+// Check for saved theme preference on page load
+if (localStorage.getItem('darkMode') === 'true') {
+    htmlElement.classList.add('dark');
+} else {
+    htmlElement.classList.remove('dark');
+}
+
+
+</script>
+
+
+
+    <!-- Sidebar -->
+<!-- Sidebar -->
+<div id="sidebar" class="sidebar p-4 bg-gray-50 dark:bg-gray-800">
+    <h1 class="text-xl font-bold mb-6 dark:text-white">📂 Collections</h1>
+    <nav>
+        <ul>
+            <li class="mb-3 flex items-center">
+                <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                </svg>
+                <a href="index.html" class="text-blue-600 hover:underline dark:text-blue-400">Accueil</a>
+            </li>
+            <li class="mb-3 flex items-center">
+                <svg class="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                </svg>
+                <a href="no.html" class="hover:underline dark:text-gray-300">Parcourir les données</a>
+            </li>
+            <li class="mb-3 flex items-center">
+                <svg class="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                </svg>
+                <a href="no.html" class="hover:underline dark:text-gray-300">Nos analyses</a>
+            </li>
+            <li class="mb-3 flex items-center">
+                <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                </svg>
+                <a href="test.html" class="hover:underline dark:text-gray-300">PRODUITS</a>
+            </li>
+            <li class="mb-3 flex items-center">
+                <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                </svg>
+                <a href="no.html" class="hover:underline dark:text-gray-300">RECAPS</a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Lottie Animation Button -->
+    <!-- <button id="lampButton" class="w-full flex justify-center items-center mt-6 bg-gray-200 dark:bg-gray-700 p-2 rounded-lg shadow-md hover:bg-gray-300 dark:hover:bg-gray-600">
+        <div id="lampAnimation" class="w-8 h-8"></div>
+        <span class="ml-2 text-gray-700 dark:text-gray-300">Mode</span>
+    </button> -->
+</div>
+
+<!-- Include Lottie Library -->
+
+
+
+
+
+    <script>
+        // Sidebar Toggle Functionality
+const sidebarToggle = document.getElementById('sidebarToggle');
+const sidebar = document.getElementById('sidebar');
+const content = document.getElementById('content');
+
+sidebarToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('sidebar-hidden');
+    content.classList.toggle('content-full');
+});
+
+// Dark/Light Mode Toggle Functionality
+const themeToggle = document.getElementById('themeToggle');
+const htmlElement = document.documentElement;
+
+themeToggle.addEventListener('click', () => {
+    htmlElement.classList.toggle('dark');
+    // Save the theme preference in localStorage
+    const isDarkMode = htmlElement.classList.contains('dark');
+    localStorage.setItem('darkMode', isDarkMode);
+});
+
+// Check for saved theme preference
+const savedDarkMode = localStorage.getItem('darkMode');
+if (savedDarkMode === 'true') {
+    htmlElement.classList.add('dark');
+} else {
+    htmlElement.classList.remove('dark');
+}
     </script>
 
-
-
-
-
-    import oracledb
-from flask import Flask, jsonify, request
-from flask_cors import CORS  # Import CORS
-import logging
-
-app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Configure Oracle database connection pool
-DB_POOL = oracledb.create_pool(
-    user="compiere",
-    password="compiere",
-    dsn="192.168.1.213/compiere",
-    min=2,
-    max=10,
-    increment=1
-)
-
-# Fetch data from Oracle DB
-def fetch_data_from_db():
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            # Define your SQL query here
-            query = """
-            SELECT 
-    us.name AS OPERATEUR,
-    co.documentno AS NDOCUMENT,
-    m.name AS PRODUCT,
-    co.dateordered AS DATECOMMANDE,
-    s.qtyreserved AS TOTALRESERVE,
-    cl.qtyreserved AS QTYRESERVE,
-    l.name AS NAME,
-    CASE
-        WHEN co.docstatus = 'CO' THEN 'prepared'
-        ELSE 'not prepared'
-    END AS STATUS
-FROM
-    m_storage s
-INNER JOIN c_orderline cl
-    ON cl.m_attributesetinstance_id = s.m_attributesetinstance_id
-INNER JOIN c_order co
-    ON co.c_order_id = cl.c_order_id
-INNER JOIN m_product m
-    ON m.m_product_id = s.m_product_id
-INNER JOIN ad_user us
-    ON us.ad_user_id = co.salesrep_id
-JOIN XX_Laboratory l
-    ON l.XX_Laboratory_ID = m.XX_Laboratory_ID
-WHERE
-    cl.qtyreserved != 0
-    AND co.c_doctypetarget_id = 1000539
-    AND cl.m_product_id = s.m_product_id
-    AND co.ad_org_id = 1000000
-    AND s.qtyonhand > 0
-    AND s.qtyreserved > 0
-FETCH FIRST 1048575 ROWS ONLY
-
-            """
-            cursor.execute(query)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]  # Get column names
-            data = [dict(zip(columns, row)) for row in rows]
-            return data
-    except Exception as e:
-        logger.error(f"Error fetching data: {e}")
-        return {"error": "An error occurred while fetching data."}
-
-@app.route('/fetch-data', methods=['GET'])
-def fetch_data():
-    data = fetch_data_from_db()
-    return jsonify(data)
-
-if __name__ == "__main__":
-    app.run(debug=True)
+</body>
+</html>

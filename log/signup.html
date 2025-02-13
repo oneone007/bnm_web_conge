@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up</title>
+<style>
+    /* General Styles */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+    background-image: url('background.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+.login-box {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    width: 300px;
+}
+
+.logo {
+    width: 100px;
+    margin-bottom: 20px;
+}
+
+h2 {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.subheading {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.textbox {
+    margin-bottom: 20px;
+}
+
+.textbox input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.error-message {
+    color: red;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+input[type="submit"] {
+    width: 100%;
+    padding: 10px;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+input[type="submit"]:hover {
+    background-color: #0056b3;
+}
+
+.signup-link {
+    margin-top: 20px;
+    color: #666;
+}
+
+.signup-link a {
+    color: #007BFF;
+    text-decoration: none;
+}
+
+.signup-link a:hover {
+    text-decoration: underline;
+}
+
+/* Full-screen overlay */
+#adminPopup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6); /* Dark overlay */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+/* Ensure popup box is centered */
+.popup-box {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    width: 350px;
+    animation: fadeIn 0.4s ease-in-out;
+}
+
+.popup-box h3 {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.popup-box img {
+    width: 120px;
+    height: 120px;
+    margin-bottom: 10px;
+}
+
+.popup-box input {
+    width: 90%;
+    padding: 10px;
+    margin: 8px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.popup-box button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
+}
+
+.popup-box button:hover {
+    background: #1d4ed8;
+    transform: scale(1.05);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+</style>    
+</head>
+<body style="background-image: url('background.jpg'); background-size: cover; background-position: center; background-attachment: fixed;">
+<!-- Popup for Admin Password -->
+<!-- Popup for Admin Password -->
+<div id="adminPopup">
+    <div class="popup-box">
+        <h3>🔐 Admin Access Required</h3>
+        <img src="signup.gif" alt="Signup Animation">
+        <p>Please enter the admin credentials to continue:</p>
+        <input type="text" id="adminusernameInput" placeholder="Admin Username" autocomplete="off">
+        <input type="password" id="adminPasswordInput" placeholder="Admin Password">
+        <button id="submitAdminPassword">Submit</button>
+        <button id="goToLogin">Go to Login</button>
+    </div>
+</div>
+
+<div id="mainContent">
+    <div class="login-container">
+        <div class="login-box">
+            <img src="bnm.png" alt="Logo" class="logo">
+            <h2>Create an Account</h2>
+            <p class="subheading">Please fill in the form to register.</p>
+            <form id="signupForm" action="signup.php" method="POST">
+                <div class="textbox">
+                    <input type="text" id="username" placeholder="Username" name="username" autocomplete="off" required>
+                    <div id="emailError" style="color: red; font-size: 14px; display: none;">Username already exists!</div>
+                </div>
+                <div class="textbox">
+                    <input type="password" id="password" placeholder="Password" name="password" required>
+                </div>
+                <div class="textbox">
+                    <input type="password" id="confirmPassword" placeholder="Confirm Password" name="confirmPassword" required>
+                </div>
+                <div class="error-message" id="errorMessage"></div>
+                <input type="submit" value="Sign Up">
+            </form>
+            <div class="signup-link">
+                <p>Done? <a href="login.html">Log In</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+    document.getElementById('goToLogin').addEventListener('click', function() {
+    window.location.href = 'login.html';
+});
+
+  document.getElementById('submitAdminPassword').addEventListener('click', function() {
+    const adminUsername = "a";
+    const adminPassword = "a"; 
+    const enteredUsername = document.getElementById('adminusernameInput').value;
+    const enteredPassword = document.getElementById('adminPasswordInput').value;
+
+    if (enteredUsername === adminUsername && enteredPassword === adminPassword) {
+        document.getElementById('adminPopup').style.display = 'none';
+        document.getElementById('mainContent').style.pointerEvents = 'auto';
+        document.getElementById('mainContent').style.opacity = '1';
+    } else {
+        alert('❌ Incorrect admin username or password!');
+        window.location.href = 'login.html';
+    }
+});
+
+
+document.getElementById("signupForm").addEventListener("submit", function(event) {
+    event.preventDefault(); // Prevent default form submission
+
+    let formData = new FormData(this);
+    let usernameField = document.getElementById("username");
+    let passwordField = document.getElementById("password");
+    let confirmPasswordField = document.getElementById("confirmPassword");
+    let usernameError = document.getElementById("emailError");
+    let errorMessage = document.getElementById("errorMessage");
+
+    // Reset previous errors
+    usernameError.style.display = "none";
+    errorMessage.style.display = "none";
+    usernameField.style.border = "";
+    passwordField.style.border = "";
+    confirmPasswordField.style.border = "";
+
+    fetch("signup.php", {
+        method: "POST",
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert("✅ Registration successful! Redirecting to login page...");
+            window.location.href = data.redirect;
+        } else {
+            if (data.error.includes("Username")) {
+                usernameError.textContent = data.error;
+                usernameError.style.display = "block";
+                usernameField.style.border = "2px solid red";
+            } else if (data.error.includes("Passwords")) {
+                errorMessage.textContent = data.error;
+                errorMessage.style.color = "red";
+                errorMessage.style.display = "block";
+                passwordField.style.border = "2px solid red";
+                confirmPasswordField.style.border = "2px solid red";
+            } else {
+                alert("❌ " + data.error);
+            }
+        }
+    })
+    .catch(error => console.error("Error:", error));
+});
+
+
+
+</script>
+
+
+
+
+ 
+
+    <!-- JavaScript for Form Validation -->
+    <script src="page_scri.js"></script>
+</body>
+</html>

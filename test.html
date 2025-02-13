@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr" class="dark">
+<html lang="fr" >
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,17 +10,49 @@
             font-family: Arial, sans-serif;
         }
         .table-container {
-            width: 80%;
-            margin: auto;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        .dark .table-container {
-            background: #1f2937;
-            color: white;
-        }
+    width: 80%;
+    max-width: 800px; /* Optional: Set a max width */
+    height: auto; /* Adjust based on content */
+    padding: 20px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+
+    /* Centering */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+html.dark .table-container {
+    background: #1e293b; /* Darker background for the table */
+    color: white; /* White text for readability */
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.1); /* Subtle light shadow */
+}
+
+html.dark .table-container th, 
+html.dark .table-container td {
+    color: white; /* Ensure table text is white */
+    border-bottom: 1px solid #374151; /* Dark border for contrast */
+}
+
+html.dark .table-container th {
+    background-color: #334155; /* Darker header background */
+}
+
+html.dark .table-container tr:hover {
+    background-color: #475569; /* Slight highlight on hover */
+}
+
+html.dark .table-container a {
+    color: #93c5fd; /* Light blue links for visibility */
+}
+
+html.dark .table-container a:hover {
+    color: #bfdbfe; /* Lighter blue on hover */
+}
+
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -30,29 +62,21 @@
             text-align: left;
             border-bottom: 1px solid #ddd;
         }
-        .dark th, .dark td {
-            border-bottom: 1px solid #374151;
-        }
+        
         th {
             background-color: #f1f5f9;
         }
-        .dark th {
-            background-color: #374151;
-        }
+    
         tr:hover {
             background-color: #eef2ff;
         }
-        .dark tr:hover {
-            background-color: #2d3748;
-        }
+     
         a {
             text-decoration: none;
             color: #2563eb;
             font-weight: bold;
         }
-        .dark a {
-            color: #93c5fd;
-        }
+      
         a:hover {
             text-decoration: underline;
         }
@@ -66,10 +90,7 @@
             height: 100vh;
             z-index: 40;
         }
-        .dark .sidebar {
-            background-color: #1f2937;
-            border-right-color: #374151;
-        }
+       
         .sidebar-hidden {
             transform: translateX(-100%);
         }
@@ -80,49 +101,154 @@
         .content-full {
             margin-left: 0;
         }
+
+        /* Dark Mode */
+html.dark .sidebar {
+    background-color: #1f2937;
+    border-right-color: #374151;
+}
+
+html.dark body {
+    background-color: #111827;
+    color: white;
+}
+
+/* Dark Mode Toggle - Styled Checkbox */
+.checkbox {
+    display: none;
+}
+
+/* Toggle Background */
+.checkbox-label {
+    width: 60px;
+    height: 30px;
+    background: #ddd;
+    display: flex;
+    border-radius: 50px;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+    padding: 5px;
+    transition: background 0.3s ease-in-out;
+}
+
+/* Ball as Sun (Default) */
+.ball {
+    width: 22px;
+    height: 22px;
+    background: #facc15; /* Sun color (yellow) */
+    position: absolute;
+    border-radius: 50%;
+    transition: transform 0.3s ease-in-out, background 0.3s ease-in-out;
+    left: 5px;
+    box-shadow: 0 0 5px 2px #facc15; /* Sun glow effect */
+}
+
+/* Add Sun Rays */
+.ball::before {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: inherit;
+    border-radius: 50%;
+    transform: scale(1.4);
+    opacity: 0.5;
+}
+
+/* Moon Shape */
+html.dark .ball {
+    transform: translateX(30px);
+    background: #1e40af; /* Moon color (blue) */
+    box-shadow: none; /* Remove glow */
+}
+
+/* Crescent Moon Effect */
+html.dark .ball::before {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: white;
+    border-radius: 50%;
+    left: 5px; /* Shift left to create crescent effect */
+}
+
+/* Dark Mode Background */
+html.dark .checkbox-label {
+    background: #333;
+}
+
+/* Positioning the Dark Mode Toggle on Top Right */
+#themeSwitcher {
+    position: fixed;
+    top: 10px;
+    right: 20px;
+    z-index: 50;
+}
+
     </style>
 </head>
+<div id="themeSwitcher">
+    <input type="checkbox" class="checkbox" id="themeToggle">
+    <label for="themeToggle" class="checkbox-label">
+        <span class="ball"></span>
+    </label>
+</div>
+
 <body class="flex h-screen bg-gray-100 dark:bg-gray-900">
-    <button id="sidebarToggle" class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700">☰</button>
-    <button id="themeToggle" class="fixed top-4 right-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700">🌓</button>
-    <div id="sidebar" class="sidebar p-4 bg-gray-50 dark:bg-gray-800">
-        <h1 class="text-xl font-bold mb-6 dark:text-white">📂 Collections</h1>
-        <nav>
-            <ul>
-                <li class="mb-3 flex items-center">
-                    <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                    </svg>
-                    <a href="index.html" class="text-blue-600 hover:underline dark:text-blue-400">Accueil</a>
-                </li>
-                <li class="mb-3 flex items-center">
-                    <svg class="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                    </svg>
-                    <a href="no.html" class="hover:underline dark:text-gray-300">Parcourir les données</a>
-                </li>
-                <li class="mb-3 flex items-center">
-                    <svg class="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                    </svg>
-                    <a href="no.html" class="hover:underline dark:text-gray-300">Nos analyses</a>
-                </li>
-        
-                <li class="mb-3 flex items-center">
-                    <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                    </svg>
-                    <a href="product.html" class="hover:underline dark:text-gray-300">PRODUITS</a>
-                </li>
-                <li class="mb-3 flex items-center">
-                    <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                    </svg>
-                    <a href="no.html" class="hover:underline dark:text-gray-300">RECAPS</a>
-                </li>
-            </ul>
-        </nav>
-    </div>
+   
+   
+   
+   
+    <button id="sidebarToggle" class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700">
+        ☰
+    </button>
+    <div id="sidebar-container"></div>
+
+    <script>
+    
+
+        fetch("sidebar.html")
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById("sidebar-container").innerHTML = html;
+    
+                // Wait for sidebar content to load, then initialize Lottie
+                let lottieScript = document.createElement("script");
+                lottieScript.src = "https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js";
+                lottieScript.onload = function () {
+                    var animation = lottie.loadAnimation({
+                        container: document.getElementById('ram-animation'), 
+                        renderer: 'svg',
+                        loop: true,
+                        autoplay: true,
+                        path: 'ram.json',
+                        rendererSettings: {
+                            clearCanvas: true,
+                            preserveAspectRatio: 'xMidYMid meet',
+                            progressiveLoad: true,
+                            hideOnTransparent: true
+                        }
+                    });
+                };
+                document.body.appendChild(lottieScript);
+            })
+            .catch(error => console.error("Error loading sidebar:", error));
+            function navigateToPage(page) {
+            window.location.href = page;
+        }
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        const content = document.getElementById('content');
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('sidebar-hidden');
+            content.classList.toggle('content-full');
+        });
+    </script>
+    
+
+
     <div id="content" class="content p-6 w-full">
         <div class="table-container">
             <table>
@@ -158,25 +284,26 @@
         </div>
     </div>
     <script>
-        function navigateToPage(page) {
-            window.location.href = page;
-        }
-        const sidebarToggle = document.getElementById('sidebarToggle');
-        const sidebar = document.getElementById('sidebar');
-        const content = document.getElementById('content');
-        sidebarToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('sidebar-hidden');
-            content.classList.toggle('content-full');
-        });
-        const themeToggle = document.getElementById('themeToggle');
-        const htmlElement = document.documentElement;
-        themeToggle.addEventListener('click', () => {
-            htmlElement.classList.toggle('dark');
-            localStorage.setItem('darkMode', htmlElement.classList.contains('dark'));
-        });
-        if (localStorage.getItem('darkMode') === 'true') {
-            htmlElement.classList.add('dark');
-        }
+
+        // Dark Mode Toggle Functionality
+const themeToggle = document.getElementById('themeToggle');
+const htmlElement = document.documentElement;
+
+// Load Dark Mode Preference from Local Storage
+const savedDarkMode = localStorage.getItem('darkMode');
+if (savedDarkMode === 'true') {
+    htmlElement.classList.add('dark');
+    themeToggle.checked = true;
+}
+
+// Toggle Dark Mode on Click
+themeToggle.addEventListener('change', () => {
+    htmlElement.classList.toggle('dark');
+    const isDarkMode = htmlElement.classList.contains('dark');
+    localStorage.setItem('darkMode', isDarkMode);
+});
+
+ 
     </script>
 </body>
 </html>

@@ -449,43 +449,177 @@ GROUP BY xf.MOVEMENTDATE  -- Group by date so filtering is possible later in the
 ORDER BY xf.MOVEMENTDATE;
 ----------------------------
 ------------
-SELECT value, name 
-FROM c_bpartner 
-WHERE AD_Client_ID = 1000022 
-AND value IN (
-    '1000499', '1000474', 'EURL MAMA AMINA GRANDS TRAVAUX PUBLICS', '1000446', 
-    '1000445', '1901002', '1901029', '65981254', '6589874', '1901140', 
-    '1901122', '1901170', 'SOUCHA PHARM', '1901178', '6666988', '1901007', 
-    'SARL ETABLISSEMENT MERHANE', '1901028', '321114', '333658', '1000480', 
-    '3214568', '65987', '64565435', '1901011', '1901013', '1901024', 
-    'SOUALAH MOHAMMED', '1901010', '65478', '2987554', '987654', '65487', 
-    '236584', '654899', '2365454', '265458', '1000420', '2156145', '1000496', 
-    '1000497', '1000488', 'TOUAHRIA SOUAD', '1000483', '1000481', 
-    'SARL PHARM ACTION', '1000478', '1000356', '1000475', '1000468', 
-    '1000467', '1000464', '1000459', '1000458', '1000457', '1000439', 
-    '1000437', '1000448', 'HAMZA KARIM', '1000436', '1000442', '1000444', 
-    '1000384', 'CP-1000424', '1000426', '1000427', '1000432', 'C-P-123.0', 
-    '1000430', '1000431', '1000428', '1901094', '1000429', '1000425', 
-    '1901025', '1901007', '1901199', '1901177', '1901000', 'C-P-12.0', 
-    '210254', '77774459', '555588774', '666598', '1901074', '1901038', 
-    '1901186', 'CHADLI LATIFA', '1901009', 'MNM PARAPHARM', 
-    'MOHAMED TOUFIK SAID', 'ZAROKA PHARM', '6598700', '6598412', '230110', 
-    '9874521', '1000337', '1901124', '1901148', '1901149', 'LG MEDIC', 
-    'C-P-480.0', '1901008', '1901094', '1901179', '1901037', '1901196', 
-    '1901030', '1901198', 'U PROMEDIC', '2100056', '1901004', 
-    'ALPHA PARAPHARM', '1901199', '1000193', '1901026', '1901018', 
-    'HAMADACHE MASSINISSA HANI', '589741', 'C-P-351.0', '6547899', 
-    'C-P-244.0', '369998', '1901014', '1901015', '1901019', '1901017'
-);
 
 
 
 SELECT cb.value, cb.name, cb.xx_nif, cb.xx_nis, cb.xx_ai, cb.xx_rc, cb.description, loc.name AS name_addr
 FROM c_bpartner cb
-INNER JOIN C_BPartner_Location loc ON (cb.c_bpartner_id = loc.c_bpartner_id)
+left JOIN C_BPartner_Location loc ON (cb.c_bpartner_id = loc.c_bpartner_id)
 WHERE cb.isactive = 'Y' 
-AND cb.AD_Client_ID = 1000000
+AND cb.AD_Client_ID = 1000022
 AND cb.value IN (
-'EURL MAMA AMINA GRANDS TRAVAUX PUBLICS'
-
+    '1901018', '1000496', '1901199', '1000439', '1000429', 'ALPHA PARAPHARM', '0210254', '1000499', 
+    '6589874', '1901015', '1000446', '1901019', '2365454', '1000488', '1000420', 'C-P-12.0', 
+    'C-P-480.0', 'CHADLI LATIFA', '1000448', '1901029', '1901009', '1000356', '6598412', '1000483', 
+    '666598', '77774459', '9874521', '6666988', '333658', '1000444', '1901179', '1000468', '1901026', 
+    '1000337', 'C-P-351.0', 'EURL MAMA AMINA GRANDS TRAVAUX PUBLICS', '3214568', '1901030', 
+    '1901178', '1901037', '6598776', '1000459', '1000475', '1901186', '1901017', '1000497', 
+    '1901177', '589741', '987654', '1901010', 'C-P-123.0', 'HAMZA KARIM', '555588774', '65478', 
+    '1901014', '1901011', '1901074', '02100056', 'CP-1000424', '1000437', '1901038', '65981254', 
+    '1000442', '1000431', 'LG MEDIC', '265458', '1901196', '236584', '1000426', '2156145', 
+    '1901122', 'MNM PARAPHARM', 'MOHAMED TOUFIK SAID', '6598700', '65487', '369998', '1901149', 
+    'C-P-244.0', '2987554', '1901094', '1000464', '1901013', '1000193', '1000428', '230110', 
+    '321114', '1901170', '1000474', '1000384', '1901004', '1901198', '1000480', '6547899', 
+    'SARL ETABLISSEMENT MERHANE', '654899', '1000427', '1000457', '1901140', '1000467', '1000430', 
+    '1000445', '1901124', '1000436', 'SARL PHARM ACTION', '1901007', '65987', 'SOUCHA PHARM', 
+    '1000425', '64565435', '1901002', '1901148', '1901028', '1000458', '1000481', 'SOUALAH MOHAMMED', 
+    '1901024', '1901000', '1901008', '1901025', '1000478', 'TOUAHRIA SOUAD', 'U PROMEDIC', 'ZAROKA PHARM'
 );
+
+
+
+
+
+
+select cb.value,cb.name,cb.xx_nif,cb.xx_nis,cb.xx_ai,cb.xx_rc,cb.description,loc.name as name_addr
+from c_bpartner cb inner join C_BPartner_Location loc on (cb.c_bpartner_id = loc.c_bpartner_id)
+where cb.isactive = 'Y' and cb.AD_Client_ID=1000022 and cb.created between '03/02/2025' and '07/02/2025';
+---------------------------------------
+      SELECT 
+            mati.value AS fournisseur, 
+            m.name,  
+            SUM(m_storage.qtyonhand) AS qty,
+            SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand) AS prix,
+            SUM(m_storage.qtyonhand - m_storage.QTYRESERVED) AS qty_dispo, 
+            SUM(M_ATTRIBUTEINSTANCE.valuenumber * (m_storage.qtyonhand - m_storage.QTYRESERVED)) AS prix_dispo,
+            ml.M_Locator_ID AS locatorid,
+            m.m_product_id AS productid,
+            1 AS sort_order
+        FROM 
+            M_ATTRIBUTEINSTANCE
+        JOIN 
+            m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
+        JOIN 
+            M_PRODUCT m ON m.M_PRODUCT_id = m_storage.M_PRODUCT_id
+        JOIN 
+            M_Locator ml ON ml.M_Locator_ID = m_storage.M_Locator_ID
+        INNER JOIN 
+            m_attributeinstance mati ON m_storage.m_attributesetinstance_id = mati.m_attributesetinstance_id
+        WHERE 
+            M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
+            AND m_storage.qtyonhand > 0
+            AND mati.m_attribute_id = 1000508
+            AND m_storage.AD_Client_ID = 1000000
+            and ml.VALUE like 'SV'
+            -- Dynamically added emplacement filter
+        GROUP BY 
+            m.name, mati.value, m.m_product_id, ml.M_Locator_ID
+        ORDER BY 
+            fournisseur, name;
+        
+
+                  SELECT ml.value AS EMPLACEMENT
+            FROM M_Locator ml
+            JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
+            WHERE m.ISACTIVE = 'Y'
+                AND m.AD_Client_ID = 1000000
+                AND ml.ISACTIVE = 'Y'
+                AND ml.AD_Client_ID = 1000000
+            ORDER BY m.value;
+
+
+
+
+
+
+    SELECT 
+    xf.MOVEMENTDATE,  -- Include the date so it can be filtered later
+    SUM(xf.TOTALLINE) AS CHIFFRE, 
+    SUM(xf.qtyentered) AS QTY,
+    SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION) AS MARGE,
+    SUM(xf.CONSOMATION),
+    CASE 
+        WHEN SUM(xf.CONSOMATION) < 0 
+        THEN ROUND(((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / (SUM(xf.CONSOMATION) * -1)), 4)
+        ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4) -- Avoid division by zero
+    END AS POURCENTAGE
+FROM xx_ca_fournisseur xf
+WHERE 
+xf.MOVEMENTDATE between '02/02/2025' and '12/02/2025' and 
+    xf.AD_Org_ID = 1000000
+    AND xf.DOCSTATUS != 'RE'
+GROUP BY xf.MOVEMENTDATE  -- Group by date so filtering is possible later in the script
+ORDER BY xf.MOVEMENTDATE;
+
+
+SELECT 
+    SUM(xf.TOTALLINE) AS CHIFFRE, 
+    SUM(xf.qtyentered) AS QTY,
+    SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION) AS MARGE,
+    SUM(xf.CONSOMATION) AS CONSOMATION,
+    CASE 
+        WHEN SUM(xf.CONSOMATION) < 0 
+        THEN ROUND(((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / (SUM(xf.CONSOMATION) * -1)), 4)
+        ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4) -- Avoid division by zero
+    END AS POURCENTAGE
+FROM xx_ca_fournisseur xf
+WHERE 
+    xf.MOVEMENTDATE BETWEEN '02-02-2025' AND '12-02-2025'
+    AND xf.AD_Org_ID = 1000000
+    AND xf.DOCSTATUS != 'RE';
+
+
+
+---------------------------
+ SELECT * FROM (
+                    SELECT 
+                        CAST(xf.name AS VARCHAR2(300)) AS FOURNISSEUR,   
+                        SUM(xf.TOTALLINE) AS total, 
+                        SUM(xf.qtyentered) AS QTY,
+                            ROUND(
+    CASE 
+        WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+        WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1)*100
+        ELSE ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION))*100
+    END, 
+4) AS marge,
+                        0 AS sort_order
+                    FROM xx_ca_fournisseur xf
+                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    JOIN C_ORDER C ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN '02-02-2025' AND '12-02-2025'
+                        AND xf.AD_Org_ID = 1000000
+                        AND xf.DOCSTATUS != 'RE'
+                        AND (:fournisseur IS NULL OR xf.name LIKE :fournisseur || '%')
+                    GROUP BY xf.name
+                    UNION ALL
+                    SELECT 
+                        CAST('Total' AS VARCHAR2(300)) AS name, 
+                        SUM(xf.TOTALLINE) AS total, 
+                        SUM(xf.qtyentered) AS QTY,
+                        ROUND(
+    CASE 
+        WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+        WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1)*100
+        ELSE ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION))*100
+    END, 
+4) AS marge,
+
+                        1 AS sort_order
+                    FROM xx_ca_fournisseur xf
+                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    JOIN C_ORDER C ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN  '02-02-2025' AND '12-02-2025'
+                        AND xf.AD_Org_ID = 1000000
+                        AND xf.DOCSTATUS != 'RE'
+                        AND (:fournisseur IS NULL OR xf.name LIKE :fournisseur || '%')
+                )
+                ORDER BY sort_order, total DESC

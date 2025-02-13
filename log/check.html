@@ -1,0 +1,232 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Page</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
+    <style>
+        /* General Styles */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+
+        .login-box {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            width: 350px;
+        }
+
+        .subheading {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .textbox {
+    position: relative;
+    margin-bottom: 20px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center everything */
+}
+
+.textbox input {
+    width: 100%; /* Ensure both fields have the same width */
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    text-align: left; /* Keep text alignment normal */
+}
+
+
+        /* Password Container */
+  .password-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+
+
+        /* Look animation */
+        #lookAnimation {
+            width: 60px;
+            height: 60px;
+            margin-bottom: -10px; /* Moves it closer to password field */
+            display: none;
+        }
+
+        /* Eye icon inside password field */
+        #eyeIcon {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+        }
+
+        .error-message {
+            color: red;
+            font-size: 14px;
+        }
+
+        input[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+
+    </style>
+</head>
+<body>
+
+
+                        <div class="login-container">
+
+        <div class="login-box">
+            <img src="bnm.png" alt="Logo" class="logo">
+            <p class="subheading">Please enter your credentials to log in.</p>
+
+            <form id="loginForm">
+                <div class="textbox">
+                    <input type="text" id="username" placeholder="Username" name="username" autocomplete="off" required>
+                    <div class="error-message" id="usernameError"></div>
+                </div>
+
+                <div class="textbox password-container">
+                       <!-- Look animation (Above Password) -->
+                       <div id="lookAnimation"></div>
+                    <!-- Password input -->
+                    <div class="password-container">
+
+                    <input type="password" id="password" placeholder="Password" name="password" required>
+                    <div id="eyeIcon"></div> <!-- Eye icon inside input field -->
+                    <div class="error-message" id="passwordError"></div>
+                </div>
+                </div>
+                
+
+                <div class="error-message" id="errorMessage"></div>
+                <input type="submit" value="Login">
+            </form>
+            <div class="signup-link">
+                <p>Don't have an account? <a href="signup.html">Sign Up</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById("loginForm").addEventListener("submit", function(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            let formData = new FormData(this);
+            let usernameField = document.getElementById("username");
+            let passwordField = document.getElementById("password");
+            let usernameError = document.getElementById("usernameError");
+            let passwordError = document.getElementById("passwordError");
+            let errorMessage = document.getElementById("errorMessage");
+
+            // Reset previous errors
+            usernameError.style.display = "none";
+            passwordError.style.display = "none";
+            errorMessage.style.display = "none";
+            usernameField.style.border = "";
+            passwordField.style.border = "";
+
+            fetch("login.php", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = data.redirect; // Redirect on success
+                } else {
+                    if (data.error.includes("Username")) {
+                        usernameError.textContent = data.error;
+                        usernameError.style.display = "block";
+                        usernameField.style.border = "2px solid red";
+                    } else {
+                        passwordError.textContent = data.error;
+                        passwordError.style.display = "block";
+                        passwordField.style.border = "2px solid red";
+                    }
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        });
+
+
+        // Load Lottie animations
+        let eyeIcon = lottie.loadAnimation({
+            container: document.getElementById('eyeIcon'),
+            renderer: 'svg',
+            loop: false,
+            autoplay: false,
+            path: 'eye.json' // Replace with correct path
+        });
+
+        let lookAnimation = lottie.loadAnimation({
+            container: document.getElementById('lookAnimation'),
+            renderer: 'svg',
+            loop: true,
+            autoplay: false,
+            path: 'look.json' // Replace with correct path
+        });
+
+        document.getElementById('eyeIcon').addEventListener('click', function () {
+            const passwordField = document.getElementById('password');
+            const lookDiv = document.getElementById('lookAnimation');
+
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                eyeIcon.goToAndPlay(15, true); // Play open-eye frame
+                lookDiv.style.display = 'block'; // Show look animation
+                lookAnimation.goToAndPlay(0, true);
+            } else {
+                passwordField.type = 'password';
+                eyeIcon.goToAndPlay(0, true); // Play closed-eye frame
+                lookDiv.style.display = 'none'; // Hide look animation
+            }
+        });
+    </script>
+
+</body>
+</html>
+
+</body>
+</html>

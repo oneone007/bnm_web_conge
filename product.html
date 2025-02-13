@@ -1,11 +1,13 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" >
 <head>
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dynamic Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
+
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -149,7 +151,91 @@ th, td {
         }
 
     
-  
+  /* Dark Mode */
+html.dark .sidebar {
+    background-color: #1f2937;
+    border-right-color: #374151;
+}
+
+html.dark body {
+    background-color: #111827;
+    color: white;
+}
+
+/* Dark Mode Toggle - Styled Checkbox */
+.checkbox {
+    display: none;
+}
+
+/* Toggle Background */
+.checkbox-label {
+    width: 60px;
+    height: 30px;
+    background: #ddd;
+    display: flex;
+    border-radius: 50px;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+    padding: 5px;
+    transition: background 0.3s ease-in-out;
+}
+
+/* Ball as Sun (Default) */
+.ball {
+    width: 22px;
+    height: 22px;
+    background: #facc15; /* Sun color (yellow) */
+    position: absolute;
+    border-radius: 50%;
+    transition: transform 0.3s ease-in-out, background 0.3s ease-in-out;
+    left: 5px;
+    box-shadow: 0 0 5px 2px #facc15; /* Sun glow effect */
+}
+
+/* Add Sun Rays */
+.ball::before {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: inherit;
+    border-radius: 50%;
+    transform: scale(1.4);
+    opacity: 0.5;
+}
+
+/* Moon Shape */
+html.dark .ball {
+    transform: translateX(30px);
+    background: #1e40af; /* Moon color (blue) */
+    box-shadow: none; /* Remove glow */
+}
+
+/* Crescent Moon Effect */
+html.dark .ball::before {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: white;
+    border-radius: 50%;
+    left: 5px; /* Shift left to create crescent effect */
+}
+
+/* Dark Mode Background */
+html.dark .checkbox-label {
+    background: #333;
+}
+
+/* Positioning the Dark Mode Toggle on Top Right */
+#themeSwitcher {
+    position: fixed;
+    top: 10px;
+    right: 20px;
+    z-index: 50;
+}
+
 
 
     </style>
@@ -161,49 +247,46 @@ th, td {
     </button>
 
     <!-- Dark/Light Mode Toggle Button -->
-    <button id="themeToggle" class="fixed top-4 right-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700">
-        🌓
-    </button>
+    <div id="themeSwitcher">
+        <input type="checkbox" class="checkbox" id="themeToggle">
+        <label for="themeToggle" class="checkbox-label">
+            <span class="ball"></span>
+        </label>
+    </div>
+    
 
     <!-- Sidebar -->
-    <div id="sidebar" class="sidebar p-4 bg-gray-50 dark:bg-gray-800">
-        <h1 class="text-xl font-bold mb-6 dark:text-white">📂 Collections</h1>
-        <nav>
-            <ul>
-                <li class="mb-3 flex items-center">
-                    <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                    </svg>
-                    <a href="index.html" class="text-blue-600 hover:underline dark:text-blue-400">Accueil</a>
-                </li>
-                <li class="mb-3 flex items-center">
-                    <svg class="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                    </svg>
-                    <a href="no.html" class="hover:underline dark:text-gray-300">Parcourir les données</a>
-                </li>
-                <li class="mb-3 flex items-center">
-                    <svg class="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                    </svg>
-                    <a href="no.html" class="hover:underline dark:text-gray-300">Nos analyses</a>
-                </li>
-            
-                <li class="mb-3 flex items-center">
-                    <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                    </svg>
-                    <a href="test.html" class="hover:underline dark:text-gray-300">PRODUITS</a>
-                </li>
-                <li class="mb-3 flex items-center">
-                    <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                    </svg>
-                    <a href="no.html" class="hover:underline dark:text-gray-300">RECAPS</a>
-                </li>
-            </ul>
-        </nav>
-    </div>
+    <div id="sidebar-container"></div>
+
+    <script>
+        fetch("sidebar.html")
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById("sidebar-container").innerHTML = html;
+    
+                // Wait for sidebar content to load, then initialize Lottie
+                let lottieScript = document.createElement("script");
+                lottieScript.src = "https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js";
+                lottieScript.onload = function () {
+                    var animation = lottie.loadAnimation({
+                        container: document.getElementById('ram-animation'), 
+                        renderer: 'svg',
+                        loop: true,
+                        autoplay: true,
+                        path: 'ram.json',
+                        rendererSettings: {
+                            clearCanvas: true,
+                            preserveAspectRatio: 'xMidYMid meet',
+                            progressiveLoad: true,
+                            hideOnTransparent: true
+                        }
+                    });
+                };
+                document.body.appendChild(lottieScript);
+            })
+            .catch(error => console.error("Error loading sidebar:", error));
+    </script>
+    
 
     <!-- Main Content -->
     <div id="content" class="content flex-grow p-4">
@@ -223,7 +306,7 @@ th, td {
         </div>
         <br>
         
-        
+  
         
         <button id="downloadExcel" class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
             <img src="excel.png" alt="Excel Icon" class="w-6 h-6">
@@ -302,8 +385,55 @@ th, td {
                                 <th data-column="TYPE_CLIENT" onclick="sortRemiseTable('TYPE_CLIENT')" class="border px-4 py-2">Type Client</th>
                             </tr>
                         </thead>
-                        <tbody id="remise-table" class="dark:bg-gray-800"></tbody>
-                    </table>
+                        <tbody id="remise-table" class="dark:bg-gray-800">
+                            <tr id="loading-row">
+                                <td colspan="5" class="text-center p-4">
+                                    <div id="lottie-container" style="width: 290px; height: 310px; margin: auto;"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                                            </table>
+                                            <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
+                                            <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
+<script>
+    // Initialize Lottie animation
+    var loadingAnimation = lottie.loadAnimation({
+        container: document.getElementById('lottie-container'),
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        path: 'load.json' // Path to your JSON file
+    });
+
+    async function fetchRemiseData() {
+        try {
+            const response = await fetch('http://127.0.0.1:5000/fetch-remise-data');
+            if (!response.ok) throw new Error('Network response was not ok');
+
+            remiseData = await response.json();
+
+            // Hide loader once data is fetched
+            hideLoader();
+            updateRemiseTableAndPagination();
+        } catch (error) {
+            console.error("Error fetching remise data:", error);
+            document.getElementById('loading-row').innerHTML = "<td colspan='5' class='text-center text-red-500'>Failed to load data</td>";
+        }
+    }
+
+    function hideLoader() {
+        const loaderRow = document.getElementById('loading-row');
+        if (loaderRow) {
+            loaderRow.remove();
+        }
+    }
+
+    // Call the function to fetch data when the page loads
+    fetchRemiseData();
+</script>
+
+
+
                 </div>
                 <!-- Pagination for First Table -->
             </div>

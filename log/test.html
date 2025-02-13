@@ -1,0 +1,45 @@
+<!DOCTYPE html> 
+<html lang="en"> 
+<head> 
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>Login Form with Icons</title> 
+    <!-- Include Font Awesome --> 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> 
+    <style> 
+        .textbox { 
+            position: relative; 
+            margin-bottom: 20px; 
+        } 
+        .textbox i { 
+            position: absolute; 
+            left: 10px; 
+            top: 50%; 
+            transform: translateY(-50%); 
+            color: #888; 
+        } 
+        .textbox input { 
+            width: 100%; 
+            padding: 10px 10px 10px 40px; /* Add padding to the left for the icon */ 
+            font-size: 16px; 
+            border: 1px solid #ccc; 
+            border-radius: 5px; 
+            box-sizing: border-box; 
+        } 
+        .textbox input:focus { 
+            outline: none; 
+            border-color: #007bff; 
+        } 
+    </style> 
+</head> 
+<body> 
+    <div class="textbox"> 
+        <i class="fas fa-user"></i> <!-- Username icon --> 
+        <input type="text" id="username" placeholder="Username" name="username" autocomplete="off" required> 
+    </div> 
+    <div class="textbox"> 
+        <i class="fas fa-lock"></i> <!-- Password icon --> 
+        <input type="password" id="password" placeholder="Password" name="password" required> 
+    </div> 
+</body> 
+</html>
