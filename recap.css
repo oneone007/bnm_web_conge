@@ -245,10 +245,3 @@ html.dark .checkbox-label {
     background: #333;
 }
 
-/* Positioning the Dark Mode Toggle on Top Right */
-#themeSwitcher {
-    position: fixed;
-    top: 10px;
-    right: 20px;
-    z-index: 50;
-}
