@@ -82,13 +82,11 @@ td {
     /* Adds spacing between tables */
 }
 
-.download-wrapper {
+/* .download-wrapper {
     display: flex;
 
-    /* Ensures tables are spaced apart */
     gap: 550px;
-    /* Adds spacing between tables */
-}
+} */
 
 .title-wrapper {
     display: flex;

@@ -194,60 +194,84 @@ html.dark .checkbox-label {
     <label for="themeToggle" class="checkbox-label">
         <span class="ball"></span>
     </label>
+    <div id="lottieContainer" style="width: 250px; height: 200px; margin-top: 10px;"></div>
+
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
+<script>
+    lottie.loadAnimation({
+        container: document.getElementById("lottieContainer"),
+        renderer: "svg",
+        loop: true,
+        autoplay: true,
+        path: "r.json" // Replace with actual path to your .rjson file
+    });
+</script>
 
 <body class="flex h-screen bg-gray-100 dark:bg-gray-900">
    
    
    
    
-    <button id="sidebarToggle" class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700">
-        ☰
-    </button>
-    <div id="sidebar-container"></div>
+<!-- Sidebar -->
+<div id="sidebar-container"></div>
 
-    <script>
-    
+<script>
+    fetch("sidebar.html")
+    .then(response => response.text())
+    .then(html => {
+        let container = document.getElementById("sidebar-container");
+        container.innerHTML = html;
 
-        fetch("sidebar.html")
-            .then(response => response.text())
-            .then(html => {
-                document.getElementById("sidebar-container").innerHTML = html;
-    
-                // Wait for sidebar content to load, then initialize Lottie
-                let lottieScript = document.createElement("script");
-                lottieScript.src = "https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js";
-                lottieScript.onload = function () {
-                    var animation = lottie.loadAnimation({
-                        container: document.getElementById('ram-animation'), 
-                        renderer: 'svg',
-                        loop: true,
-                        autoplay: true,
-                        path: 'ram.json',
-                        rendererSettings: {
-                            clearCanvas: true,
-                            preserveAspectRatio: 'xMidYMid meet',
-                            progressiveLoad: true,
-                            hideOnTransparent: true
-                        }
-                    });
-                };
-                document.body.appendChild(lottieScript);
-            })
-            .catch(error => console.error("Error loading sidebar:", error));
-            function navigateToPage(page) {
-            window.location.href = page;
+        // Manually extract and execute scripts from sidebar.html
+        let scripts = container.getElementsByTagName("script");
+        for (let script of scripts) {
+            let newScript = document.createElement("script");
+            if (script.src) {
+                newScript.src = script.src; // External script
+                newScript.onload = () => console.log(`Loaded script: ${script.src}`);
+            } else {
+                newScript.textContent = script.textContent; // Inline script
+            }
+            document.body.appendChild(newScript);
         }
-        const sidebarToggle = document.getElementById('sidebarToggle');
-        const sidebar = document.getElementById('sidebar');
-        const content = document.getElementById('content');
-        sidebarToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('sidebar-hidden');
-            content.classList.toggle('content-full');
-        });
-    </script>
-    
 
+        // Reinitialize Sidebar Toggle
+        let sidebarToggle = document.getElementById("sidebarToggle");
+        let sidebar = document.querySelector(".sidebar");
+        let content = document.querySelector(".content");
+
+        if (sidebarToggle && sidebar && content) {
+            sidebarToggle.addEventListener("click", function () {
+                sidebar.classList.toggle("sidebar-hidden");
+                content.classList.toggle("content-full");
+            });
+        }
+
+        // Wait for sidebar content to load, then initialize Lottie
+        let lottieScript = document.createElement("script");
+        lottieScript.src = "https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js";
+        lottieScript.onload = function () {
+            var animation = lottie.loadAnimation({
+                container: document.getElementById('ram-animation'),
+                renderer: 'svg',
+                loop: true,
+                autoplay: true,
+                path: 'ram.json',
+                rendererSettings: {
+                    clearCanvas: true,
+                    preserveAspectRatio: 'xMidYMid meet',
+                    progressiveLoad: true,
+                    hideOnTransparent: true
+                }
+            });
+        };
+        document.body.appendChild(lottieScript);
+    })
+    .catch(error => console.error("Error loading sidebar:", error));
+
+</script>
 
     <div id="content" class="content p-6 w-full">
         <div class="table-container">

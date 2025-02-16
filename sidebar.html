@@ -19,11 +19,52 @@
     height: 100vh;
     z-index: 40;
     padding-top: 60px;
+    left: 0;
 }
 
+/* When Sidebar is Hidden */
 .sidebar-hidden {
     transform: translateX(-100%);
 }
+
+/* Content Adjustment */
+.content {
+    margin-left: 250px;
+    transition: margin-left 0.3s ease-in-out;
+    width: calc(100% - 250px);
+    padding: 20px;
+}
+
+/* When Sidebar is Hidden, Expand Content */
+.content-full {
+    margin-left: 0;
+    width: 100%;
+}
+
+/* Sidebar Toggle Button */
+#sidebarToggle {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 50;
+    background: #2563eb;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 18px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+#sidebarToggle:hover {
+    background: #1d4ed8;
+}
+
+/* When Sidebar is Hidden, Keep Toggle Button Visible */
+.sidebar-hidden + #sidebarToggle {
+    left: 10px; /* Stay in position */
+}
+
 
 /* Content */
 .content {
@@ -146,6 +187,12 @@ html.dark .checkbox-label {
     </head>
 
 
+    <button id="sidebarToggle"
+class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700">
+☰
+</button>
+
+
 <div id="sidebar" class="sidebar p-4 bg-gray-50 dark:bg-gray-800">
        
     <div id="ram-animation"></div>
@@ -167,6 +214,7 @@ rendererSettings: {
 });
 
 </script>
+
 <img src="bnm.png" alt="Logo" class="logo">
     <h1 class="text-xl font-bold mb-6 dark:text-white">📂 Collections</h1>
     <nav>
@@ -189,12 +237,32 @@ rendererSettings: {
                 </svg>
                 <a href="no.html" class="hover:underline dark:text-gray-300">Nos analyses</a>
             </li>
-            <li class="mb-3 flex items-center">
-                <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                </svg>
-                <a href="test.html" class="hover:underline dark:text-gray-300">PRODUITS</a>
+            <li class="mb-3 flex flex-col">
+                <!-- Main Menu Item -->
+                <div id="products-toggle" class="flex items-center cursor-pointer">
+                    <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                    </svg>
+                    <span class="hover:underline dark:text-gray-300">PRODUCTS</span>
+                </div>
+            
+                <!-- Subcategory List (Hidden by Default) -->
+                <ul id="products-submenu" class="ml-7 mt-2 space-y-2 hidden">
+                    <li>
+                        <a href="etatstock.html" class="block hover:underline dark:text-gray-300">ÉTAT DE STOCK</a>
+                    </li>
+                    <li>
+                        <a href="product.html" class="block hover:underline dark:text-gray-300">PRODUCTS</a>
+                    </li>
+                </ul>
             </li>
+            
+            <script>
+                document.getElementById("products-toggle").addEventListener("click", function () {
+                    let submenu = document.getElementById("products-submenu");
+                    submenu.classList.toggle("hidden");
+                });
+            </script>
             <li class="mb-3 flex items-center">
                 <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
@@ -214,12 +282,24 @@ rendererSettings: {
     function navigateToPage(page) {
         window.location.href = page;
     }
+    
+
+
     const sidebarToggle = document.getElementById('sidebarToggle');
-    const sidebar = document.getElementById('sidebar');
-    const content = document.getElementById('content');
-    sidebarToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('sidebar-hidden');
-        content.classList.toggle('content-full');
-    });
+const sidebar = document.getElementById('sidebar');
+const content = document.querySelector('.content');
+
+sidebarToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('sidebar-hidden');
+    content.classList.toggle('content-full');
+
+    // Change button position when sidebar is hidden
+    if (sidebar.classList.contains('sidebar-hidden')) {
+        sidebarToggle.style.left = '10px';  // Keep button visible
+    } else {
+        sidebarToggle.style.left = '260px'; // Adjust when sidebar is open
+    }
+});
+
     </script>
 </html>

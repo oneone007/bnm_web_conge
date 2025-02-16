@@ -1,7 +1,14 @@
 import oracledb
-from flask import Flask, jsonify, request
-from flask_cors import CORS  # Import CORS
+from flask import Flask, jsonify, request, send_file
+from flask_cors import CORS
 import logging
+import pandas as pd
+from io import BytesIO
+from openpyxl import Workbook
+from openpyxl.styles import PatternFill, Font
+from openpyxl.worksheet.table import Table, TableStyleInfo
+from datetime import datetime
+
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -589,6 +596,7 @@ def fetch_product():
 
     data = fetch_product_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone)
     return jsonify(data)
+
 @app.route('/fetchZoneRecap', methods=['GET'])
 def fetch_zone():
     start_date = request.args.get('start_date')
@@ -633,6 +641,524 @@ def fetch_fournisseur():
 
     data = fetch_fournisseur_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone)
     return jsonify(data)
+
+
+@app.route('/download-totalrecap-excel', methods=['GET'])
+def download_totalrecap_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    # Fetch data from the database
+    data = fetch_rcap_data(start_date, end_date)
+
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate a filename with the selected parameters
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    filename = f"TotalRecap_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_totalrecap(data, filename)
+
+def generate_excel_totalrecap(data, filename):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Total Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    ws.append(df.columns.tolist())
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+    ws.auto_filter.ref = ws.dimensions
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="TotalRecapTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+@app.route('/download-fournisseur-excel', methods=['GET'])
+def download_fournisseur_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    # Fetch data
+    data = fetch_fournisseur_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone)
+
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    filename = f"FournisseurRecap_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_fournisseur(data, filename)
+
+def generate_excel_fournisseur(data, filename):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Fournisseur Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    ws.append(df.columns.tolist())
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+    ws.auto_filter.ref = ws.dimensions
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="FournisseurRecapTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@app.route('/download-product-excel', methods=['GET'])
+def download_product_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    # Fetch data
+    data = fetch_product_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone)
+
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    filename = f"ProductRecap_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_product(data, filename)
+
+
+def generate_excel_product(data, filename):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Product Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    ws.append(df.columns.tolist())
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+    ws.auto_filter.ref = ws.dimensions
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="ProductRecapTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+
+@app.route('/download-zone-excel', methods=['GET'])
+def download_zone_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    # Fetch data
+    data = fetch_zone_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone)
+
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    filename = f"ZoneRecap_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_zone(data, filename)
+
+def generate_excel_zone(data, filename):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Zone Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    ws.append(df.columns.tolist())
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+    ws.auto_filter.ref = ws.dimensions
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="ZoneRecapTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+@app.route('/download-client-excel', methods=['GET'])
+def download_client_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    # Fetch data
+    data = fetch_client_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone)
+
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    filename = f"ClientRecap_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_client(data, filename)
+
+def generate_excel_client(data, filename):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Client Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    ws.append(df.columns.tolist())
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+    ws.auto_filter.ref = ws.dimensions
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="ClientRecapTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+@app.route('/download-operator-excel', methods=['GET'])
+def download_operator_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    # Fetch data
+    data = fetch_operator_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone)
+
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    filename = f"OperatorRecap_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_operator(data, filename)
+
+def generate_excel_operator(data, filename):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Operator Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    ws.append(df.columns.tolist())
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+    ws.auto_filter.ref = ws.dimensions
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="OperatorRecapTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@app.route('/download-bccb-excel', methods=['GET'])
+def download_bccb_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    # Fetch data
+    data = fetch_bccb_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone)
+
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    filename = f"BCCBRecap_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_bccb(data, filename)
+
+def generate_excel_bccb(data, filename):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "BCCB Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    ws.append(df.columns.tolist())
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+    ws.auto_filter.ref = ws.dimensions
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="BCCBRecapTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
 
 
 if __name__ == "__main__":

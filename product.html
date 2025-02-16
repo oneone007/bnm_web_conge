@@ -242,9 +242,7 @@ html.dark .checkbox-label {
 </head>
 <body class="flex h-screen bg-gray-100 dark:bg-gray-900">
     <!-- Sidebar Toggle Button -->
-    <button id="sidebarToggle" class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700">
-        ☰
-    </button>
+
 
     <!-- Dark/Light Mode Toggle Button -->
     <div id="themeSwitcher">
@@ -252,39 +250,67 @@ html.dark .checkbox-label {
         <label for="themeToggle" class="checkbox-label">
             <span class="ball"></span>
         </label>
+        <div id="lottieContainer" style="width: 250px; height: 200px; margin-top: 10px;"></div>
+
     </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
+    <script>
+        lottie.loadAnimation({
+            container: document.getElementById("lottieContainer"),
+            renderer: "svg",
+            loop: true,
+            autoplay: true,
+            path: "r.json" // Replace with actual path to your .rjson file
+        });
+    </script>
     
 
     <!-- Sidebar -->
-    <div id="sidebar-container"></div>
+<!-- Sidebar -->
+<div id="sidebar-container"></div>
 
-    <script>
-        fetch("sidebar.html")
-            .then(response => response.text())
-            .then(html => {
-                document.getElementById("sidebar-container").innerHTML = html;
+<script>
+    fetch("sidebar.html")
+        .then(response => response.text())
+        .then(html => {
+            let container = document.getElementById("sidebar-container");
+            let tempDiv = document.createElement("div");
+            tempDiv.innerHTML = html;
     
-                // Wait for sidebar content to load, then initialize Lottie
-                let lottieScript = document.createElement("script");
-                lottieScript.src = "https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js";
-                lottieScript.onload = function () {
-                    var animation = lottie.loadAnimation({
-                        container: document.getElementById('ram-animation'), 
-                        renderer: 'svg',
-                        loop: true,
-                        autoplay: true,
-                        path: 'ram.json',
-                        rendererSettings: {
-                            clearCanvas: true,
-                            preserveAspectRatio: 'xMidYMid meet',
-                            progressiveLoad: true,
-                            hideOnTransparent: true
-                        }
-                    });
-                };
-                document.body.appendChild(lottieScript);
-            })
-            .catch(error => console.error("Error loading sidebar:", error));
+            // Extract scripts before inserting HTML
+            let scripts = tempDiv.getElementsByTagName("script");
+            let scriptContents = [];
+            let scriptSources = [];
+    
+            for (let script of scripts) {
+                if (script.src) {
+                    scriptSources.push(script.src); // Collect external script sources
+                } else {
+                    scriptContents.push(script.textContent); // Collect inline script contents
+                }
+            }
+    
+            // Insert the sidebar content into the page
+            container.innerHTML = tempDiv.innerHTML;
+    
+            // Load external scripts
+            scriptSources.forEach(src => {
+                let newScript = document.createElement("script");
+                newScript.src = src;
+                newScript.async = false;
+                document.body.appendChild(newScript);
+            });
+    
+            // Execute inline scripts
+            scriptContents.forEach(scriptText => {
+                let newScript = document.createElement("script");
+                newScript.textContent = scriptText;
+                document.body.appendChild(newScript);
+            });
+    
+        })
+        .catch(error => console.error("Error loading sidebar:", error));
     </script>
     
 
@@ -736,15 +762,8 @@ function renderPagination() {
     paginationContainer.appendChild(lastPageButton);
 }
 
-// Sidebar Toggle Functionality
-const sidebarToggle = document.getElementById('sidebarToggle');
-const sidebar = document.getElementById('sidebar');
-const content = document.getElementById('content');
 
-sidebarToggle.addEventListener('click', () => {
-    sidebar.classList.toggle('sidebar-hidden');
-    content.classList.toggle('content-full');
-});
+
 
 // Dark/Light Mode Toggle Functionality
 const themeToggle = document.getElementById('themeToggle');

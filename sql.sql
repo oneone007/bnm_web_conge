@@ -623,3 +623,14 @@ WHERE
                         AND (:fournisseur IS NULL OR xf.name LIKE :fournisseur || '%')
                 )
                 ORDER BY sort_order, total DESC
+
+
+
+
+
+
+                SELECT COUNT(*) 
+FROM AD_User au 
+JOIN xx_ca_fournisseur xf ON au.AD_User_ID = xf.SALESREP_ID
+WHERE xf.MOVEMENTDATE BETWEEN TO_DATE('2024-01-01', 'YYYY-MM-DD') 
+AND TO_DATE('2024-01-31', 'YYYY-MM-DD');
