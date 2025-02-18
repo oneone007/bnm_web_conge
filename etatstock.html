@@ -4,7 +4,8 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dynamic Dashboard</title>
+    <title>BNM</title>
+    <link rel="icon" href="tab.png" sizes="128x128" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
         body {
@@ -274,54 +275,84 @@ html.dark .checkbox-label {
     
     
 
-    <!-- Sidebar -->
-
-    
-    <!-- Sidebar -->
+<!-- Sidebar -->
+<!-- Sidebar -->
 <div id="sidebar-container"></div>
 
 <script>
+    // Fetch sidebar content dynamically
     fetch("sidebar.html")
         .then(response => response.text())
         .then(html => {
             let container = document.getElementById("sidebar-container");
             let tempDiv = document.createElement("div");
             tempDiv.innerHTML = html;
-    
-            // Extract scripts before inserting HTML
-            let scripts = tempDiv.getElementsByTagName("script");
-            let scriptContents = [];
-            let scriptSources = [];
-    
-            for (let script of scripts) {
-                if (script.src) {
-                    scriptSources.push(script.src); // Collect external script sources
-                } else {
-                    scriptContents.push(script.textContent); // Collect inline script contents
-                }
-            }
-    
+
             // Insert the sidebar content into the page
             container.innerHTML = tempDiv.innerHTML;
-    
-            // Load external scripts
-            scriptSources.forEach(src => {
-                let newScript = document.createElement("script");
-                newScript.src = src;
-                newScript.async = false;
-                document.body.appendChild(newScript);
-            });
-    
-            // Execute inline scripts
-            scriptContents.forEach(scriptText => {
-                let newScript = document.createElement("script");
-                newScript.textContent = scriptText;
-                document.body.appendChild(newScript);
-            });
-    
+
+            // Reattach event listeners for the submenu toggles (Products, Recaps)
+            const productsToggle = document.getElementById("products-toggle");
+            if (productsToggle) {
+                productsToggle.addEventListener("click", function () {
+                    let submenu = document.getElementById("products-submenu");
+                    submenu.classList.toggle("hidden");
+                });
+            }
+
+            const recapsToggle = document.getElementById("recaps-toggle");
+            if (recapsToggle) {
+                recapsToggle.addEventListener("click", function () {
+                    let submenu = document.getElementById("recaps-submenu");
+                    submenu.classList.toggle("hidden");
+                });
+            }
+
+            // Initialize Lottie animation after sidebar is inserted
+            const ramAnimation = document.getElementById('ram-animation');
+            if (ramAnimation) {
+                lottie.loadAnimation({
+                    container: ramAnimation,
+                    renderer: 'svg',
+                    loop: true,
+                    autoplay: true,
+                    path: 'ram.json',
+                    rendererSettings: {
+                        clearCanvas: true,
+                        preserveAspectRatio: 'xMidYMid meet',
+                        progressiveLoad: true,
+                        hideOnTransparent: true
+                    }
+                });
+            }
+
+            // Sidebar toggle functionality
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            const content = document.querySelector('.content');
+
+            // Ensure sidebarToggle is initialized after sidebar is loaded
+            if (sidebarToggle && sidebar && content) {
+                sidebarToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('sidebar-hidden');
+                    content.classList.toggle('content-full');
+
+                    // Adjust button position when sidebar is hidden or shown
+                    if (sidebar.classList.contains('sidebar-hidden')) {
+                        sidebarToggle.style.left = '10px';  // Sidebar hidden
+                    } else {
+                        sidebarToggle.style.left = '260px'; // Sidebar visible
+                    }
+                });
+            } else {
+                console.error("Sidebar or Toggle Button not found!");
+            }
+
         })
         .catch(error => console.error("Error loading sidebar:", error));
-    </script>
+</script>
+
+    
     
 
     <!-- Main Content -->
@@ -440,7 +471,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function fetchEmplacementData() {
     try {
-        const response = await fetch('http://127.0.0.1:5000/fetch-emplacement-data');
+        const response = await fetch('http://192.168.1.156:5000/fetch-emplacement-data');
         if (!response.ok) throw new Error('Network response was not ok');
 
         const emplacementData = await response.json();
@@ -489,7 +520,7 @@ let sortDirection = 'asc';
 // Fetch data on page load
 async function fetchData() {
     try {
-        const response = await fetch('http://127.0.0.1:5000/fetch-data-stock');
+        const response = await fetch('http://192.168.1.156:5000/fetch-data-stock');
         if (!response.ok) throw new Error('Network response was not ok');
         allData = await response.json();
         console.log("Fetched Data:", allData); // Debugging log
@@ -512,7 +543,7 @@ document.getElementById("stock").addEventListener("click", function () {
         params.append("locatorname", selectedLocatorName);
     }
 
-    window.open(`http://127.0.0.1:5000/download-stock-excel?${params.toString()}`, "_blank");
+    window.open(`http://192.168.1.156:5000/download-stock-excel?${params.toString()}`, "_blank");
 });
 
 

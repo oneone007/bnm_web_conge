@@ -4,7 +4,8 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dynamic Dashboard</title>
+    <title>BNM</title>
+    <link rel="icon" href="tab.png" sizes="128x128" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
 
@@ -256,63 +257,97 @@ html.dark .checkbox-label {
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <script>
-        lottie.loadAnimation({
-            container: document.getElementById("lottieContainer"),
-            renderer: "svg",
-            loop: true,
-            autoplay: true,
-            path: "r.json" // Replace with actual path to your .rjson file
-        });
+        // Second animation
+    var rocketAnimation = lottie.loadAnimation({
+        container: document.getElementById('lottieContainer'),  // ID of the second container
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        path: 'r.json'  // Path to your second JSON file
+    });
     </script>
     
 
     <!-- Sidebar -->
 <!-- Sidebar -->
+
+
 <div id="sidebar-container"></div>
 
 <script>
+    // Fetch sidebar content dynamically
     fetch("sidebar.html")
         .then(response => response.text())
         .then(html => {
             let container = document.getElementById("sidebar-container");
             let tempDiv = document.createElement("div");
             tempDiv.innerHTML = html;
-    
-            // Extract scripts before inserting HTML
-            let scripts = tempDiv.getElementsByTagName("script");
-            let scriptContents = [];
-            let scriptSources = [];
-    
-            for (let script of scripts) {
-                if (script.src) {
-                    scriptSources.push(script.src); // Collect external script sources
-                } else {
-                    scriptContents.push(script.textContent); // Collect inline script contents
-                }
-            }
-    
+
             // Insert the sidebar content into the page
             container.innerHTML = tempDiv.innerHTML;
-    
-            // Load external scripts
-            scriptSources.forEach(src => {
-                let newScript = document.createElement("script");
-                newScript.src = src;
-                newScript.async = false;
-                document.body.appendChild(newScript);
-            });
-    
-            // Execute inline scripts
-            scriptContents.forEach(scriptText => {
-                let newScript = document.createElement("script");
-                newScript.textContent = scriptText;
-                document.body.appendChild(newScript);
-            });
-    
+
+            // Reattach event listeners for the submenu toggles (Products, Recaps)
+            const productsToggle = document.getElementById("products-toggle");
+            if (productsToggle) {
+                productsToggle.addEventListener("click", function () {
+                    let submenu = document.getElementById("products-submenu");
+                    submenu.classList.toggle("hidden");
+                });
+            }
+
+            const recapsToggle = document.getElementById("recaps-toggle");
+            if (recapsToggle) {
+                recapsToggle.addEventListener("click", function () {
+                    let submenu = document.getElementById("recaps-submenu");
+                    submenu.classList.toggle("hidden");
+                });
+            }
+
+            // Initialize Lottie animation after sidebar is inserted
+            const ramAnimation = document.getElementById('ram-animation');
+            if (ramAnimation) {
+                lottie.loadAnimation({
+                    container: ramAnimation,
+                    renderer: 'svg',
+                    loop: true,
+                    autoplay: true,
+                    path: 'ram.json',
+                    rendererSettings: {
+                        clearCanvas: true,
+                        preserveAspectRatio: 'xMidYMid meet',
+                        progressiveLoad: true,
+                        hideOnTransparent: true
+                    }
+                });
+            }
+
+            // Sidebar toggle functionality
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            const content = document.querySelector('.content');
+
+            // Ensure sidebarToggle is initialized after sidebar is loaded
+            if (sidebarToggle && sidebar && content) {
+                sidebarToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('sidebar-hidden');
+                    content.classList.toggle('content-full');
+
+                    // Adjust button position when sidebar is hidden or shown
+                    if (sidebar.classList.contains('sidebar-hidden')) {
+                        sidebarToggle.style.left = '10px';  // Sidebar hidden
+                    } else {
+                        sidebarToggle.style.left = '260px'; // Sidebar visible
+                    }
+                });
+            } else {
+                console.error("Sidebar or Toggle Button not found!");
+            }
+
         })
         .catch(error => console.error("Error loading sidebar:", error));
-    </script>
-    
+</script>
+
+
 
     <!-- Main Content -->
     <div id="content" class="content flex-grow p-4">
@@ -414,26 +449,26 @@ html.dark .checkbox-label {
                         <tbody id="remise-table" class="dark:bg-gray-800">
                             <tr id="loading-row">
                                 <td colspan="5" class="text-center p-4">
-                                    <div id="lottie-container" style="width: 290px; height: 310px; margin: auto;"></div>
+                                    <div id="lottie-container-a" style="width: 290px; height: 310px; margin: auto;"></div>
                                 </td>
                             </tr>
                         </tbody>
                                             </table>
                                             <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
-                                            <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
 <script>
     // Initialize Lottie animation
-    var loadingAnimation = lottie.loadAnimation({
-        container: document.getElementById('lottie-container'),
+// First animation
+var loadingAnimation = lottie.loadAnimation({
+        container: document.getElementById('lottie-container-a'),  // ID of the first container
         renderer: 'svg',
         loop: true,
         autoplay: true,
-        path: 'load.json' // Path to your JSON file
+        path: 'load.json'  // Path to your first JSON file
     });
 
     async function fetchRemiseData() {
         try {
-            const response = await fetch('http://127.0.0.1:5000/fetch-remise-data');
+            const response = await fetch('http://192.168.1.156:5000/fetch-remise-data');
             if (!response.ok) throw new Error('Network response was not ok');
 
             remiseData = await response.json();
@@ -443,7 +478,6 @@ html.dark .checkbox-label {
             updateRemiseTableAndPagination();
         } catch (error) {
             console.error("Error fetching remise data:", error);
-            document.getElementById('loading-row').innerHTML = "<td colspan='5' class='text-center text-red-500'>Failed to load data</td>";
         }
     }
 
@@ -589,24 +623,24 @@ document.getElementById("downloadExcel").addEventListener("click", function () {
     let product = document.getElementById("search-product").value;
     let marge = document.getElementById("margeInput").value;
 
-    let url = `http://127.0.0.1:5000/download-marge-excel?fournisseur=${encodeURIComponent(fournisseur)}&product=${encodeURIComponent(product)}&marge=${encodeURIComponent(marge)}`;
+    let url = `http://192.168.1.156:5000/download-marge-excel?fournisseur=${encodeURIComponent(fournisseur)}&product=${encodeURIComponent(product)}&marge=${encodeURIComponent(marge)}`;
     window.open(url, "_blank");
 });
 
 document.getElementById("downloadExcel_REMISE").addEventListener("click", function () {
-    window.open("http://127.0.0.1:5000/download-remise-excel", "_blank"); 
+    window.open("http://192.168.1.156:5000/download-remise-excel", "_blank"); 
 });
 document.getElementById("downloadExcel_BONUS").addEventListener("click", function () {
-    window.open("http://127.0.0.1:5000/download-bonus-excel", "_blank"); 
+    window.open("http://192.168.1.156:5000/download-bonus-excel", "_blank"); 
 });
 document.getElementById("downloadExcel_RESERVE").addEventListener("click", function () {
-    window.open("http://127.0.0.1:5000/download-reserved-excel", "_blank"); 
+    window.open("http://192.168.1.156:5000/download-reserved-excel", "_blank"); 
 });
 
 
 async function fetchData() {
     try {
-        const response = await fetch('http://127.0.0.1:5000/fetch-data');
+        const response = await fetch('http://192.168.1.156:5000/fetch-data');
         if (!response.ok) throw new Error('Network response was not ok');
 
         allData = await response.json();
@@ -801,7 +835,7 @@ let sortDirectionRemise = 'asc';
 
 async function fetchRemiseData() {
     try {
-        const response = await fetch('http://127.0.0.1:5000/fetch-remise-data');
+        const response = await fetch('http://192.168.1.156:5000/fetch-remise-data');
         if (!response.ok) throw new Error('Network response was not ok');
 
         remiseData = await response.json();
@@ -945,7 +979,7 @@ let sortDirectionBonus = 'asc';
 // Fetch data for the bonus table
 async function fetchBonusData() {
     try {
-        const response = await fetch('http://127.0.0.1:5000/fetch-bonus-data');
+        const response = await fetch('http://192.168.1.156:5000/fetch-bonus-data');
         if (!response.ok) throw new Error('Network response was not ok');
 
         bonusData = await response.json();
@@ -1084,7 +1118,7 @@ const rowsPerPageReserved = 10;
 // Fetch data for the reserved table
 async function fetchReservedData() {
     try {
-        const response = await fetch('http://127.0.0.1:5000/fetch-reserved-data');
+        const response = await fetch('http://192.168.1.156:5000/fetch-reserved-data');
         if (!response.ok) throw new Error('Network response was not ok');
 
         reservedData = await response.json();

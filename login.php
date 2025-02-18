@@ -19,7 +19,7 @@ if ($result->num_rows === 1) {
     if (password_verify($password, $user['password'])) {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['username'] = $user['username'];
-        echo json_encode(["success" => true, "redirect" => "index.html"]);
+        echo json_encode(["success" => true, "redirect" => "main.html"]);
     } else {
         echo json_encode(["success" => false, "error" => "Invalid password"]);
     }

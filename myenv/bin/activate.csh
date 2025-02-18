@@ -13,13 +13,13 @@ setenv VIRTUAL_ENV /opt/lampp/htdocs/bnm_web/myenv
 
 set _OLD_VIRTUAL_PATH="$PATH"
 setenv PATH "$VIRTUAL_ENV/"bin":$PATH"
+setenv VIRTUAL_ENV_PROMPT myenv
 
 
 set _OLD_VIRTUAL_PROMPT="$prompt"
 
 if (! "$?VIRTUAL_ENV_DISABLE_PROMPT") then
-    set prompt = '(myenv) '"$prompt"
-    setenv VIRTUAL_ENV_PROMPT '(myenv) '
+    set prompt = "("myenv") $prompt:q"
 endif
 
 alias pydoc python -m pydoc

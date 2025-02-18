@@ -4,9 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BNM</title>
-    <link rel="icon" href="tab.png" sizes="128x128" type="image/png">
-                <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <title>Dynamic Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <link rel="stylesheet" href="recap.css">
     <style>
@@ -255,79 +254,48 @@
 <div id="sidebar-container"></div>
 
 <script>
-    // Fetch sidebar content dynamically
     fetch("sidebar.html")
         .then(response => response.text())
         .then(html => {
             let container = document.getElementById("sidebar-container");
             let tempDiv = document.createElement("div");
             tempDiv.innerHTML = html;
-
+    
+            // Extract scripts before inserting HTML
+            let scripts = tempDiv.getElementsByTagName("script");
+            let scriptContents = [];
+            let scriptSources = [];
+    
+            for (let script of scripts) {
+                if (script.src) {
+                    scriptSources.push(script.src); // Collect external script sources
+                } else {
+                    scriptContents.push(script.textContent); // Collect inline script contents
+                }
+            }
+    
             // Insert the sidebar content into the page
             container.innerHTML = tempDiv.innerHTML;
-
-            // Reattach event listeners for the submenu toggles (Products, Recaps)
-            const productsToggle = document.getElementById("products-toggle");
-            if (productsToggle) {
-                productsToggle.addEventListener("click", function () {
-                    let submenu = document.getElementById("products-submenu");
-                    submenu.classList.toggle("hidden");
-                });
-            }
-
-            const recapsToggle = document.getElementById("recaps-toggle");
-            if (recapsToggle) {
-                recapsToggle.addEventListener("click", function () {
-                    let submenu = document.getElementById("recaps-submenu");
-                    submenu.classList.toggle("hidden");
-                });
-            }
-
-            // Initialize Lottie animation after sidebar is inserted
-            const ramAnimation = document.getElementById('ram-animation');
-            if (ramAnimation) {
-                lottie.loadAnimation({
-                    container: ramAnimation,
-                    renderer: 'svg',
-                    loop: true,
-                    autoplay: true,
-                    path: 'ram.json',
-                    rendererSettings: {
-                        clearCanvas: true,
-                        preserveAspectRatio: 'xMidYMid meet',
-                        progressiveLoad: true,
-                        hideOnTransparent: true
-                    }
-                });
-            }
-
-            // Sidebar toggle functionality
-            const sidebarToggle = document.getElementById('sidebarToggle');
-            const sidebar = document.getElementById('sidebar');
-            const content = document.querySelector('.content');
-
-            // Ensure sidebarToggle is initialized after sidebar is loaded
-            if (sidebarToggle && sidebar && content) {
-                sidebarToggle.addEventListener('click', () => {
-                    sidebar.classList.toggle('sidebar-hidden');
-                    content.classList.toggle('content-full');
-
-                    // Adjust button position when sidebar is hidden or shown
-                    if (sidebar.classList.contains('sidebar-hidden')) {
-                        sidebarToggle.style.left = '10px';  // Sidebar hidden
-                    } else {
-                        sidebarToggle.style.left = '260px'; // Sidebar visible
-                    }
-                });
-            } else {
-                console.error("Sidebar or Toggle Button not found!");
-            }
-
+    
+            // Load external scripts
+            scriptSources.forEach(src => {
+                let newScript = document.createElement("script");
+                newScript.src = src;
+                newScript.async = false;
+                document.body.appendChild(newScript);
+            });
+    
+            // Execute inline scripts
+            scriptContents.forEach(scriptText => {
+                let newScript = document.createElement("script");
+                newScript.textContent = scriptText;
+                document.body.appendChild(newScript);
+            });
+    
         })
         .catch(error => console.error("Error loading sidebar:", error));
-</script>
-
-
+    </script>
+    
 
 
     <!-- Main Content -->
@@ -552,24 +520,18 @@
         <div class="table-wrapper">
             <!-- First Table: RECAP PAR ZONE -->
             <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
-                <div class="flex items-center justify-between p-4">
-                    <h2 class="text-lg font-semibold dark:text-white">RECAP PAR ZONE</h2>
-                    
-                    <img id="generate-chart-zone"
-                         src="chrt.png"
-                         alt="chart Icon"
-                         class="w-6 h-6 cursor-pointer transform hover:scale-105 transition-all duration-300 ease-in-out"
-                         >
-                </div>
-            
+                <h2 class="text-lg font-semibold p-4 dark:text-white">RECAP PAR ZONE</h2>
                 <div class="overflow-x-auto">
                     <table class="min-w-full border-collapse text-sm text-left dark:text-white">
                         <thead>
                             <tr class="table-header dark:bg-gray-700">
-                                <th data-column="ZONE" onclick="sortrecapzone('ZONE')" class="border px-4 py-2">NAME</th>
-                                <th data-column="Total" onclick="sortrecapzone('Total')" class="border px-4 py-2">Total</th>
+                                <th data-column="ZONE" onclick="sortrecapzone('ZONE')" class="border px-4 py-2">NAME
+                                </th>
+                                <th data-column="Total" onclick="sortrecapzone('Total')" class="border px-4 py-2">Total
+                                </th>
                                 <th data-column="QTy" onclick="sortrecapzone('QTy')" class="border px-4 py-2">QTy</th>
-                                <th data-column="Marge" onclick="sortrecapzone('Marge')" class="border px-4 py-2">Marge</th>
+                                <th data-column="Marge" onclick="sortrecapzone('Marge')" class="border px-4 py-2">Marge
+                                </th>
                             </tr>
                         </thead>
                         <tbody id="recap-zone-table" class="dark:bg-gray-800">
@@ -582,7 +544,6 @@
                     </table>
                 </div>
             </div>
-            
 
             <!-- Second Table: RECAP CLIENT -->
             <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
@@ -631,26 +592,19 @@
         <div class="table-wrapper flex flex-wrap gap-6">
             <!-- First Table: RECAP PAR OPÉRATEUR -->
             <div class="table-container flex-1 min-w-[400px] rounded-lg bg-white shadow-md dark:bg-gray-800">
-                <div class="flex items-center justify-between p-4">
-                    <h2 class="text-lg font-semibold dark:text-white">RECAP PAR OPÉRATEUR</h2>
-                    
-                    <img id="generate-chart-operateur"
-                         src="chrt.png"
-                         alt="chart Icon"
-                         class="w-6 h-6 cursor-pointer transform hover:scale-105 transition-all duration-300 ease-in-out"
-                         >
-                         <!-- onclick="yourFunctionHere()" -->
-
-                </div>
-            
+                <h2 class="text-lg font-semibold p-4 dark:text-white">RECAP PAR OPÉRATEUR</h2>
                 <div class="overflow-x-auto">
                     <table class="min-w-full border-collapse text-sm text-left dark:text-white">
                         <thead>
                             <tr class="table-header dark:bg-gray-700">
-                                <th data-column="OPERATEUR" onclick="sortRecapOperator('OPERATEUR')" class="border px-4 py-2">Opérateur</th>
-                                <th data-column="TOTAL" onclick="sortRecapOperator('TOTAL')" class="border px-4 py-2">Total</th>
-                                <th data-column="QTY" onclick="sortRecapOperator('QTY')" class="border px-4 py-2">QTy</th>
-                                <th data-column="MARGE" onclick="sortRecapOperator('MARGE')" class="border px-4 py-2">Marge</th>
+                                <th data-column="OPERATEUR" onclick="sortRecapOperator('OPERATEUR')"
+                                    class="border px-4 py-2">Opérateur</th>
+                                <th data-column="TOTAL" onclick="sortRecapOperator('TOTAL')" class="border px-4 py-2">
+                                    Total</th>
+                                <th data-column="QTY" onclick="sortRecapOperator('QTY')" class="border px-4 py-2">QTy
+                                </th>
+                                <th data-column="MARGE" onclick="sortRecapOperator('MARGE')" class="border px-4 py-2">
+                                    Marge</th>
                             </tr>
                         </thead>
                         <tbody id="recap-operator-table" class="dark:bg-gray-800">
@@ -663,7 +617,6 @@
                     </table>
                 </div>
             </div>
-            
 
             <!-- Second Table: RECAP PAR BCCB -->
             <div class="table-container flex-1 min-w-[400px] rounded-lg bg-white shadow-md dark:bg-gray-800">
@@ -693,13 +646,16 @@
         </div>
 
 
+        <button id="generate-chart" class="bg-blue-500 text-white px-4 py-2 rounded">Generate Chart</button>
 
-
-
+        <select id="chart-data-selector" multiple>
+            <!-- Options will be added dynamically -->
+        </select>
+        
         
         <!-- Chart container -->
         <div style="width: 80%; margin: auto;">
-            <canvas id="allcharts" style="width: 100%; height: 400px;"></canvas>
+            <canvas id="operatorChart" style="width: 100%; height: 400px;"></canvas>
         </div>
         
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -759,7 +715,7 @@
                 if (!startDate || !endDate) return; // Don't fetch until both dates are selected
 
                 try {
-                    const response = await fetch(`http://192.168.1.156:5000/fetchTotalrecapData?start_date=${startDate}&end_date=${endDate}`);
+                    const response = await fetch(`http://127.0.0.1:5000/fetchTotalrecapData?start_date=${startDate}&end_date=${endDate}`);
                     if (!response.ok) throw new Error("Network response was not ok");
 
                     const data = await response.json();
@@ -828,7 +784,7 @@
         return;
     }
 
-    const downloadUrl = `http://192.168.1.156:5000/download-totalrecap-excel?start_date=${startDate}&end_date=${endDate}`;
+    const downloadUrl = `http://127.0.0.1:5000/download-totalrecap-excel?start_date=${startDate}&end_date=${endDate}`;
     window.location.href = downloadUrl;  // Triggers file download
 });
 
@@ -857,7 +813,7 @@
 
                 if (!startDate || !endDate) return;
 
-                const url = new URL("http://192.168.1.156:5000/fetchFournisseurData");
+                const url = new URL("http://127.0.0.1:5000/fetchFournisseurData");
                 url.searchParams.append("start_date", startDate);
                 url.searchParams.append("end_date", endDate);
                 if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
@@ -962,7 +918,7 @@
         return;
     }
 
-    const url = new URL("http://192.168.1.156:5000/download-fournisseur-excel");
+    const url = new URL("http://127.0.0.1:5000/download-fournisseur-excel");
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
@@ -1013,7 +969,7 @@
 
                 if (!startDate || !endDate) return;
 
-                const url = new URL("http://192.168.1.156:5000/fetchProductData");
+                const url = new URL("http://127.0.0.1:5000/fetchProductData");
                 url.searchParams.append("start_date", startDate);
                 url.searchParams.append("end_date", endDate);
                 if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
@@ -1096,7 +1052,7 @@
         return;
     }
 
-    const url = new URL("http://192.168.1.156:5000/download-product-excel");
+    const url = new URL("http://127.0.0.1:5000/download-product-excel");
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
@@ -1154,7 +1110,7 @@
 
                 if (!startDate || !endDate) return;
 
-                const url = new URL("http://192.168.1.156:5000/fetchZoneRecap");
+                const url = new URL("http://127.0.0.1:5000/fetchZoneRecap");
                 url.searchParams.append("start_date", startDate);
                 url.searchParams.append("end_date", endDate);
                 if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
@@ -1171,7 +1127,6 @@
                     const data = await response.json();
                     console.log("Received Data:", data); // Debugging log
                     updateZoneTable(data);
-                    return data;  // ✅ Fix: Ensure function returns data
                 } catch (error) {
                     console.error("Error fetching zone recap data:", error);
                 }
@@ -1270,7 +1225,7 @@ function downloadExcel(endpoint) {
         return;
     }
 
-    const url = new URL(`http://192.168.1.156:5000/${endpoint}`);
+    const url = new URL(`http://127.0.0.1:5000/${endpoint}`);
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
@@ -1297,7 +1252,7 @@ function downloadExcel(endpoint) {
 
                 if (!startDate || !endDate) return;
 
-                const url = new URL("http://192.168.1.156:5000/fetchClientRecap");
+                const url = new URL("http://127.0.0.1:5000/fetchClientRecap");
                 url.searchParams.append("start_date", startDate);
                 url.searchParams.append("end_date", endDate);
                 if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
@@ -1388,7 +1343,7 @@ async function fetchOperatorRecap() {
 
     if (!startDate || !endDate) return;
 
-    const url = new URL("http://192.168.1.156:5000/fetchOperatorRecap");
+    const url = new URL("http://127.0.0.1:5000/fetchOperatorRecap");
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
@@ -1413,6 +1368,13 @@ async function fetchOperatorRecap() {
 }
 
 // Button click triggers the chart creation (after data is fetched)
+document.getElementById("generate-chart").addEventListener("click", async function () {
+    const data = await fetchOperatorRecap();  // Fetch data when clicking the button
+    if (data) {
+        // Now, update the chart with the fetched data
+        updateChart(data);
+    }
+});
 
 // Update table with fetched data
 function updateOperatorTable(data) {
@@ -1460,73 +1422,35 @@ function updateOperatorTable(data) {
 }
 
 // Update chart with fetched data (only when clicking the button)
-let allcharts = null; // Global chart variable
-
-// Function to fetch and update the Operator chart
-document.getElementById("generate-chart-operateur").addEventListener("click", async function () {
-    const data = await fetchOperatorRecap();
-    console.log("Fetched operateur Data chart without total:", data); // Debugging log
-
-    if (data && data.length > 0) {
-        // Filter out the "Total" row before passing the data to the chart
-        const dataForChart = data.filter(row => row.OPERATEUR !== "Total");
-        
-        // Update the chart with the filtered data
-        updateChart(dataForChart, "OPERATEUR");
-    } else {
-        console.warn("No data received for ZONE.");
-    }
-});
-
-// Function to fetch and update the Zone chart
-document.getElementById("generate-chart-zone").addEventListener("click", async function () {
-    const data = await fetchZoneRecap();
-    console.log("Fetched Zone Data chart without total:", data); // Debugging log
-
-    if (data && data.length > 0) {
-        // Filter out the "Total" row before passing the data to the chart
-        const dataForChart = data.filter(row => row.ZONE !== "Total");
-        
-        // Update the chart with the filtered data
-        updateChart(dataForChart, "ZONE");
-    } else {
-        console.warn("No data received for ZONE.");
-    }
-});
-
-
-
-// Generic function to update the chart based on dataset type (Operator or Zone)
-function updateChart(data, type) {
+function updateChart(data) {
     if (!data || data.length === 0) {
-        console.warn(`No data available for the ${type} chart.`);
+        console.warn("No data available for the chart.");
         return;
     }
 
-    // Extract "Total" row if available
-    const totalRow = data.find(row => row[type] === "Total");
-    const filteredData = data.filter(row => row[type] !== "Total");
+    // Include the "Total" row for chart
+    const totalRow = data.find(row => row.OPERATEUR === "Total");
+    const filteredData = data.filter(row => row.OPERATEUR !== "Total"); // Exclude "Total" row from the table only
 
-    // Prepare labels and values
-    const labels = filteredData.map(row => row[type]);
+    const labels = filteredData.map(row => row.OPERATEUR);
     const totalValues = filteredData.map(row => row.TOTAL);
     const qtyValues = filteredData.map(row => row.QTY);
     const margeValues = filteredData.map(row => row.MARGE * 100);
 
-    // Include the "Total" row in the chart
+    // Include the "Total" row in the chart data
     if (totalRow) {
-        labels.unshift(totalRow[type]);
+        labels.unshift(totalRow.OPERATEUR);
         totalValues.unshift(totalRow.TOTAL);
         qtyValues.unshift(totalRow.QTY);
         margeValues.unshift(totalRow.MARGE * 100);
     }
 
-    console.log(`Chart Labels for ${type}:`, labels);
+    console.log("Chart Labels:", labels);
     console.log("Total Values:", totalValues);
     console.log("Qty Values:", qtyValues);
     console.log("Marge Values:", margeValues);
 
-    const canvas = document.getElementById("allcharts");
+    const canvas = document.getElementById("operatorChart");
     if (!canvas) {
         console.error("Canvas element not found!");
         return;
@@ -1534,15 +1458,15 @@ function updateChart(data, type) {
 
     const ctx = canvas.getContext("2d");
 
-    // Destroy previous chart before creating a new one
-    if (allcharts instanceof Chart) {
+    // Destroy old chart if it exists
+    if (operatorChart instanceof Chart) {
         console.log("Destroying old chart...");
-        allcharts.destroy();
+        operatorChart.destroy();
     }
 
-    // Render the new chart
+    // Ensure chart renders properly after a small delay
     setTimeout(() => {
-        allcharts = new Chart(ctx, {
+        operatorChart = new Chart(ctx, {
             type: "bar",
             data: {
                 labels: labels,
@@ -1573,7 +1497,7 @@ function updateChart(data, type) {
             },
         });
 
-        console.log(`${type} chart successfully created!`);
+        console.log("Chart successfully created!");
     }, 100);
 }
 
@@ -1608,7 +1532,7 @@ function formatNumber(num) {
 
                 if (!startDate || !endDate) return;
 
-                const url = new URL("http://192.168.1.156:5000/fetchBCCBRecap");
+                const url = new URL("http://127.0.0.1:5000/fetchBCCBRecap");
                 url.searchParams.append("start_date", startDate);
                 url.searchParams.append("end_date", endDate);
                 if (fournisseur) url.searchParams.append("fournisseur", fournisseur);

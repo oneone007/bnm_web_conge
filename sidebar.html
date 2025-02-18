@@ -19,8 +19,21 @@
     height: 100vh;
     z-index: 40;
     padding-top: 60px;
+    padding-bottom: 20px; /* Add padding at the bottom for the logout button */
     left: 0;
+    display: flex;
+    flex-direction: column; /* Align items vertically */
 }
+
+.sidebar .mt-auto {
+    margin-top: auto; /* Push the logout button to the bottom */
+    width: 100%;
+}
+
+.sidebar a {
+    text-align: center; /* Center align the logout button */
+}
+
 
 /* When Sidebar is Hidden */
 .sidebar-hidden {
@@ -194,28 +207,26 @@ class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg h
 
 
 <div id="sidebar" class="sidebar p-4 bg-gray-50 dark:bg-gray-800">
-       
     <div id="ram-animation"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
 
-<script>
-var animation = lottie.loadAnimation({
-container: document.getElementById('ram-animation'), // Corrected ID
-renderer: 'svg',
-loop: true,
-autoplay: true,
-path: 'ram.json',
-rendererSettings: {
-    clearCanvas: true,
-    preserveAspectRatio: 'xMidYMid meet',
-    progressiveLoad: true,
-    hideOnTransparent: true
-}
-});
+    <script>
+        var animation = lottie.loadAnimation({
+            container: document.getElementById('ram-animation'),
+            renderer: 'svg',
+            loop: true,
+            autoplay: true,
+            path: 'ram.json',
+            rendererSettings: {
+                clearCanvas: true,
+                preserveAspectRatio: 'xMidYMid meet',
+                progressiveLoad: true,
+                hideOnTransparent: true
+            }
+        });
+    </script>
 
-</script>
-
-<img src="bnm.png" alt="Logo" class="logo">
+    <img src="log.png" alt="Logo" class="logo">
     <h1 class="text-xl font-bold mb-6 dark:text-white">📂 Collections</h1>
     <nav>
         <ul>
@@ -223,7 +234,7 @@ rendererSettings: {
                 <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
                 </svg>
-                <a href="index.html" class="text-blue-600 hover:underline dark:text-blue-400">Accueil</a>
+                <a href="main.html" class="text-blue-600 hover:underline dark:text-blue-400">Accueil</a>
             </li>
             <li class="mb-3 flex items-center">
                 <svg class="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -238,15 +249,12 @@ rendererSettings: {
                 <a href="no.html" class="hover:underline dark:text-gray-300">Nos analyses</a>
             </li>
             <li class="mb-3 flex flex-col">
-                <!-- Main Menu Item -->
                 <div id="products-toggle" class="flex items-center cursor-pointer">
                     <svg class="w-5 h-5 text-green-600 dark:text-green-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
                     </svg>
                     <span class="hover:underline dark:text-gray-300">PRODUCTS</span>
                 </div>
-            
-                <!-- Subcategory List (Hidden by Default) -->
                 <ul id="products-submenu" class="ml-7 mt-2 space-y-2 hidden">
                     <li>
                         <a href="etatstock.html" class="block hover:underline dark:text-gray-300">ÉTAT DE STOCK</a>
@@ -256,33 +264,54 @@ rendererSettings: {
                     </li>
                 </ul>
             </li>
-            
-            <script>
-                document.getElementById("products-toggle").addEventListener("click", function () {
-                    let submenu = document.getElementById("products-submenu");
-                    submenu.classList.toggle("hidden");
-                });
-            </script>
-            <li class="mb-3 flex items-center">
-                <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                </svg>
-                <a href="recap.html" class="hover:underline dark:text-gray-300">RECAPS</a>
+            <li class="mb-3 flex flex-col">
+                <div id="recaps-toggle" class="flex items-center cursor-pointer">
+                    <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                    </svg>
+                    <span class="hover:underline dark:text-gray-300">RECAPS</span>
+                </div>
+                <ul id="recaps-submenu" class="ml-7 mt-2 space-y-2 hidden">
+                    <li>
+                        <a href="no.html" class="block hover:underline dark:text-gray-300">Récap Achat</a>
+                    </li>
+                    <li>
+                        <a href="recap.html" class="block hover:underline dark:text-gray-300">Récap Vente</a>
+                    </li>
+                </ul>
             </li>
         </ul>
     </nav>
 
-    <!-- Lottie Animation Button -->
-    <!-- <button id="lampButton" class="w-full flex justify-center items-center mt-6 bg-gray-200 dark:bg-gray-700 p-2 rounded-lg shadow-md hover:bg-gray-300 dark:hover:bg-gray-600">
-        <div id="lampAnimation" class="w-8 h-8"></div>
-        <span class="ml-2 text-gray-700 dark:text-gray-300">Mode</span>
-    </button> -->
+    <!-- Logout Button -->
+    <div class="mt-auto">
+        <a href="index.html" class="block text-center py-3 mt-4 w-full bg-red-600 text-white rounded-lg shadow-lg hover:bg-red-700 transition-all duration-300 transform hover:scale-105">
+            Logout
+        </a>
+    </div>
+    
 </div>
+
 <script>
     function navigateToPage(page) {
         window.location.href = page;
     }
-    
+              // Ensure the script runs after the DOM is fully loaded
+              document.addEventListener("DOMContentLoaded", function () {
+                    // Toggle Products submenu visibility
+                    document.getElementById("products-toggle").addEventListener("click", function () {
+                        let submenu = document.getElementById("products-submenu");
+                        console.log("Toggling PRODUCTS submenu"); // Debug log
+                        submenu.classList.toggle("hidden");
+                    });
+            
+                    // Toggle Recaps submenu visibility
+                    document.getElementById("recaps-toggle").addEventListener("click", function () {
+                        let submenu = document.getElementById("recaps-submenu");
+                        console.log("Toggling RECAPS submenu"); // Debug log
+                        submenu.classList.toggle("hidden");
+                    });
+                });
 
 
     const sidebarToggle = document.getElementById('sidebarToggle');
