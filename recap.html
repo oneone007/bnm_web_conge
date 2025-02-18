@@ -344,37 +344,7 @@
         <!-- Search Fields -->
 <!-- Search Fields -->
 <!-- Search Fields -->
-<div class="search-container">
-    <div>
-        <label for="recap_fournisseur">Recap Fournisseur:</label>
-        <input type="text" id="recap_fournisseur" placeholder="Search...">
-    </div>
 
-    <div>
-        <label for="recap_product">Recap Product:</label>
-        <input type="text" id="recap_product" placeholder="Search...">
-    </div>
-
-    <div>
-        <label for="recap_zone">Recap Zone:</label>
-        <input type="text" id="recap_zone" placeholder="Search...">
-    </div>
-
-    <div>
-        <label for="recap_client">Recap Client:</label>
-        <input type="text" id="recap_client" placeholder="Search...">
-    </div>
-
-    <div>
-        <label for="recap_operateur">Recap Operateur:</label>
-        <input type="text" id="recap_operateur" placeholder="Search...">
-    </div>
-
-    <div>
-        <label for="recap_bccbclient">Recap BCCB Client:</label>
-        <input type="text" id="recap_bccbclient" placeholder="Search...">
-    </div>
-</div>
 
 
         <br>
@@ -458,10 +428,14 @@
      
         <div class="table-wrapper">
             <!-- First Table -->
-             
             <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
-                <h2 class="text-lg font-semibold p-4 dark:text-black">RECAP PAR FOURNISSEUR</h2>
-
+                <div class="flex justify-between items-center p-4"> <!-- Flex container for title and search -->
+                    <h2 class="text-lg font-semibold dark:text-black">RECAP PAR FOURNISSEUR</h2>
+                    <div>
+                        <input type="text" id="recap_fournisseur" placeholder="Search..." class="p-2 border border-gray-300 rounded">
+                    </div>
+                </div>
+        
                 <div class="overflow-x-auto">
 
 
@@ -501,8 +475,13 @@
             <!-- Second Table -->
 
             <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
-                    <h2 class="text-lg font-semibold p-4 dark:text-white">RECAP PAR PRODUIT</h2>
-
+                   
+                    <div class="flex justify-between items-center p-4"> <!-- Flex container for title and search -->
+                        <h2 class="text-lg font-semibold dark:text-black">RECAP PAR PRODUIT</h2>
+                        <div>
+                            <input type="text" id="recap_product" placeholder="Search..." class="p-2 border border-gray-300 rounded">
+                        </div>
+                    </div>
                 <div class="overflow-x-auto">
 
 
@@ -552,14 +531,19 @@
         <div class="table-wrapper">
             <!-- First Table: RECAP PAR ZONE -->
             <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
-                <div class="flex items-center justify-between p-4">
-                    <h2 class="text-lg font-semibold dark:text-white">RECAP PAR ZONE</h2>
-                    
+              
+
+                <div class="flex justify-between items-center p-4"> <!-- Flex container for title and search -->
+                    <h2 class="text-lg font-semibold dark:text-black">RECAP PAR ZONE</h2>
                     <img id="generate-chart-zone"
-                         src="chrt.png"
-                         alt="chart Icon"
-                         class="w-6 h-6 cursor-pointer transform hover:scale-105 transition-all duration-300 ease-in-out"
-                         >
+                    src="chrt.png"
+                    alt="chart Icon"
+                    class="w-6 h-6 cursor-pointer transform hover:scale-105 transition-all duration-300 ease-in-out"
+                    >
+                    <div>
+                     
+                        <input type="text" id="recap_zone" placeholder="Search..." class="p-2 border border-gray-300 rounded">
+                    </div>
                 </div>
             
                 <div class="overflow-x-auto">
@@ -586,8 +570,13 @@
 
             <!-- Second Table: RECAP CLIENT -->
             <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
-                <h2 class="text-lg font-semibold p-4 dark:text-white">RECAP CLIENT</h2>
-                <div class="overflow-x-auto">
+                <div class="flex justify-between items-center p-4"> <!-- Flex container for title and search -->
+                    <h2 class="text-lg font-semibold dark:text-black">RECAP CLIENT</h2>
+                    <div>
+                        <input type="text" id="recap_client" placeholder="Search..." class="p-2 border border-gray-300 rounded">
+                    </div>
+                </div>  
+                              <div class="overflow-x-auto">
                     <table class="min-w-full border-collapse text-sm text-left dark:text-white">
                         <thead>
                             <tr class="table-header dark:bg-gray-700">
@@ -631,17 +620,22 @@
         <div class="table-wrapper flex flex-wrap gap-6">
             <!-- First Table: RECAP PAR OPÉRATEUR -->
             <div class="table-container flex-1 min-w-[400px] rounded-lg bg-white shadow-md dark:bg-gray-800">
-                <div class="flex items-center justify-between p-4">
-                    <h2 class="text-lg font-semibold dark:text-white">RECAP PAR OPÉRATEUR</h2>
-                    
-                    <img id="generate-chart-operateur"
-                         src="chrt.png"
-                         alt="chart Icon"
-                         class="w-6 h-6 cursor-pointer transform hover:scale-105 transition-all duration-300 ease-in-out"
-                         >
-                         <!-- onclick="yourFunctionHere()" -->
+            
+                
 
+                <div class="flex justify-between items-center p-4"> <!-- Flex container for title and search -->
+                    <h2 class="text-lg font-semibold dark:text-black">RECAP PAR OPÉRATEUR</h2>
+                    <img id="generate-chart-operateur"
+                    src="chrt.png"
+                    alt="chart Icon"
+                    class="w-6 h-6 cursor-pointer transform hover:scale-105 transition-all duration-300 ease-in-out"
+                    >
+                    <div>
+                     
+                        <input type="text" id="recap_operateur" placeholder="Search..." class="p-2 border border-gray-300 rounded">
+                    </div>
                 </div>
+
             
                 <div class="overflow-x-auto">
                     <table class="min-w-full border-collapse text-sm text-left dark:text-white">
@@ -667,7 +661,12 @@
 
             <!-- Second Table: RECAP PAR BCCB -->
             <div class="table-container flex-1 min-w-[400px] rounded-lg bg-white shadow-md dark:bg-gray-800">
-                <h2 class="text-lg font-semibold p-4 dark:text-white">RECAP PAR BCCB CLIENT</h2>
+                <div class="flex justify-between items-center p-4"> <!-- Flex container for title and search -->
+                    <h2 class="text-lg font-semibold dark:text-black">BCCB CLIENT</h2>
+                    <div>
+                        <input type="text" id="recap_bccbclient" placeholder="Search..." class="p-2 border border-gray-300 rounded">
+                    </div>
+                </div>  
                 <div class="overflow-x-auto">
                     <table class="min-w-full border-collapse text-sm text-left dark:text-white">
                         <thead>

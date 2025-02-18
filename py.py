@@ -1854,9 +1854,419 @@ def generate_excel_bccb(data, filename):
 
     return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
+def fetch_total_recap_achat(start_date, end_date, fournisseur, product):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT
+                    SUM(CASE 
+                        WHEN xf.C_DocType_ID = 1000646 THEN -1 * TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED) 
+                        ELSE TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED) 
+                    END) AS chiffre
+                FROM M_InOut xf
+                JOIN M_InOutline mi ON mi.M_INOUT_ID = xf.M_INOUT_ID
+                JOIN C_BPartner cb ON cb.C_BPARTNER_ID = xf.C_BPARTNER_ID
+                LEFT JOIN C_InvoiceLine ci ON ci.M_INOUTLINE_ID = mi.M_INOUTLINE_ID
+                JOIN M_ATTRIBUTEINSTANCE ma ON ma.M_ATTRIBUTESETINSTANCE_ID = mi.M_ATTRIBUTESETINSTANCE_ID
+                JOIN M_PRODUCT m ON m.M_PRODUCT_id = mi.M_PRODUCT_id
+                WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                    AND ma.M_Attribute_ID = 1000504
+                    AND xf.AD_Org_ID = 1000000
+                    AND xf.C_DocType_ID IN (1000013, 1000646)
+                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
+                    AND (:fournisseur IS NULL OR UPPER(cb.name) LIKE UPPER(:fournisseur) || '%')
+                    AND (:product IS NULL OR UPPER(m.name) LIKE UPPER(:product) || '%')
+            """
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'fournisseur': fournisseur or None,
+                'product': product or None
+            }
+
+            cursor.execute(query, params)
+            row = cursor.fetchone()
+            
+            return {"chiffre": row[0] if row and row[0] is not None else 0}
+    
+    except Exception as e:
+        logger.error(f"Error fetching total recap achat: {e}")
+        return {"error": "An error occurred while fetching total recap achat."}
+@app.route('/fetchTotalRecapAchat', methods=['GET'])
+def fetch_total_achat():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    data = fetch_total_recap_achat(start_date, end_date, fournisseur, product)
+    return jsonify(data)
+def fetch_fournisseur_recap_achat(start_date, end_date, fournisseur, product):
+    try:
+        # Acquire a connection from the pool
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+                SELECT
+                    CAST(cb.name AS VARCHAR2(300)) AS FOURNISSEUR,   
+                    SUM(CASE 
+                        WHEN xf.C_DocType_ID = 1000646 THEN -1 * TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED) 
+                        ELSE TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED) 
+                    END) AS chiffre,
+                    0 AS sort_order
+                FROM 
+                    M_InOut  xf
+                JOIN M_INOUTLINE mi ON mi.M_INOUT_ID=xf.M_INOUT_ID
+                JOIN C_BPartner cb ON cb.C_BPARTNER_ID=xf.C_BPARTNER_ID
+                LEFT JOIN C_InvoiceLine ci ON ci.M_INOUTLINE_ID=mi.M_INOUTLINE_ID
+                JOIN M_ATTRIBUTEINSTANCE ma ON ma.M_ATTRIBUTESETINSTANCE_ID=mi.M_ATTRIBUTESETINSTANCE_ID
+                JOIN M_PRODUCT m ON m.M_PRODUCT_id=mi.M_PRODUCT_id
+                WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                    AND ma.M_Attribute_ID=1000504
+                    AND xf.AD_Org_ID = 1000000
+                    AND xf.C_DocType_ID IN (1000013, 1000646)
+                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
+                    AND (:fournisseur IS NULL OR UPPER(cb.name) LIKE UPPER(:fournisseur) || '%')
+                    AND (:product IS NULL OR UPPER(m.name) LIKE UPPER(:product) || '%')
+                GROUP BY 
+                    cb.name
+
+                UNION ALL
+
+                SELECT
+                    CAST('Total' AS VARCHAR2(300)) AS FOURNISSEUR, 
+                    SUM(CASE 
+                        WHEN xf.C_DocType_ID = 1000646 THEN -1 * TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED) 
+                        ELSE TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED) 
+                    END) AS chiffre,
+                    1 AS sort_order
+                FROM 
+                    M_InOut  xf
+                JOIN M_INOUTLINE mi ON mi.M_INOUT_ID=xf.M_INOUT_ID
+                JOIN C_BPartner cb ON cb.C_BPARTNER_ID=xf.C_BPARTNER_ID
+                LEFT JOIN C_InvoiceLine ci ON ci.M_INOUTLINE_ID=mi.M_INOUTLINE_ID
+                JOIN M_ATTRIBUTEINSTANCE ma ON ma.M_ATTRIBUTESETINSTANCE_ID=mi.M_ATTRIBUTESETINSTANCE_ID
+                JOIN M_PRODUCT m ON m.M_PRODUCT_id=mi.M_PRODUCT_id
+                WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                    AND ma.M_Attribute_ID=1000504
+                    AND xf.AD_Org_ID = 1000000
+                    AND xf.C_DocType_ID IN (1000013, 1000646)
+                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
+                    AND (:fournisseur IS NULL OR UPPER(cb.name) LIKE UPPER(:fournisseur) || '%')
+                    AND (:product IS NULL OR UPPER(m.name) LIKE UPPER(:product) || '%')
+            """
+
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'fournisseur': fournisseur or None,
+                'product': product or None
+            }
+
+            # Execute the query with the provided parameters
+            cursor.execute(query, params)
+
+            # Fetch the results
+            rows = cursor.fetchall()
+
+            # Format the results into a list of dictionaries
+            data = [{"FOURNISSEUR": row[0], "CHIFFRE": row[1], "SORT_ORDER": row[2]} for row in rows]
+
+            return data
+    
+    except Exception as e:
+        logger.error(f"Error fetching fournisseur recap achat: {e}")
+        return {"error": "An error occurred while fetching fournisseur recap achat."}
+
+# Flask route to handle the request
+@app.route('/fetchfourisseurRecapAchat', methods=['GET'])
+def fetch_fournisseur_achat():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+
+    # Ensure both start_date and end_date are provided
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    # Fetch data from the database
+    data = fetch_fournisseur_recap_achat(start_date, end_date, fournisseur, product)
+
+    # Return the result as a JSON response
+    return jsonify(data)
 
 
+def fetch_product_achat_recap(start_date, end_date, fournisseur, product):
+    try:
+        # Acquire a connection from the pool
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
 
+            query = """
+                SELECT 
+                    CAST(m.name AS VARCHAR2(300)) AS produit,   
+                    SUM(CASE 
+                            WHEN xf.C_DocType_ID = 1000646 THEN -1 * TO_NUMBER(mi.QTYENTERED)
+                            ELSE TO_NUMBER(mi.QTYENTERED)
+                        END) AS qty,
+                    
+                    SUM(CASE 
+                            WHEN xf.C_DocType_ID = 1000646 THEN -1 * TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED)
+                            ELSE TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED)
+                        END) AS chiffre,
+                    0 AS sort_order
+                FROM 
+                    M_InOut xf
+                    JOIN M_INOUTLINE mi ON mi.M_INOUT_ID = xf.M_INOUT_ID
+                    JOIN M_ATTRIBUTEINSTANCE ma ON ma.M_ATTRIBUTESETINSTANCE_ID = mi.M_ATTRIBUTESETINSTANCE_ID
+                    JOIN C_BPartner cb ON cb.C_BPARTNER_ID = xf.C_BPARTNER_ID
+                    JOIN M_PRODUCT m ON m.M_PRODUCT_id = mi.M_PRODUCT_id
+                WHERE 
+                    xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                    AND xf.AD_Org_ID = 1000000
+                    AND xf.C_DocType_ID IN (1000013, 1000646)
+                    AND ma.M_Attribute_ID = 1000504
+                    AND xf.DOCSTATUS = 'CO'
+                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
+                    AND (:fournisseur IS NULL OR UPPER(cb.name) LIKE UPPER(:fournisseur) || '%')
+                    AND (:product IS NULL OR UPPER(m.name) LIKE UPPER(:product) || '%')
+                GROUP BY 
+                    m.name
+
+                UNION ALL
+
+                SELECT
+                    CAST('Total' AS VARCHAR2(300)) AS produit, 
+                    SUM(CASE 
+                            WHEN xf.C_DocType_ID = 1000646 THEN -1 * TO_NUMBER(mi.QTYENTERED)
+                            ELSE TO_NUMBER(mi.QTYENTERED)
+                        END) AS qty,
+                    SUM(CASE 
+                            WHEN xf.C_DocType_ID = 1000646 THEN -1 * TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED)
+                            ELSE TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED)
+                        END) AS chiffre,
+                    1 AS sort_order
+                FROM 
+                    M_InOut xf
+                    JOIN M_INOUTLINE mi ON mi.M_INOUT_ID = xf.M_INOUT_ID
+                    JOIN M_ATTRIBUTEINSTANCE ma ON ma.M_ATTRIBUTESETINSTANCE_ID = mi.M_ATTRIBUTESETINSTANCE_ID
+                    JOIN C_BPartner cb ON cb.C_BPARTNER_ID = xf.C_BPARTNER_ID
+                    JOIN M_PRODUCT m ON m.M_PRODUCT_id = mi.M_PRODUCT_id
+                WHERE 
+                    xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                    AND xf.AD_Org_ID = 1000000
+                    AND xf.C_DocType_ID IN (1000013, 1000646)
+                    AND ma.M_Attribute_ID = 1000504
+                    AND xf.DOCSTATUS = 'CO'
+                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
+                    AND (:fournisseur IS NULL OR UPPER(cb.name) LIKE UPPER(:fournisseur) || '%')
+                    AND (:product IS NULL OR UPPER(m.name) LIKE UPPER(:product) || '%')
+            """
+
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'fournisseur': fournisseur or None,
+                'product': product or None
+            }
+
+            # Execute the query with the provided parameters
+            cursor.execute(query, params)
+
+            # Fetch the results
+            rows = cursor.fetchall()
+
+            # Format the results into a list of dictionaries
+            data = [{"PRODUIT": row[0], "QTY": row[1], "CHIFFRE": row[2], "SORT_ORDER": row[3]} for row in rows]
+
+            return data
+    
+    except Exception as e:
+        logger.error(f"Error fetching product recap achat: {e}")
+        return {"error": "An error occurred while fetching product recap achat."}
+
+@app.route('/fetchProductRecapAchat', methods=['GET'])
+def fetch_product_achat():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+
+    # Ensure both start_date and end_date are provided
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    # Fetch data from the database
+    data = fetch_product_achat_recap(start_date, end_date, fournisseur, product)
+
+    # Return the result as a JSON response
+    return jsonify(data)
+
+
+@app.route('/download-recap-product-achat-excel', methods=['GET'])
+def download_recap_product_achat_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+ 
+
+    # Ensure both start and end dates are provided
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    # Fetch the data using the fetch_product_achat_recap function
+    data = fetch_product_achat_recap(start_date, end_date, fournisseur, product)
+
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    filename = f"ProductRecapAchat_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    # Generate and return the Excel file
+    return generate_excel_product_achat(data, filename)
+
+def generate_excel_product_achat(data, filename):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Convert the data into a DataFrame
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    # Create an Excel workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Product Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    # Add headers to the sheet
+    ws.append(df.columns.tolist())
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+    ws.auto_filter.ref = ws.dimensions
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table for better presentation
+    table = Table(displayName="ProductRecapTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    # Send the file to the client for download
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@app.route('/download-recap-fournisseur-achat-excel', methods=['GET'])
+def download_recap_fournisseur_achat_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+
+    # Ensure both start and end dates are provided
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    # Fetch data using the fetch_fournisseur_recap_achat function
+    data = fetch_fournisseur_recap_achat(start_date, end_date, fournisseur, product)
+
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    filename = f"FournisseurRecapAchat_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    # Generate and return the Excel file
+    return generate_excel_fournisseur_achat(data, filename)
+
+def generate_excel_fournisseur_achat(data, filename):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Convert the data into a DataFrame
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    # Create an Excel workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Fournisseur Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    # Add headers to the sheet
+    ws.append(df.columns.tolist())
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+    ws.auto_filter.ref = ws.dimensions
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table for better presentation
+    table = Table(displayName="FournisseurRecapAchatTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    # Send the file to the client for download
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)
