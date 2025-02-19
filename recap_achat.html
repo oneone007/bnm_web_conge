@@ -157,7 +157,6 @@
       }
   }
 
-
   .date-container {
     display: flex;
     flex-wrap: wrap;
@@ -167,6 +166,18 @@
     background: #f9fafb;
     border-radius: 12px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    max-width: 600px; /* Adjust width as needed */
+    width: 100%; /* Ensures it doesn't exceed max-width */
+    margin: 0 auto; /* Centers the container */
+}
+
+@media (max-width: 768px) {
+    .date-container {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+        max-width: 90%; /* Allows slight expansion on smaller screens */
+    }
 }
 
 .date-container label {
@@ -220,6 +231,84 @@
         align-items: flex-start;
     }
 }
+/* Hide Default Checkbox */
+.checkbox {
+    display: none;
+}
+
+/* Toggle Background */
+.checkbox-label {
+    width: 60px;
+    height: 30px;
+    background: #f97316; /* Light Mode Orange */
+    display: flex;
+    align-items: center;
+    border-radius: 50px;
+    position: relative;
+    cursor: pointer;
+    padding: 5px;
+    transition: background 0.3s ease-in-out;
+}
+
+/* Ball */
+.ball {
+    width: 24px;
+    height: 24px;
+    background: white;
+    position: absolute;
+    border-radius: 50%;
+    transition: transform 0.3s ease-in-out;
+    left: 5px;
+}
+
+/* Icons */
+.icon {
+    font-size: 16px;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: opacity 0.3s ease-in-out;
+}
+
+/* Sun (Left) */
+.sun {
+    left: 10px;
+    color: white;
+}
+
+/* Moon (Right) */
+.moon {
+    right: 10px;
+    color: white;
+    opacity: 0; /* Hidden in Light Mode */
+}
+
+/* Dark Mode */
+html.dark .checkbox-label {
+    background: #1f2937; /* Dark Mode Gray */
+}
+
+html.dark .ball {
+    transform: translateX(30px);
+}
+
+html.dark .sun {
+    opacity: 0; /* Hide Sun */
+}
+
+html.dark .moon {
+    opacity: 1; /* Show Moon */
+}
+
+/* Theme Switcher Position */
+#themeSwitcher {
+    position: sticky;
+    top: 10px;
+    right: 10px;
+    padding: 10px;
+    z-index: 50;
+}
+
 
     </style>
 
@@ -233,10 +322,11 @@
     <div id="themeSwitcher">
         <input type="checkbox" class="checkbox" id="themeToggle">
         <label for="themeToggle" class="checkbox-label">
-            <span class="ball"></span>
+            <span class="icon sun">☀️</span>
+            <span class="icon moon">🌙</span>
         </label>
         <div id="lottieContainer" style="width: 250px; height: 200px; margin-top: 10px;"></div>
-
+    
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
@@ -250,10 +340,13 @@
         });
     </script>
 
+
 <!-- Sidebar -->
 <div id="sidebar-container"></div>
 
 <script>
+    
+    // Fetch sidebar content dynamically
     fetch("sidebar.html")
         .then(response => response.text())
         .then(html => {
@@ -264,25 +357,66 @@
             // Insert the sidebar content into the page
             container.innerHTML = tempDiv.innerHTML;
 
-            // Now reattach the event listeners for toggles directly
-            // Toggle Products submenu visibility
-            document.getElementById("products-toggle").addEventListener("click", function () {
-                let submenu = document.getElementById("products-submenu");
-                console.log("Toggling PRODUCTS submenu"); // Debug log
-                submenu.classList.toggle("hidden");
-            });
+            // Reattach event listeners for the submenu toggles (Products, Recaps)
+            const productsToggle = document.getElementById("products-toggle");
+            if (productsToggle) {
+                productsToggle.addEventListener("click", function () {
+                    let submenu = document.getElementById("products-submenu");
+                    submenu.classList.toggle("hidden");
+                });
+            }
 
-            // Toggle Recaps submenu visibility
-            document.getElementById("recaps-toggle").addEventListener("click", function () {
-                let submenu = document.getElementById("recaps-submenu");
-                console.log("Toggling RECAPS submenu"); // Debug log
-                submenu.classList.toggle("hidden");
-            });
+            const recapsToggle = document.getElementById("recaps-toggle");
+            if (recapsToggle) {
+                recapsToggle.addEventListener("click", function () {
+                    let submenu = document.getElementById("recaps-submenu");
+                    submenu.classList.toggle("hidden");
+                });
+            }
+
+            // Initialize Lottie animation after sidebar is inserted
+            const ramAnimation = document.getElementById('ram-animation');
+            if (ramAnimation) {
+                lottie.loadAnimation({
+                    container: ramAnimation,
+                    renderer: 'svg',
+                    loop: true,
+                    autoplay: true,
+                    path: 'ram.json',
+                    rendererSettings: {
+                        clearCanvas: true,
+                        preserveAspectRatio: 'xMidYMid meet',
+                        progressiveLoad: true,
+                        hideOnTransparent: true
+                    }
+                });
+            }
+
+            // Sidebar toggle functionality
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            const content = document.querySelector('.content');
+
+            // Ensure sidebarToggle is initialized after sidebar is loaded
+            if (sidebarToggle && sidebar && content) {
+                sidebarToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('sidebar-hidden');
+                    content.classList.toggle('content-full');
+
+                    // Adjust button position when sidebar is hidden or shown
+                    if (sidebar.classList.contains('sidebar-hidden')) {
+                        sidebarToggle.style.left = '10px';  // Sidebar hidden
+                    } else {
+                        sidebarToggle.style.left = '260px'; // Sidebar visible
+                    }
+                });
+            } else {
+                console.error("Sidebar or Toggle Button not found!");
+            }
+
         })
         .catch(error => console.error("Error loading sidebar:", error));
 </script>
-
-
     <!-- Main Content -->
     <div id="content" class="content flex-grow p-4">
 

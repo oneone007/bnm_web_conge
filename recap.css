@@ -173,73 +173,7 @@ html.dark body {
 }
 
 /* Dark Mode Toggle - Styled Checkbox */
-.checkbox {
-    display: none;
-}
+/* Hide Default Checkbox */
+/* Hide Default Checkbox */
 
-/* Toggle Background */
-.checkbox-label {
-    width: 60px;
-    height: 30px;
-    background: #ddd;
-    display: flex;
-    border-radius: 50px;
-    align-items: center;
-    position: relative;
-    cursor: pointer;
-    padding: 5px;
-    transition: background 0.3s ease-in-out;
-}
-
-/* Ball as Sun (Default) */
-.ball {
-    width: 22px;
-    height: 22px;
-    background: #facc15;
-    /* Sun color (yellow) */
-    position: absolute;
-    border-radius: 50%;
-    transition: transform 0.3s ease-in-out, background 0.3s ease-in-out;
-    left: 5px;
-    box-shadow: 0 0 5px 2px #facc15;
-    /* Sun glow effect */
-}
-
-/* Add Sun Rays */
-.ball::before {
-    content: "";
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: inherit;
-    border-radius: 50%;
-    transform: scale(1.4);
-    opacity: 0.5;
-}
-
-/* Moon Shape */
-html.dark .ball {
-    transform: translateX(30px);
-    background: #1e40af;
-    /* Moon color (blue) */
-    box-shadow: none;
-    /* Remove glow */
-}
-
-/* Crescent Moon Effect */
-html.dark .ball::before {
-    content: "";
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: white;
-    border-radius: 50%;
-    left: 5px;
-    /* Shift left to create crescent effect */
-}
-
-/* Dark Mode Background */
-html.dark .checkbox-label {
-    background: #333;
-}
 
