@@ -1,10 +1,41 @@
+<?php
+session_start();
+
+// Set session timeout to 1 hour (3600 seconds)
+$inactive_time = 3600;
+
+// Check if the user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: BNM"); // Redirect to login if not logged in
+    exit();
+}
+
+// Check if last activity is set
+if (isset($_SESSION['last_activity'])) {
+    // Calculate session lifetime
+    $session_lifetime = time() - $_SESSION['last_activity'];
+
+    if ($session_lifetime > $inactive_time) {
+        session_unset(); // Unset session variables
+        session_destroy(); // Destroy the session
+        header("Location: BNM?session_expired=1"); // Redirect to login page with message
+        exit();
+    }
+}
+
+// Update last activity timestamp
+$_SESSION['last_activity'] = time();
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dynamic Dashboard</title>
+    <title>BNM</title>
+    <link rel="icon" href="tab.png" sizes="128x128" type="image/png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <link rel="stylesheet" href="recap.css">
@@ -347,7 +378,7 @@ html.dark .moon {
 <script>
     
     // Fetch sidebar content dynamically
-    fetch("sidebar.html")
+    fetch("side")
         .then(response => response.text())
         .then(html => {
             let container = document.getElementById("sidebar-container");

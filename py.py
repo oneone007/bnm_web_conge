@@ -665,7 +665,7 @@ def download_stock_excel():
     if filters["name"]:
         data = [row for row in data if filters["name"].lower() in row["NAME"].lower()]
 
-    # Generate filename with filter values
+    # Generate filename dynamically
     today_date = datetime.now().strftime("%d-%m-%Y")
     location_part = f"_{filters['locatorname']}" if filters["locatorname"] else ""
     filter_values = "_".join([f"{key}-{value}" for key, value in filters.items() if value and key != "locatorname"])
@@ -673,7 +673,6 @@ def download_stock_excel():
     filename = f"{stock_value}_{today_date}{location_part}.xlsx" if not filter_values else f"{stock_value}_{today_date}{location_part}_{filter_values}.xlsx"
 
     return generate_excel_stock(data, filename)
-
 
 
 

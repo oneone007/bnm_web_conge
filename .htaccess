@@ -1,0 +1,11 @@
+RewriteEngine On
+RewriteBase /bnm_web/
+
+# Block direct access to .html files
+RewriteCond %{THE_REQUEST} \s/+bnm_web/([^?]*\.html) [NC]
+RewriteRule ^ - [R=404,L]
+
+# Redirect clean URLs to router.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([^/]+)/?$ router.php?page=$1 [L,QSA]

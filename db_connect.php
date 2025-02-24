@@ -1,3 +1,4 @@
+
 <?php
 $host = 'localhost'; // Database host
 $dbname = 'bnm'; // Database name

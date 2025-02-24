@@ -1,3 +1,31 @@
+<?php
+session_start();
+
+// Set session timeout to 1 hour (3600 seconds)
+$inactive_time = 3600;
+
+// Check if the user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: BNM"); // Redirect to login if not logged in
+    exit();
+}
+
+// Check if last activity is set
+if (isset($_SESSION['last_activity'])) {
+    // Calculate session lifetime
+    $session_lifetime = time() - $_SESSION['last_activity'];
+
+    if ($session_lifetime > $inactive_time) {
+        session_unset(); // Unset session variables
+        session_destroy(); // Destroy the session
+        header("Location: BNM?session_expired=1"); // Redirect to login page with message
+        exit();
+    }
+}
+
+// Update last activity timestamp
+$_SESSION['last_activity'] = time();
+?>
 <!DOCTYPE html>
 <html lang="en" >
 <head>
@@ -323,6 +351,77 @@ html.dark .moon {
     z-index: 50;
 }
 
+.search-container {
+      display: grid;
+      grid-template-columns: repeat(1, minmax(250px, 1fr)); /* 3 columns per row */
+      gap: 16px;
+      padding: 20px;
+      width: 50%;
+
+      background: #f9fafb;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .search-container label {
+      display: block;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+  }
+
+  .search-container input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: all 0.3s ease-in-out;
+      background-color: white;
+      color: #111827;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .search-container input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
+  }
+
+  /* Dark Mode */
+  .dark .search-container {
+      background: #1f2937;
+      box-shadow: none;
+  }
+
+  .dark .search-container label {
+      color: #e5e7eb;
+  }
+
+  .dark .search-container input {
+      background-color: #374151;
+      color: white;
+      border: 1px solid #4b5563;
+      box-shadow: none;
+  }
+
+  .dark .search-container input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+  }
+
+  /* Responsive Design */
+  @media (max-width: 1024px) {
+      .search-container {
+          grid-template-columns: repeat(2, minmax(250px, 1fr)); /* 2 per row on tablets */
+      }
+  }
+
+  @media (max-width: 768px) {
+      .search-container {
+          grid-template-columns: 1fr; /* 1 per row on mobile */
+      }
+  }
 
 
     </style>
@@ -361,7 +460,7 @@ html.dark .moon {
 
 <script>
     // Fetch sidebar content dynamically
-    fetch("sidebar.html")
+    fetch("side")
         .then(response => response.text())
         .then(html => {
             let container = document.getElementById("sidebar-container");
@@ -455,7 +554,14 @@ html.dark .moon {
     </select>
 </div> 
 -->
-<label class="text-blue-600 font-semibold mb-2 block" for="locatorDropdown">Select Location:</label>
+
+<div class="search-container">
+    <div>
+        <label for="recap_fournisseur"> Fournisseur:</label>
+        <input type="text" id="recap_fournisseur" placeholder="Search...">
+    </div>
+<div>
+    <label class="text-blue-600 font-semibold mb-2 block" for="locatorDropdown">Select Location:</label>
 <select id="locatorDropdown" class="w-60 border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
     <option value="">-- Select Location --</option>
     <option value="1000000">Z-ETAGE</option>
@@ -480,7 +586,9 @@ html.dark .moon {
     <option value="1000314">MOYEN GENERAUX</option>
     <option value="1000210">PERIME</option>
 </select>
+</div>
 
+</div>
 
         <br><br>
      
@@ -531,6 +639,12 @@ html.dark .moon {
      
   
         <script >
+window.onload = () => {
+    document.getElementById("recap_fournisseur").value = ""; // Clear search input
+    document.getElementById("locatorDropdown").value = ""; // Reset select dropdown to empty value
+};
+
+
 
 let emplacementPage = 1;
 const emplacementRowsPerPage = 10;
@@ -596,6 +710,11 @@ let filters = {
 };
 let sortColumn = '';
 let sortDirection = 'asc';
+document.getElementById("recap_fournisseur").addEventListener("input", function () {
+    filters.fournisseur = this.value.toLowerCase(); // Store search input in filters
+    currentPage = 1;
+    updateTableAndPagination();
+});
 
 // Fetch data on page load
 async function fetchData() {
@@ -612,8 +731,8 @@ async function fetchData() {
 
 document.getElementById("stock").addEventListener("click", function () {
     let params = new URLSearchParams();
-    
-    // Get the selected location
+
+    // Get selected location
     let locatorDropdown = document.getElementById("locatorDropdown");
     let selectedLocatorID = locatorDropdown.value;
     let selectedLocatorName = locatorDropdown.options[locatorDropdown.selectedIndex].text;
@@ -623,8 +742,16 @@ document.getElementById("stock").addEventListener("click", function () {
         params.append("locatorname", selectedLocatorName);
     }
 
+    // Get fournisseur search input
+    let searchFournisseur = document.getElementById("recap_fournisseur").value.trim();
+    if (searchFournisseur) {
+        params.append("fournisseur", searchFournisseur);
+    }
+
+    // Open the filtered download link
     window.open(`http://192.168.1.156:5000/download-stock-excel?${params.toString()}`, "_blank");
 });
+
 
 
 function filterDropdown(type) {
@@ -636,12 +763,16 @@ function filterDropdown(type) {
 
 function filterData(data) {
     const selectedLocatorID = Number(filters.locatorid); // Convert once for efficiency
+    const searchQuery = filters.fournisseur; // Get the search query
 
     return data.filter(row => {
-        if (!filters.locatorid) return true; // No filter applied, show all
-        return Number(row.LOCATORID) === selectedLocatorID;
+        let matchesLocator = !filters.locatorid || Number(row.LOCATORID) === selectedLocatorID;
+        let matchesSearch = !searchQuery || row.FOURNISSEUR.toLowerCase().includes(searchQuery);
+
+        return matchesLocator && matchesSearch;
     });
 }
+
 
 
 

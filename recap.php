@@ -1,3 +1,33 @@
+<?php
+session_start();
+
+// Set session timeout to 1 hour (3600 seconds)
+$inactive_time = 3600;
+
+// Check if the user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: BNM"); // Redirect to login if not logged in
+    exit();
+}
+
+// Check if last activity is set
+if (isset($_SESSION['last_activity'])) {
+    // Calculate session lifetime
+    $session_lifetime = time() - $_SESSION['last_activity'];
+
+    if ($session_lifetime > $inactive_time) {
+        session_unset(); // Unset session variables
+        session_destroy(); // Destroy the session
+        header("Location: BNM?session_expired=1"); // Redirect to login page with message
+        exit();
+    }
+}
+
+// Update last activity timestamp
+$_SESSION['last_activity'] = time();
+?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -5,6 +35,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BNM</title>
+    <script src="main.js" defer></script>
     <link rel="icon" href="tab.png" sizes="128x128" type="image/png">
                 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
                 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
@@ -312,6 +343,11 @@ html.dark .moon {
 
 
 
+
+
+
+
+
     </style>
 
 </head>
@@ -352,7 +388,7 @@ html.dark .moon {
 
 <script>
     // Fetch sidebar content dynamically
-    fetch("sidebar.html")
+    fetch("side")
         .then(response => response.text())
         .then(html => {
             let container = document.getElementById("sidebar-container");
@@ -463,6 +499,9 @@ html.dark .moon {
             <img src="excel.png" alt="Excel Icon" class="w-6 h-6">
             <span>Total Recap Download</span>
         </button>
+
+ 
+
 
         <br>
         
@@ -804,7 +843,6 @@ html.dark .moon {
 
         <br><br><br> <br>
         <script>
-
 
 
 

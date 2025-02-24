@@ -1,4 +1,8 @@
 <?php
+header('Content-Type: application/json');
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 include 'db_connect.php'; // Include the database connection
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -26,12 +30,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(["success" => false, "error" => "Username already exists!"]);
     } else {
         // Insert the new user
-        $sql = "INSERT INTO users (username, password) VALUES (?, ?)";
+        $sql = "INSERT INTO users (username, password, confipassword) VALUES (?, ?, ?)";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ss", $username, $hashedPassword);
+        $stmt->bind_param("sss", $username, $hashedPassword, $confirmPassword);
 
         if ($stmt->execute()) {
-            echo json_encode(["success" => true, "redirect" => "index.html"]);
+            echo json_encode(["success" => true, "redirect" => "BNM"]);
         } else {
             echo json_encode(["success" => false, "error" => "Error during signup. Please try again."]);
         }

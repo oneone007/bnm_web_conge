@@ -1,3 +1,49 @@
+<?php
+session_start();
+
+// Set session timeout to 1 hour (3600 seconds)
+$inactive_time = 3600;
+
+// Check if the user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: BNM"); // Redirect to login if not logged in
+    exit();
+}
+
+// Get session details
+$user_id = $_SESSION['user_id'];
+$username = isset($_SESSION['username']) ? $_SESSION['username'] : 'Unknown';
+$login_time = isset($_SESSION['login_time']) ? date("Y-m-d H:i:s", $_SESSION['login_time']) : 'Unknown';
+$ip_address = $_SERVER['REMOTE_ADDR'];
+$current_time = date("Y-m-d H:i:s");
+
+// Check if last activity is set
+if (isset($_SESSION['last_activity'])) {
+    // Calculate session lifetime
+    $session_lifetime = time() - $_SESSION['last_activity'];
+
+    if ($session_lifetime > $inactive_time) {
+        session_unset(); // Unset session variables
+        session_destroy(); // Destroy the session
+
+        // Log session expiration
+        $log_entry = "$current_time - User ID: $user_id - Username: $username - IP: $ip_address - Session Expired\n";
+        file_put_contents(__DIR__ . "/login_logs.txt", $log_entry, FILE_APPEND);
+
+        header("Location: BNM?session_expired=1"); // Redirect to login page with message
+        exit();
+    }
+}
+
+// Update last activity timestamp
+$_SESSION['last_activity'] = time();
+
+// Log session activity
+$log_entry = "$current_time - User ID: $user_id - Username: $username - Login Time: $login_time - IP: $ip_address - Active Session\n";
+file_put_contents(__DIR__ . "/login_logs.txt", $log_entry, FILE_APPEND);
+?>
+
+
 
     <!DOCTYPE html>
     <html lang="en">
@@ -259,7 +305,7 @@ html.dark .moon {
 
     
     // Fetch sidebar content dynamically
-    fetch("sidebar.html")
+    fetch("side")
         .then(response => response.text())
         .then(html => {
             let container = document.getElementById("sidebar-container");
@@ -330,6 +376,47 @@ html.dark .moon {
         .catch(error => console.error("Error loading sidebar:", error));
 </script>
 
+<div class="canvas-container">
+    <!-- <div class="container arrow" onclick="location.href='c';">Arrow</div>
+    <div class="container rabbit" onclick="location.href='b';">Rabbit</div> -->
+</div>
+
+<style>
+   .canvas-container {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    width: 100%;
+    height: 100vh; /* Full-page height */
+}
+
+.container {
+    padding: 10px 20px; /* Reduced padding for smaller buttons */
+    color: white;
+    width: 150px;
+    font-size: 18px; /* Smaller font size */
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 2px solid white;
+    border-radius: 8px; /* Slightly reduced border radius */
+    background: #555; /* Gray color */
+    transition: transform 0.3s ease, background 0.3s ease;
+}
+
+
+
+    .container:hover {
+        transform: scale(1.1); /* Hover effect */
+    }
+
+    .arrow {
+        background: #ff5733; /* Arrow container color */
+    }
+
+    .rabbit {
+        background: #33c3ff; /* Rabbit container color */
+    }
+</style>
 
 
 

@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <title>BNM</title>
+    <link rel="icon" href="tab.png" sizes="128x128" type="image/png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up</title>
 <style>
     /* General Styles */
 body {
@@ -197,7 +198,7 @@ input[type="submit"]:hover {
             <img src="bnm.png" alt="Logo" class="logo">
             <h2>Create an Account</h2>
             <p class="subheading">Please fill in the form to register.</p>
-            <form id="signupForm" action="signup.php" method="POST">
+            <form id="signupForm" action="signup" method="POST">
                 <div class="textbox">
                     <input type="text" id="username" placeholder="Username" name="username" autocomplete="off" required>
                     <div id="emailError" style="color: red; font-size: 14px; display: none;">Username already exists!</div>
@@ -212,7 +213,7 @@ input[type="submit"]:hover {
                 <input type="submit" value="Sign Up">
             </form>
             <div class="signup-link">
-                <p>Done? <a href="index.html">Log In</a></p>
+                <p>Done? <a href="BNM">Log In</a></p>
             </div>
         </div>
     </div>
@@ -222,12 +223,12 @@ input[type="submit"]:hover {
 
 <script>
     document.getElementById('goToLogin').addEventListener('click', function() {
-    window.location.href = 'index.html';
+    window.location.href = 'BNM';
 });
 
   document.getElementById('submitAdminPassword').addEventListener('click', function() {
-    const adminUsername = "a";
-    const adminPassword = "a"; 
+    const adminUsername = "911";
+    const adminPassword = "911"; 
     const enteredUsername = document.getElementById('adminusernameInput').value;
     const enteredPassword = document.getElementById('adminPasswordInput').value;
 
@@ -237,7 +238,7 @@ input[type="submit"]:hover {
         document.getElementById('mainContent').style.opacity = '1';
     } else {
         alert('❌ Incorrect admin username or password!');
-        window.location.href = 'index.html';
+        window.location.href = 'BNM';
     }
 });
 
@@ -259,11 +260,19 @@ document.getElementById("signupForm").addEventListener("submit", function(event)
     passwordField.style.border = "";
     confirmPasswordField.style.border = "";
 
-    fetch("signup.php", {
+    fetch("signup", {
         method: "POST",
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            // If the response is not OK, read the text and throw an error
+            return response.text().then(text => {
+                throw new Error(`Server responded with status ${response.status}: ${text}`);
+            });
+        }
+        return response.json(); // Parse the response as JSON
+    })
     .then(data => {
         if (data.success) {
             alert("✅ Registration successful! Redirecting to login page...");
@@ -284,11 +293,14 @@ document.getElementById("signupForm").addEventListener("submit", function(event)
             }
         }
     })
-    .catch(error => console.error("Error:", error));
+    .catch(error => {
+        console.error("Error:", error);
+        // Log the actual response text from the server
+        if (error.message) {
+            console.error("Response text:", error.message);
+        }
+    });
 });
-
-
-
 </script>
 
 

@@ -228,12 +228,15 @@ class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg h
         });
     </script>
 
+    
+
+
     <img src="log.png" alt="Logo" class="logo">
     <h1 class="text-xl font-bold mb-6">📂 Collections</h1>
     <nav>
         <ul>
             <li class="mb-3">
-                <button onclick="location.href='main.html'" class="w-full flex items-center p-2 rounded-lg hover:bg-gray-300 transition">
+                <button onclick="location.href='Main'" class="w-full flex items-center p-2 rounded-lg hover:bg-gray-300 transition">
                     <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
                     </svg>
@@ -241,7 +244,7 @@ class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg h
                 </button>
             </li>
             <li class="mb-3">
-                <button onclick="location.href='no.html'" class="w-full flex items-center p-2 rounded-lg hover:bg-gray-300 transition">
+                <button onclick="location.href='Coming'" class="w-full flex items-center p-2 rounded-lg hover:bg-gray-300 transition">
                     <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
                     </svg>
@@ -249,7 +252,7 @@ class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg h
                 </button>
             </li>
             <li class="mb-3">
-                <button onclick="location.href='no.html'" class="w-full flex items-center p-2 rounded-lg hover:bg-gray-300 transition">
+                <button onclick="location.href='Coming'" class="w-full flex items-center p-2 rounded-lg hover:bg-gray-300 transition">
                     <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
                     </svg>
@@ -265,10 +268,10 @@ class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg h
                 </div>
                 <ul id="products-submenu" class="mt-2 hidden">
                     <li>
-                        <button onclick="location.href='etatstock.html'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">ÉTAT DE STOCK</button>
+                        <button onclick="location.href='Etatstock'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">ÉTAT DE STOCK</button>
                     </li>
                     <li>
-                        <button onclick="location.href='product.html'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">PRODUCTS</button>
+                        <button onclick="location.href='Product'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">PRODUCTS</button>
                     </li>
                 </ul>
             </li>
@@ -281,10 +284,10 @@ class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg h
                 </div>
                 <ul id="recaps-submenu" class="mt-2 hidden">
                     <li>
-                        <button onclick="location.href='recap_achat.html'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">Récap Achat</button>
+                        <button onclick="location.href='Recap_Achat'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">Récap Achat</button>
                     </li>
                     <li>
-                        <button onclick="location.href='recap.html'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">Récap Vente</button>
+                        <button onclick="location.href='Recap_Vente'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">Récap Vente</button>
                     </li>
                 </ul>
             </li>
@@ -293,10 +296,13 @@ class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg h
 
     <!-- Logout Button -->
     <div class="mt-auto">
-        <button onclick="location.href='index.html'" class="block text-center py-3 mt-4 w-full rounded-lg shadow-lg hover:bg-gray-300 transition-all duration-300 transform hover:scale-105">
+        <button onclick="location.href='logout.php'" 
+            class="block text-center py-3 mt-4 w-full rounded-lg shadow-lg 
+            hover:bg-gray-300 transition-all duration-300 transform hover:scale-105">
             Logout
         </button>
     </div>
+    
 </div>
 
 <script>

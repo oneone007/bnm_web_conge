@@ -3,7 +3,7 @@ function validateSignupForm() {
     // Get the input values
     const username = document.getElementById("username").value;
     const password = document.getElementById("password").value;
-    const confirmPassword = document.getElementById("confipassword").value;
+    const confirmPassword = document.getElementById("confirmPassword").value;
 
     // Error message element
     const errorMessage = document.getElementById("errorMessage");
