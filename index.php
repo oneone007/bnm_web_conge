@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BNM</title>
-    <link rel="icon" href="tab.png" sizes="128x128" type="image/png">
+    <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
 
@@ -314,7 +314,7 @@ var animation = lottie.loadAnimation({
     renderer: 'svg',
     loop: true,
     autoplay: true,
-    path: 'rmdn.json',
+    path: 'json_files/rmdn.json',
     rendererSettings: {
         clearCanvas: true,
         preserveAspectRatio: 'xMidYMid meet',
@@ -328,7 +328,7 @@ var animation = lottie.loadAnimation({
     renderer: 'svg',
     loop: true,
     autoplay: true,
-    path: 'ram.json',
+    path: 'json_files/ram.json',
     rendererSettings: {
         clearCanvas: true,
         preserveAspectRatio: 'xMidYMid meet',
@@ -353,7 +353,7 @@ var animation = lottie.loadAnimation({
     renderer: 'svg',
     loop: true,
     autoplay: true,
-    path: 'ramadan.json',
+    path: 'json_files/ramadan.json',
     rendererSettings: {
         clearCanvas: true,
         preserveAspectRatio: 'xMidYMid meet',
@@ -537,7 +537,7 @@ passwordField.addEventListener("input", checkCredentials);
         renderer: 'svg',
         loop: false,
         autoplay: false,
-        path: 'eye.json' // Replace with correct path
+        path: 'json_files/eye.json' // Replace with correct path
     });
     
     let lookAnimation = lottie.loadAnimation({
@@ -545,7 +545,7 @@ passwordField.addEventListener("input", checkCredentials);
         renderer: 'svg',
         loop: true,
         autoplay: false,
-        path: 'look.json' // Replace with correct path
+        path: 'json_files/look.json' // Replace with correct path
     });
     
     document.getElementById('eyeIcon').addEventListener('click', function () {

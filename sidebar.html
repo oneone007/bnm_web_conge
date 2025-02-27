@@ -218,7 +218,7 @@ class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg h
             renderer: 'svg',
             loop: true,
             autoplay: true,
-            path: 'ram.json',
+            path: 'json_files/ram.json',
             rendererSettings: {
                 clearCanvas: true,
                 preserveAspectRatio: 'xMidYMid meet',
@@ -231,7 +231,7 @@ class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg h
     
 
 
-    <img src="log.png" alt="Logo" class="logo">
+    <img src="assets/log.png" alt="Logo" class="logo">
     <h1 class="text-xl font-bold mb-6">📂 Collections</h1>
     <nav>
         <ul>
@@ -268,6 +268,8 @@ class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg h
                 </div>
                 <ul id="products-submenu" class="mt-2 hidden">
                     <li>
+              <!-- <button onclick="location.href='working'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">ÉTAT DE STOCK</button> -->
+
                         <button onclick="location.href='Etatstock'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">ÉTAT DE STOCK</button>
                     </li>
                     <li>
@@ -286,8 +288,17 @@ class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg h
                     <li>
                         <button onclick="location.href='Recap_Achat'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">Récap Achat</button>
                     </li>
+                    
                     <li>
+                        
+                        <!-- <button onclick="location.href='working'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">Récap Vente</button> -->
+
                         <button onclick="location.href='Recap_Vente'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">Récap Vente</button>
+                    </li>
+                    <li>
+                       <button onclick="location.href='working'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">Récap Vente FACTURATION</button>
+
+                        <!-- <button onclick="location.href='Recap_Vente_Facturation'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">Récap Vente FACTURATION</button> -->
                     </li>
                 </ul>
             </li>

@@ -547,163 +547,233 @@ def generate_excel(data, value):
     return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
-def fetch_filtred_emplacment_from_db():
-    try:
-        # Fetch emplacement data
-        emplacements_data = fetch_emplacment_data()
-
-        # Extract emplacement values
-        emplacements = [entry["EMPLACEMENT"] for entry in emplacements_data]
-
-        # Build the emplacement filter dynamically
-        emplacement_filter = ""
-        if emplacements:
-            emplacement_values = "', '".join(emplacements)  # Convert list to SQL format
-            emplacement_filter = f"AND ml.value IN ('{emplacement_values}')"
-
-        # Define the SQL query with dynamic emplacement filtering
-        query = f"""
-        SELECT 
-            mati.value AS fournisseur, 
-            m.name,  
-            SUM(m_storage.qtyonhand) AS qty,
-            SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand) AS prix,
-            SUM(m_storage.qtyonhand - m_storage.QTYRESERVED) AS qty_dispo, 
-            SUM(M_ATTRIBUTEINSTANCE.valuenumber * (m_storage.qtyonhand - m_storage.QTYRESERVED)) AS prix_dispo,
-            ml.M_Locator_ID AS locatorid,
-            m.m_product_id AS productid,
-            1 AS sort_order
-        FROM 
-            M_ATTRIBUTEINSTANCE
-        JOIN 
-            m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
-        JOIN 
-            M_PRODUCT m ON m.M_PRODUCT_id = m_storage.M_PRODUCT_id
-        JOIN 
-            M_Locator ml ON ml.M_Locator_ID = m_storage.M_Locator_ID
-        INNER JOIN 
-            m_attributeinstance mati ON m_storage.m_attributesetinstance_id = mati.m_attributesetinstance_id
-        WHERE 
-            M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
-            AND m_storage.qtyonhand > 0
-            AND mati.m_attribute_id = 1000508
-            AND m_storage.AD_Client_ID = 1000000
-            {emplacement_filter}  -- Dynamically added emplacement filter
-        GROUP BY 
-            m.name, mati.value, m.m_product_id, ml.M_Locator_ID
-        ORDER BY 
-            fournisseur, name
-        """
-
-        # Execute the query
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            cursor.execute(query)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]  # Get column names
-            data = [dict(zip(columns, row)) for row in rows]
-
-        return data
-
-    except Exception as e:
-        logger.error(f"Error fetching data: {e}")
-        return {"error": "An error occurred while fetching data."}
-
-
-
-def fetch_emplacment_data():
+def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None):
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
+
             query = """
-            SELECT ml.value AS EMPLACEMENT
-            FROM M_Locator ml
-            JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
-            WHERE m.ISACTIVE = 'Y'
-                AND m.AD_Client_ID = 1000000
-                AND ml.ISACTIVE = 'Y'
-                AND ml.AD_Client_ID = 1000000
-            ORDER BY m.value
+            SELECT 
+                mati.value AS fournisseur, 
+                m.name,  
+                SUM(m_storage.qtyonhand) AS qty,
+                SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand) AS prix,
+                SUM(m_storage.qtyonhand - m_storage.QTYRESERVED) AS qty_dispo, 
+                SUM(M_ATTRIBUTEINSTANCE.valuenumber * (m_storage.qtyonhand - m_storage.QTYRESERVED)) AS prix_dispo,
+                ml.M_Locator_ID AS locatorid,
+                m.m_product_id AS productid,
+                1 AS sort_order
+            FROM 
+                M_ATTRIBUTEINSTANCE
+            JOIN 
+                m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
+            JOIN 
+                M_PRODUCT m ON m.M_PRODUCT_id = m_storage.M_PRODUCT_id
+            JOIN 
+                M_Locator ml ON ml.M_Locator_ID = m_storage.M_Locator_ID
+            INNER JOIN 
+                m_attributeinstance mati ON m_storage.m_attributesetinstance_id = mati.m_attributesetinstance_id
+            WHERE 
+                M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
+                AND m_storage.qtyonhand > 0
+                AND mati.m_attribute_id = 1000508
+                AND m_storage.AD_Client_ID = 1000000
             """
-            cursor.execute(query)
+
+            params = {}
+
+            if fournisseur:
+                query += " AND mati.value LIKE :fournisseur || '%'"
+                params["fournisseur"] = fournisseur
+
+            if magasin:
+                query += """
+                AND m_storage.M_Locator_ID IN (
+                    SELECT M_Locator_ID 
+                    FROM M_Locator 
+                    WHERE M_Warehouse_ID IN (
+                        SELECT M_Warehouse_ID 
+                        FROM M_Warehouse 
+                        WHERE VALUE LIKE :magasin || '%'
+                    )
+                )
+                """
+                params["magasin"] = magasin
+            else:
+                query += """
+                AND m_storage.M_Locator_ID IN (
+                    SELECT M_Locator_ID 
+                    FROM M_Locator 
+                    WHERE M_Warehouse_ID IN (
+                        SELECT M_Warehouse_ID 
+                        FROM M_Warehouse 
+                        WHERE VALUE IN ('HANGAR', '1-Dépôt Principal', '8-Dépot réserve', '88-Dépot Hangar réserve')
+                    )
+                )
+                """
+
+            if emplacement:
+                query += """
+                AND (
+                    (M_Warehouse_ID != 1000000 AND 
+                     m_storage.M_Locator_ID IN (
+                         SELECT M_Locator_ID 
+                         FROM M_Locator 
+                         WHERE value LIKE :emplacement || '%'
+                     ))
+                    OR 
+                    (M_Warehouse_ID = 1000000 AND 
+                     m.M_Locator_ID IN (
+                         SELECT M_Locator_ID 
+                         FROM M_Locator 
+                         WHERE value LIKE :emplacement || '%'
+                     ))
+                )
+                """
+                params["emplacement"] = emplacement
+
+            query += """
+            GROUP BY m.name, mati.value, m.m_product_id, ml.M_Locator_ID
+
+            UNION ALL
+
+            SELECT 
+                CAST('Total' AS NVARCHAR2(300)) AS fournisseur, 
+                CAST('' AS NVARCHAR2(300)) AS name, 
+                SUM(m_storage.qtyonhand) AS qty,
+                SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand) AS prix,
+                SUM(m_storage.qtyonhand - m_storage.QTYRESERVED) AS qty_dispo, 
+                SUM(M_ATTRIBUTEINSTANCE.valuenumber * (m_storage.qtyonhand - m_storage.QTYRESERVED)) AS prix_dispo,
+                NULL AS locatorid,  -- Changed from ml.M_Locator_ID to NULL, since it's not relevant for the total row
+                NULL AS productid,  -- Changed from m.m_product_id to NULL
+                0 AS sort_order
+            FROM 
+                M_ATTRIBUTEINSTANCE
+            JOIN 
+                m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
+            JOIN 
+                M_PRODUCT m ON m.M_PRODUCT_id = m_storage.M_PRODUCT_id
+            JOIN 
+                M_Locator ml ON ml.M_Locator_ID = m_storage.M_Locator_ID
+            INNER JOIN 
+                m_attributeinstance mati ON m_storage.m_attributesetinstance_id = mati.m_attributesetinstance_id
+            WHERE 
+                M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
+                AND m_storage.qtyonhand > 0
+                AND mati.m_attribute_id = 1000508
+                AND m_storage.AD_Client_ID = 1000000
+            """
+
+            if fournisseur:
+                query += " AND mati.value LIKE :fournisseur || '%'"
+
+            if magasin:
+                query += """
+                AND m_storage.M_Locator_ID IN (
+                    SELECT M_Locator_ID 
+                    FROM M_Locator 
+                    WHERE M_Warehouse_ID IN (
+                        SELECT M_Warehouse_ID 
+                        FROM M_Warehouse 
+                        WHERE VALUE LIKE :magasin || '%'
+                    )
+                )
+                """
+            else:
+                query += """
+                AND m_storage.M_Locator_ID IN (
+                    SELECT M_Locator_ID 
+                    FROM M_Locator 
+                    WHERE M_Warehouse_ID IN (
+                        SELECT M_Warehouse_ID 
+                        FROM M_Warehouse 
+                        WHERE VALUE IN ('HANGAR', '1-Dépôt Principal', '8-Dépot réserve', '88-Dépot Hangar réserve')
+                    )
+                )
+                """
+
+            if emplacement:
+                query += """
+                AND (
+                    (M_Warehouse_ID != 1000000 AND 
+                     m_storage.M_Locator_ID IN (
+                         SELECT M_Locator_ID 
+                         FROM M_Locator 
+                         WHERE value LIKE :emplacement || '%'
+                     ))
+                    OR 
+                    (M_Warehouse_ID = 1000000 AND 
+                     m.M_Locator_ID IN (
+                         SELECT M_Locator_ID 
+                         FROM M_Locator 
+                         WHERE value LIKE :emplacement || '%'
+                     ))
+                )
+                """
+
+            query += """
+            ORDER BY sort_order, fournisseur, name
+            """
+
+           
+
+            cursor.execute(query, params)
             rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]  # Get column names
+            columns = [col[0] for col in cursor.description]
             data = [dict(zip(columns, row)) for row in rows]
+
             return data
+
     except Exception as e:
-        logger.error(f"Error fetching remise data: {e}")
-        return {"error": "An error occurred while fetching emplacement data."}
-    
-@app.route('/fetch-emplacement-data', methods=['GET'])
-def fetch_data():
-    data = fetch_emplacment_data()
-    return jsonify(data)
+        logger.error(f"Database error: {e}")
+        return {"error": "An error occurred while fetching stock data."}
 
-@app.route('/fetch-data-stock', methods=['GET'])
+# Flask route
+@app.route('/fetch-stock-data', methods=['GET'])
 def fetch_stock_data():
-    data = fetch_filtred_emplacment_from_db()
-    return jsonify(data)
+    try:
+        fournisseur = request.args.get("fournisseur", None)
+        magasin = request.args.get("magasin", None)
+        emplacement = request.args.get("emplacement", None)
 
-# Route to download Excel for bonus data
-@app.route('/download-stock-excel', methods=['GET'])
-def download_stock_excel():
-    stock_value = request.args.get("stock", "STOCK")
-    filters = {
-        "locatorid": request.args.get("locatorid"),
-        "locatorname": request.args.get("locatorname"),  # Capture the name
-        "fournisseur": request.args.get("fournisseur"),
-        "name": request.args.get("name")
-    }
+        data = fetch_stock_data_from_db(fournisseur, magasin, emplacement)
+        return jsonify(data)
 
-    data = fetch_filtred_emplacment_from_db()
-
-    # Apply filters
-    if filters["locatorid"]:
-        data = [row for row in data if str(row["LOCATORID"]) == filters["locatorid"]]
-    if filters["fournisseur"]:
-        data = [row for row in data if filters["fournisseur"].lower() in row["FOURNISSEUR"].lower()]
-    if filters["name"]:
-        data = [row for row in data if filters["name"].lower() in row["NAME"].lower()]
-
-    # Generate filename dynamically
-    today_date = datetime.now().strftime("%d-%m-%Y")
-    location_part = f"_{filters['locatorname']}" if filters["locatorname"] else ""
-    filter_values = "_".join([f"{key}-{value}" for key, value in filters.items() if value and key != "locatorname"])
-    
-    filename = f"{stock_value}_{today_date}{location_part}.xlsx" if not filter_values else f"{stock_value}_{today_date}{location_part}_{filter_values}.xlsx"
-
-    return generate_excel_stock(data, filename)
+    except Exception as e:
+        logger.error(f"Error fetching stock data: {e}")
+        return jsonify({"error": "Failed to fetch stock data"}), 500
 
 
-
-# Helper function to generate Excel file
-def generate_excel_stock(data, filename):
-    if not data or "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
+def generate_excel_stock(data):
+    # Create a DataFrame from the data
     df = pd.DataFrame(data)
-    if df.empty:
-        return jsonify({"error": "No data available"}), 400
 
+    # Create workbook and worksheet using openpyxl
     wb = Workbook()
     ws = wb.active
-    ws.title = "Filtered Data"
+    ws.title = "Stock Data"
 
+    # Define header styles
     header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
     header_font = Font(color="FFFFFF", bold=True)
 
+    # Write headers
     ws.append(df.columns.tolist())
-    for col_idx, cell in enumerate(ws[1], 1):
+    for cell in ws[1]:
         cell.fill = header_fill
         cell.font = header_font
+
+    # Apply auto filter (using the dimensions of the sheet)
     ws.auto_filter.ref = ws.dimensions
 
+    # Write data rows with alternating row styling for readability
     for row_idx, row in enumerate(df.itertuples(index=False), start=2):
         ws.append(row)
         if row_idx % 2 == 0:
             for cell in ws[row_idx]:
                 cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
 
+    # Optionally, create an Excel table
     table = Table(displayName="DataTable", ref=ws.dimensions)
     style = TableStyleInfo(
         name="TableStyleMedium9",
@@ -715,11 +785,182 @@ def generate_excel_stock(data, filename):
     table.tableStyleInfo = style
     ws.add_table(table)
 
+    # Save workbook to a BytesIO stream
     output = BytesIO()
     wb.save(output)
     output.seek(0)
+    return output
 
-    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+@app.route('/download-stock-excel', methods=['GET'])
+def download_stock_excel():
+    try:
+        # Get query parameters
+        fournisseur = request.args.get("fournisseur", None)
+        magasin = request.args.get("magasin", None)
+        emplacement = request.args.get("emplacement", None)
+
+        # Fetch data from the database
+        data = fetch_stock_data_from_db(fournisseur, magasin, emplacement)
+
+        # Check if data contains an error
+        if "error" in data:
+            return jsonify({"error": data["error"]}), 500
+
+        # Check if data is empty
+        if not data:
+            return jsonify({"error": "No data available to generate Excel"}), 400
+
+        # Generate Excel file in memory
+        excel_output = generate_excel_stock(data)
+
+        # Generate filename based on parameters
+        today_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"stock_data_{today_date}.xlsx"
+
+        if fournisseur:
+            filename = f"stock_data_fournisseur_{fournisseur}_{today_date}.xlsx"
+        if magasin:
+            filename = f"stock_data_magasin_{magasin}_{today_date}.xlsx"
+        if emplacement:
+            filename = f"stock_data_emplacement_{emplacement}_{today_date}.xlsx"
+        if fournisseur and magasin:
+            filename = f"stock_data_fournisseur_{fournisseur}_magasin_{magasin}_{today_date}.xlsx"
+        if fournisseur and emplacement:
+            filename = f"stock_data_fournisseur_{fournisseur}_emplacement_{emplacement}_{today_date}.xlsx"
+        if magasin and emplacement:
+            filename = f"stock_data_magasin_{magasin}_emplacement_{emplacement}_{today_date}.xlsx"
+        if fournisseur and magasin and emplacement:
+            filename = f"stock_data_fournisseur_{fournisseur}_magasin_{magasin}_emplacement_{emplacement}_{today_date}.xlsx"
+
+        # Send file as a download response
+        return send_file(
+            excel_output,
+            as_attachment=True,
+            download_name=filename,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+    except Exception as e:
+        print(f"Error generating Excel: {e}")
+        return jsonify({"error": "Failed to generate Excel file"}), 500
+
+
+    
+# Flask route for generating Excel from fetched stock data
+
+def fetch_magasins_from_db(magasin=None, emplacement=None):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+                SELECT DISTINCT m.value AS MAGASIN
+                FROM M_Locator ml
+                JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
+                WHERE m.ISACTIVE = 'Y'
+                  AND m.AD_Client_ID = 1000000
+                  AND ml.ISACTIVE = 'Y'
+                  AND ml.AD_Client_ID = 1000000
+            """
+
+            params = {}
+
+            # Dynamically add filters
+            if magasin:
+                query += " AND m.value LIKE :magasin || '%'"
+                params["magasin"] = magasin
+
+            if emplacement:
+                query += " AND ml.value LIKE :emplacement || '%'"
+                params["emplacement"] = emplacement
+
+            query += " ORDER BY m.value"
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+
+            return data
+
+    except Exception as e:
+        logger.error(f"Error fetching magasins: {e}")
+        return {"error": "An error occurred while fetching magasins."}
+
+
+def fetch_emplacements_from_db(magasin=None, emplacement=None):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+                SELECT ml.value AS EMPLACEMENT
+                FROM M_Locator ml
+                JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
+                WHERE m.ISACTIVE = 'Y'
+                  AND m.AD_Client_ID = 1000000
+                  AND ml.ISACTIVE = 'Y'
+                  AND ml.AD_Client_ID = 1000000
+            """
+
+            params = {}
+
+            # Dynamically add filters
+            if magasin:
+                query += " AND m.value LIKE :magasin || '%'"
+                params["magasin"] = magasin
+
+            if emplacement:
+                query += " AND ml.value LIKE :emplacement || '%'"
+                params["emplacement"] = emplacement
+
+            query += " ORDER BY m.value"
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+
+            return data
+
+    except Exception as e:
+        logger.error(f"Error fetching emplacements: {e}")
+        return {"error": "An error occurred while fetching emplacements."}
+
+
+@app.route('/fetch-magasins', methods=['GET'])
+def fetch_magasins():
+    try:
+        magasin = request.args.get("magasin", None)
+        emplacement = request.args.get("emplacement", None)
+
+        data = fetch_magasins_from_db(magasin, emplacement)
+        return jsonify(data)
+
+    except Exception as e:
+        logger.error(f"Error fetching magasins: {e}")
+        return jsonify({"error": "Failed to fetch magasins"}), 500
+
+@app.route('/fetch-emplacements', methods=['GET'])
+def fetch_emplacements():
+    try:
+        magasin = request.args.get("magasin", None)
+        emplacement = request.args.get("emplacement", None)
+
+        data = fetch_emplacements_from_db(magasin, emplacement)
+        return jsonify(data)
+
+    except Exception as e:
+        logger.error(f"Error fetching emplacements: {e}")
+        return jsonify({"error": "Failed to fetch emplacements"}), 500
+    
+
+
+
+
+
+# Helper function to generate Excel file
 
 # Fetch total recap data
 def fetch_rcap_data(start_date, end_date):
@@ -742,6 +983,38 @@ def fetch_rcap_data(start_date, end_date):
                     xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
                     AND TO_DATE(:end_date, 'YYYY-MM-DD')
                     AND xf.AD_Org_ID = 1000000
+                    AND xf.DOCSTATUS != 'RE'
+            """
+            cursor.execute(query, {'start_date': start_date, 'end_date': end_date})
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            data = [dict(zip(columns, row)) for row in rows]
+            return data
+    except Exception as e:
+        logger.error(f"Error fetching data: {e}")
+        return {"error": "An error occurred while fetching data."}
+
+# Fetch total recap data
+def fetch_rcap_data_facturation(start_date, end_date):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT 
+                    SUM(xf.TOTALLINE) AS CHIFFRE, 
+                    SUM(xf.qtyentered) AS QTY,
+                    SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION) AS MARGE,
+                    SUM(xf.CONSOMATION) AS CONSOMATION,
+                    CASE 
+                        WHEN SUM(xf.CONSOMATION) < 0 
+                        THEN ROUND(((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / (SUM(xf.CONSOMATION) * -1)), 4)
+                        ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
+                    END AS POURCENTAGE
+                FROM xx_ca_fournisseur xf
+                WHERE 
+                    xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                    AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                    AND xf.AD_Org_ID = 1000012
                     AND xf.DOCSTATUS != 'RE'
             """
             cursor.execute(query, {'start_date': start_date, 'end_date': end_date})
@@ -1011,27 +1284,62 @@ def fetch_bccb_recap(start_date, end_date, fournisseur, product, client, operate
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
             query = """
-                SELECT c.DOCUMENTNO, c.DATEORDERED, c.GRANDTOTAL 
-                FROM C_Order c
-                JOIN M_InOut mi ON mi.C_ORDER_ID = c.C_ORDER_ID
-                JOIN xx_ca_fournisseur xf ON xf.DOCUMENTNO = mi.DOCUMENTNO
-                JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
-                JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
-                JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
-                JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
-                WHERE c.AD_Org_ID = 1000000
-                      AND xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                      AND (c.DOCSTATUS = 'CL' OR c.DOCSTATUS = 'CO')
-                      AND c.C_DocType_ID IN (1000539, 1001408)
-                      AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
-                      AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
-                      AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
-                      AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
-                      AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
-                      AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
-                GROUP BY c.DOCUMENTNO, c.DATEORDERED, c.GRANDTOTAL 
-                ORDER BY c.DOCUMENTNO
+                SELECT DOCUMENTNO, DATEORDERED, GRANDTOTAL, 
+      round(avg( CASE WHEN marge < 0 THEN 0 ELSE marge END),2) AS marge
+FROM (  
+    SELECT det.*, 
+           ROUND((det.ventef - det.p_revient) / det.p_revient * 100, 2) AS marge
+    FROM (  
+        SELECT lot.*,  
+               (lot.priceentered - ((lot.priceentered * NVL(lot.remise_vente, 0)) / 100)) / (1 + (lot.bonus_vente / 100)) AS ventef
+        FROM (  
+            SELECT ol.priceentered, 
+                   (SELECT valuenumber 
+                    FROM m_attributeinstance 
+                    WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                          AND m_attribute_id = 1000504) AS p_revient,
+                   
+                   (SELECT valuenumber 
+                    FROM m_attributeinstance 
+                    WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                          AND m_attribute_id = 1000908) AS bonus_vente,
+                   
+                   (SELECT valuenumber 
+                    FROM m_attributeinstance 
+                    WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                          AND m_attribute_id = 1001408) AS remise_vente,
+                   
+                   c.DOCUMENTNO, 
+                   c.DATEORDERED, 
+                   c.GRANDTOTAL
+            FROM C_Order c
+            JOIN C_OrderLine ol ON c.C_Order_ID = ol.C_Order_ID 
+            JOIN M_InOut mi ON mi.C_Order_ID = c.C_Order_ID
+            JOIN xx_ca_fournisseur xf ON xf.DOCUMENTNO = mi.DOCUMENTNO
+            JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+            JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+            JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+            JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+            WHERE c.AD_Org_ID = 1000000 
+                  AND ol.qtyentered > 0
+                  AND xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                      AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                  AND (c.DOCSTATUS = 'CL' OR c.DOCSTATUS = 'CO')
+                  AND c.C_DocType_ID IN (1000539, 1001408)
+                  AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
+                  AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
+                  AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
+                  AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
+                  AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
+                  AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
+            GROUP BY c.DOCUMENTNO, c.DATEORDERED, c.GRANDTOTAL, ol.priceentered, ol.m_attributesetinstance_id
+            ORDER BY c.DOCUMENTNO
+        )  lot  
+    )  det  
+)  
+group by DOCUMENTNO, DATEORDERED, GRANDTOTAL
+order by DOCUMENTNO
+
             """
             params = {
                 'start_date': start_date,
@@ -1319,6 +1627,17 @@ def fetch_recap():
     data = fetch_rcap_data(start_date, end_date)
     return jsonify(data)
 
+@app.route('/fetchTotalrecapData_facturation', methods=['GET'])
+def fetch_recap_facturation():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    data = fetch_rcap_data_facturation(start_date, end_date)
+    return jsonify(data)
+
 @app.route('/fetchFournisseurData', methods=['GET'])
 def fetch_fournisseur():
     start_date = request.args.get('start_date')
@@ -1356,6 +1675,27 @@ def download_totalrecap_excel():
     filename = f"TotalRecap_{start_date}_to_{end_date}_{today_date}.xlsx"
 
     return generate_excel_totalrecap(data, filename)
+
+
+@app.route('/download-totalrecap-excel', methods=['GET'])
+def download_totalrecap_excel_facturation():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    # Fetch data from the database
+    data = fetch_rcap_data_facturation(start_date, end_date)
+
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate a filename with the selected parameters
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    filename = f"TotalRecap_FACTURATION_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_totalrecap_facturation(data, filename)
 
 def generate_excel_totalrecap(data, filename):
     if not data or "error" in data:
@@ -1404,6 +1744,61 @@ def generate_excel_totalrecap(data, filename):
     output.seek(0)
 
     return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+def generate_excel_totalrecap_facturation(data, filename):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Total Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    ws.append(df.columns.tolist())
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+    ws.auto_filter.ref = ws.dimensions
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="TotalRecapTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+
+
+
+
 @app.route('/download-fournisseur-excel', methods=['GET'])
 def download_fournisseur_excel():
     start_date = request.args.get('start_date')
@@ -2266,6 +2661,70 @@ def generate_excel_fournisseur_achat(data, filename):
 
     # Send the file to the client for download
     return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+def fetch_bccb_product(bccb):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT product, qty, remise, 
+                       CASE WHEN marge < 0 THEN 0 ELSE marge END AS marge 
+                FROM (
+                    SELECT det.*, 
+                           ROUND((det.ventef - det.p_revient) / det.p_revient * 100, 2) AS marge 
+                    FROM (
+                        SELECT lot.*, 
+                               (lot.priceentered - ((lot.priceentered * NVL(lot.remise_vente, 0)) / 100)) / 
+                               (1 + (lot.bonus_vente / 100)) AS ventef 
+                        FROM (
+                            SELECT ol.priceentered AS priceentered, 
+                                   ol.qtyentered AS qty, 
+                                   mp.name AS product, 
+                                   ol.discount / 100 AS remise, 
+                                   (SELECT valuenumber FROM m_attributeinstance 
+                                    WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                                          AND m_attribute_id = 1000504) AS p_revient, 
+                                   (SELECT valuenumber FROM m_attributeinstance 
+                                    WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                                          AND m_attribute_id = 1000908) AS bonus_vente, 
+                                   (SELECT valuenumber FROM m_attributeinstance 
+                                    WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                                          AND m_attribute_id = 1001408) AS remise_vente 
+                            FROM c_orderline ol 
+                            INNER JOIN c_order o ON o.c_order_id = ol.c_order_id 
+                            INNER JOIN m_product mp ON ol.m_product_id = mp.m_product_id 
+                            WHERE ol.qtyentered > 0 
+                                  AND (:bccb IS NULL OR UPPER(o.documentno) LIKE UPPER(:bccb) || '%')
+                        ) lot
+                    ) det
+                )
+            """
+            
+            params = {
+                'bccb': bccb or None
+            }
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            return [dict(zip(columns, row)) for row in rows]
+    except Exception as e:
+        logger.error(f"Error fetching BCCB product data: {e}")
+        return {"error": "An error occurred while fetching BCCB product data."}
+
+
+
+@app.route('/fetchBCCBProduct', methods=['GET'])
+def fetch_bccb_p():
+    bccb = request.args.get('bccb')
+
+    if not bccb:
+        return jsonify({"error": "Missing bccb parameter"}), 400
+
+    data = fetch_bccb_product(bccb)
+    return jsonify(data)
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)

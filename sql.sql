@@ -653,3 +653,115 @@ WHERE xf.MOVEMENTDATE BETWEEN TO_DATE('2025-02-01', 'YYYY-MM-DD')
     AND xf.AD_Org_ID = 1000000
     AND xf.C_DocType_ID IN (1000013, 1000646)
     AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725);
+
+
+
+
+
+
+ select  count (name) from M_PRODUCT
+WHERE AD_Client_ID = 1000000
+AND AD_Org_ID = 1000000
+  AND ISACTIVE = 'Y'
+;
+
+
+
+
+
+SELECT ml.value AS EMPLACEMENT
+FROM M_Locator ml
+JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
+WHERE m.ISACTIVE = 'Y'
+  AND m.AD_Client_ID = 1000000
+  AND ml.ISACTIVE = 'Y'
+  AND ml.AD_Client_ID = 1000000
+  AND (:MAGASIN IS NULL OR m.value LIKE :MAGASIN || '%')
+  AND (:EMPLACEMENT IS NULL OR ml.value LIKE :EMPLACEMENT || '%')
+ORDER BY m.value;
+
+
+SELECT distinct m.value AS MAGASIN
+FROM M_Locator ml
+JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
+WHERE m.ISACTIVE = 'Y'
+  AND m.AD_Client_ID = 1000000
+  AND ml.ISACTIVE = 'Y'
+  AND ml.AD_Client_ID = 1000000
+  AND (:MAGASIN IS NULL OR m.value LIKE :MAGASIN || '%')
+  AND (:EMPLACEMENT IS NULL OR ml.value LIKE :EMPLACEMENT || '%')
+ORDER BY m.value;
+
+
+SELECT 
+    mati.value AS fournisseur, 
+    m.name,  
+    SUM(m_storage.qtyonhand) AS qty,
+    SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand) AS prix,
+    SUM(m_storage.qtyonhand - m_storage.QTYRESERVED) AS qty_dispo, 
+    SUM(M_ATTRIBUTEINSTANCE.valuenumber * (m_storage.qtyonhand - m_storage.QTYRESERVED)) AS prix_dispo,
+    ml.M_Locator_ID AS locatorid,
+    m.m_product_id AS productid,
+    1 AS sort_order
+FROM 
+    M_ATTRIBUTEINSTANCE
+JOIN 
+    m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
+JOIN 
+    M_PRODUCT m ON m.M_PRODUCT_id = m_storage.M_PRODUCT_id
+JOIN 
+    M_Locator ml ON ml.M_Locator_ID = m_storage.M_Locator_ID
+INNER JOIN 
+    m_attributeinstance mati ON m_storage.m_attributesetinstance_id = mati.m_attributesetinstance_id
+WHERE 
+    M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
+    AND m_storage.qtyonhand > 0
+    AND mati.m_attribute_id = 1000508
+    AND m_storage.AD_Client_ID = 1000000
+    AND m_storage.M_Locator_ID IN (
+        SELECT M_Locator_ID 
+        FROM M_Locator 
+        WHERE M_Warehouse_ID IN (
+            SELECT M_Warehouse_ID 
+            FROM M_Warehouse 
+            WHERE VALUE IN ('1-Dépôt Principal')
+        )
+    )
+    AND m_storage.M_Locator_ID IN (
+        SELECT M_Locator_ID 
+        FROM M_Locator 
+        WHERE value LIKE 'Préparation%'
+    )
+GROUP BY 
+    m.name, mati.value, m.m_product_id, ml.M_Locator_ID;
+
+
+
+
+ SELECT 
+                    SUM(xf.TOTALLINE) AS CHIFFRE, 
+                    SUM(xf.qtyentered) AS QTY,
+                    SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION) AS MARGE,
+                    SUM(xf.CONSOMATION) AS CONSOMATION,
+                    CASE 
+                        WHEN SUM(xf.CONSOMATION) < 0 
+                        THEN ROUND(((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / (SUM(xf.CONSOMATION) * -1)), 4)
+                        ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
+                    END AS POURCENTAGE
+                FROM xx_ca_fournisseur xf
+                WHERE 
+                    xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                    AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                    AND xf.AD_Org_ID = 1000012
+                    AND xf.DOCSTATUS != 'RE'
+
+
+
+
+                     SELECT DISTINCT m.value AS MAGASIN
+                FROM M_Locator ml
+                JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
+                WHERE m.ISACTIVE = 'Y'
+                  AND m.AD_Client_ID = 1000000
+                  AND ml.ISACTIVE = 'Y'
+                  AND ml.AD_Client_ID = 1000000

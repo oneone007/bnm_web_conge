@@ -914,7 +914,9 @@ html.dark .moon {
 
             // Ensure dates clear on refresh
             window.onload = () => {
-    // Clear all inputs except date fields on page load
+    // Clear all inputs on page load
+    document.getElementById("start-date").value = "";
+    document.getElementById("end-date").value = "";
     document.getElementById("recap_fournisseur").value = "";
     document.getElementById("recap_product").value = "";
     document.getElementById("recap_zone").value = "";
@@ -941,27 +943,15 @@ html.dark .moon {
     // Set end date when start date is selected
     startDateInput.addEventListener("change", updateEndDate);
 
-    // Refresh button: clear other fields but keep date fields
+    // Refresh button to re-trigger existing values without changing them
     document.getElementById("refresh-btn").addEventListener("click", () => {
-        // Clear non-date fields
-        document.getElementById("recap_fournisseur").value = "";
-        document.getElementById("recap_product").value = "";
-        document.getElementById("recap_zone").value = "";
-        document.getElementById("recap_client").value = "";
-        document.getElementById("recap_operateur").value = "";
-        document.getElementById("recap_bccbclient").value = "";
-
-        // Trigger update events for date fields
+        // Re-dispatch events to simulate re-selection
         startDateInput.dispatchEvent(new Event("input", { bubbles: true }));
         startDateInput.dispatchEvent(new Event("change", { bubbles: true }));
         endDateInput.dispatchEvent(new Event("input", { bubbles: true }));
         endDateInput.dispatchEvent(new Event("change", { bubbles: true }));
-
-        // Refresh data based on existing date values
-        fetchData(startDateInput.value, endDateInput.value, "", "", "", "", "", ""); 
     });
 };
-
 
 
             // Fetch data when both dates are selected
@@ -972,7 +962,7 @@ html.dark .moon {
                 if (!startDate || !endDate) return; // Don't fetch until both dates are selected
 
                 try {
-                    const response = await fetch(`http://192.168.1.156:5000/fetchTotalrecapData?start_date=${startDate}&end_date=${endDate}`);
+                    const response = await fetch(`http://192.168.1.156:5000/fetchTotalrecapData_facturation?start_date=${startDate}&end_date=${endDate}`);
                     if (!response.ok) throw new Error("Network response was not ok");
 
                     const data = await response.json();

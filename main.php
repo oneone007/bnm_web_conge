@@ -51,7 +51,7 @@ file_put_contents(__DIR__ . "/login_logs.txt", $log_entry, FILE_APPEND);
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>BNM</title>
-        <link rel="icon" href="tab.png" sizes="128x128" type="image/png">
+        <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
         <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
         <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
             <script src="https://kit.fontawesome.com/YOUR_KIT_CODE.js" crossorigin="anonymous"></script>
@@ -290,7 +290,7 @@ html.dark .moon {
         renderer: "svg",
         loop: true,
         autoplay: true,
-        path: "r.json" // Replace with actual path to your .rjson file
+        path: "json_files/r.json" // Replace with actual path to your .rjson file
     });
 </script>
 
@@ -340,7 +340,7 @@ html.dark .moon {
                     renderer: 'svg',
                     loop: true,
                     autoplay: true,
-                    path: 'ram.json',
+                    path: 'json_files/ram.json',
                     rendererSettings: {
                         clearCanvas: true,
                         preserveAspectRatio: 'xMidYMid meet',

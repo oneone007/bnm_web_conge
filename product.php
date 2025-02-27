@@ -33,7 +33,7 @@ $_SESSION['last_activity'] = time();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BNM</title>
-    <link rel="icon" href="tab.png" sizes="128x128" type="image/png">
+    <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
 
@@ -370,7 +370,7 @@ html.dark .moon {
         renderer: 'svg',
         loop: true,
         autoplay: true,
-        path: 'r.json'  // Path to your second JSON file
+        path: 'json_files/r.json'  // Path to your second JSON file
     });
     </script>
     
@@ -418,7 +418,7 @@ html.dark .moon {
                     renderer: 'svg',
                     loop: true,
                     autoplay: true,
-                    path: 'ram.json',
+                    path: 'json_files/ram.json',
                     rendererSettings: {
                         clearCanvas: true,
                         preserveAspectRatio: 'xMidYMid meet',
@@ -477,7 +477,7 @@ html.dark .moon {
   
         
         <button id="downloadExcel" class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
-            <img src="excel.png" alt="Excel Icon" class="w-6 h-6">
+            <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
             <span>Download Marge Table</span>
         </button>
 
@@ -523,10 +523,10 @@ html.dark .moon {
         <div class="download-wrapper">
       
         <button id="downloadExcel_REMISE" class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
-            <img src="excel.png" alt="Excel Icon" class="w-6 h-6">
+            <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
             <span>Download remise Auto Table</span>
         </button> <button id="downloadExcel_BONUS" class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
-            <img src="excel.png" alt="Excel Icon" class="w-6 h-6">
+            <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
             <span>Download bonus Auto Table</span>
         </button>
         </div>
@@ -570,7 +570,7 @@ var loadingAnimation = lottie.loadAnimation({
         renderer: 'svg',
         loop: true,
         autoplay: true,
-        path: 'load.json'  // Path to your first JSON file
+        path: 'json_files/load.json'  // Path to your first JSON file
     });
 
     async function fetchRemiseData() {
@@ -634,7 +634,7 @@ var loadingAnimation = lottie.loadAnimation({
 
 
 <button id="downloadExcel_RESERVE" class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
-    <img src="excel.png" alt="Excel Icon" class="w-6 h-6">
+    <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
     <span>Download RESERVED PRODUCTS Table</span>
 </button>
 

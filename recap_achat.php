@@ -34,7 +34,7 @@ $_SESSION['last_activity'] = time();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BNM</title>
-    <link rel="icon" href="tab.png" sizes="128x128" type="image/png">
+    <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
@@ -367,7 +367,7 @@ html.dark .moon {
             renderer: "svg",
             loop: true,
             autoplay: true,
-            path: "r.json" // Replace with actual path to your .rjson file
+            path: "json_files/r.json" // Replace with actual path to your .rjson file
         });
     </script>
 
@@ -413,7 +413,7 @@ html.dark .moon {
                     renderer: 'svg',
                     loop: true,
                     autoplay: true,
-                    path: 'ram.json',
+                    path: 'json_files/ram.json',
                     rendererSettings: {
                         clearCanvas: true,
                         preserveAspectRatio: 'xMidYMid meet',
@@ -467,22 +467,32 @@ html.dark .moon {
 
         <br>
         <!-- Date Inputs -->
-        <div class="date-container">
-            <div class="flex items-center space-x-2">
-                <label for="start-date">Begin Date:</label>
-                <input type="date" id="start-date">
-            </div>
-        
-            <div class="flex items-center space-x-2">
-                <label for="end-date">End Date:</label>
-                <input type="date" id="end-date">
-            </div>
-        </div>
+        <div class="date-container flex space-x-4 items-center">
+    <div class="flex items-center space-x-2">
+        <label for="start-date">Begin Date:</label>
+        <input type="date" id="start-date" class="border rounded px-2 py-1">
+    </div>
+
+    <div class="flex items-center space-x-2">
+        <label for="end-date">End Date:</label>
+        <input type="date" id="end-date" class="border rounded px-2 py-1">
+    </div>
+
+    <!-- Refresh Button with Icon -->
+    <button id="refresh-btn" class="p-3 bg-white text-blue-500 rounded-full shadow-lg hover:shadow-xl border border-blue-500 transition duration-200 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75a7.5 7.5 0 0 0 12.755 4.652M4.5 15.75H9m-4.5 0v4.5m15-7.5a7.5 7.5 0 0 0-12.755-4.652M19.5 8.25H15m4.5 0V3.75" />
+        </svg>
+    </button>
+</div>
+
+
+
         <br>
 
         <button id="downloadExcel_totalrecap"
             class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
-            <img src="excel.png" alt="Excel Icon" class="w-6 h-6">
+            <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
             <span>Total Recap Download</span>
         </button>
 
@@ -521,13 +531,13 @@ html.dark .moon {
 
             <button id="download-recap-fournisseur-achat-excel"
                 class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
-                <img src="excel.png" alt="Excel Icon" class="w-6 h-6">
+                <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
                 <span>Fournisseur Download </span>
             </button>
             
              <button id="download-recap-product-achat-excel"
                 class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
-                <img src="excel.png" alt="Excel Icon" class="w-6 h-6">
+                <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
                 <span>Product Download</span>
             </button>
         </div>
@@ -626,13 +636,13 @@ html.dark .moon {
 
             // Define an array of element IDs and their corresponding JSON file paths
             const lottieElements = [
-                { id: "lottie-container", path: "date.json" },
-                { id: "lottie-container-d", path: "l.json" },
-                { id: "lottie-d", path: "l.json" },
-                { id: "bccb", path: "l.json" },
-                { id: "operator", path: "l.json" },
-                { id: "zone", path: "l.json" },
-                { id: "client", path: "l.json" }
+                { id: "lottie-container", path: "json_files/date.json" },
+                { id: "lottie-container-d", path: "json_files/l.json" },
+                { id: "lottie-d", path: "json_files/l.json" },
+                { id: "bccb", path: "json_files/l.json" },
+                { id: "operator", path: "json_files/l.json" },
+                { id: "zone", path: "json_files/l.json" },
+                { id: "client", path: "json_files/l.json" }
             ];
 
             // Loop through each element and initialize Lottie animation
@@ -657,7 +667,40 @@ html.dark .moon {
                 document.getElementById("recap_product").value = "";
             };
 
-         
+            document.addEventListener("DOMContentLoaded", function () {
+        const startDate = document.getElementById("start-date");
+        const endDate = document.getElementById("end-date");
+        const refreshBtn = document.getElementById("refresh-btn");
+
+        // Set default value for end date to today
+        const today = new Date().toISOString().split("T")[0];
+        endDate.value = today;
+
+        function triggerChangeEvent(inputElement) {
+            inputElement.focus(); // Simulate user focusing on the field
+            inputElement.value = inputElement.value; // Ensure the value is set correctly
+            inputElement.dispatchEvent(new Event("input", { bubbles: true })); // Simulate user typing
+            inputElement.dispatchEvent(new Event("change", { bubbles: true })); // Simulate user selection
+        }
+
+        // When start date is selected, set end date to today if not manually changed
+        startDate.addEventListener("change", function () {
+            if (!endDate.dataset.changed) {
+                endDate.value = today;
+                triggerChangeEvent(endDate); // Ensure all listeners detect the change
+            }
+        });
+
+        // Mark end date as manually changed
+        endDate.addEventListener("change", function () {
+            endDate.dataset.changed = true;
+        });
+
+        // Refresh button action
+        refreshBtn.addEventListener("click", function () {
+            triggerChangeEvent(endDate); // Make sure refresh triggers the change
+        });
+    });
 // Format number with thousand separators & two decimals
 
 

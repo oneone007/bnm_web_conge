@@ -7,6 +7,7 @@ $pages = [
     "Product" => "product.php",
     "Recap_Achat" => "recap_achat.php",
     "Recap_Vente" => "recap.php",
+    "Recap_Vente_Facturation" => "recap_fact.php",
     "signup" => "signup.html",
     "side" => "sidebar.html",
     "login" => "login.php",
@@ -14,6 +15,7 @@ $pages = [
     "a" => "a.html",
     "b" => "b.html",
     "c" => "c.html",
+    "working" => "constract.html",
     "t" => "tes.php",
 
     "build" =>"work.html"

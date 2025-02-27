@@ -33,7 +33,7 @@ $_SESSION['last_activity'] = time();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BNM</title>
-    <link rel="icon" href="tab.png" sizes="128x128" type="image/png">
+    <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
         body {
@@ -127,10 +127,43 @@ th, td {
 
 }
 
-.table-container {
-    flex: 1; /* Default full size */
-    min-width: 300px; /* Prevents tables from becoming too small */
+.tables-wrapper {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start; /* Align tables at the top */
+    justify-content: flex-start; /* Arrange tables in a row */
+    flex-wrap: wrap; /* Prevent overflow */
 }
+
+/* Small Tables (Magasins & Emplacements) */
+.small {
+    width: 15%; /* Small width for Magasins & Emplacements */
+    min-width: 180px; /* Prevent too small */
+}
+
+/* Large Table (Etat de Stock) */
+.large {
+    width: 65%; /* Takes the remaining space */
+}
+
+/* Table Box Styling */
+.table-box {
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .tables-wrapper {
+        flex-direction: column;
+    }
+    .small, .large {
+        width: 100%;
+    }
+}
+
 
 
         .sidebar {
@@ -350,78 +383,212 @@ html.dark .moon {
     padding: 10px;
     z-index: 50;
 }
+.scrollable-table {
+    max-height: 250px; /* Adjust height based on your design */
+    overflow-y: auto;
+    display: block;
+}
+.selected {
+    font-weight: bold; /* Make text bold */
+    background-color: #e0f7fa; /* Light blue background */
+    border-left: 4px solid #0097a7; /* Add a left border */
+}
+.scrollable-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
 
+.scrollable-table th,
+.scrollable-table td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+
+  .table-box.small {
+    width: 250px; /* Adjust as needed */
+    max-height: 350px; /* Ensure space for 10 rows */
+    overflow-y: auto;
+    border: 1px solid #ccc;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+tbody tr {
+    height: 35px; /* Adjust row height to fit 10 rows */
+}
+
+
+/* Search Container */
 .search-container {
-      display: grid;
-      grid-template-columns: repeat(1, minmax(250px, 1fr)); /* 3 columns per row */
-      gap: 16px;
-      padding: 20px;
-      width: 50%;
+    position: relative; /* Ensure dropdown is positioned correctly */
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-width: 400px;
+    padding: 15px;
+    background: #f9fafb;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
 
-      background: #f9fafb;
-      border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
+/* Search Input */
+.search-container input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: all 0.3s ease-in-out;
+    background-color: white;
+    color: #111827;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
 
-  .search-container label {
-      display: block;
-      font-weight: 600;
-      color: #374151;
-      margin-bottom: 6px;
-  }
+.search-container input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
+}
 
-  .search-container input {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-      font-size: 16px;
-      transition: all 0.3s ease-in-out;
-      background-color: white;
-      color: #111827;
-      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-  }
+/* Dropdown Container */
+.dropdown {
+    position: absolute;
+    top: 100%; /* Place right below the input */
+    left: 0;
+    width: 100%;
+    max-height: 250px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1050;
+    display: none;
+    font-size: 14px;
+    padding: 5px 0;
+}
 
-  .search-container input:focus {
-      outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
-  }
+/* Dropdown Items */
+.dropdown-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: background 0.2s ease-in-out;
+    color: #333;
+    font-weight: 500;
+}
 
-  /* Dark Mode */
-  .dark .search-container {
-      background: #1f2937;
-      box-shadow: none;
-  }
+/* Hover Effect */
+.dropdown-item:hover {
+    background: #f0f0f0;
+}
 
-  .dark .search-container label {
-      color: #e5e7eb;
-  }
+/* Dark Mode */
+.dark .search-container {
+    background: #1f2937;
+}
 
-  .dark .search-container input {
-      background-color: #374151;
-      color: white;
-      border: 1px solid #4b5563;
-      box-shadow: none;
-  }
+.dark .search-container input {
+    background-color: #374151;
+    color: white;
+    border: 1px solid #4b5563;
+}
 
-  .dark .search-container input:focus {
-      border-color: #3b82f6;
-      box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
-  }
+.dark .search-container input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+}
 
-  /* Responsive Design */
-  @media (max-width: 1024px) {
-      .search-container {
-          grid-template-columns: repeat(2, minmax(250px, 1fr)); /* 2 per row on tablets */
-      }
-  }
+/* Responsive Design */
+@media (max-width: 768px) {
+    .search-container {
+        width: 100%;
+        max-width: none;
+    }
+}
+/* Wrapper Styling */
+.tables-wrapper {
+    display: flex;
+    gap: 16px; /* Spacing between tables */
+    flex-wrap: wrap; /* Wrap to the next line on smaller screens */
+    justify-content: flex-start;
+}
 
-  @media (max-width: 768px) {
-      .search-container {
-          grid-template-columns: 1fr; /* 1 per row on mobile */
-      }
-  }
+/* Small Table Box */
+.table-box {
+    background: #ffffff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+    min-width: 250px; /* Ensures proper size */
+}
+
+/* Table Styling */
+.table-box table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+/* Table Head */
+.table-box thead tr {
+    background-color: #f1f5f9; /* Light gray background */
+    color: #374151; /* Dark text */
+    font-weight: bold;
+}
+
+/* Table Head & Cells */
+.table-box th,
+.table-box td {
+    padding: 8px;
+    border: 1px solid #ccc;
+    text-align: left;
+}
+
+/* Alternating Rows */
+.table-box tbody tr:nth-child(odd) {
+    background-color: #f9fafb;
+}
+
+.table-box tbody tr:nth-child(even) {
+    background-color: #e5e7eb;
+}
+
+/* ====== DARK MODE ====== */
+.dark .table-box {
+    background: #1f2937;
+    border-color: #374151;
+    color: #f9fafb;
+}
+
+.dark .table-box thead tr {
+    background-color: #374151;
+    color: #f9fafb;
+}
+
+.dark .table-box tbody tr:nth-child(odd) {
+    background-color: #1f2937;
+}
+
+.dark .table-box tbody tr:nth-child(even) {
+    background-color: #474d53;
+}
+
+.dark .table-box th,
+.dark .table-box td {
+    border-color: #4b5563;
+}
 
 
     </style>
@@ -448,7 +615,7 @@ html.dark .moon {
             renderer: "svg",
             loop: true,
             autoplay: true,
-            path: "r.json" // Replace with actual path to your .rjson file
+            path: "json_files/r.json" // Replace with actual path to your .rjson file
         });
     </script>
     
@@ -495,7 +662,7 @@ html.dark .moon {
                     renderer: 'svg',
                     loop: true,
                     autoplay: true,
-                    path: 'ram.json',
+                    path: 'json_files/ram.json',
                     rendererSettings: {
                         clearCanvas: true,
                         preserveAspectRatio: 'xMidYMid meet',
@@ -555,45 +722,19 @@ html.dark .moon {
 </div> 
 -->
 
-<div class="search-container">
-    <div>
-        <label for="recap_fournisseur"> Fournisseur:</label>
-        <input type="text" id="recap_fournisseur" placeholder="Search...">
-    </div>
-<div>
-    <label class="text-blue-600 font-semibold mb-2 block" for="locatorDropdown">Select Location:</label>
-<select id="locatorDropdown" class="w-60 border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200">
-    <option value="">-- Select Location --</option>
-    <option value="1000000">Z-ETAGE</option>
-    <option value="1001130">3-etage</option>
-    <option value="1000614">Préparation</option>
-    <option value="1000514">Depot Cos</option>
-    <option value="1001020">Dépôt Vente</option>
-    <option value="1000212">Dépôt Compensation</option>
-    <option value="1001127">Standard</option>
-    <option value="1001128">Dépot réserve</option>
-    <option value="1001136">Dépot Hangar réserve</option>
-    <option value="1001132">Dépôt Compensation Périmé</option>
-    <option value="1001135">HANGAR</option>
-    <option value="1001129">ARCHIVE PERIME</option>
-    <option value="1000817">PRODUIT NON VENDABLE</option>
-    <option value="1000414">Revignettage Client</option>
-    <option value="1000214">RETOUR FOURNISSEUR</option>
-    <option value="1000213">VIDE</option>
-    <option value="1000209">SV</option>
-    <option value="1000109">CASSE</option>
-    <option value="1000211">MANQUE</option>
-    <option value="1000314">MOYEN GENERAUX</option>
-    <option value="1000210">PERIME</option>
-</select>
+<div class="search-container relative">
+    <input type="text" id="recap_fournisseur" placeholder="Search Fournisseur">
+    <div id="fournisseur-dropdown" class="dropdown"></div>
 </div>
 
-</div>
+
+
+
 
         <br><br>
      
-        <button id="stock" class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
-            <img src="excel.png" alt="Excel Icon" class="w-6 h-6">
+        <button id="stock_excel" class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
+            <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
             <span>Download Stock Table</span>
         </button>
 
@@ -604,6 +745,56 @@ html.dark .moon {
         <div class="table-wrapper">
         <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
             <div class="overflow-x-auto">
+               
+            </div>
+        </div>
+
+<!-- second table remise aauto  -->
+
+
+        </div>
+
+        <!-- Pagination -->
+
+        <div class="tables-wrapper">
+    <!-- Magasins Table -->
+    <div class="table-box small">
+        <table>
+            <thead>
+                <tr><th>Magasin</th></tr>
+            </thead>
+            <tbody id="magasin-table-body">
+                <tr><td>Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Emplacements Table -->
+    <div class="table-box small">
+        <table>
+            <thead>
+                <tr><th>Emplacement</th></tr>
+            </thead>
+            <tbody id="emplacement-table-body">
+                <tr><td>Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Large Table (Etat de Stock) -->
+
+</div>
+
+
+        <br>
+            <button id="refreshButton" class="p-2 bg-gray-200 text-gray-900 rounded hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600">
+                🔄 Refresh
+            </button>
+        <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
+            <div class="overflow-x-auto">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2"> ETAT DE STOCK</h2>
+                
+
                 <table class="min-w-full border-collapse text-sm text-left dark:text-white">
                     <thead>
                         <tr class="table-header dark:bg-gray-700">
@@ -613,9 +804,7 @@ html.dark .moon {
                             <th data-column="PRIX" onclick="sortTable('PRIX')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">PRIX</th>
                             <th data-column="QTY_DISPO" onclick="sortTable('QTY_DISPO')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">QTY_DISPO</th>
                             <th data-column="PRIX_DISPO" onclick="sortTable('PRIX_DISPO')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">PRIX_DISPO</th>
-                            <th data-column="LOCATORID" onclick="sortTable('LOCATORID')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">LOCATORID</th>
-                            <th data-column="PRODUCTID" onclick="sortTable('PRODUCTID')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">PRODUCTID</th>
-                            <th data-column="SORT_ORDER" onclick="sortTable('SORT_ORDER')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">SORT_ORDER</th>
+
                     </thead>
                     <tbody id="data-table" class="dark:bg-gray-800">
                         <!-- Dynamic Rows -->
@@ -624,257 +813,322 @@ html.dark .moon {
             </div>
         </div>
 
-<!-- second table remise aauto  -->
-
-
-        </div>
-        <div class="mt-4 flex justify-center space-x-2" id="pagination"></div>
-
-        <!-- Pagination -->
-
-        
-        <br>
-    
-        <br>
-     
-  
         <script >
-window.onload = () => {
-    document.getElementById("recap_fournisseur").value = ""; // Clear search input
-    document.getElementById("locatorDropdown").value = ""; // Reset select dropdown to empty value
-};
-
-
-
-let emplacementPage = 1;
-const emplacementRowsPerPage = 10;
-let emplacementData = [];
-let emplacementSortColumn = '';
-let emplacementSortDirection = 'asc';
-
-// Fetch Emplacement data on page load
-window.onload = () => {
-    fetchEmplacementData();
-    fetchData();
-
-};
-
-document.addEventListener("DOMContentLoaded", () => {
-    fetchEmplacementData();
-});
-
-async function fetchEmplacementData() {
-    try {
-        const response = await fetch('http://192.168.1.156:5000/fetch-emplacement-data');
-        if (!response.ok) throw new Error('Network response was not ok');
-
-        const emplacementData = await response.json();
-        updateEmplacementDropdown(emplacementData);
-    } catch (error) {
-        console.error("Error fetching emplacement data:", error);
-        document.getElementById("emplacement-dropdown").innerHTML = `<option value="">Failed to load</option>`;
-    }
-}
-
-function updateEmplacementDropdown(data) {
-    const dropdown = document.getElementById("emplacement-dropdown");
-    dropdown.innerHTML = ""; // Clear existing options
-
-    if (!data || data.length === 0) {
-        dropdown.innerHTML = `<option value="">No data available</option>`;
-        return;
-    }
-
-    data.forEach(item => {
-        const option = document.createElement("option");
-        option.value = item.EMPLACEMENT || "";
-        option.textContent = item.EMPLACEMENT || "Unknown";
-        dropdown.appendChild(option);
-    });
-}
-
-
-let currentPage = 1;
-const rowsPerPage = 10;
 let allData = [];
-let filters = {
-    fournisseur: '',
-    name: '',
-    qty: '',
-    prix: '',
-    qty_dispo: '',
-    prix_dispo: '',
-    locatorid: '',
-    PRODUCTID: '',
-    sort_order: ''
-};
-let sortColumn = '';
-let sortDirection = 'asc';
-document.getElementById("recap_fournisseur").addEventListener("input", function () {
-    filters.fournisseur = this.value.toLowerCase(); // Store search input in filters
-    currentPage = 1;
-    updateTableAndPagination();
+let selectedMagasin = null;
+let selectedEmplacement = null;
+
+// Debounce function to limit API calls
+function debounce(func, delay) {
+    let timeoutId;
+    return function (...args) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
+
+
+// Add event listener for the Refresh button
+document.getElementById("refreshButton").addEventListener("click", () => {
+    console.log("Refreshing data...");
+    const fournisseur = document.getElementById("recap_fournisseur").value.trim();
+    fetchData(fournisseur, selectedMagasin, selectedEmplacement);
 });
+
+
+
+document.getElementById('stock_excel').addEventListener('click', function() {
+    // Get parameters (if available)
+    const fournisseur = document.getElementById('recap_fournisseur').value.trim() || null;
+    const magasin = selectedMagasin; // Use the selectedMagasin variable
+    const emplacement = selectedEmplacement; // Use the selectedEmplacement variable
+
+    // Build the URL with parameters
+    let url = 'http://192.168.1.156:5000/download-stock-excel?';
+    if (fournisseur) url += `fournisseur=${fournisseur}&`;
+    if (magasin) url += `magasin=${magasin}&`;
+    if (emplacement) url += `emplacement=${emplacement}&`;
+
+    // Remove the trailing '&' if no parameters are provided
+    if (url.endsWith('&')) url = url.slice(0, -1);
+
+    // Trigger the download
+    window.location.href = url;
+});
+
+
 
 // Fetch data on page load
-async function fetchData() {
+document.addEventListener("DOMContentLoaded", () => {
+    fetchData(); // Initial fetch without any filters
+    fetchAndDisplayMagasins(); // Fetch magasins
+});
+
+const fournisseurInput = document.getElementById("recap_fournisseur");
+const fournisseurDropdown = document.getElementById("fournisseur-dropdown");
+
+function clearSearch() {
+    fournisseurInput.value = ""; // Clear input field
+    fournisseurDropdown.style.display = "none"; // Hide dropdown
+    fetchData("", selectedMagasin, selectedEmplacement); // Refresh data
+}
+
+// Search input event listener with debounce
+fournisseurInput.addEventListener("input", debounce(function () {
+    const searchValue = this.value.trim().toLowerCase();
+
+    if (searchValue) {
+        showFournisseurDropdown(searchValue);
+    } else {
+        clearSearch();
+    }
+}, 300));
+
+// Add event listener for click to clear search and refresh
+fournisseurInput.addEventListener("click", clearSearch);
+
+
+// Fetch data with optional filters
+async function fetchData(fournisseur = "", magasin = null, emplacement = null) {
     try {
-        const response = await fetch('http://192.168.1.156:5000/fetch-data-stock');
+        const url = new URL("http://192.168.1.156:5000/fetch-stock-data");
+        if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
+        if (magasin) url.searchParams.append("magasin", magasin);
+        if (emplacement) url.searchParams.append("emplacement", emplacement);
+
+        const response = await fetch(url);
         if (!response.ok) throw new Error('Network response was not ok');
+
         allData = await response.json();
-        console.log("Fetched Data:", allData); // Debugging log
-        updateTableAndPagination();
+        console.log("Fetched Data:", allData); // Debugging
+        renderTable();
     } catch (error) {
         console.error("Error fetching data:", error);
     }
 }
 
-document.getElementById("stock").addEventListener("click", function () {
-    let params = new URLSearchParams();
+// Show fournisseur dropdown
+function showFournisseurDropdown(searchValue) {
+    fournisseurDropdown.innerHTML = "";
+    fournisseurDropdown.style.display = "block";
 
-    // Get selected location
-    let locatorDropdown = document.getElementById("locatorDropdown");
-    let selectedLocatorID = locatorDropdown.value;
-    let selectedLocatorName = locatorDropdown.options[locatorDropdown.selectedIndex].text;
+    // Get unique fournisseurs matching search
+    const uniqueFournisseurs = [...new Set(allData.map(row => row.FOURNISSEUR))]
+        .filter(f => f && f.toLowerCase().includes(searchValue));
 
-    if (selectedLocatorID) {
-        params.append("locatorid", selectedLocatorID);
-        params.append("locatorname", selectedLocatorName);
+    if (uniqueFournisseurs.length === 0) {
+        fournisseurDropdown.style.display = "none";
+        return;
     }
 
-    // Get fournisseur search input
-    let searchFournisseur = document.getElementById("recap_fournisseur").value.trim();
-    if (searchFournisseur) {
-        params.append("fournisseur", searchFournisseur);
-    }
-
-    // Open the filtered download link
-    window.open(`http://192.168.1.156:5000/download-stock-excel?${params.toString()}`, "_blank");
-});
-
-
-
-function filterDropdown(type) {
-    const searchValue = document.getElementById(`search-${type}`).value.toLowerCase();
-    filters[type] = searchValue;
-    currentPage = 1;
-    updateTableAndPagination();
-}
-
-function filterData(data) {
-    const selectedLocatorID = Number(filters.locatorid); // Convert once for efficiency
-    const searchQuery = filters.fournisseur; // Get the search query
-
-    return data.filter(row => {
-        let matchesLocator = !filters.locatorid || Number(row.LOCATORID) === selectedLocatorID;
-        let matchesSearch = !searchQuery || row.FOURNISSEUR.toLowerCase().includes(searchQuery);
-
-        return matchesLocator && matchesSearch;
-    });
-}
-
-
-
-
-function sortTable(column) {
-    if (sortColumn === column) {
-        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-    } else {
-        sortColumn = column;
-        sortDirection = 'asc';
-    }
-
-    document.querySelectorAll('th').forEach(th => {
-        const content = th.innerText.replace(/ ↑| ↓/g, '');
-        th.innerText = content;
-    });
-    
-    const currentHeader = document.querySelector(`th[data-column="${column}"]`);
-    if (currentHeader) {
-        const arrow = sortDirection === 'asc' ? ' ↑' : ' ↓';
-        currentHeader.innerText += arrow;
-    }
-    
-    updateTableAndPagination();
-}
-document.getElementById("locatorDropdown").addEventListener("change", function () {
-    filters.locatorid = this.value; // Store the selected value in filters
-    currentPage = 1;
-    updateTableAndPagination(); // Refresh the table with the new filter
-});
-
-function updateTableAndPagination() {
-    renderTablePage(currentPage);
-    renderPagination();
-}
-
-function renderTablePage(page) {
-    let filteredData = filterData(allData);
-
-    if (sortColumn) {
-        filteredData.sort((a, b) => {
-            if (a[sortColumn] < b[sortColumn]) return sortDirection === 'asc' ? -1 : 1;
-            if (a[sortColumn] > b[sortColumn]) return sortDirection === 'asc' ? 1 : -1;
-            return 0;
+    // Populate dropdown
+    uniqueFournisseurs.forEach(fournisseur => {
+        const option = document.createElement("div");
+        option.classList.add("dropdown-item");
+        option.textContent = fournisseur;
+        option.addEventListener("click", () => {
+            fournisseurInput.value = fournisseur;
+            fournisseurDropdown.style.display = "none";
+            fetchData(fournisseur, selectedMagasin, selectedEmplacement);
         });
-    }
+        fournisseurDropdown.appendChild(option);
+    });
+}
 
-    const start = (page - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-    const pageData = filteredData.slice(start, end);
-
+// Render table function
+function renderTable() {
     const tableBody = document.getElementById("data-table");
     tableBody.innerHTML = "";
 
-    pageData.forEach(row => {
-        const tr = document.createElement("tr");
-        tr.classList.add('table-row', 'dark:bg-gray-700');
+    let totalRow = allData.find(row => row.FOURNISSEUR?.toLowerCase() === "total");
+    let filteredData = allData.filter(row => row.FOURNISSEUR?.toLowerCase() !== "total");
 
-        tr.innerHTML = `
-            <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || ''}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${row.NAME || ''}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${row.QTY || ''}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${row.PRIX || ''}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${row.QTY_DISPO || ''}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${row.PRIX_DISPO || ''}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${row.LOCATORID || ''}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${row.PRODUCTID || ''}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${row.SORT_ORDER || ''}</td>
-        `;
+    if (totalRow) {
+        const tr = createTableRow(totalRow, true);
+        tableBody.appendChild(tr);
+    }
+
+    filteredData.forEach(row => {
+        const tr = createTableRow(row);
         tableBody.appendChild(tr);
     });
 }
 
-function createPageButton(text, pageNumber) {
-    const button = document.createElement("button");
-    button.innerText = text;
-    button.classList.add("px-4", "py-2", "bg-gray-300", "rounded", "hover:bg-gray-400", "dark:bg-gray-700", "dark:text-white");
-    button.disabled = pageNumber < 1 || pageNumber > Math.ceil(filterData(allData).length / rowsPerPage);
-    button.addEventListener("click", () => {
-        currentPage = pageNumber;
-        updateTableAndPagination();
+// Helper function to create a table row
+function createTableRow(row, isTotal = false) {
+    const tr = document.createElement("tr");
+    tr.classList.add('table-row', 'dark:bg-gray-700');
+
+    if (isTotal) {
+        tr.classList.add('font-bold', 'bg-gray-200', 'dark:bg-gray-800'); // Highlight total row
+    }
+
+    const formatNumber = (num) => num ? parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+
+    tr.innerHTML = `
+        <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || ''}</td>
+        <td class="border px-4 py-2 dark:border-gray-600">${row.NAME || ''}</td>
+        <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
+        <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.PRIX)}</td>
+        <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY_DISPO)}</td>
+        <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.PRIX_DISPO)}</td>
+
+    `;
+    return tr;
+}
+
+
+
+
+
+
+
+// Fetch and display magasins
+async function fetchAndDisplayMagasins() {
+    try {
+        const response = await fetch("http://192.168.1.156:5000/fetch-magasins");
+        if (!response.ok) throw new Error("Network response was not ok");
+
+        const data = await response.json();
+        console.log("Received Magasins Data:", data);
+        updateMagasinTable(data);
+    } catch (error) {
+        console.error("Error fetching magasins:", error);
+    }
+}
+
+// Update magasin table
+function updateMagasinTable(data) {
+    const tableBody = document.getElementById("magasin-table-body");
+    tableBody.innerHTML = "";
+
+    if (!Array.isArray(data) || data.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="1">No data available</td></tr>`;
+        return;
+    }
+
+    // Add cancel selection row
+    const cancelRow = document.createElement("tr");
+    cancelRow.innerHTML = `<td class="cancel-selection">❌ Cancel Selection</td>`;
+    cancelRow.addEventListener("click", () => resetSelection("magasin"));
+    tableBody.appendChild(cancelRow);
+
+    data.forEach(item => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${item.MAGASIN || "Unknown"}</td>`;
+        row.dataset.magasin = item.MAGASIN;
+        row.addEventListener("click", () => selectMagasin(row));
+        tableBody.appendChild(row);
     });
-    return button;
 }
 
-function renderPagination() {
-    const filteredData = filterData(allData);
-    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-    const paginationContainer = document.getElementById("pagination");
-    paginationContainer.innerHTML = "";
+// Magasin selection logic
+function selectMagasin(selectedRow) {
+    // Remove 'selected' class from all magasin rows
+    document.querySelectorAll("#magasin-table-body tr").forEach(row => {
+        row.classList.remove("selected");
+    });
 
-    paginationContainer.appendChild(createPageButton("First", 1));
-    paginationContainer.appendChild(createPageButton("<", currentPage - 1));
+    // Add 'selected' class to the clicked row
+    selectedRow.classList.add("selected");
 
-    const pageButton = document.createElement("button");
-    pageButton.innerText = currentPage;
-    pageButton.classList.add("px-4", "py-2", "bg-blue-500", "text-white", "rounded", "dark:bg-blue-600");
-    pageButton.disabled = true;
-    paginationContainer.appendChild(pageButton);
+    selectedMagasin = selectedRow.dataset.magasin;
+    console.log("Selected Magasin:", selectedMagasin);
 
-    paginationContainer.appendChild(createPageButton(">", currentPage + 1));
-    paginationContainer.appendChild(createPageButton("Last", totalPages));
+    // Fetch and display emplacements for the selected magasin
+    fetchAndDisplayEmplacements(selectedMagasin);
+
+    // Fetch stock data with the selected magasin
+    const fournisseur = document.getElementById("recap_fournisseur").value.trim();
+    fetchData(fournisseur, selectedMagasin, selectedEmplacement);
 }
+
+// Fetch and display emplacements
+async function fetchAndDisplayEmplacements(magasin) {
+    if (!magasin) {
+        document.getElementById("emplacement-table-body").innerHTML = "";
+        return;
+    }
+
+    try {
+        const url = new URL("http://192.168.1.156:5000/fetch-emplacements");
+        url.searchParams.append("magasin", magasin);
+
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Network response was not ok");
+
+        const data = await response.json();
+        console.log("Received Emplacements Data:", data);
+        updateEmplacementTable(data);
+    } catch (error) {
+        console.error("Error fetching emplacements:", error);
+    }
+}
+
+// Update emplacement table
+function updateEmplacementTable(data) {
+    const tableBody = document.getElementById("emplacement-table-body");
+    tableBody.innerHTML = "";
+
+    if (!Array.isArray(data) || data.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="1">No data available</td></tr>`;
+        return;
+    }
+
+    // Add cancel selection row
+    const cancelRow = document.createElement("tr");
+    cancelRow.innerHTML = `<td class="cancel-selection">❌ Cancel Selection</td>`;
+    cancelRow.addEventListener("click", () => resetSelection("emplacement"));
+    tableBody.appendChild(cancelRow);
+
+    data.forEach(item => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${item.EMPLACEMENT || "Unknown"}</td>`;
+        row.dataset.emplacement = item.EMPLACEMENT;
+        row.addEventListener("click", () => selectEmplacement(row));
+        tableBody.appendChild(row);
+    });
+}
+
+// Emplacement selection logic
+function selectEmplacement(selectedRow) {
+    // Remove 'selected' class from all emplacement rows
+    document.querySelectorAll("#emplacement-table-body tr").forEach(row => {
+        row.classList.remove("selected");
+    });
+
+    // Add 'selected' class to the clicked row
+    selectedRow.classList.add("selected");
+
+    selectedEmplacement = selectedRow.dataset.emplacement;
+    console.log("Selected Emplacement:", selectedEmplacement);
+
+    // Fetch stock data with the selected emplacement
+    const fournisseur = document.getElementById("recap_fournisseur").value.trim();
+    fetchData(fournisseur, selectedMagasin, selectedEmplacement);
+}
+
+// Reset selection logic
+function resetSelection(type) {
+    console.log(`Resetting ${type} selection...`);
+
+    if (type === "magasin") {
+        document.querySelectorAll("#magasin-table-body tr").forEach(row => row.classList.remove("selected"));
+        selectedMagasin = null;
+        // Clear emplacement table when magasin selection is reset
+        document.getElementById("emplacement-table-body").innerHTML = "";
+        selectedEmplacement = null;
+    } else if (type === "emplacement") {
+        document.querySelectorAll("#emplacement-table-body tr").forEach(row => row.classList.remove("selected"));
+        selectedEmplacement = null;
+    }
+
+    // Fetch stock data without the reset filter
+    const fournisseur = document.getElementById("recap_fournisseur").value.trim();
+    fetchData(fournisseur, selectedMagasin, selectedEmplacement);
+}
+
 
 document.getElementById('themeToggle').addEventListener('click', () => {
     document.documentElement.classList.toggle('dark');
