@@ -571,197 +571,119 @@ WHERE
 
 
 ---------------------------
- SELECT * FROM (
-                    SELECT 
-                        CAST(xf.name AS VARCHAR2(300)) AS FOURNISSEUR,   
-                        SUM(xf.TOTALLINE) AS total, 
-                        SUM(xf.qtyentered) AS QTY,
-                            ROUND(
-    CASE 
-        WHEN SUM(xf.CONSOMATION) = 0 THEN 0
-        WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1)*100
-        ELSE ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION))*100
-    END, 
-4) AS marge,
-                        0 AS sort_order
-                    FROM xx_ca_fournisseur xf
-                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
-                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
-                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
-                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
-                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
-                    JOIN C_ORDER C ON mi.C_ORDER_ID = c.C_ORDER_ID
-                    WHERE xf.MOVEMENTDATE BETWEEN '02-02-2025' AND '12-02-2025'
-                        AND xf.AD_Org_ID = 1000000
-                        AND xf.DOCSTATUS != 'RE'
-                        AND (:fournisseur IS NULL OR xf.name LIKE :fournisseur || '%')
-                    GROUP BY xf.name
-                    UNION ALL
-                    SELECT 
-                        CAST('Total' AS VARCHAR2(300)) AS name, 
-                        SUM(xf.TOTALLINE) AS total, 
-                        SUM(xf.qtyentered) AS QTY,
-                        ROUND(
-    CASE 
-        WHEN SUM(xf.CONSOMATION) = 0 THEN 0
-        WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1)*100
-        ELSE ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION))*100
-    END, 
-4) AS marge,
-
-                        1 AS sort_order
-                    FROM xx_ca_fournisseur xf
-                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
-                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
-                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
-                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
-                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
-                    JOIN C_ORDER C ON mi.C_ORDER_ID = c.C_ORDER_ID
-                    WHERE xf.MOVEMENTDATE BETWEEN  '02-02-2025' AND '12-02-2025'
-                        AND xf.AD_Org_ID = 1000000
-                        AND xf.DOCSTATUS != 'RE'
-                        AND (:fournisseur IS NULL OR xf.name LIKE :fournisseur || '%')
-                )
-                ORDER BY sort_order, total DESC
-
-
-
-
-
-
-                SELECT COUNT(*) 
-FROM AD_User au 
-JOIN xx_ca_fournisseur xf ON au.AD_User_ID = xf.SALESREP_ID
-WHERE xf.MOVEMENTDATE BETWEEN TO_DATE('2024-01-01', 'YYYY-MM-DD') 
-AND TO_DATE('2024-01-31', 'YYYY-MM-DD');
-
-
-SELECT
-    SUM(CASE 
-        WHEN xf.C_DocType_ID = 1000646 THEN -1 * TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED) 
-        ELSE TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED) 
-    END) AS chiffre
-FROM M_InOut xf
-JOIN M_InOutline mi ON mi.M_INOUT_ID = xf.M_INOUT_ID
-JOIN C_BPartner cb ON cb.C_BPARTNER_ID = xf.C_BPARTNER_ID
-LEFT JOIN C_InvoiceLine ci ON ci.M_INOUTLINE_ID = mi.M_INOUTLINE_ID
-JOIN M_ATTRIBUTEINSTANCE ma ON ma.M_ATTRIBUTESETINSTANCE_ID = mi.M_ATTRIBUTESETINSTANCE_ID
-JOIN M_PRODUCT m ON m.M_PRODUCT_id = mi.M_PRODUCT_id
-WHERE xf.MOVEMENTDATE BETWEEN TO_DATE('2025-02-01', 'YYYY-MM-DD') 
-                          AND TO_DATE('2025-02-18', 'YYYY-MM-DD')
-    AND ma.M_Attribute_ID = 1000504
-    AND xf.AD_Org_ID = 1000000
-    AND xf.C_DocType_ID IN (1000013, 1000646)
-    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725);
-
-
-
-
-
-
- select  count (name) from M_PRODUCT
-WHERE AD_Client_ID = 1000000
-AND AD_Org_ID = 1000000
-  AND ISACTIVE = 'Y'
-;
-
-
-
-
-
-SELECT ml.value AS EMPLACEMENT
-FROM M_Locator ml
-JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
-WHERE m.ISACTIVE = 'Y'
-  AND m.AD_Client_ID = 1000000
-  AND ml.ISACTIVE = 'Y'
-  AND ml.AD_Client_ID = 1000000
-  AND (:MAGASIN IS NULL OR m.value LIKE :MAGASIN || '%')
-  AND (:EMPLACEMENT IS NULL OR ml.value LIKE :EMPLACEMENT || '%')
-ORDER BY m.value;
-
-
-SELECT distinct m.value AS MAGASIN
-FROM M_Locator ml
-JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
-WHERE m.ISACTIVE = 'Y'
-  AND m.AD_Client_ID = 1000000
-  AND ml.ISACTIVE = 'Y'
-  AND ml.AD_Client_ID = 1000000
-  AND (:MAGASIN IS NULL OR m.value LIKE :MAGASIN || '%')
-  AND (:EMPLACEMENT IS NULL OR ml.value LIKE :EMPLACEMENT || '%')
-ORDER BY m.value;
-
-
+WITH Latest_Purchase AS (
+    SELECT 
+        cl.M_Product_ID,
+        SUM(cl.qtyentered) AS last_purchase_qty,
+        c.dateinvoiced,
+        ROW_NUMBER() OVER (PARTITION BY cl.M_Product_ID ORDER BY c.dateinvoiced DESC) AS rn
+    FROM 
+        C_InvoiceLine cl
+    JOIN 
+        C_Invoice c ON c.C_Invoice_id = cl.C_Invoice_id
+    JOIN 
+        M_INOUTLINE ml ON ml.M_INOUTLINE_id = cl.M_INOUTLINE_ID
+    WHERE 
+        c.dateinvoiced BETWEEN TO_DATE('2020-01-01', 'YYYY-MM-DD') 
+                          AND TO_DATE('2025-12-31', 'YYYY-MM-DD')
+        AND c.AD_Client_ID = 1000000
+        AND c.AD_Org_ID = 1000000
+        AND c.ISSOTRX = 'N'
+        AND c.DOCSTATUS in ('CO','CL')
+        AND ml.M_Locator_ID != 1001020
+        AND cl.M_Product_ID = 1182513 -- Replace with the correct product ID
+    GROUP BY 
+        cl.M_Product_ID, c.dateinvoiced
+)
 SELECT 
-    mati.value AS fournisseur, 
-    m.name,  
-    SUM(m_storage.qtyonhand) AS qty,
-    SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand) AS prix,
-    SUM(m_storage.qtyonhand - m_storage.QTYRESERVED) AS qty_dispo, 
-    SUM(M_ATTRIBUTEINSTANCE.valuenumber * (m_storage.qtyonhand - m_storage.QTYRESERVED)) AS prix_dispo,
-    ml.M_Locator_ID AS locatorid,
-    m.m_product_id AS productid,
-    1 AS sort_order
+    M_Product_ID,
+    last_purchase_qty,
+    dateinvoiced
 FROM 
-    M_ATTRIBUTEINSTANCE
-JOIN 
-    m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
-JOIN 
-    M_PRODUCT m ON m.M_PRODUCT_id = m_storage.M_PRODUCT_id
-JOIN 
-    M_Locator ml ON ml.M_Locator_ID = m_storage.M_Locator_ID
-INNER JOIN 
-    m_attributeinstance mati ON m_storage.m_attributesetinstance_id = mati.m_attributesetinstance_id
+    Latest_Purchase
 WHERE 
-    M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
-    AND m_storage.qtyonhand > 0
-    AND mati.m_attribute_id = 1000508
-    AND m_storage.AD_Client_ID = 1000000
-    AND m_storage.M_Locator_ID IN (
-        SELECT M_Locator_ID 
-        FROM M_Locator 
-        WHERE M_Warehouse_ID IN (
-            SELECT M_Warehouse_ID 
-            FROM M_Warehouse 
-            WHERE VALUE IN ('1-Dépôt Principal')
-        )
-    )
-    AND m_storage.M_Locator_ID IN (
-        SELECT M_Locator_ID 
-        FROM M_Locator 
-        WHERE value LIKE 'Préparation%'
-    )
-GROUP BY 
-    m.name, mati.value, m.m_product_id, ml.M_Locator_ID;
+    rn = 1;
+
+-------------
+
+--------------------------2nd sql----------------------------
 
 
 
+    WITH Latest_Purchase AS (
+    SELECT 
+        cl.M_Product_ID,
+        SUM(cl.qtyentered) AS last_purchase_qty,
+        c.dateinvoiced,
+        ROW_NUMBER() OVER (PARTITION BY cl.M_Product_ID ORDER BY c.dateinvoiced DESC) AS rn
+    FROM 
+        C_InvoiceLine cl
+    JOIN C_Invoice c ON c.C_Invoice_id = cl.C_Invoice_id
+    JOIN M_INOUTLINE ml ON ml.M_INOUTLINE_id = cl.M_INOUTLINE_ID
+    WHERE 
+        c.dateinvoiced BETWEEN TO_DATE('2025-02-23', 'YYYY-MM-DD') 
+                          AND TO_DATE('2025-03-02', 'YYYY-MM-DD')
+        AND c.AD_Client_ID = 1000000
+        AND c.AD_Org_ID = 1000000
+        AND c.ISSOTRX = 'N'
+        AND c.DOCSTATUS in ('CO','CL')
+        AND ml.M_Locator_ID != 1000020
+    GROUP BY 
+        cl.M_Product_ID, c.dateinvoiced
+),
+Filtered_Latest_Purchase AS (
+    SELECT 
+        M_Product_ID,
+        last_purchase_qty,
+        dateinvoiced
+    FROM 
+        Latest_Purchase
+    WHERE 
+        rn = 1
+),
+On_Hand_Quantity AS (
+    SELECT  
+        m.M_Product_ID as midp,
+        m.name AS product_name,
+        SUM(s.QTYONHAND) - SUM(s.QTYRESERVED) AS QTYONHAND
+    FROM 
+        m_product m
+    JOIN m_storage s ON s.M_PRODUCT_ID = m.M_PRODUCT_ID
+    JOIN M_Locator ml ON ml.M_Locator_ID = s.M_Locator_ID
+    WHERE 
+        s.AD_Client_ID = 1000000
+        AND m.AD_Client_ID = 1000000
+        AND s.M_Locator_ID IN (1001135, 1000614, 1001128, 1001136)
+        AND UPPER(m.name) LIKE UPPER('ABC BOITE A PHARMACIE GM  (10 PAS DE VRAC)')
+    GROUP BY 
+        m.M_Product_ID, m.name
+),
+Stock_Principale AS (
+    SELECT 
+        ROUND(SUM(M_ATTRIBUTEINSTANCE.valuenumber * (m_storage.qtyonhand - m_storage.QTYRESERVED)), 2) AS stock_principale
+    FROM 
+        M_ATTRIBUTEINSTANCE
+    JOIN m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
+    WHERE 
+        M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
+        AND m_storage.qtyonhand > 0
+        AND m_storage.M_Locator_ID IN (1001135, 1000614, 1001128, 1001136)
+        AND m_storage.M_Product_ID IN (SELECT M_Product_ID FROM M_Product WHERE UPPER(name) LIKE UPPER('ABC BOITE A PHARMACIE GM  (10 PAS DE VRAC)'))
+)
+SELECT 
+    oq.midp,
+    oq.product_name,
+    oq.QTYONHAND AS "QTY DISPO",
+    COALESCE(fp.last_purchase_qty, 0) AS "DERNIER ACHAT",
+    fp.dateinvoiced AS "DATE",
+    sp.stock_principale AS "VALEUR"
+FROM 
+    On_Hand_Quantity oq
+LEFT JOIN 
+    Filtered_Latest_Purchase fp ON oq.midp = fp.M_Product_ID
+CROSS JOIN 
+    Stock_Principale sp
+ORDER BY 
+    oq.product_name;
 
- SELECT 
-                    SUM(xf.TOTALLINE) AS CHIFFRE, 
-                    SUM(xf.qtyentered) AS QTY,
-                    SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION) AS MARGE,
-                    SUM(xf.CONSOMATION) AS CONSOMATION,
-                    CASE 
-                        WHEN SUM(xf.CONSOMATION) < 0 
-                        THEN ROUND(((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / (SUM(xf.CONSOMATION) * -1)), 4)
-                        ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
-                    END AS POURCENTAGE
-                FROM xx_ca_fournisseur xf
-                WHERE 
-                    xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                    AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                    AND xf.AD_Org_ID = 1000012
-                    AND xf.DOCSTATUS != 'RE'
 
-
-
-
-                     SELECT DISTINCT m.value AS MAGASIN
-                FROM M_Locator ml
-                JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
-                WHERE m.ISACTIVE = 'Y'
-                  AND m.AD_Client_ID = 1000000
-                  AND ml.ISACTIVE = 'Y'
-                  AND ml.AD_Client_ID = 1000000

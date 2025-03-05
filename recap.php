@@ -598,8 +598,7 @@ html.dark .moon {
                                     QTy</th>
                                 <th data-column="Marge" onclick="sortrecapTable('Marge')" class="border px-4 py-2">
                                     Marge</th>
-                                <th data-column="Sort_Order" onclick="sortrecapTable('Sort_Order')"
-                                    class="border px-4 py-2">Sort Order</th>
+                               
                             </tr>
                         </thead>
                         <tbody id="recap-frnsr-table" class="dark:bg-gray-800">
@@ -844,7 +843,11 @@ html.dark .moon {
         </div>
 
 <br>
-
+<button id="download-bccb-product-excel"
+            class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
+            <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
+            <span>BCCB Product Recap Download</span>
+        </button>
         <div id="bccb-product-container" class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800" style="display: none;">
     <div class="overflow-x-auto">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">BCCB Product Recap</h2>
@@ -972,7 +975,9 @@ html.dark .moon {
                 if (!startDate || !endDate) return; // Don't fetch until both dates are selected
 
                 try {
-                    const response = await fetch(`http://192.168.1.156:5000/fetchTotalrecapData?start_date=${startDate}&end_date=${endDate}`);
+                    
+                    const response = await fetch(`http://192.168.1.156:5000/fetchTotalrecapData?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000000`);
+
                     if (!response.ok) throw new Error("Network response was not ok");
 
                     const data = await response.json();
@@ -993,7 +998,7 @@ html.dark .moon {
             }
 
             // Format number with thousand separators & two decimals
-            function formatNumber(value) {
+            function formatNumbert(value) {
                 if (value === null || value === undefined || isNaN(value)) return "";
                 return parseFloat(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
@@ -1018,9 +1023,9 @@ html.dark .moon {
                 tableBody.innerHTML = `
 <tr class="dark:bg-gray-700">
     <td class="border px-4 py-2 dark:border-gray-600">From ${startDate} to ${endDate}</td>
-    <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.CHIFFRE)}</td>
-    <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
-    <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.MARGE)}</td>
+    <td class="border px-4 py-2 dark:border-gray-600">${formatNumbert(row.CHIFFRE)}</td>
+    <td class="border px-4 py-2 dark:border-gray-600">${formatNumbert(row.QTY)}</td>
+    <td class="border px-4 py-2 dark:border-gray-600">${formatNumbert(row.MARGE)}</td>
     <td class="border px-4 py-2 dark:border-gray-600">${formatPercentage(row.POURCENTAGE)}</td>
 </tr>
 `;
@@ -1041,7 +1046,7 @@ html.dark .moon {
         return;
     }
 
-    const downloadUrl = `http://192.168.1.156:5000/download-totalrecap-excel?start_date=${startDate}&end_date=${endDate}`;
+    const downloadUrl = `http://192.168.1.156:5000/download-totalrecap-excel?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000000`;
     window.location.href = downloadUrl;  // Triggers file download
 });
 
@@ -1073,6 +1078,7 @@ html.dark .moon {
                 const url = new URL("http://192.168.1.156:5000/fetchFournisseurData");
                 url.searchParams.append("start_date", startDate);
                 url.searchParams.append("end_date", endDate);
+                url.searchParams.append("ad_org_id", "1000000"); 
                 if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
                 if (product) url.searchParams.append("product", product);
                 if (client) url.searchParams.append("client", client);
@@ -1114,7 +1120,7 @@ html.dark .moon {
             }
 
             // Format number with thousand separators & two decimals
-            function formatNumber(value) {
+            function formatNumberf(value) {
                 if (value === null || value === undefined || isNaN(value)) return "";
                 return parseFloat(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
@@ -1167,10 +1173,9 @@ html.dark .moon {
                     tableBody.innerHTML += `
             <tr class="bg-gray-200 font-bold">
                 <td class="border px-4 py-2 dark:border-gray-600">${totalRow.FOURNISSEUR}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.TOTAL)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.QTY)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.MARGE)}%</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${totalRow.SORT_ORDER}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumberf(totalRow.TOTAL)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumberf(totalRow.QTY)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumberf(totalRow.MARGE)}%</td>
             </tr>
         `;
                 }
@@ -1179,10 +1184,9 @@ html.dark .moon {
                     tableBody.innerHTML += `
             <tr class="dark:bg-gray-700">
                 <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || "N/A"}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.TOTAL)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.MARGE)}%</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${row.SORT_ORDER}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumberf(row.TOTAL)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumberf(row.QTY)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumberf(row.MARGE)}%</td>
             </tr>
         `;
                 });
@@ -1208,6 +1212,8 @@ html.dark .moon {
     const url = new URL("http://192.168.1.156:5000/download-fournisseur-excel");
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
+    url.searchParams.append("ad_org_id", "1000000"); // Added ad_org_id parameter
+
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
     if (product) url.searchParams.append("product", product);
     if (client) url.searchParams.append("client", client);
@@ -1259,6 +1265,7 @@ html.dark .moon {
                 const url = new URL("http://192.168.1.156:5000/fetchProductData");
                 url.searchParams.append("start_date", startDate);
                 url.searchParams.append("end_date", endDate);
+                url.searchParams.append("ad_org_id", "1000000"); 
                 if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
                 if (product) url.searchParams.append("product", product);
                 if (client) url.searchParams.append("client", client);
@@ -1304,7 +1311,11 @@ html.dark .moon {
         fetchProductRecap();
     });
 });
-
+    // Format number with thousand separators & two decimals
+    function formatNumberp(value) {
+                if (value === null || value === undefined || isNaN(value)) return "";
+                return parseFloat(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
             // Update table with fetched data
             function updateProductTable(data) {
                 const tableBody = document.getElementById("recap-prdct-table");
@@ -1327,9 +1338,9 @@ html.dark .moon {
                     totalTr.classList.add("bg-gray-200", "font-bold", "dark:bg-gray-700");
                     totalTr.innerHTML = `
             <td class="border px-4 py-2 dark:border-gray-600">${totalRow.PRODUIT}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.TOTAL)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.QTY)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.MARGE * 100)}%</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.TOTAL)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.MARGE * 100)}%</td>
         `;
                     fragment.appendChild(totalTr);
                 }
@@ -1340,9 +1351,9 @@ html.dark .moon {
                     tr.classList.add("dark:bg-gray-700");
                     tr.innerHTML = `
             <td class="border px-4 py-2 dark:border-gray-600">${row.PRODUIT || "N/A"}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.TOTAL)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.MARGE * 100)}%</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.TOTAL)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.MARGE * 100)}%</td>
         `;
                     fragment.appendChild(tr);
                 });
@@ -1369,6 +1380,8 @@ html.dark .moon {
     const url = new URL("http://192.168.1.156:5000/download-product-excel");
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
+    url.searchParams.append("ad_org_id", "1000000"); // Added ad_org_id parameter
+
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
     if (product) url.searchParams.append("product", product);
     if (client) url.searchParams.append("client", client);
@@ -1455,6 +1468,7 @@ html.dark .moon {
                 const url = new URL("http://192.168.1.156:5000/fetchZoneRecap");
                 url.searchParams.append("start_date", startDate);
                 url.searchParams.append("end_date", endDate);
+                url.searchParams.append("ad_org_id", "1000000"); 
                 if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
                 if (product) url.searchParams.append("product", product);
                 if (client) url.searchParams.append("client", client);
@@ -1497,9 +1511,9 @@ html.dark .moon {
                     totalTr.classList.add("bg-gray-200", "font-bold", "dark:bg-gray-700");
                     totalTr.innerHTML = `
             <td class="border px-4 py-2 dark:border-gray-600">${totalRow.ZONE}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.TOTAL)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.QTY)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.MARGE * 100)}%</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.TOTAL)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.MARGE * 100)}%</td>
         `;
                     fragment.appendChild(totalTr);
                 }
@@ -1510,9 +1524,9 @@ html.dark .moon {
                     tr.classList.add("dark:bg-gray-700");
                     tr.innerHTML = `
             <td class="border px-4 py-2 dark:border-gray-600">${row.ZONE || "N/A"}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.TOTAL)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.MARGE * 100)}%</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.TOTAL)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.MARGE * 100)}%</td>
         `;
                     fragment.appendChild(tr);
                 });
@@ -1553,6 +1567,9 @@ document.getElementById("download-Opérateur-excel").addEventListener("click", f
 document.getElementById("download-BCCB-excel").addEventListener("click", function () {
     downloadExcel("download-bccb-excel");
 });
+document.getElementById("download-bccb-product-excel").addEventListener("click", function () {
+    downloadExcel("download-bccb-product-excel");
+});
 function downloadExcel(endpoint) {
     const startDate = document.getElementById("start-date").value;
     const endDate = document.getElementById("end-date").value;
@@ -1571,6 +1588,8 @@ function downloadExcel(endpoint) {
     const url = new URL(`http://192.168.1.156:5000/${endpoint}`);
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
+    url.searchParams.append("ad_org_id", "1000000"); // Added ad_org_id parameter
+
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
     if (product) url.searchParams.append("product", product);
     if (client) url.searchParams.append("client", client);
@@ -1598,6 +1617,7 @@ function downloadExcel(endpoint) {
                 const url = new URL("http://192.168.1.156:5000/fetchClientRecap");
                 url.searchParams.append("start_date", startDate);
                 url.searchParams.append("end_date", endDate);
+                url.searchParams.append("ad_org_id", "1000000"); 
                 if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
                 if (product) url.searchParams.append("product", product);
                 if (client) url.searchParams.append("client", client);
@@ -1666,9 +1686,9 @@ function downloadExcel(endpoint) {
                     totalTr.classList.add("bg-gray-200", "font-bold", "dark:bg-gray-700");
                     totalTr.innerHTML = `
             <td class="border px-4 py-2 dark:border-gray-600">${totalRow.CLIENT}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.TOTAL)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.QTY)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.MARGE * 100)}%</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.TOTAL)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.MARGE * 100)}%</td>
         `;
                     fragment.appendChild(totalTr);
                 }
@@ -1679,9 +1699,9 @@ function downloadExcel(endpoint) {
                     tr.classList.add("dark:bg-gray-700");
                     tr.innerHTML = `
             <td class="border px-4 py-2 dark:border-gray-600">${row.CLIENT || "N/A"}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.TOTAL)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.MARGE * 100)}%</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.TOTAL)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.MARGE * 100)}%</td>
         `;
                     fragment.appendChild(tr);
                 });
@@ -1716,6 +1736,7 @@ async function fetchOperatorRecap() {
     const url = new URL("http://192.168.1.156:5000/fetchOperatorRecap");
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
+    url.searchParams.append("ad_org_id", "1000000"); 
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
     if (product) url.searchParams.append("product", product);
     if (client) url.searchParams.append("client", client);
@@ -1788,9 +1809,9 @@ function updateOperatorTable(data) {
         totalTr.classList.add("bg-gray-200", "font-bold", "dark:bg-gray-700");
         totalTr.innerHTML = `
             <td class="border px-4 py-2 dark:border-gray-600">${totalRow.OPERATEUR}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.TOTAL)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.QTY)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.MARGE * 100)}%</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.TOTAL)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.MARGE * 100)}%</td>
         `;
         fragment.appendChild(totalTr);
     }
@@ -1801,9 +1822,9 @@ function updateOperatorTable(data) {
         tr.classList.add("dark:bg-gray-700");
         tr.innerHTML = `
             <td class="border px-4 py-2 dark:border-gray-600">${row.OPERATEUR || "N/A"}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.TOTAL)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.MARGE * 100)}%</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.TOTAL)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.MARGE * 100)}%</td>
         `;
         fragment.appendChild(tr);
     });
@@ -1964,6 +1985,7 @@ function formatNumber(num) {
                 const url = new URL("http://192.168.1.156:5000/fetchBCCBRecap");
                 url.searchParams.append("start_date", startDate);
                 url.searchParams.append("end_date", endDate);
+                
                 if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
                 if (product) url.searchParams.append("product", product);
                 if (client) url.searchParams.append("client", client);
@@ -2089,7 +2111,7 @@ function formatNumber(num) {
             document.getElementById("recap_bccbclient").addEventListener("input", debounce(fetchBccbRecap, 500));
             document.getElementById("recap_zone").addEventListener("input", debounce(fetchBccbRecap, 500));
 
-            async function fetchBccbProduct(bccb) {
+ async function fetchBccbProduct(bccb) {
     if (!bccb) return;
 
     const tableContainer = document.getElementById("bccb-product-container");
@@ -2097,6 +2119,7 @@ function formatNumber(num) {
 
     const url = new URL("http://192.168.1.156:5000/fetchBCCBProduct");
     url.searchParams.append("bccb", bccb);
+    url.searchParams.append("ad_org_id", "1000000"); 
 
     try {
         const response = await fetch(url);

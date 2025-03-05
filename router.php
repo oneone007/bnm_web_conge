@@ -8,6 +8,10 @@ $pages = [
     "Recap_Achat" => "recap_achat.php",
     "Recap_Vente" => "recap.php",
     "Recap_Vente_Facturation" => "recap_fact.php",
+    
+    "recap_achat_facturation" => "recap_achat_facturation.php",
+    "Rotation" => "rotation.php",
+
     "signup" => "signup.html",
     "side" => "sidebar.html",
     "login" => "login.php",

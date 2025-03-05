@@ -513,6 +513,9 @@ html.dark .moon {
             <span>Total Recap Download</span>
         </button>
 
+        
+
+
  
 
 
@@ -598,8 +601,7 @@ html.dark .moon {
                                     QTy</th>
                                 <th data-column="Marge" onclick="sortrecapTable('Marge')" class="border px-4 py-2">
                                     Marge</th>
-                                <th data-column="Sort_Order" onclick="sortrecapTable('Sort_Order')"
-                                    class="border px-4 py-2">Sort Order</th>
+                               
                             </tr>
                         </thead>
                         <tbody id="recap-frnsr-table" class="dark:bg-gray-800">
@@ -758,7 +760,7 @@ html.dark .moon {
                 <span>Opérateur Download </span>
             
                 
-            </button> <button id="download-BCCB-excel"
+            </button> <button id="download-BCCB-excel-fac"
                 class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
                 <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
                 <span>BCCB Download</span>
@@ -844,7 +846,11 @@ html.dark .moon {
         </div>
 
 <br>
-
+<button id="download-bccb-product-excel-f"
+            class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
+            <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
+            <span>BCCB Product Recap Download</span>
+        </button>
         <div id="bccb-product-container" class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800" style="display: none;">
     <div class="overflow-x-auto">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">BCCB Product Recap</h2>
@@ -914,9 +920,7 @@ html.dark .moon {
 
             // Ensure dates clear on refresh
             window.onload = () => {
-    // Clear all inputs on page load
-    document.getElementById("start-date").value = "";
-    document.getElementById("end-date").value = "";
+    // Clear all inputs except date fields on page load
     document.getElementById("recap_fournisseur").value = "";
     document.getElementById("recap_product").value = "";
     document.getElementById("recap_zone").value = "";
@@ -943,13 +947,24 @@ html.dark .moon {
     // Set end date when start date is selected
     startDateInput.addEventListener("change", updateEndDate);
 
-    // Refresh button to re-trigger existing values without changing them
+    // Refresh button: clear other fields but keep date fields
     document.getElementById("refresh-btn").addEventListener("click", () => {
-        // Re-dispatch events to simulate re-selection
+        // Clear non-date fields
+        document.getElementById("recap_fournisseur").value = "";
+        document.getElementById("recap_product").value = "";
+        document.getElementById("recap_zone").value = "";
+        document.getElementById("recap_client").value = "";
+        document.getElementById("recap_operateur").value = "";
+        document.getElementById("recap_bccbclient").value = "";
+
+        // Trigger update events for date fields
         startDateInput.dispatchEvent(new Event("input", { bubbles: true }));
         startDateInput.dispatchEvent(new Event("change", { bubbles: true }));
         endDateInput.dispatchEvent(new Event("input", { bubbles: true }));
         endDateInput.dispatchEvent(new Event("change", { bubbles: true }));
+
+        // Refresh data based on existing date values
+        fetchData(startDateInput.value, endDateInput.value, "", "", "", "", "", ""); 
     });
 };
 
@@ -962,7 +977,7 @@ html.dark .moon {
                 if (!startDate || !endDate) return; // Don't fetch until both dates are selected
 
                 try {
-                    const response = await fetch(`http://192.168.1.156:5000/fetchTotalrecapData_facturation?start_date=${startDate}&end_date=${endDate}`);
+                    const response = await fetch(`http://192.168.1.156:5000/fetchTotalrecapData?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000012`);
                     if (!response.ok) throw new Error("Network response was not ok");
 
                     const data = await response.json();
@@ -983,7 +998,7 @@ html.dark .moon {
             }
 
             // Format number with thousand separators & two decimals
-            function formatNumber(value) {
+            function formatNumberT(value) {
                 if (value === null || value === undefined || isNaN(value)) return "";
                 return parseFloat(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
@@ -1008,9 +1023,9 @@ html.dark .moon {
                 tableBody.innerHTML = `
 <tr class="dark:bg-gray-700">
     <td class="border px-4 py-2 dark:border-gray-600">From ${startDate} to ${endDate}</td>
-    <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.CHIFFRE)}</td>
-    <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
-    <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.MARGE)}</td>
+    <td class="border px-4 py-2 dark:border-gray-600">${formatNumberT(row.CHIFFRE)}</td>
+    <td class="border px-4 py-2 dark:border-gray-600">${formatNumberT(row.QTY)}</td>
+    <td class="border px-4 py-2 dark:border-gray-600">${formatNumberT(row.MARGE)}</td>
     <td class="border px-4 py-2 dark:border-gray-600">${formatPercentage(row.POURCENTAGE)}</td>
 </tr>
 `;
@@ -1031,7 +1046,7 @@ html.dark .moon {
         return;
     }
 
-    const downloadUrl = `http://192.168.1.156:5000/download-totalrecap-excel?start_date=${startDate}&end_date=${endDate}`;
+    const downloadUrl = `http://192.168.1.156:5000/download-totalrecap-excel?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000012`;
     window.location.href = downloadUrl;  // Triggers file download
 });
 
@@ -1049,43 +1064,46 @@ html.dark .moon {
 
             // Fetch data when filters are applied
             async function fetchFournisseurRecap() {
-                const startDate = document.getElementById("start-date").value;
-                const endDate = document.getElementById("end-date").value;
-                const fournisseur = document.getElementById("recap_fournisseur").value.trim().toUpperCase();
-                const product = document.getElementById("recap_product").value.trim().toUpperCase();
-                const client = document.getElementById("recap_client").value.trim().toUpperCase();
-                const operateur = document.getElementById("recap_operateur").value.trim().toUpperCase();
-                const bccb = document.getElementById("recap_bccbclient").value.trim().toUpperCase();
-                const zone = document.getElementById("recap_zone").value.trim().toUpperCase();
+    const startDate = document.getElementById("start-date").value;
+    const endDate = document.getElementById("end-date").value;
+    const fournisseur = document.getElementById("recap_fournisseur").value.trim().toUpperCase();
+    const product = document.getElementById("recap_product").value.trim().toUpperCase();
+    const client = document.getElementById("recap_client").value.trim().toUpperCase();
+    const operateur = document.getElementById("recap_operateur").value.trim().toUpperCase();
+    const bccb = document.getElementById("recap_bccbclient").value.trim().toUpperCase();
+    const zone = document.getElementById("recap_zone").value.trim().toUpperCase();
 
-                if (!startDate || !endDate) return;
+    if (!startDate || !endDate) return;
 
-                const url = new URL("http://192.168.1.156:5000/fetchFournisseurData");
-                url.searchParams.append("start_date", startDate);
-                url.searchParams.append("end_date", endDate);
-                if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
-                if (product) url.searchParams.append("product", product);
-                if (client) url.searchParams.append("client", client);
-                if (operateur) url.searchParams.append("operateur", operateur);
-                if (bccb) url.searchParams.append("bccb", bccb);
-                if (zone) url.searchParams.append("zone", zone);
+    const url = new URL("http://192.168.1.156:5000/fetchFournisseurData");
+    url.searchParams.append("start_date", startDate);
+    url.searchParams.append("end_date", endDate);
+    url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
 
-                try {
-                    showLoader();
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error("Network response was not ok");
+    if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
+    if (product) url.searchParams.append("product", product);
+    if (client) url.searchParams.append("client", client);
+    if (operateur) url.searchParams.append("operateur", operateur);
+    if (bccb) url.searchParams.append("bccb", bccb);
+    if (zone) url.searchParams.append("zone", zone);
 
-                    const data = await response.json();
-                    console.log("Fetched Data:", data);  // Debugging line to check if response contains data
-                    updateFournisseurTable(data);
-                    hideLoader();
-                } catch (error) {
-                    console.error("Error fetching fournisseur data:", error);
-                    document.getElementById('recap-frnsr-table').innerHTML =
-                        `<tr><td colspan="5" class="text-center text-red-500 p-4">Failed to load data</td></tr>`;
-                    hideLoader();
-                }
-            }
+    try {
+        showLoader();
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Network response was not ok");
+
+        const data = await response.json();
+        console.log("Fetched Data:", data);  // Debugging line to check if response contains data
+        updateFournisseurTable(data);
+        hideLoader();
+    } catch (error) {
+        console.error("Error fetching fournisseur data:", error);
+        document.getElementById('recap-frnsr-table').innerHTML =
+            `<tr><td colspan="5" class="text-center text-red-500 p-4">Failed to load data</td></tr>`;
+        hideLoader();
+    }
+}
+
 
 
             // Show loader animation
@@ -1104,7 +1122,7 @@ html.dark .moon {
             }
 
             // Format number with thousand separators & two decimals
-            function formatNumber(value) {
+            function formatNumberf(value) {
                 if (value === null || value === undefined || isNaN(value)) return "";
                 return parseFloat(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
@@ -1157,10 +1175,9 @@ html.dark .moon {
                     tableBody.innerHTML += `
             <tr class="bg-gray-200 font-bold">
                 <td class="border px-4 py-2 dark:border-gray-600">${totalRow.FOURNISSEUR}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.TOTAL)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.QTY)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.MARGE)}%</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${totalRow.SORT_ORDER}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumberf(totalRow.TOTAL)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumberf(totalRow.QTY)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumberf(totalRow.MARGE)}%</td>
             </tr>
         `;
                 }
@@ -1169,10 +1186,9 @@ html.dark .moon {
                     tableBody.innerHTML += `
             <tr class="dark:bg-gray-700">
                 <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || "N/A"}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.TOTAL)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.MARGE)}%</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${row.SORT_ORDER}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumberf(row.TOTAL)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumberf(row.QTY)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumberf(row.MARGE)}%</td>
             </tr>
         `;
                 });
@@ -1198,6 +1214,8 @@ html.dark .moon {
     const url = new URL("http://192.168.1.156:5000/download-fournisseur-excel");
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
+    url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
+
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
     if (product) url.searchParams.append("product", product);
     if (client) url.searchParams.append("client", client);
@@ -1249,6 +1267,7 @@ html.dark .moon {
                 const url = new URL("http://192.168.1.156:5000/fetchProductData");
                 url.searchParams.append("start_date", startDate);
                 url.searchParams.append("end_date", endDate);
+                url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
                 if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
                 if (product) url.searchParams.append("product", product);
                 if (client) url.searchParams.append("client", client);
@@ -1359,6 +1378,8 @@ html.dark .moon {
     const url = new URL("http://192.168.1.156:5000/download-product-excel");
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
+    url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
+
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
     if (product) url.searchParams.append("product", product);
     if (client) url.searchParams.append("client", client);
@@ -1445,6 +1466,8 @@ html.dark .moon {
                 const url = new URL("http://192.168.1.156:5000/fetchZoneRecap");
                 url.searchParams.append("start_date", startDate);
                 url.searchParams.append("end_date", endDate);
+                url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
+
                 if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
                 if (product) url.searchParams.append("product", product);
                 if (client) url.searchParams.append("client", client);
@@ -1465,53 +1488,53 @@ html.dark .moon {
                 }
             }
 
-            // Update table with fetched data
             function updateZoneTable(data) {
-                const tableBody = document.getElementById("recap-zone-table");
-                tableBody.innerHTML = ""; // Clear table before inserting new rows
+    const tableBody = document.getElementById("recap-zone-table");
+    tableBody.innerHTML = ""; // Clear table before inserting new rows
 
-                if (!data || data.length === 0) {
-                    tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">No data available</td></tr>`;
-                    return;
-                }
+    if (!data || data.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">No data available</td></tr>`;
+        return;
+    }
 
-                const fragment = document.createDocumentFragment();
+    const fragment = document.createDocumentFragment();
 
-                // Find and extract the "Total" row
-                const totalRow = data.find(row => row.ZONE === "Total");
-                const filteredData = data.filter(row => row.ZONE !== "Total");
+    // Find and extract the "Total" row
+    const totalRow = data.find(row => row.ZONE === "Total");
+    const filteredData = data.filter(row => row.ZONE !== "Total");
 
-                // Create and append the "Total" row first
-                if (totalRow) {
-                    const totalTr = document.createElement("tr");
-                    totalTr.classList.add("bg-gray-200", "font-bold", "dark:bg-gray-700");
-                    totalTr.innerHTML = `
+    // Create and append the "Total" row first
+    if (totalRow) {
+        const totalTr = document.createElement("tr");
+        totalTr.classList.add("bg-gray-200", "font-bold", "dark:bg-gray-700");
+        totalTr.innerHTML = `
             <td class="border px-4 py-2 dark:border-gray-600">${totalRow.ZONE}</td>
             <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.TOTAL)}</td>
             <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.QTY)}</td>
             <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.MARGE * 100)}%</td>
         `;
-                    fragment.appendChild(totalTr);
-                }
+        fragment.appendChild(totalTr);
+    }
 
-                // Append remaining rows
-                filteredData.forEach(row => {
-                    const tr = document.createElement("tr");
-                    tr.classList.add("dark:bg-gray-700");
-                    tr.innerHTML = `
-            <td class="border px-4 py-2 dark:border-gray-600">${row.ZONE || "N/A"}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.TOTAL)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.MARGE * 100)}%</td>
+    // Append remaining rows
+    filteredData.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.classList.add("dark:bg-gray-700");
+        tr.innerHTML = `
+            <td class="border px-4 py-2 dark:border-gray-600">${row.ZONE === "<Aucune>" || !row.ZONE ? "Aucun" : row.ZONE}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberz(row.TOTAL)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberz(row.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberz(row.MARGE * 100)}%</td>
         `;
-                    fragment.appendChild(tr);
-                });
+        fragment.appendChild(tr);
+    });
 
-                tableBody.appendChild(fragment); // Append rows efficiently
-            }
+    tableBody.appendChild(fragment); // Append rows efficiently
+}
+
 
             // Format numbers with commas (thousands separator)
-            function formatNumber(value) {
+            function formatNumberz(value) {
                 return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value || 0);
             }
 
@@ -1540,9 +1563,17 @@ document.getElementById("download-Opérateur-excel").addEventListener("click", f
 });
 
 // Download BCCB Recap as Excel
-document.getElementById("download-BCCB-excel").addEventListener("click", function () {
-    downloadExcel("download-bccb-excel");
+document.getElementById("download-BCCB-excel-fac").addEventListener("click", function () {
+    downloadExcel("download-BCCB-excel-fac");
 });
+
+document.getElementById("download-bccb-product-excel-f").addEventListener("click", function () {
+    downloadExcel("download-bccb-product-excel-f");
+});
+
+
+
+
 function downloadExcel(endpoint) {
     const startDate = document.getElementById("start-date").value;
     const endDate = document.getElementById("end-date").value;
@@ -1561,6 +1592,8 @@ function downloadExcel(endpoint) {
     const url = new URL(`http://192.168.1.156:5000/${endpoint}`);
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
+    url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
+
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
     if (product) url.searchParams.append("product", product);
     if (client) url.searchParams.append("client", client);
@@ -1588,6 +1621,8 @@ function downloadExcel(endpoint) {
                 const url = new URL("http://192.168.1.156:5000/fetchClientRecap");
                 url.searchParams.append("start_date", startDate);
                 url.searchParams.append("end_date", endDate);
+                url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
+
                 if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
                 if (product) url.searchParams.append("product", product);
                 if (client) url.searchParams.append("client", client);
@@ -1706,6 +1741,8 @@ async function fetchOperatorRecap() {
     const url = new URL("http://192.168.1.156:5000/fetchOperatorRecap");
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
+    url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
+
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
     if (product) url.searchParams.append("product", product);
     if (client) url.searchParams.append("client", client);
@@ -1951,9 +1988,10 @@ function formatNumber(num) {
 
                 if (!startDate || !endDate) return;
 
-                const url = new URL("http://192.168.1.156:5000/fetchBCCBRecap");
+                const url = new URL("http://192.168.1.156:5000/fetchBCCBRecapfact");
                 url.searchParams.append("start_date", startDate);
                 url.searchParams.append("end_date", endDate);
+
                 if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
                 if (product) url.searchParams.append("product", product);
                 if (client) url.searchParams.append("client", client);
@@ -2085,8 +2123,10 @@ function formatNumber(num) {
     const tableContainer = document.getElementById("bccb-product-container");
     tableContainer.style.display = "none"; // Hide table before fetching
 
-    const url = new URL("http://192.168.1.156:5000/fetchBCCBProduct");
+    const url = new URL("http://192.168.1.156:5000/fetchBCCBProductfact");
     url.searchParams.append("bccb", bccb);
+    url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
+
 
     try {
         const response = await fetch(url);
@@ -2135,6 +2175,10 @@ function updateBccbProductTable(data) {
 
     tableBody.appendChild(fragment);
 }
+
+
+
+
 
 
 

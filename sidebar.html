@@ -14,26 +14,41 @@
     max-width: 250px;
     background-color: #f9fafb;
     border-right: 1px solid #e5e7eb;
-    transition: transform 0.3s ease-in-out;
+    transition: transform 0.3s ease-in-out, width 0.3s ease-in-out;
     position: fixed;
     height: 100vh;
     z-index: 40;
     padding-top: 60px;
-    padding-bottom: 20px; /* Add padding at the bottom for the logout button */
+    padding-bottom: 20px;
     left: 0;
     display: flex;
-    flex-direction: column; /* Align items vertically */
+    flex-direction: column;
+    overflow-y: auto; /* Enable scrolling */
 }
 
+/* Adjust sidebar width for smaller screens */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 200px;
+    }
+}
+
+@media (max-width: 480px) {
+    .sidebar {
+        width: 180px;
+    }
+}
+
+/* Push logout button to bottom */
 .sidebar .mt-auto {
-    margin-top: auto; /* Push the logout button to the bottom */
+    margin-top: auto;
     width: 100%;
 }
 
+/* Center align sidebar links */
 .sidebar a {
-    text-align: center; /* Center align the logout button */
+    text-align: center;
 }
-
 
 /* When Sidebar is Hidden */
 .sidebar-hidden {
@@ -52,6 +67,96 @@
 .content-full {
     margin-left: 0;
     width: 100%;
+}
+
+/* Adjust content margin for smaller screens */
+@media (max-width: 768px) {
+    .content {
+        margin-left: 200px;
+        width: calc(100% - 200px);
+    }
+}
+
+@media (max-width: 480px) {
+    .content {
+        margin-left: 180px;
+        width: calc(100% - 180px);
+    }
+}
+/* Make sidebar scrollable when content overflows */
+.sidebar:hover {
+    overflow-y: auto;
+}
+
+/* Ensure smooth scrolling */
+.sidebar::-webkit-scrollbar {
+    width: 8px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 10px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+/* Adjust sidebar width and text for smaller screens */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 180px;
+    }
+
+    .sidebar a {
+        font-size: 14px; /* Reduce text size */
+    }
+
+    #ram-animation {
+        height: 80px; /* Adjust RAM animation */
+    }
+}
+
+@media (max-width: 480px) {
+    .sidebar {
+        width: 160px;
+    }
+
+    .sidebar a {
+        font-size: 12px; /* Make text smaller */
+    }
+
+    #ram-animation {
+        height: 70px; /* Further reduce RAM animation */
+    }
+}
+
+/* Content Adjustment */
+.content {
+    margin-left: 250px;
+    transition: margin-left 0.3s ease-in-out;
+    width: calc(100% - 250px);
+    padding: 20px;
+}
+
+/* When Sidebar is Hidden */
+.sidebar-hidden {
+    transform: translateX(-100%);
+}
+
+/* Responsive Content */
+@media (max-width: 768px) {
+    .content {
+        margin-left: 180px;
+        width: calc(100% - 180px);
+    }
+}
+
+@media (max-width: 480px) {
+    .content {
+        margin-left: 160px;
+        width: calc(100% - 160px);
+    }
 }
 
 /* Sidebar Toggle Button */
@@ -75,8 +180,25 @@
 
 /* When Sidebar is Hidden, Keep Toggle Button Visible */
 .sidebar-hidden + #sidebarToggle {
-    left: 10px; /* Stay in position */
+    left: 10px;
 }
+
+/* Responsive Sidebar Behavior */
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+    }
+    
+    .sidebar-active {
+        transform: translateX(0);
+    }
+    
+    .content {
+        margin-left: 0;
+        width: 100%;
+    }
+}
+
 
 
 /* Content */
@@ -275,6 +397,10 @@ class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg h
                     <li>
                         <button onclick="location.href='Product'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">PRODUCTS</button>
                     </li>
+                    
+                    <li>
+                        <button onclick="location.href='Rotation'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">Rotation</button>
+                    </li>
                 </ul>
             </li>
             <li class="mb-3 flex flex-col">
@@ -296,7 +422,7 @@ class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg h
                         <button onclick="location.href='Recap_Vente'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">Récap Vente</button>
                     </li>
                     <li>
-                       <button onclick="location.href='working'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">Récap Vente FACTURATION</button>
+                       <button onclick="location.href='Recap_Vente_Facturation'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">Récap Vente FACTURATION</button>
 
                         <!-- <button onclick="location.href='Recap_Vente_Facturation'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">Récap Vente FACTURATION</button> -->
                     </li>
