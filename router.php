@@ -11,6 +11,8 @@ $pages = [
     
     "recap_achat_facturation" => "recap_achat_facturation.php",
     "Rotation" => "rotation.php",
+    
+    "Journal_Vente" => "journal.php",
 
     "signup" => "signup.html",
     "side" => "sidebar.html",

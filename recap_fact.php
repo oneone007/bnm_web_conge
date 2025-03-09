@@ -372,6 +372,20 @@ html.dark .moon {
 
 </div>
 
+<!-- Include SweetAlert2 Library (Add this to your HTML head if not already included) -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    Swal.fire({
+        title: "⚠️ Warning",
+        text: "You are in Facturation Server!",
+        icon: "warning",
+        confirmButtonText: "OK",
+        allowOutsideClick: false // Prevent closing by clicking outside
+    });
+});
+</script>
 
 
 

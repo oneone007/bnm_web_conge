@@ -348,6 +348,20 @@ html.dark .moon {
 <body class="flex h-screen bg-gray-100 dark:bg-gray-900">
     <!-- Sidebar Toggle Button -->
  
+<!-- Include SweetAlert2 Library (Add this to your HTML head if not already included) -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    Swal.fire({
+        title: "⚠️ Warning",
+        text: "You are in Facturation Server!",
+        icon: "warning",
+        confirmButtonText: "OK",
+        allowOutsideClick: false // Prevent closing by clicking outside
+    });
+});
+</script>
 
     <!-- Dark/Light Mode Toggle Button -->
     <div id="themeSwitcher">
@@ -667,7 +681,7 @@ html.dark .moon {
                 document.getElementById("recap_product").value = "";
             };
 
-            document.addEventListener("DOMContentLoaded", function () {
+     document.addEventListener("DOMContentLoaded", function () {
         const startDate = document.getElementById("start-date");
         const endDate = document.getElementById("end-date");
         const refreshBtn = document.getElementById("refresh-btn");
@@ -797,7 +811,7 @@ async function fetchFournisseurRecapAchat() {
     if (!startDate || !endDate) return;
 
     // Construct URL with query parameters
-    const url = `http://192.168.1.156:5000/fetchfourisseurRecapAchat?start_date=${startDate}&end_date=${endDate}&fournisseur=${fournisseur}&product=${product}`;
+    const url = `http://192.168.1.156:5000/fetchfourisseurRecapAchat_fact?start_date=${startDate}&end_date=${endDate}&fournisseur=${fournisseur}&product=${product}`;
 
     try {
         showLoader(); // Show loading animation
@@ -841,6 +855,40 @@ function formatNumber(value) {
 
 // Update table with fetched data for recap achat
 // Update table with fetched data for recap achat
+// function updateFournisseurRecapAchatTable(data) {
+//     const tableBody = document.getElementById("recap-frnsr-table-achat");
+//     tableBody.innerHTML = "";
+
+//     if (!data || data.length === 0) {
+//         tableBody.innerHTML = `<tr><td colspan="2" class="text-center p-4">No data available</td></tr>`;
+//         return;
+//     }
+
+//     // Find and separate the total row
+//     const totalRow = data.find(row => row.FOURNISSEUR === "Total");
+//     const filteredData = data.filter(row => row.FOURNISSEUR !== "Total");
+
+//     // Add the "Total" row with sticky style to the table
+//     if (totalRow) {
+//         tableBody.innerHTML += `
+//             <tr class="bg-gray-200 font-bold sticky top-0 z-10">
+//                 <td class="border px-4 py-2 dark:border-gray-600">${totalRow.FOURNISSEUR}</td>
+//                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.CHIFFRE)}</td>
+//             </tr>
+//         `;
+//     }
+
+//     // Add the filtered data rows
+//     filteredData.forEach(row => {
+//         tableBody.innerHTML += `
+//             <tr class="dark:bg-gray-700">
+//                 <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || "N/A"}</td>
+//                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.CHIFFRE)}</td>
+//             </tr>
+//         `;
+//     });
+// }
+
 function updateFournisseurRecapAchatTable(data) {
     const tableBody = document.getElementById("recap-frnsr-table-achat");
     tableBody.innerHTML = "";
@@ -854,7 +902,7 @@ function updateFournisseurRecapAchatTable(data) {
     const totalRow = data.find(row => row.FOURNISSEUR === "Total");
     const filteredData = data.filter(row => row.FOURNISSEUR !== "Total");
 
-    // Add the "Total" row with sticky style to the table
+    // Add the "Total" row with sticky style
     if (totalRow) {
         tableBody.innerHTML += `
             <tr class="bg-gray-200 font-bold sticky top-0 z-10">
@@ -866,15 +914,27 @@ function updateFournisseurRecapAchatTable(data) {
 
     // Add the filtered data rows
     filteredData.forEach(row => {
-        tableBody.innerHTML += `
-            <tr class="dark:bg-gray-700">
-                <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || "N/A"}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.CHIFFRE)}</td>
-            </tr>
+        const tr = document.createElement("tr");
+        tr.className = "dark:bg-gray-700 cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600";
+        tr.innerHTML = `
+            <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || "N/A"}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.CHIFFRE)}</td>
         `;
+
+        // Add click event to fill in the search input
+        tr.addEventListener("click", () => {
+            const searchInput = document.getElementById("recap_fournisseur");
+            if (row.FOURNISSEUR) {
+                searchInput.value = row.FOURNISSEUR;
+                searchInput.dispatchEvent(new Event("input")); // Trigger input event
+            }
+        });
+
+        tableBody.appendChild(tr);
     });
 }
 
+// Event listeners to fetch data when inputs change
 
 
 // Fetch data when filters are applied for product recap achat
@@ -894,7 +954,7 @@ async function fetchProductRecapAchat() {
     if (!startDate || !endDate) return;
 
     // Construct URL with query parameters
-    const url = `http://192.168.1.156:5000/fetchProductRecapAchat?start_date=${startDate}&end_date=${endDate}&fournisseur=${fournisseur}&product=${product}`;
+    const url = `http://192.168.1.156:5000/fetchProductRecapAchat_fact?start_date=${startDate}&end_date=${endDate}&fournisseur=${fournisseur}&product=${product}`;
 
     try {
         showLoader(); // Show loading animation
@@ -937,7 +997,7 @@ function formatNumber(value) {
 // Update table with fetched data for product recap achat
 function updateProductRecapAchatTable(data) {
     const tableBody = document.getElementById("recap-prdct-table");
-    let rowsHTML = "";
+    tableBody.innerHTML = "";
 
     if (!data || data.length === 0) {
         tableBody.innerHTML = `<tr><td colspan="3" class="text-center p-4">No data available</td></tr>`;
@@ -948,62 +1008,48 @@ function updateProductRecapAchatTable(data) {
     const totalRow = data.find(row => row.PRODUIT === "Total");
     const filteredData = data.filter(row => row.PRODUIT !== "Total");
 
-    // Add the "Total" row with sticky style to the table
+    // Add the "Total" row with sticky style
     if (totalRow) {
-        rowsHTML += `
-            <tr class="bg-gray-200 font-bold sticky top-0 z-10">
-                <td class="border px-4 py-2 dark:border-gray-600">${totalRow.PRODUIT}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.QTY)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.CHIFFRE)}</td>
-            </tr>
+        const totalRowElement = document.createElement("tr");
+        totalRowElement.className = "bg-gray-200 font-bold sticky top-0 z-10";
+        totalRowElement.innerHTML = `
+            <td class="border px-4 py-2 dark:border-gray-600">${totalRow.PRODUIT}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.CHIFFRE)}</td>
         `;
+        tableBody.appendChild(totalRowElement);
     }
 
     // Add the filtered data rows
     filteredData.forEach(row => {
-        rowsHTML += `
-            <tr class="dark:bg-gray-700">
-                <td class="border px-4 py-2 dark:border-gray-600">${row.PRODUIT || "N/A"}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.CHIFFRE)}</td>
-            </tr>
+        const tr = document.createElement("tr");
+        tr.className = "dark:bg-gray-700 cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600";
+        tr.innerHTML = `
+            <td class="border px-4 py-2 dark:border-gray-600">${row.PRODUIT || "N/A"}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.CHIFFRE)}</td>
         `;
-    });
 
-    // Insert all rows at once into the table
-    tableBody.innerHTML = rowsHTML;
+        // Add click event to fill in the search input
+        tr.addEventListener("click", () => {
+            const searchInput = document.getElementById("recap_product");
+            if (row.PRODUIT) {
+                searchInput.value = row.PRODUIT;
+                searchInput.dispatchEvent(new Event("input")); // Trigger input event
+            }
+        });
+
+        tableBody.appendChild(tr);
+    });
 }
 
+// Event listeners to fetch data when inputs change
+document.getElementById("recap_fournisseur").addEventListener("input", fetchProductRecapAchat);
+document.getElementById("recap_product").addEventListener("input", fetchProductRecapAchat);
+document.getElementById("start-date").addEventListener("input", fetchProductRecapAchat);
+document.getElementById("end-date").addEventListener("input", fetchProductRecapAchat);
 
-document.getElementById("download-recap-product-achat-excel").addEventListener("click", async function () {
-    const startDate = document.getElementById("start-date").value;
-    const endDate = document.getElementById("end-date").value;
-    const fournisseur = document.getElementById("recap_fournisseur").value.trim().toUpperCase();
-    const product = document.getElementById("recap_product").value.trim().toUpperCase();
- 
 
-    // Ensure both start and end dates are provided
-    if (!startDate || !endDate) {
-        alert("Please select a start and end date.");
-        return;
-    }
-
-    // Construct the URL with query parameters
-    const url = new URL("http://192.168.1.156:5000/download-recap-product-achat-excel");
-    url.searchParams.append("start_date", startDate);
-    url.searchParams.append("end_date", endDate);
-    if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
-    if (product) url.searchParams.append("product", product);
- 
-
-    try {
-        // Trigger the download by navigating to the URL
-        window.location.href = url;
-    } catch (error) {
-        console.error("Error downloading Excel file:", error);
-        alert("Failed to download the Excel file.");
-    }
-});
 
 // Fetch data when filters are applied
 document.getElementById("download-recap-fournisseur-achat-excel").addEventListener("click", async function () {
@@ -1011,31 +1057,49 @@ document.getElementById("download-recap-fournisseur-achat-excel").addEventListen
     const endDate = document.getElementById("end-date").value;
     const fournisseur = document.getElementById("recap_fournisseur").value.trim().toUpperCase();
     const product = document.getElementById("recap_product").value.trim().toUpperCase();
- 
 
     // Ensure both start and end dates are provided
     if (!startDate || !endDate) {
-        alert("Please select a start and end date.");
+        alert("Please select both start and end dates.");
         return;
     }
 
-    // Construct the URL with query parameters
-    const url = new URL("http://192.168.1.156:5000/download-recap-fournisseur-achat-excel");
-    url.searchParams.append("start_date", startDate);
-    url.searchParams.append("end_date", endDate);
-    if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
-    if (product) url.searchParams.append("product", product);
- 
+    // Construct download URL with query parameters
+    const url = `http://192.168.1.156:5000/download-recap-fournisseur-achat_facturation-excel?start_date=${startDate}&end_date=${endDate}&fournisseur=${fournisseur}&product=${product}`;
 
-    try {
-        // Trigger the download by navigating to the URL
-        window.location.href = url;
-    } catch (error) {
-        console.error("Error downloading Excel file:", error);
-        alert("Failed to download the Excel file.");
-    }
+    // Create an invisible link element
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "FournisseurRecapAchat.xlsx");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 });
 
+
+document.getElementById("download-recap-product-achat-excel").addEventListener("click", async function () {
+    const startDate = document.getElementById("start-date").value;
+    const endDate = document.getElementById("end-date").value;
+    const fournisseur = document.getElementById("recap_fournisseur").value.trim().toUpperCase();
+    const product = document.getElementById("recap_product").value.trim().toUpperCase();
+
+    // Ensure both start and end dates are provided
+    if (!startDate || !endDate) {
+        alert("Please select both start and end dates.");
+        return;
+    }
+
+    // Construct download URL with query parameters
+    const url = `http://192.168.1.156:5000/download-recap-product-achat_facturation-excel?start_date=${startDate}&end_date=${endDate}&fournisseur=${fournisseur}&product=${product}`;
+
+    // Create an invisible link element
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "productRecapAchat.xlsx");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+});
 
 
             // Dark Mode Toggle Functionality

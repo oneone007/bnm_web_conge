@@ -400,14 +400,196 @@ ORDER BY
 
 @app.route('/rotationParMois', methods=['GET'])
 def fetch_rotation():
+    product = request.args.get('product')  # Ensure product is received first
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
-    product = request.args.get('product')
-    
+
+    # Debugging
+    logger.info(f"Received parameters: product={product}, start_date={start_date}, end_date={end_date}")
+
     data = rotation_par_mois(start_date, end_date, product)
     return jsonify(data)
 
 
+
+from flask import Flask, request, jsonify
+import logging
+
+app = Flask(__name__)
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+
+
+
+def journal_vente(start_date, end_date, client):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+            SELECT ci.DocumentNo,
+                   ci.DateInvoiced,
+                   cb.name as client,
+                   CASE WHEN ci.isreturntrx='Y'
+                        THEN -(ci.GRANDTOTAL - getinvoicetaxamt(ci.c_invoice_id) - ci.chargeamt) 
+                        ELSE  ci.GRANDTOTAL - getinvoicetaxamt(ci.c_invoice_id) - ci.chargeamt 
+                   END as TotalHT,
+                   CASE WHEN ci.isreturntrx='Y'           
+                        THEN -getinvoicetaxamt(ci.c_invoice_id) 
+                        ELSE  getinvoicetaxamt(ci.c_invoice_id) 
+                   END as TotalTVA,
+                   CASE WHEN ci.isreturntrx='Y'
+                        THEN -ci.chargeamt 
+                        ELSE ci.chargeamt 
+                   END as TotalDT,
+                   CASE WHEN ci.isreturntrx='Y'
+                        THEN -ci.GRANDTOTAL + ci.chargeamt  
+                        ELSE ci.GRANDTOTAL - ci.chargeamt 
+                   END as TotalTTC,
+                   CASE WHEN ci.isreturntrx='Y'
+                        THEN -ci.GRANDTOTAL 
+                        ELSE ci.GRANDTOTAL 
+                   END as NETAPAYER,   
+                   sr.name as region,
+                   adc.name as Entreprise
+            FROM C_INVOICE ci
+            INNER JOIN AD_CLIENT adc ON (adc.ad_client_id = ci.ad_client_id)
+            INNER JOIN AD_ORG ado ON (ado.ad_org_id = ci.ad_org_id)
+            INNER JOIN C_BPARTNER cb ON (cb.c_bpartner_id = ci.c_bpartner_id) 
+            INNER JOIN C_BPARTNER_Location bpl ON (bpl.C_BPARTNER_Location_id = ci.C_BPARTNER_Location_id) 
+            LEFT OUTER JOIN c_salesregion sr ON (bpl.C_SalesRegion_ID = sr.C_SalesRegion_ID)
+            WHERE ci.dateInvoiced BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                                     AND TO_DATE(:end_date, 'YYYY-MM-DD')
+            AND ci.ad_Org_id = 1000012
+            AND ci.ISSOTRX = 'Y' 
+            AND ci.docstatus IN ('CO', 'CL')
+            AND ci.c_doctype_id IN (SELECT c_doctype_id FROM c_doctype WHERE Xx_Excluejournalvente = 'N')
+            """
+
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+            }
+
+            if client:
+                query += " AND cb.name LIKE :client"
+                params['client'] = f"%{client}%"
+
+            query += " ORDER BY ci.DateInvoiced"
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+
+            data = [
+                {
+                    "DocumentNo": row[0],
+                    "DateInvoiced": row[1],
+                    "Client": row[2],
+                    "TotalHT": row[3],
+                    "TotalTVA": row[4],
+                    "TotalDT": row[5],
+                    "TotalTTC": row[6],
+                    "NETAPAYER": row[7],
+                    "Region": row[8],
+                    "Entreprise": row[9]
+                }
+                for row in rows
+            ]
+
+            return data
+
+    except Exception as e:
+        logger.error(f"Error fetching journal de vente: {e}")
+        return {"error": "An error occurred while fetching sales journal data."}
+
+
+
+@app.route('/journalVente', methods=['GET'])
+def fetch_journal():
+    client = request.args.get('client')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    data = journal_vente(start_date, end_date, client)
+    return jsonify(data)
+
+@app.route('/download-journal-vente-excel', methods=['GET'])
+def download_journal_vente_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    client = request.args.get('client', 'All_Clients')  # Default if no client is provided
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    # Fetch data
+    data = journal_vente(start_date, end_date, client)
+
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename
+    download_datetime = datetime.now().strftime("%d-%m-%Y_%H-%M")  # Day-Month-Year_Hour-Minute
+    sanitized_client = client.replace(" ", "_").replace("/", "-")  # Replace spaces & slashes
+    filename = f"Journal_Vente_{sanitized_client}_{start_date}_to_{end_date}_{download_datetime}.xlsx"
+
+    return generate_excel_journal(data, filename)
+
+def generate_excel_journal(data, filename):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Convert data to DataFrame
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    # Create Excel workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Journal de Vente"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    # Add headers
+    ws.append(df.columns.tolist())
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+    ws.auto_filter.ref = ws.dimensions
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="JournalVenteTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    # Send the file to the client
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
 @app.route('/download-rotation-par-mois-excel', methods=['GET'])

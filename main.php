@@ -374,8 +374,29 @@ html.dark .moon {
 
         })
         .catch(error => console.error("Error loading sidebar:", error));
-</script>
 
+
+        
+</script>
+<script>
+        // Dark Mode Toggle Functionality
+        const themeToggle = document.getElementById('themeToggle');
+            const htmlElement = document.documentElement;
+
+            // Load Dark Mode Preference from Local Storage
+            const savedDarkMode = localStorage.getItem('darkMode');
+            if (savedDarkMode === 'true') {
+                htmlElement.classList.add('dark');
+                themeToggle.checked = true;
+            }
+
+            // Toggle Dark Mode on Click
+            themeToggle.addEventListener('change', () => {
+                htmlElement.classList.toggle('dark');
+                const isDarkMode = htmlElement.classList.contains('dark');
+                localStorage.setItem('darkMode', isDarkMode);
+            });
+</script>
 <div class="canvas-container">
     <!-- <div class="container arrow" onclick="location.href='c';">Arrow</div>
     <div class="container rabbit" onclick="location.href='b';">Rabbit</div> -->

@@ -581,53 +581,15 @@ WITH Latest_Purchase AS (
         C_InvoiceLine cl
     JOIN 
         C_Invoice c ON c.C_Invoice_id = cl.C_Invoice_id
-    JOIN 
-        M_INOUTLINE ml ON ml.M_INOUTLINE_id = cl.M_INOUTLINE_ID
+        join M_INOUTLINE ml on ml.M_INOUTLINE_id = cl.M_INOUTLINE_ID
+         
     WHERE 
-        c.dateinvoiced BETWEEN TO_DATE('2020-01-01', 'YYYY-MM-DD') 
-                          AND TO_DATE('2025-12-31', 'YYYY-MM-DD')
+        c.dateinvoiced BETWEEN TO_DATE('01/01/2020', 'DD/MM/YYYY') AND SYSDATE
         AND c.AD_Client_ID = 1000000
         AND c.AD_Org_ID = 1000000
         AND c.ISSOTRX = 'N'
         AND c.DOCSTATUS in ('CO','CL')
-        AND ml.M_Locator_ID != 1001020
-        AND cl.M_Product_ID = 1182513 -- Replace with the correct product ID
-    GROUP BY 
-        cl.M_Product_ID, c.dateinvoiced
-)
-SELECT 
-    M_Product_ID,
-    last_purchase_qty,
-    dateinvoiced
-FROM 
-    Latest_Purchase
-WHERE 
-    rn = 1;
-
--------------
-
---------------------------2nd sql----------------------------
-
-
-
-    WITH Latest_Purchase AS (
-    SELECT 
-        cl.M_Product_ID,
-        SUM(cl.qtyentered) AS last_purchase_qty,
-        c.dateinvoiced,
-        ROW_NUMBER() OVER (PARTITION BY cl.M_Product_ID ORDER BY c.dateinvoiced DESC) AS rn
-    FROM 
-        C_InvoiceLine cl
-    JOIN C_Invoice c ON c.C_Invoice_id = cl.C_Invoice_id
-    JOIN M_INOUTLINE ml ON ml.M_INOUTLINE_id = cl.M_INOUTLINE_ID
-    WHERE 
-        c.dateinvoiced BETWEEN TO_DATE('2025-02-23', 'YYYY-MM-DD') 
-                          AND TO_DATE('2025-03-02', 'YYYY-MM-DD')
-        AND c.AD_Client_ID = 1000000
-        AND c.AD_Org_ID = 1000000
-        AND c.ISSOTRX = 'N'
-        AND c.DOCSTATUS in ('CO','CL')
-        AND ml.M_Locator_ID != 1000020
+        and ml.M_Locator_ID!=1001020
     GROUP BY 
         cl.M_Product_ID, c.dateinvoiced
 ),
@@ -648,27 +610,30 @@ On_Hand_Quantity AS (
         SUM(s.QTYONHAND) - SUM(s.QTYRESERVED) AS QTYONHAND
     FROM 
         m_product m
-    JOIN m_storage s ON s.M_PRODUCT_ID = m.M_PRODUCT_ID
-    JOIN M_Locator ml ON ml.M_Locator_ID = s.M_Locator_ID
+    JOIN 
+        m_storage s ON s.M_PRODUCT_ID = m.M_PRODUCT_ID
+    JOIN 
+        M_Locator ml ON ml.M_Locator_ID = s.M_Locator_ID
     WHERE 
         s.AD_Client_ID = 1000000
         AND m.AD_Client_ID = 1000000
-        AND s.M_Locator_ID IN (1001135, 1000614, 1001128, 1001136)
-        AND UPPER(m.name) LIKE UPPER('ABC BOITE A PHARMACIE GM  (10 PAS DE VRAC)')
+        AND s.M_Locator_ID IN (1001135, 1000614, 1001128,1001136)
+        AND m.name LIKE 'ABC BOITE A PHARMACIE GM  (10 PAS DE VRAC)'
     GROUP BY 
         m.M_Product_ID, m.name
 ),
 Stock_Principale AS (
     SELECT 
-        ROUND(SUM(M_ATTRIBUTEINSTANCE.valuenumber * (m_storage.qtyonhand - m_storage.QTYRESERVED)), 2) AS stock_principale
+        ROUND(SUM(M_ATTRIBUTEINSTANCE.valuenumber * (m_storage.qtyonhand-m_storage.QTYRESERVED)), 2) AS stock_principale
     FROM 
         M_ATTRIBUTEINSTANCE
-    JOIN m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
+    JOIN 
+        m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
     WHERE 
         M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
         AND m_storage.qtyonhand > 0
-        AND m_storage.M_Locator_ID IN (1001135, 1000614, 1001128, 1001136)
-        AND m_storage.M_Product_ID IN (SELECT M_Product_ID FROM M_Product WHERE UPPER(name) LIKE UPPER('ABC BOITE A PHARMACIE GM  (10 PAS DE VRAC)'))
+        AND m_storage.M_Locator_ID IN (1001135, 1000614, 1001128,1001136)
+        AND m_storage.M_Product_ID IN (SELECT M_Product_ID FROM M_Product WHERE name LIKE 'ABC BOITE A PHARMACIE GM  (10 PAS DE VRAC)')
 )
 SELECT 
     oq.midp,
@@ -676,7 +641,7 @@ SELECT
     oq.QTYONHAND AS "QTY DISPO",
     COALESCE(fp.last_purchase_qty, 0) AS "DERNIER ACHAT",
     fp.dateinvoiced AS "DATE",
-    sp.stock_principale AS "VALEUR"
+    sp.stock_principale AS "valeur"
 FROM 
     On_Hand_Quantity oq
 LEFT JOIN 
@@ -684,6 +649,6 @@ LEFT JOIN
 CROSS JOIN 
     Stock_Principale sp
 ORDER BY 
-    oq.product_name;
-
+    oq.product_name
+;
 

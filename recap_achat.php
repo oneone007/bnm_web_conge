@@ -854,7 +854,7 @@ function updateFournisseurRecapAchatTable(data) {
     const totalRow = data.find(row => row.FOURNISSEUR === "Total");
     const filteredData = data.filter(row => row.FOURNISSEUR !== "Total");
 
-    // Add the "Total" row with sticky style to the table
+    // Add the "Total" row with sticky style
     if (totalRow) {
         tableBody.innerHTML += `
             <tr class="bg-gray-200 font-bold sticky top-0 z-10">
@@ -866,15 +866,27 @@ function updateFournisseurRecapAchatTable(data) {
 
     // Add the filtered data rows
     filteredData.forEach(row => {
-        tableBody.innerHTML += `
-            <tr class="dark:bg-gray-700">
-                <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || "N/A"}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.CHIFFRE)}</td>
-            </tr>
+        const tr = document.createElement("tr");
+        tr.className = "dark:bg-gray-700 cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600";
+        tr.innerHTML = `
+            <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || "N/A"}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.CHIFFRE)}</td>
         `;
+
+        // Add click event to fill in the search input
+        tr.addEventListener("click", () => {
+            const searchInput = document.getElementById("recap_fournisseur");
+            if (row.FOURNISSEUR) {
+                searchInput.value = row.FOURNISSEUR;
+                searchInput.dispatchEvent(new Event("input")); // Trigger input event
+            }
+        });
+
+        tableBody.appendChild(tr);
     });
 }
 
+// Event listeners to fetch data when inputs change
 
 
 // Fetch data when filters are applied for product recap achat
@@ -937,7 +949,7 @@ function formatNumber(value) {
 // Update table with fetched data for product recap achat
 function updateProductRecapAchatTable(data) {
     const tableBody = document.getElementById("recap-prdct-table");
-    let rowsHTML = "";
+    tableBody.innerHTML = "";
 
     if (!data || data.length === 0) {
         tableBody.innerHTML = `<tr><td colspan="3" class="text-center p-4">No data available</td></tr>`;
@@ -948,31 +960,47 @@ function updateProductRecapAchatTable(data) {
     const totalRow = data.find(row => row.PRODUIT === "Total");
     const filteredData = data.filter(row => row.PRODUIT !== "Total");
 
-    // Add the "Total" row with sticky style to the table
+    // Add the "Total" row with sticky style
     if (totalRow) {
-        rowsHTML += `
-            <tr class="bg-gray-200 font-bold sticky top-0 z-10">
-                <td class="border px-4 py-2 dark:border-gray-600">${totalRow.PRODUIT}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.QTY)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.CHIFFRE)}</td>
-            </tr>
+        const totalRowElement = document.createElement("tr");
+        totalRowElement.className = "bg-gray-200 font-bold sticky top-0 z-10";
+        totalRowElement.innerHTML = `
+            <td class="border px-4 py-2 dark:border-gray-600">${totalRow.PRODUIT}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.CHIFFRE)}</td>
         `;
+        tableBody.appendChild(totalRowElement);
     }
 
     // Add the filtered data rows
     filteredData.forEach(row => {
-        rowsHTML += `
-            <tr class="dark:bg-gray-700">
-                <td class="border px-4 py-2 dark:border-gray-600">${row.PRODUIT || "N/A"}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.CHIFFRE)}</td>
-            </tr>
+        const tr = document.createElement("tr");
+        tr.className = "dark:bg-gray-700 cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600";
+        tr.innerHTML = `
+            <td class="border px-4 py-2 dark:border-gray-600">${row.PRODUIT || "N/A"}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.CHIFFRE)}</td>
         `;
-    });
 
-    // Insert all rows at once into the table
-    tableBody.innerHTML = rowsHTML;
+        // Add click event to fill in the search input
+        tr.addEventListener("click", () => {
+            const searchInput = document.getElementById("recap_product");
+            if (row.PRODUIT) {
+                searchInput.value = row.PRODUIT;
+                searchInput.dispatchEvent(new Event("input")); // Trigger input event
+            }
+        });
+
+        tableBody.appendChild(tr);
+    });
 }
+
+// Event listeners to fetch data when inputs change
+document.getElementById("recap_fournisseur").addEventListener("input", fetchProductRecapAchat);
+document.getElementById("recap_product").addEventListener("input", fetchProductRecapAchat);
+document.getElementById("start-date").addEventListener("input", fetchProductRecapAchat);
+document.getElementById("end-date").addEventListener("input", fetchProductRecapAchat);
+
 
 
 document.getElementById("download-recap-product-achat-excel").addEventListener("click", async function () {

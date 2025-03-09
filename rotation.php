@@ -512,7 +512,10 @@ html.dark .moon {
     }
 
 
-
+    .table-container {
+    max-height: 570px; /* Adjust the height as needed */
+    overflow-y: auto;  /* Enable vertical scrolling if content exceeds max-height */
+}
 
 
 
@@ -678,20 +681,22 @@ html.dark .moon {
 
 
         <!-- Date Inputs -->
-        <div class="date-container">
-            <div class="flex items-center space-x-2">
-                <label for="start-date">Begin Date:</label>
-                <input type="date" id="start-date">
-            </div>
-        
-            <div class="flex items-center space-x-2">
-                <label for="end-date">End Date:</label>
-                <input type="date" id="end-date">
-            </div>
-        </div>
-        <div class="product-container">
-    <input type="text" id="product-search" placeholder="Search product...">
+<div class="date-container">
+    <div class="flex items-center space-x-2">
+        <label for="start-date">Begin Date:</label>
+        <input type="date" id="start-date">
+    </div>
 
+    <div class="flex items-center space-x-2">
+        <label for="end-date">End Date:</label>
+        <input type="date" id="end-date">
+    </div>
+
+</div>
+
+<div class="product-container">
+    <input type="text" id="product-search" placeholder="Search product...">
+    
     <div class="custom-dropdown">
         <select id="product-select">
             <option value="">Select a product</option>
@@ -730,7 +735,7 @@ html.dark .moon {
         </button>
 <br>
  
-        <div class="flex gap-6">
+<div class="flex gap-6">
     <!-- Left Side: Tables -->
     <div class="w-1/4">
         <!-- First Table: Smaller -->
@@ -751,6 +756,7 @@ html.dark .moon {
                 </table>
             </div>
         </div>
+        <br>
 
         <!-- Second Table: Taller -->
         <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
@@ -783,11 +789,10 @@ html.dark .moon {
             <i class="fas fa-expand"></i> Full Screen
         </button>
     </div>
-
-    <div class="canvas-container rounded-lg bg-white shadow-md dark:bg-gray-800 h-[500px] w-full flex justify-center items-center">
-        <canvas id="histogramChart" class="w-full h-full"></canvas>
-    </div>
+    <div id="chartContainer" class="canvas-container rounded-lg bg-white shadow-md dark:bg-gray-800 h-[500px] w-full flex justify-center items-center" style="display: none;">
+    <canvas id="histogramChart" class="w-full h-full"></canvas>
 </div>
+<br><br>
 
 <!-- Button Styles -->
 <style>
@@ -822,25 +827,49 @@ html.dark .moon {
 <script>
 
 
-window.onload = () => {
-    document.getElementById("start-date").value = "";
-    document.getElementById("end-date").value = "";
-    document.getElementById("product-select").value = "";
+
+
+
+document.addEventListener("DOMContentLoaded", () => {
+    updateToggleButtonText();
 
     const startDate = document.getElementById("start-date");
     const endDate = document.getElementById("end-date");
+    const productSearch = document.getElementById("product-search");
 
-    startDate.addEventListener("change", function () {
-        if (!endDate.value) {
-            const today = new Date().toISOString().split("T")[0]; // Get today's date
-            endDate.value = today;
+    // Initially disable date inputs
+    startDate.disabled = true;
+    endDate.disabled = true;
 
-            // ✅ Trigger "change" event programmatically
-            const event = new Event("change", { bubbles: true });
-            endDate.dispatchEvent(event);
+    // Enable dates only if a product is selected
+    productSearch.addEventListener("input", function () {
+        if (this.value.trim()) {
+            startDate.disabled = false;
+            endDate.disabled = false;
+        } else {
+            startDate.disabled = true;
+            endDate.disabled = true;
+            startDate.value = "";
+            endDate.value = "";
         }
     });
-};
+
+    // Prevent date change if no product is selected
+    startDate.addEventListener("click", function (event) {
+        if (startDate.disabled) {
+            event.preventDefault();
+            alert("Please select a product first.");
+        }
+    });
+
+    endDate.addEventListener("click", function (event) {
+        if (endDate.disabled) {
+            event.preventDefault();
+            alert("Please select a product first.");
+        }
+    });
+});
+
 
 
 
@@ -849,18 +878,35 @@ let currentChartType = Math.random() < 0.5 ? "bar" : "line"; // Random chart on 
 
 document.addEventListener("DOMContentLoaded", () => {
     updateToggleButtonText();
-    fetchHistogramData();
 
     // Add event listeners for auto-updating the chart when input values change
     document.getElementById("product-search")?.addEventListener("input", fetchHistogramData);
-    document.getElementById("start-date")?.addEventListener("change", fetchHistogramData);
-    document.getElementById("end-date")?.addEventListener("change", fetchHistogramData);
+    document.getElementById("start-date")?.addEventListener("change", function() {
+        if (document.getElementById("end-date").value) {
+            fetchHistogramData();
+        }
+    });
+    document.getElementById("end-date")?.addEventListener("change", function() {
+        if (document.getElementById("start-date").value) {
+            fetchHistogramData();
+        }
+    });
 });
 
+
+
 function fetchHistogramData() {
-    const productName = document.getElementById("product-search")?.value.trim() ;
+    const productName = document.getElementById("product-search")?.value.trim();
     const startDate = document.getElementById("start-date")?.value;
-    const endDate = document.getElementById("end-date")?.value ;
+    const endDate = document.getElementById("end-date")?.value;
+    const chartContainer = document.getElementById("chartContainer");
+
+    // Check if both startDate and endDate are provided
+    if (!startDate || !endDate) {
+        console.error("❌ Start date and end date are required.");
+        chartContainer.style.display = "none"; // Hide the chart if dates are missing
+        return;
+    }
 
     const url = `http://192.168.1.156:5000/histogram?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}&product=${encodeURIComponent(productName)}`;
 
@@ -869,12 +915,18 @@ function fetchHistogramData() {
         .then(data => {
             if (!Array.isArray(data) || data.length === 0) {
                 console.error("❌ No valid data received.");
+                chartContainer.style.display = "none"; // Hide chart if no data
                 return;
             }
+            chartContainer.style.display = "flex"; // Show chart when data is available
             updateHistogramChart(data);
         })
-        .catch(error => console.error("❌ Error fetching histogram data:", error));
+        .catch(error => {
+            console.error("❌ Error fetching histogram data:", error);
+            chartContainer.style.display = "none"; // Hide chart on error
+        });
 }
+
 
 function updateHistogramChart(data) {
     const labels = data.map(item => item.PERIOD);
@@ -1136,26 +1188,50 @@ function updateHistoriqueTable(data) {
 }
 
 
-// ✅ Attach event listeners
-["start-date", "end-date", "product-select"].forEach(id => {
-    document.getElementById(id).addEventListener("change", fetchHistoriqueRotation);
+
+
+
+
+// ✅ Attach event listeners to trigger fetching when filters change
+["start-date", "end-date", "product-search"].forEach(id => {
+    document.getElementById(id).addEventListener("change", fetchRotationData);
+});
+
+// Clear search input and date fields, then trigger function on click
+document.getElementById("product-search").addEventListener("click", function () {
+    this.value = ""; // Clear search input
+    document.getElementById("start-date").value = ""; // Clear start date
+    document.getElementById("end-date").value = ""; // Clear end date
+
+    // Trigger change event for all to refresh results
+    ["start-date", "end-date", "product-search"].forEach(id => {
+        document.getElementById(id).dispatchEvent(new Event("change"));
+    });
 });
 
 
-
-
-
 async function fetchRotationData() {
-    const productName = document.getElementById("product-search").value.trim();
-    const startDate = document.getElementById("start-date").value;
-    const endDate = document.getElementById("end-date").value;
+    const productInput = document.getElementById("product-search");
+    const startDateInput = document.getElementById("start-date");
+    const endDateInput = document.getElementById("end-date");
 
-    if (!productName || !startDate || !endDate) {
-        console.error("❌ Missing required fields. Not sending request.");
+    const productName = productInput.value.trim();
+    
+    if (!productName) {
+        console.warn("⚠️ Please select a product first.");
         return;
     }
 
-    const url = `http://192.168.1.156:5000/rotationParMois?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}&product=${encodeURIComponent(productName)}`;
+    // Ensure startDate and endDate are selected after the product
+    const startDate = startDateInput.value;
+    const endDate = endDateInput.value;
+
+    if (!startDate || !endDate) {
+        console.warn("⚠️ Please select both start and end dates.");
+        return;
+    }
+
+    const url = `http://192.168.1.156:5000/rotationParMois?product=${encodeURIComponent(productName)}&start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
     console.log("🔗 Request URL:", url); // ✅ Debugging
 
     try {
@@ -1207,6 +1283,54 @@ function updateRotationTable(data) {
     console.log("✅ Table updated successfully.");
 }
 
+// Set up event listeners for product and date inputs
+document.addEventListener("DOMContentLoaded", () => {
+    const productSelect = document.getElementById("product-select");
+    const startDate = document.getElementById("start-date");
+    const endDate = document.getElementById("end-date");
+
+    // Initially disable date inputs
+    startDate.disabled = true;
+    endDate.disabled = true;
+
+    // Set end date to today initially
+    const today = new Date().toISOString().split("T")[0];
+    endDate.value = today;
+
+    function enableDateInputs() {
+        if (productSelect.value) {
+            startDate.disabled = false;
+            endDate.disabled = false;
+        } else {
+            startDate.disabled = true;
+            endDate.disabled = true;
+            startDate.value = "";
+            endDate.value = today;
+        }
+    }
+
+    productSelect.addEventListener("change", () => {
+        enableDateInputs();
+        fetchRotationData(); // Fetch new data when product changes
+    });
+
+    startDate.addEventListener("change", () => {
+        if (!endDate.value) {
+            endDate.value = today;
+        }
+        fetchRotationData(); // Fetch new data when start date changes
+    });
+
+    endDate.addEventListener("change", () => {
+        fetchRotationData(); // Fetch new data when end date changes
+    });
+
+    // Initial fetch if product is already selected
+    if (productSelect.value) {
+        enableDateInputs();
+        fetchRotationData();
+    }
+});
 
 document.getElementById("downloadExcel_rotation").addEventListener("click", async () => {
     const productName = document.getElementById("product-search").value.trim();
@@ -1229,6 +1353,8 @@ document.getElementById("downloadExcel_rotation").addEventListener("click", asyn
     link.click();
     document.body.removeChild(link);
 });
+
+
 
 
 // ✅ Attach event listeners to trigger fetching when filters change
