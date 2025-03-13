@@ -43,485 +43,47 @@ $_SESSION['last_activity'] = time();
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <link rel="stylesheet" href="recap.css">
+    <link rel="stylesheet" href="rotation.css">
     <style>
-
-        
-        .dark td {
-            color: #000000 !important;
-            /* Force black text in dark mode */
-            background-color: #d1d5db;
-            /* Light gray background for contrast */
-        }
-
-        .dark h2 {
-            color: #000000 !important;
-            /* Force black text in dark mode */
-            background-color: #d1d5db;
-            /* Light gray background for contrast */
-        }
-
-
-        .dark label {
-            color: white !important;
-        }
-
-        /* Positioning the Dark Mode Toggle on Top Right */
-      
-        .download-container {
-    display: flex;
-    justify-content: flex-end;
-    padding: 0 16px 12px 16px;
-}
-.download-wrapper {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 50px; /* Reduced for responsiveness */
-      margin-top: 20px;
-      padding: 10px;
-  }
-
-  .download-wrapper button {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background-color: white;
-      border: 1px solid #d1d5db;
-      color: #374151;
-      padding: 12px 24px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      transition: all 0.3s ease-in-out;
-  }
-
-  .download-wrapper button:hover {
-      background-color: #f3f4f6;
-      transform: scale(1.05);
-  }
-
-  .download-wrapper button img {
-      width: 24px;
-      height: 24px;
-  }
-
-  /* Responsive Styles */
-  @media (max-width: 768px) {
-      .download-wrapper {
-          flex-direction: column;
-          align-items: center;
-          gap: 20px;
-      }
-
-      .download-wrapper button {
-          width: 90%; /* Full width for smaller screens */
-          justify-content: center;
-      }
-  }
-
-  .search-container {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(250px, 1fr)); /* 3 columns per row */
-      gap: 16px;
-      padding: 20px;
-      background: #f9fafb;
-      border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-
-  .search-container label {
-      display: block;
-      font-weight: 600;
-      color: #374151;
-      margin-bottom: 6px;
-  }
-
-  .search-container input {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-      font-size: 16px;
-      transition: all 0.3s ease-in-out;
-      background-color: white;
-      color: #111827;
-      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-  }
-
-  .search-container input:focus {
-      outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
-  }
-
-  /* Dark Mode */
-  .dark .search-container {
-      background: #1f2937;
-      box-shadow: none;
-  }
-
-  .dark .search-container label {
-      color: #e5e7eb;
-  }
-
-  .dark .search-container input {
-      background-color: #374151;
-      color: white;
-      border: 1px solid #4b5563;
-      box-shadow: none;
-  }
-
-  .dark .search-container input:focus {
-      border-color: #3b82f6;
-      box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
-  }
-
-  /* Responsive Design */
-  @media (max-width: 1024px) {
-      .search-container {
-          grid-template-columns: repeat(2, minmax(250px, 1fr)); /* 2 per row on tablets */
-      }
-  }
-
-  @media (max-width: 768px) {
-      .search-container {
-          grid-template-columns: 1fr; /* 1 per row on mobile */
-      }
-  }
-
-
-.date-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    align-items: center;
-    padding: 16px;
-    background: #f9fafb;
-    border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    max-width: 600px; /* Adjust width as needed */
-    width: 100%; /* Ensures it doesn't exceed max-width */
-    margin: 0 auto; /* Centers the container */
+        /* Responsive Chart Container */
+@media (max-width: 1024px) {
+    #chartContainer {
+        height: 400px; /* Reduce height on medium screens */
+    }
 }
 
 @media (max-width: 768px) {
-    .date-container {
-        flex-direction: column;
-        gap: 12px;
-        align-items: flex-start;
-        max-width: 90%; /* Allows slight expansion on smaller screens */
+    #chartContainer {
+        height: 300px; /* Smaller height for tablets */
+    }
+}
+
+@media (max-width: 480px) {
+    #chartContainer {
+        height: 250px; /* Compact height for mobile screens */
     }
 }
 
 
-.date-container label {
-    font-weight: 600;
-    color: #374151;
+
+
+/* Sidebar Hidden by Default */
+.sidebar-hidden {
+    transform: translateX(-100%);
 }
 
-.date-container input {
-    padding: 10px 14px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 16px;
-    transition: all 0.3s ease-in-out;
-    background-color: white;
-    color: #111827;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.date-container input:focus {
-    outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
-}
-
-/* Dark Mode */
-.dark .date-container {
-    background: #1f2937;
-    box-shadow: none;
-}
-
-.dark .date-container label {
-    color: #e5e7eb;
-}
-
-.dark .date-container input {
-    background-color: #374151;
-    color: white;
-    border: 1px solid #4b5563;
-}
-
-.dark .date-container input:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .date-container {
-        flex-direction: column;
-        gap: 12px;
-        align-items: flex-start;
-    }
-}
-
-/* Hide Default Checkbox */
-/* Hide Default Checkbox */
-.checkbox {
-    display: none;
-}
-
-/* Toggle Background */
-.checkbox-label {
-    width: 60px;
-    height: 30px;
-    background: #f97316; /* Light Mode Orange */
-    display: flex;
-    align-items: center;
-    border-radius: 50px;
-    position: relative;
-    cursor: pointer;
-    padding: 5px;
-    transition: background 0.3s ease-in-out;
-}
-
-/* Ball */
-.ball {
-    width: 24px;
-    height: 24px;
-    background: white;
-    position: absolute;
-    border-radius: 50%;
+/* Sidebar Appears Smoothly */
+.sidebar {
     transition: transform 0.3s ease-in-out;
-    left: 5px;
 }
 
-/* Icons */
-.icon {
-    font-size: 16px;
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    transition: opacity 0.3s ease-in-out;
+/* Sidebar Stays Open Until Mouse Leaves */
+.sidebar:hover {
+    transform: translateX(0);
 }
-
-/* Sun (Left) */
-.sun {
-    left: 10px;
-    color: white;
-}
-
-/* Moon (Right) */
-.moon {
-    right: 10px;
-    color: white;
-    opacity: 0; /* Hidden in Light Mode */
-}
-
-/* Dark Mode */
-html.dark .checkbox-label {
-    background: #1f2937; /* Dark Mode Gray */
-}
-
-html.dark .ball {
-    transform: translateX(30px);
-}
-
-html.dark .sun {
-    opacity: 0; /* Hide Sun */
-}
-
-html.dark .moon {
-    opacity: 1; /* Show Moon */
-}
-
-/* Theme Switcher Position */
-#themeSwitcher {
-    position: sticky;
-    top: 10px;
-    right: 10px;
-    padding: 10px;
-    z-index: 50;
-}
-
-.product-container {
-    display: flex;
-    flex-direction: column;
-    width: 320px;
-    margin-top: 10px;
-}
-
-/* Search Input */
-#product-search {
-    padding: 10px;
-    border: 1px solid #3a506b; /* Dark border */
-    border-radius: 5px;
-    width: 100%;
-    font-size: 14px;
-    outline: none;
-    transition: border-color 0.3s ease, background-color 0.3s, color 0.3s;
-    
-    /* Light Mode */
-    background-color: white;  
-    color: black;
-}
-
-#product-search:focus {
-    border-color: #007bff;
-}
-
-/* Dropdown */
-.custom-dropdown {
-    position: relative;
-    width: 100%;
-}
-
-/* Dropdown Select Box */
-.custom-dropdown select {
-    width: 100%;
-    height: 40px;
-    padding: 8px;
-    border: 1px solid #3a506b; /* Dark border */
-    border-radius: 5px;
-    background-color: white;
-    color: black;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.3s, color 0.3s;
-}
-
-/* Dropdown List */
-.custom-dropdown .dropdown-list {
-    position: absolute;
-    width: 100%;
-    max-height: 200px;
-    overflow-y: auto;
-    border: 1px solid #3a506b;
-    border-radius: 5px;
-    background-color: white;
-    color: black;
-    display: none;
-    z-index: 100;
-    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-    padding: 5px;
-    transition: background-color 0.3s, color 0.3s;
-}
-
-/* Dropdown Items */
-.custom-dropdown .dropdown-list div {
-    padding: 8px;
-    cursor: pointer;
-    font-size: 14px;
-    line-height: 1.4;
-    word-wrap: break-word;
-    white-space: normal;
-    border-bottom: 1px solid #ccc;
-    transition: background-color 0.3s, color 0.3s;
-}
-
-.custom-dropdown .dropdown-list div:last-child {
-    border-bottom: none;
-}
-
-/* Hover Effect */
-.custom-dropdown .dropdown-list div:hover {
-    background-color: #007bff;
-    color: white;
-}
-
-
-
-    /* Button */
-    .see-all-btn {
-        margin-top: 10px;
-        padding: 8px;
-        background-color: #007bff;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 14px;
-        text-align: center;
-    }
-
-    .see-all-btn:hover {
-        background-color: #0056b3;
-    }
-
-    /* Popup (Modal) */
-    .modal {
-    display: none; 
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    justify-content: center;
-    align-items: center;
-    z-index: 1000; /* Ensure it is above other elements */
-}
-
-/* Modal content */
-.modal-content {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    width: 50%;
-    max-height: 80vh; /* Prevents overflow */
-    overflow-y: auto; /* Scroll if too large */
-    position: relative; /* Needed for close button positioning */
-    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-/* Close button */
-.modal-content .close-btn {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    font-size: 24px;
-    font-weight: bold;
-    cursor: pointer;
-    color: #333;
-    background: none;
-    border: none;
-}
-
-.modal-content .close-btn:hover {
-    color: red;
-}
-
-       /* Styles specific to the popup table */
-       .modal-content table.popup-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 10px;
-    }
-
-    .modal-content table.popup-table th,
-    .modal-content table.popup-table td {
-        padding: 10px;
-        border: 1px solid #ddd;
-        text-align: left;
-    }
-
-    .modal-content table.popup-table th {
-        background-color: #007bff;
-        color: white;
-    }
-
-
-    .table-container {
-    max-height: 570px; /* Adjust the height as needed */
-    overflow-y: auto;  /* Enable vertical scrolling if content exceeds max-height */
-}
-
-
-
-
 
     </style>
+
 
 </head>
 
@@ -559,7 +121,7 @@ html.dark .moon {
 <!-- Sidebar -->
 <div id="sidebar-container"></div>
 
-<script>
+<!-- <script>
     // Fetch sidebar content dynamically
     fetch("side")
         .then(response => response.text())
@@ -630,8 +192,93 @@ html.dark .moon {
 
         })
         .catch(error => console.error("Error loading sidebar:", error));
-</script>
+</script> -->
+<script>
+    // Fetch sidebar content dynamically
+ fetch("side")
+    .then(response => response.text())
+    .then(html => {
+        let container = document.getElementById("sidebar-container");
+        let tempDiv = document.createElement("div");
+        tempDiv.innerHTML = html;
 
+        // Insert sidebar content into the page
+        container.innerHTML = tempDiv.innerHTML;
+
+        // Reattach event listeners for submenu toggles (Products, Recaps)
+        const productsToggle = document.getElementById("products-toggle");
+        if (productsToggle) {
+            productsToggle.addEventListener("click", function () {
+                let submenu = document.getElementById("products-submenu");
+                submenu.classList.toggle("hidden");
+            });
+        }
+
+        const recapsToggle = document.getElementById("recaps-toggle");
+        if (recapsToggle) {
+            recapsToggle.addEventListener("click", function () {
+                let submenu = document.getElementById("recaps-submenu");
+                submenu.classList.toggle("hidden");
+            });
+        }
+
+        // Initialize Lottie animation after sidebar is inserted
+        const ramAnimation = document.getElementById('ram-animation');
+        if (ramAnimation) {
+            lottie.loadAnimation({
+                container: ramAnimation,
+                renderer: 'svg',
+                loop: true,
+                autoplay: true,
+                path: 'json_files/ram.json',
+                rendererSettings: {
+                    clearCanvas: true,
+                    preserveAspectRatio: 'xMidYMid meet',
+                    progressiveLoad: true,
+                    hideOnTransparent: true
+                }
+            });
+        }
+
+        // Sidebar toggle functionality
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        const content = document.querySelector('.content');
+
+        if (sidebarToggle && sidebar && content) {
+            sidebarToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('sidebar-hidden');
+                content.classList.toggle('content-full');
+
+                // Adjust button position when sidebar is hidden or shown
+                if (sidebar.classList.contains('sidebar-hidden')) {
+                    sidebarToggle.style.left = '10px';  // Sidebar hidden
+                } else {
+                    sidebarToggle.style.left = '260px'; // Sidebar visible
+                }
+            });
+        } else {
+            console.error("Sidebar or Toggle Button not found!");
+        }
+
+        // Auto-hide sidebar when not hovered
+        document.addEventListener('mousemove', (event) => {
+            if (event.clientX < 50) {  // Mouse near the left edge (50px)
+                sidebar.classList.remove('sidebar-hidden');
+                content.classList.remove('content-full');
+            }
+        });
+
+        // Hide sidebar when the mouse leaves it
+        sidebar.addEventListener('mouseleave', () => {
+            sidebar.classList.add('sidebar-hidden');
+            content.classList.add('content-full');
+        });
+
+    })
+    .catch(error => console.error("Error loading sidebar:", error));
+
+</script>
 
 
 

@@ -6,13 +6,18 @@ $pages = [
     "Coming" => "no.html",
     "Product" => "product.php",
     "Recap_Achat" => "recap_achat.php",
-    "Recap_Vente" => "recap.php",
-    "Recap_Vente_Facturation" => "recap_fact.php",
+    "Recap_Vente" => "recapvente.php",
+    "Recap_Vente_Facturation" => "recapvente_fact.php",
     
+    "CONFIRMED_ORDERS" => "confirm_order.php",
+
+
     "recap_achat_facturation" => "recap_achat_facturation.php",
     "Rotation" => "rotation.php",
     
     "Journal_Vente" => "journal.php",
+    
+    "bat" => "batman.html",
 
     "signup" => "signup.html",
     "side" => "sidebar.html",

@@ -36,316 +36,9 @@ $_SESSION['last_activity'] = time();
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
+    <link rel="stylesheet" href="product.css">
 
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-     
-        .table-container {
-    max-height: 400px;
-    overflow-y: auto; /* Enables vertical scrolling if needed */
-    overflow-x: auto; /* Enables horizontal scrolling if needed */
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-}
-
-.table-container table {
-    width: 100%;
-    table-layout: auto; /* Allows columns to resize dynamically */
-    min-width: 100%; /* Ensures the table doesn't shrink too much */
-    max-width: 100%; /* Prevents overflow beyond the container */
-    border-collapse: collapse;
-}
-
-thead {
-    position: sticky;
-    top: 0;
-    background-color: #f3f4f6;
-    z-index: 10;
-}
-
-th, td {
-    white-space: nowrap; /* Prevents text wrapping */
-    text-align: left;
-    padding: 10px;
-    border: 1px solid #ddd;
-}
-
-.dark .table-container {
-    border-color: #374151;
-}
-
-.dark .table-header {
-    background-color: #374151;
-    color: #f9fafb; /* White text in dark mode */
-}
-
-.dark .table-row:nth-child(odd) {
-    background-color: #1f2937;
-    color: #f9fafb; /* White text on dark background */
-}
-
-.dark .table-row:nth-child(even) {
-    background-color: #474d53;
-    color: #ececec;
-}
-
-
-.table-wrapper {
-    display: flex;
-    justify-content: space-between; /* Ensures tables are spaced apart */
-    gap: 20px; /* Adds spacing between tables */
-}
-
-.paginatio-wrapper {
-    display: flex;
-    justify-content: center; 
-    /* Ensures tables are spaced apart */
-    gap: 250px; /* Adds spacing between tables */
-}
-.download-wrapper {
-    display: flex;
-    
-    /* Ensures tables are spaced apart */
-    gap: 550px; /* Adds spacing between tables */
-}
-.title-wrapper{
-    display: flex;
-    
-    /* Ensures tables are spaced apart */
-    gap: 730px; /* Adds spacing between tables */
-}
-
-
-
-
-
-
-        .sidebar {
-            min-width: 200px;
-            max-width: 250px;
-            background-color: #f9fafb;
-            border-right: 1px solid #e5e7eb;
-            transition: transform 0.3s ease-in-out;
-            position: fixed;
-            height: 100vh;
-            z-index: 40;
-        }
-
-        .sidebar-hidden {
-            transform: translateX(-100%);
-        }
-
-        .content {
-            margin-left: 250px; /* Adjust this value based on the sidebar width */
-            transition: margin-left 0.3s ease-in-out;
-            width: calc(100% - 250px); /* Adjust this value based on the sidebar width */
-        }
-
-        .content-full {
-            margin-left: 0;
-            width: 100%;
-        }
-
-        .table-header {
-            background-color: #f3f4f6;
-            text-align: left;
-            color: #000; /* Default text color */
-            position: sticky; top: 0;
-        }
-
-        .table-row {
-            color: #000; /* Default black text */
-        }
-
-        .table-row:nth-child(odd) {
-            background-color: #f9fafb;
-        }
-
-        /* Dark mode styles */
-        .dark .sidebar {
-            background-color: #1f2937;
-            border-right-color: #374151;
-        }
-
-   
-
-        .dark body {
-            background-color: #111827;
-            color: #010911;
-        }
-
-    
-  /* Dark Mode */
-html.dark .sidebar {
-    background-color: #1f2937;
-    border-right-color: #374151;
-}
-
-html.dark body {
-    background-color: #111827;
-    color: white;
-}
-
-/* Dark Mode Toggle - Styled Checkbox */
-.checkbox {
-    display: none;
-}
-
-/* Toggle Background */
-.checkbox-label {
-    width: 60px;
-    height: 30px;
-    background: #ddd;
-    display: flex;
-    border-radius: 50px;
-    align-items: center;
-    position: relative;
-    cursor: pointer;
-    padding: 5px;
-    transition: background 0.3s ease-in-out;
-}
-
-/* Ball as Sun (Default) */
-.ball {
-    width: 22px;
-    height: 22px;
-    background: #facc15; /* Sun color (yellow) */
-    position: absolute;
-    border-radius: 50%;
-    transition: transform 0.3s ease-in-out, background 0.3s ease-in-out;
-    left: 5px;
-    box-shadow: 0 0 5px 2px #facc15; /* Sun glow effect */
-}
-
-/* Add Sun Rays */
-.ball::before {
-    content: "";
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: inherit;
-    border-radius: 50%;
-    transform: scale(1.4);
-    opacity: 0.5;
-}
-
-/* Moon Shape */
-html.dark .ball {
-    transform: translateX(30px);
-    background: #1e40af; /* Moon color (blue) */
-    box-shadow: none; /* Remove glow */
-}
-
-/* Crescent Moon Effect */
-html.dark .ball::before {
-    content: "";
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: white;
-    border-radius: 50%;
-    left: 5px; /* Shift left to create crescent effect */
-}
-
-/* Dark Mode Background */
-html.dark .checkbox-label {
-    background: #333;
-}
-
-/* Positioning the Dark Mode Toggle on Top Right */
-#themeSwitcher {
-    position: fixed;
-    top: 10px;
-    right: 20px;
-    z-index: 50;
-}
-
-
-/* Hide Default Checkbox */
-.checkbox {
-    display: none;
-}
-
-/* Toggle Background */
-.checkbox-label {
-    width: 60px;
-    height: 30px;
-    background: #f97316; /* Light Mode Orange */
-    display: flex;
-    align-items: center;
-    border-radius: 50px;
-    position: relative;
-    cursor: pointer;
-    padding: 5px;
-    transition: background 0.3s ease-in-out;
-}
-
-/* Ball */
-.ball {
-    width: 24px;
-    height: 24px;
-    background: white;
-    position: absolute;
-    border-radius: 50%;
-    transition: transform 0.3s ease-in-out;
-    left: 5px;
-}
-
-/* Icons */
-.icon {
-    font-size: 16px;
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    transition: opacity 0.3s ease-in-out;
-}
-
-/* Sun (Left) */
-.sun {
-    left: 10px;
-    color: white;
-}
-
-/* Moon (Right) */
-.moon {
-    right: 10px;
-    color: white;
-    opacity: 0; /* Hidden in Light Mode */
-}
-
-/* Dark Mode */
-html.dark .checkbox-label {
-    background: #1f2937; /* Dark Mode Gray */
-}
-
-html.dark .ball {
-    transform: translateX(30px);
-}
-
-html.dark .sun {
-    opacity: 0; /* Hide Sun */
-}
-
-html.dark .moon {
-    opacity: 1; /* Show Moon */
-}
-
-/* Theme Switcher Position */
-#themeSwitcher {
-    position: sticky;
-    top: 10px;
-    right: 10px;
-    padding: 10px;
-    z-index: 50;
-}
-
-
-    </style>
+ 
 </head>
 <body class="flex h-screen bg-gray-100 dark:bg-gray-900">
     <!-- Sidebar Toggle Button -->
@@ -358,7 +51,7 @@ html.dark .moon {
             <span class="icon sun">☀️</span>
             <span class="icon moon">🌙</span>
         </label>
-        <div id="lottieContainer" style="width: 250px; height: 200px; margin-top: 10px;"></div>
+        <div id="lottieContainer" style="width: 200px; height: 150px; margin-top: 10px;"></div>
     
     </div>
 
@@ -383,75 +76,89 @@ html.dark .moon {
 
 <script>
     // Fetch sidebar content dynamically
-    fetch("side")
-        .then(response => response.text())
-        .then(html => {
-            let container = document.getElementById("sidebar-container");
-            let tempDiv = document.createElement("div");
-            tempDiv.innerHTML = html;
+ fetch("side")
+    .then(response => response.text())
+    .then(html => {
+        let container = document.getElementById("sidebar-container");
+        let tempDiv = document.createElement("div");
+        tempDiv.innerHTML = html;
 
-            // Insert the sidebar content into the page
-            container.innerHTML = tempDiv.innerHTML;
+        // Insert sidebar content into the page
+        container.innerHTML = tempDiv.innerHTML;
 
-            // Reattach event listeners for the submenu toggles (Products, Recaps)
-            const productsToggle = document.getElementById("products-toggle");
-            if (productsToggle) {
-                productsToggle.addEventListener("click", function () {
-                    let submenu = document.getElementById("products-submenu");
-                    submenu.classList.toggle("hidden");
-                });
+        // Reattach event listeners for submenu toggles (Products, Recaps)
+        const productsToggle = document.getElementById("products-toggle");
+        if (productsToggle) {
+            productsToggle.addEventListener("click", function () {
+                let submenu = document.getElementById("products-submenu");
+                submenu.classList.toggle("hidden");
+            });
+        }
+
+        const recapsToggle = document.getElementById("recaps-toggle");
+        if (recapsToggle) {
+            recapsToggle.addEventListener("click", function () {
+                let submenu = document.getElementById("recaps-submenu");
+                submenu.classList.toggle("hidden");
+            });
+        }
+
+        // Initialize Lottie animation after sidebar is inserted
+        const ramAnimation = document.getElementById('ram-animation');
+        if (ramAnimation) {
+            lottie.loadAnimation({
+                container: ramAnimation,
+                renderer: 'svg',
+                loop: true,
+                autoplay: true,
+                path: 'json_files/ram.json',
+                rendererSettings: {
+                    clearCanvas: true,
+                    preserveAspectRatio: 'xMidYMid meet',
+                    progressiveLoad: true,
+                    hideOnTransparent: true
+                }
+            });
+        }
+
+        // Sidebar toggle functionality
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        const content = document.querySelector('.content');
+
+        if (sidebarToggle && sidebar && content) {
+            sidebarToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('sidebar-hidden');
+                content.classList.toggle('content-full');
+
+                // Adjust button position when sidebar is hidden or shown
+                if (sidebar.classList.contains('sidebar-hidden')) {
+                    sidebarToggle.style.left = '10px';  // Sidebar hidden
+                } else {
+                    sidebarToggle.style.left = '260px'; // Sidebar visible
+                }
+            });
+        } else {
+            console.error("Sidebar or Toggle Button not found!");
+        }
+
+        // Auto-hide sidebar when not hovered
+        document.addEventListener('mousemove', (event) => {
+            if (event.clientX < 50) {  // Mouse near the left edge (50px)
+                sidebar.classList.remove('sidebar-hidden');
+                content.classList.remove('content-full');
             }
+        });
 
-            const recapsToggle = document.getElementById("recaps-toggle");
-            if (recapsToggle) {
-                recapsToggle.addEventListener("click", function () {
-                    let submenu = document.getElementById("recaps-submenu");
-                    submenu.classList.toggle("hidden");
-                });
-            }
+        // Hide sidebar when the mouse leaves it
+        sidebar.addEventListener('mouseleave', () => {
+            sidebar.classList.add('sidebar-hidden');
+            content.classList.add('content-full');
+        });
 
-            // Initialize Lottie animation after sidebar is inserted
-            const ramAnimation = document.getElementById('ram-animation');
-            if (ramAnimation) {
-                lottie.loadAnimation({
-                    container: ramAnimation,
-                    renderer: 'svg',
-                    loop: true,
-                    autoplay: true,
-                    path: 'json_files/ram.json',
-                    rendererSettings: {
-                        clearCanvas: true,
-                        preserveAspectRatio: 'xMidYMid meet',
-                        progressiveLoad: true,
-                        hideOnTransparent: true
-                    }
-                });
-            }
+    })
+    .catch(error => console.error("Error loading sidebar:", error));
 
-            // Sidebar toggle functionality
-            const sidebarToggle = document.getElementById('sidebarToggle');
-            const sidebar = document.getElementById('sidebar');
-            const content = document.querySelector('.content');
-
-            // Ensure sidebarToggle is initialized after sidebar is loaded
-            if (sidebarToggle && sidebar && content) {
-                sidebarToggle.addEventListener('click', () => {
-                    sidebar.classList.toggle('sidebar-hidden');
-                    content.classList.toggle('content-full');
-
-                    // Adjust button position when sidebar is hidden or shown
-                    if (sidebar.classList.contains('sidebar-hidden')) {
-                        sidebarToggle.style.left = '10px';  // Sidebar hidden
-                    } else {
-                        sidebarToggle.style.left = '260px'; // Sidebar visible
-                    }
-                });
-            } else {
-                console.error("Sidebar or Toggle Button not found!");
-            }
-
-        })
-        .catch(error => console.error("Error loading sidebar:", error));
 </script>
 
 
@@ -461,6 +168,7 @@ html.dark .moon {
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-2xl font-semibold dark:text-white" style="color: #3373c7;">Product</h2>
         </div>
+      
 
         <!-- Filters -->
         <div class="grid grid-cols-4 gap-4 mb-4">
@@ -475,7 +183,13 @@ html.dark .moon {
         <br>
         
   
-        
+        <button id="refresh-btn" class="px-4 py-2 bg-gray-500 text-white rounded-lg shadow-md hover:bg-gray-600 transition duration-200 flex items-center gap-2">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M10 2a8 8 0 00-8 8H0l3 3 3-3H4a6 6 0 111.757 4.243l1.414 1.414A8 8 0 0010 2z" clip-rule="evenodd"/>
+    </svg>
+    Refresh
+</button>
+<br>
         <button id="downloadExcel" class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
             <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
             <span>Download Marge Table</span>
@@ -484,10 +198,11 @@ html.dark .moon {
         <br>
         <br>
         <!-- Data Table -->
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">MARGE</h2>
 
         <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
             <div class="overflow-x-auto">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">MARGE Table </h2>
+
                 <table class="min-w-full border-collapse text-sm text-left dark:text-white">
                     <thead>
                         <tr class="table-header dark:bg-gray-700">
@@ -533,15 +248,15 @@ html.dark .moon {
 
         <br>
         <div class="title-wrapper">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">REMISE AUTO</h2>
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">BONUS AUTO</h2>
+
         </div>
         <div class="table-wrapper">
             <!-- First Table -->
             <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
 
                 <div class="overflow-x-auto">
-                    
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">REMISE AUTO </h2>
+
 
                     <table class="min-w-full border-collapse text-sm text-left dark:text-white">
                         <thead>
@@ -610,6 +325,8 @@ var loadingAnimation = lottie.loadAnimation({
             <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
             
                 <div class="overflow-x-auto">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">BONUS AUTO </h2>
+
                     <table class="min-w-full border-collapse text-sm text-left dark:text-white">
                         <thead>
                             <tr class="table-header dark:bg-gray-700">
@@ -637,12 +354,13 @@ var loadingAnimation = lottie.loadAnimation({
     <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
     <span>Download RESERVED PRODUCTS Table</span>
 </button>
-
+<br>
 
 <!-- Reserver products  Table -->
-<h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Produit Réservé</h2>
 <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
     <div class="overflow-x-auto">
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">Produit Réservé </h2>
+
         <table class="min-w-full border-collapse text-sm text-left dark:text-white">
             <thead>
                 <tr class="table-header dark:bg-gray-700">
@@ -692,7 +410,27 @@ window.onload = () => {
     fetchBonusData();
     fetchReservedData();
 };
+document.getElementById("refresh-btn").addEventListener("click", function() {
+        // Store current input values
+        const productSearchValue = document.getElementById("search-product").value;
+        const supplierSearchValue = document.getElementById("search-supplier").value;
 
+        // Fetch new data
+        fetchData();
+        fetchRemiseData();
+        fetchBonusData();
+        fetchReservedData();
+
+        // Restore input values after data refresh
+        setTimeout(() => {
+            document.getElementById("search-product").value = productSearchValue;
+            document.getElementById("search-supplier").value = supplierSearchValue;
+
+            // Re-trigger filtering to apply search after refresh
+            filterDropdown('product');
+            filterDropdown('supplier');
+        }, 100);
+    });
 document.getElementById("downloadExcel").addEventListener("click", function () {
     let table = document.getElementById("data-table");
     let wb = XLSX.utils.book_new(); // Create a new workbook
@@ -1362,7 +1100,7 @@ function renderReservedPagination() {
 // Call fetch function when the page loads
 document.addEventListener("DOMContentLoaded", fetchReservedData);
 
-   
+
 
   </script>
 

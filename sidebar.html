@@ -102,7 +102,7 @@
     background: #f1f1f1;
 }
 
-/* Adjust sidebar width and text for smaller screens */
+/* Adjust sidebar width for smaller screens */
 @media (max-width: 768px) {
     .sidebar {
         width: 180px;
@@ -114,6 +114,11 @@
 
     #ram-animation {
         height: 80px; /* Adjust RAM animation */
+    }
+
+    .content {
+        margin-left: 180px;
+        width: calc(100% - 180px);
     }
 }
 
@@ -128,6 +133,27 @@
 
     #ram-animation {
         height: 70px; /* Further reduce RAM animation */
+    }
+
+    .content {
+        margin-left: 160px;
+        width: calc(100% - 160px);
+    }
+}
+
+/* Responsive Sidebar Behavior */
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+    }
+    
+    .sidebar-active {
+        transform: translateX(0);
+    }
+    
+    .content {
+        margin-left: 0;
+        width: 100%;
     }
 }
 
@@ -199,6 +225,20 @@
     }
 }
 
+/* Hide sidebar by default */
+.sidebar-hidden {
+    transform: translateX(-100%);
+}
+
+/* Ensure the sidebar remains visible on hover */
+.sidebar {
+    transition: transform 0.3s ease-in-out;
+}
+
+/* When sidebar is hovered, make it visible */
+.sidebar:hover {
+    transform: translateX(0);
+}
 
 
 /* Content */
@@ -299,25 +339,22 @@ html.dark .checkbox-label {
     z-index: 50;
 }
 #ram-animation {
-    position: relative;  /* Keep it inside the sidebar */
+    position: absolute;  /* Place it behind other elements */
+    top: 0;
+    left: 0;
     width: 100%;  /* Fit inside sidebar */
-    height: 100px; /* Adjust height as needed */
+    height: 300px; /* Adjust height as needed */
     display: flex;
     justify-content: center;
     align-items: center;
     pointer-events: none; /* Prevent interaction */
     background: transparent;
+    z-index: -1; /* Push it behind other content */
 }
-#ram-animation {
-    position: relative;  /* Keep it inside the sidebar */
-    width: 100%;  /* Fit inside sidebar */
-    height: 100px; /* Adjust height as needed */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    pointer-events: none; /* Prevent interaction */
-    background: transparent;
+#space{
+    height: 150px;
 }
+
 
 
         </style>
@@ -350,7 +387,8 @@ class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg h
         });
     </script>
 
-    
+ 
+<div id="space"></div>
 
 
     <img src="assets/log.png" alt="Logo" class="logo">
@@ -513,13 +551,24 @@ class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg h
                 });
 
 
-    const sidebarToggle = document.getElementById('sidebarToggle');
+const sidebarToggle = document.getElementById('sidebarToggle');
 const sidebar = document.getElementById('sidebar');
 const content = document.querySelector('.content');
 
-sidebarToggle.addEventListener('click', () => {
-    sidebar.classList.toggle('sidebar-hidden');
-    content.classList.toggle('content-full');
+// Detect when the cursor is near the left edge
+document.addEventListener('mousemove', (event) => {
+    if (event.clientX < 50) {  // When mouse is near the left edge (50px)
+        sidebar.classList.remove('sidebar-hidden');
+        content.classList.remove('content-full');
+    }
+});
+
+// Hide sidebar when the mouse leaves the sidebar area
+sidebar.addEventListener('mouseleave', () => {
+    sidebar.classList.add('sidebar-hidden');
+    content.classList.add('content-full');
+
+
 
     // Change button position when sidebar is hidden
     if (sidebar.classList.contains('sidebar-hidden')) {
@@ -528,6 +577,8 @@ sidebarToggle.addEventListener('click', () => {
         sidebarToggle.style.left = '260px'; // Adjust when sidebar is open
     }
 });
+
+
 
     </script>
 </html>

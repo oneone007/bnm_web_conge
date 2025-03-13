@@ -1083,7 +1083,7 @@ order by DOCUMENTNO
         return {"error": "An error occurred while fetching BCCB recap."}
 
 
-@app.route('/fetchBCCBRecap', methods=['GET'])
+@app.route('/fetchBCCBRecap', methods=['GET']) 
 def fetch_bccb():
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
@@ -4369,6 +4369,316 @@ def generate_excel_journal(data, filename):
 
     # Send the file to the client
     return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+
+
+
+
+
+# Assuming DB_POOL is a valid database connection pool
+
+
+def fetch_etat_fournisseur():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            # Static SQL query without dynamic filtering
+            query = """
+                SELECT 
+                    ROUND(SUM(total_echu), 2) AS "TOTAL ECHU",
+                    ROUND(SUM(total_dette), 2) AS "TOTAL DETTE",
+                    ROUND(SUM(STOCK), 2) AS "TOTAL STOCK"
+                FROM (
+                    -- TOTAL ECHU Calculation
+                    SELECT  
+                        SUM(COALESCE(invoiceOpen(inv.C_Invoice_ID, 0), 0)) AS total_echu,
+                        0 AS total_dette,
+                        0 AS STOCK
+                    FROM C_Invoice inv
+                    INNER JOIN c_bpartner bp ON bp.c_bpartner_id = inv.c_bpartner_id
+                    LEFT OUTER JOIN C_BPARTNER_LOCATION bpl ON bp.c_bpartner_id = bpl.c_bpartner_id
+                    LEFT OUTER JOIN C_SalesRegion SR ON SR.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    INNER JOIN C_PAYMENTTERM pt ON inv.C_PaymentTerm_ID = pt.C_PaymentTerm_ID
+                    WHERE inv.docstatus IN ('CO', 'CL')
+                      AND inv.ad_client_id = 1000000
+                      AND inv.ISSOTRX = 'N'
+                      AND bp.isactive = 'Y'
+                      AND bp.isvendor = 'Y'
+                      AND COALESCE(invoiceOpen(inv.C_Invoice_ID, 0), 0) <> 0
+                      AND inv.AD_Org_ID = 1000000
+                      AND inv.AD_Client_ID = 1000000
+                      AND (inv.dateinvoiced + pt.netdays) BETWEEN TO_DATE('01/01/2020', 'DD/MM/YYYY') AND SYSDATE
+                      AND bp.name NOT LIKE 'solde initial%'
+
+                    UNION ALL
+
+                    -- TOTAL DETTE Calculation
+                    SELECT  
+                        0 AS total_echu,
+                        SUM(cs.grandtotal - cs.verse_fact) AS total_dette,
+                        0 AS STOCK
+                    FROM (
+                        SELECT cs.grandtotal, cs.verse_fact, cs.C_Invoice_ID,
+                               ROW_NUMBER() OVER (PARTITION BY cs.name, cs.C_Invoice_ID ORDER BY cs.dateinvoiced DESC) AS rn
+                        FROM xx_vendor_status cs
+                        WHERE cs.AD_Client_ID = 1000000
+                          AND cs.AD_Org_ID = 1000000
+                          AND cs.dateinvoiced BETWEEN TO_DATE('01/01/2015', 'DD/MM/YYYY') AND TO_DATE('30/12/3000', 'DD/MM/YYYY')
+                          AND cs.name NOT LIKE 'solde initial%'
+                    ) cs
+                    WHERE cs.rn = 1
+
+                    UNION ALL
+
+                    -- TOTAL STOCK Calculation
+                    SELECT 
+                        0 AS total_echu,
+                        0 AS total_dette,
+                        ROUND(SUM(asi.valuenumber * (ms.qtyonhand - ms.QTYRESERVED)), 2) AS STOCK
+                    FROM 
+                        M_ATTRIBUTEINSTANCE asi
+                    JOIN 
+                        m_storage ms ON ms.M_ATTRIBUTEsetINSTANCE_id = asi.M_ATTRIBUTEsetINSTANCE_id
+                    LEFT JOIN 
+                        C_bpartner bp ON bp.c_bpartner_id = ValueNUMBER_of_ASI('Fournisseur', asi.m_attributesetinstance_id)
+                    WHERE 
+                        asi.M_Attribute_ID = 1000504
+                        AND ms.qtyonhand > 0
+                        AND ms.m_locator_id IN (1000614, 1001128, 1001135, 1001136)
+                        AND bp.name NOT LIKE 'solde initial%'
+                ) temp
+                HAVING ROUND(SUM(total_echu), 2) <> 0 OR ROUND(SUM(total_dette), 2) <> 0
+                ORDER BY "TOTAL DETTE" DESC, "TOTAL ECHU" DESC, "TOTAL STOCK" DESC
+            """
+
+            # Execute the query
+            cursor.execute(query)
+            row = cursor.fetchone()
+
+            # Return the results
+            return {
+                "TOTAL ECHU": row[0] if row else 0,
+                "TOTAL DETTE": row[1] if row else 0,
+                "TOTAL STOCK": row[2] if row else 0
+            }
+
+    except Exception as e:
+        logging.error(f"Error fetching etat fournisseur: {e}")
+        return {"error": "An error occurred while fetching etat fournisseur."}
+
+
+
+@app.route('/etat_fournisseur', methods=['GET'])
+def get_etat_fournisseur():
+    result = fetch_etat_fournisseur()
+    return jsonify(result)
+
+
+
+def fetch_fournisseur_dette(fournisseur=None):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+                SELECT 
+                    fournisseur,
+                    ROUND(COALESCE(SUM(total_echu), 0), 2) AS "TOTAL ECHU",
+                    ROUND(COALESCE(SUM(total_dette), 0), 2) AS "TOTAL DETTE",
+                    ROUND(COALESCE(SUM(STOCK), 0), 2) AS "TOTAL STOCK"
+                FROM (
+                    -- TOTAL ECHU Calculation
+                    SELECT  
+                        bp.name AS fournisseur,
+                        SUM(COALESCE(invoiceOpen(inv.C_Invoice_ID, 0), 0)) AS total_echu,
+                        0 AS total_dette,
+                        0 AS STOCK
+                    FROM C_Invoice inv
+                    INNER JOIN c_bpartner bp ON bp.c_bpartner_id = inv.c_bpartner_id
+                    INNER JOIN C_PAYMENTTERM pt ON inv.C_PaymentTerm_ID = pt.C_PaymentTerm_ID
+                    WHERE inv.docstatus IN ('CO', 'CL')
+                      AND inv.ad_client_id = 1000000
+                      AND inv.ISSOTRX = 'N'
+                      AND bp.isactive = 'Y'
+                      AND bp.isvendor = 'Y'
+                      AND COALESCE(invoiceOpen(inv.C_Invoice_ID, 0), 0) <> 0
+                      AND inv.AD_Org_ID = 1000000
+                      AND (inv.dateinvoiced + pt.netdays) BETWEEN TO_DATE('01/01/2020', 'DD/MM/YYYY') AND SYSDATE
+                      AND bp.name NOT LIKE 'solde initial%'
+                    {fournisseur_filter}
+                    GROUP BY bp.name
+
+                    UNION ALL
+
+                    -- TOTAL DETTE Calculation
+                    SELECT  
+                        cs.name AS fournisseur,
+                        0 AS total_echu,
+                        SUM(cs.grandtotal - cs.verse_fact) AS total_dette,
+                        0 AS STOCK
+                    FROM (
+                        SELECT cs.name, cs.grandtotal, cs.verse_fact, cs.C_Invoice_ID,
+                               ROW_NUMBER() OVER (PARTITION BY cs.name, cs.C_Invoice_ID ORDER BY cs.dateinvoiced DESC) AS rn
+                        FROM xx_vendor_status cs
+                        WHERE cs.AD_Client_ID = 1000000
+                          AND cs.AD_Org_ID = 1000000
+                          AND cs.dateinvoiced BETWEEN TO_DATE('01/01/2015', 'DD/MM/YYYY') AND TO_DATE('30/12/3000', 'DD/MM/YYYY')
+                          AND cs.name NOT LIKE 'solde initial%'
+                    ) cs
+                    WHERE cs.rn = 1
+                    {fournisseur_filter}
+                    GROUP BY cs.name
+
+                    UNION ALL
+
+                    -- TOTAL STOCK Calculation
+                    SELECT 
+                        bp.name AS fournisseur,
+                        0 AS total_echu,
+                        0 AS total_dette,
+                        ROUND(SUM(asi.valuenumber * (ms.qtyonhand - ms.QTYRESERVED)), 2) AS STOCK
+                    FROM 
+                        M_ATTRIBUTEINSTANCE asi
+                    JOIN 
+                        m_storage ms ON ms.M_ATTRIBUTEsetINSTANCE_id = asi.M_ATTRIBUTEsetINSTANCE_id
+                    LEFT JOIN 
+                        C_bpartner bp ON bp.c_bpartner_id = ValueNUMBER_of_ASI('Fournisseur', asi.m_attributesetinstance_id)
+                    WHERE 
+                        asi.M_Attribute_ID = 1000504
+                        AND ms.qtyonhand > 0
+                        AND ms.m_locator_id IN (1000614, 1001128, 1001135, 1001136)
+                        AND bp.name NOT LIKE 'solde initial%'
+                    {fournisseur_filter}
+                    GROUP BY bp.name
+                ) temp
+                GROUP BY fournisseur
+                HAVING ROUND(SUM(total_echu), 2) <> 0 OR ROUND(SUM(total_dette), 2) <> 0
+                ORDER BY "TOTAL DETTE" DESC, "TOTAL ECHU" DESC, "TOTAL STOCK" DESC
+            """
+
+            # Conditionally add the fournisseur filter if a value is provided
+            fournisseur_filter = "AND bp.name LIKE :fournisseur || '%'" if fournisseur else ""
+            final_query = query.format(fournisseur_filter=fournisseur_filter)
+            params = {'fournisseur': fournisseur} if fournisseur else {}
+
+            cursor.execute(final_query, params)
+            rows = cursor.fetchall()
+
+            result = []
+            for row in rows:
+                result.append({
+                    "FOURNISSEUR": row[0],
+                    "TOTAL ECHU": row[1],
+                    "TOTAL DETTE": row[2],
+                    "TOTAL STOCK": row[3]
+                })
+
+            return result
+
+    except Exception as e:
+        logging.error(f"Error fetching fournisseur dette: {e}")
+        return {"error": "An error occurred while fetching fournisseur dette."}
+
+
+@app.route('/fetchFournisseurDette', methods=['GET'])
+def fetch_fournisseur_dette_api():
+    fournisseur = request.args.get('fournisseur')  # Get the fournisseur parameter from the request
+
+    data = fetch_fournisseur_dette(fournisseur)  # Call the function to get the data
+    return jsonify(data)  # Return the result as JSON
+
+
+
+def fetch_order_confirmed():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            
+            query = """
+                SELECT * FROM (
+                    SELECT 
+                        CAST(org.name AS VARCHAR2(300)) AS organisation,
+                        CAST(co.documentno AS VARCHAR2(50)) AS ndocument,
+                        CAST(cb.name AS VARCHAR2(300)) AS tier,
+                        co.dateordered AS datecommande,
+                        CAST(us.name AS VARCHAR2(100)) AS vendeur,
+                        ROUND(((co.totallines / (SELECT SUM(mat.valuenumber * li.qtyentered) 
+                             FROM c_orderline li 
+                             INNER JOIN m_attributeinstance mat ON mat.m_attributesetinstance_id = li.m_attributesetinstance_id
+                             WHERE mat.m_attribute_id = 1000504 
+                               AND li.c_order_id = co.c_order_id 
+                               AND li.qtyentered > 0 
+                             GROUP BY li.c_order_id)) - 1) * 100, 2) AS marge,
+                        ROUND(co.totallines, 2) AS montant,
+                        1 AS sort_order
+                    FROM 
+                        c_order co
+                    INNER JOIN ad_org org ON co.ad_org_id = org.ad_org_id
+                    INNER JOIN c_bpartner cb ON co.c_bpartner_id = cb.c_bpartner_id
+                    INNER JOIN ad_user us ON co.salesrep_id = us.ad_user_id
+                    INNER JOIN c_orderconfirm conf ON co.c_order_id = conf.c_order_id
+                    WHERE 
+                        conf.c_orderconfirm_id IS NOT NULL 
+                        AND co.docstatus = 'IP' 
+                        AND co.docaction IN ('CO', 'PR') 
+                        AND co.c_doctypetarget_id = 1000539 
+                        AND co.ad_org_id = 1000000
+                    
+                    UNION ALL
+                    
+                    SELECT 
+                        CAST('Total' AS VARCHAR2(300)) AS organisation,
+                        CAST(NULL AS VARCHAR2(50)) AS ndocument,
+                        CAST(NULL AS VARCHAR2(300)) AS tier,
+                        NULL AS datecommande,
+                        CAST(NULL AS VARCHAR2(100)) AS vendeur,
+                        ROUND(AVG(ROUND(((co.totallines / (SELECT SUM(mat.valuenumber * li.qtyentered) 
+                             FROM c_orderline li 
+                             INNER JOIN m_attributeinstance mat ON mat.m_attributesetinstance_id = li.m_attributesetinstance_id
+                             WHERE mat.m_attribute_id = 1000504 
+                               AND li.c_order_id = co.c_order_id 
+                               AND li.qtyentered > 0 
+                             GROUP BY li.c_order_id)) - 1) * 100, 2)), 2) AS marge,
+                        ROUND(SUM(co.totallines), 2) AS montant,
+                        0 AS sort_order
+                    FROM 
+                        c_order co
+                    INNER JOIN ad_org org ON co.ad_org_id = org.ad_org_id
+                    INNER JOIN c_bpartner cb ON co.c_bpartner_id = cb.c_bpartner_id
+                    INNER JOIN ad_user us ON co.salesrep_id = us.ad_user_id
+                    INNER JOIN c_orderconfirm conf ON co.c_order_id = conf.c_order_id
+                    WHERE 
+                        conf.c_orderconfirm_id IS NOT NULL 
+                        AND co.docstatus = 'IP' 
+                        AND co.docaction IN ('CO', 'PR') 
+                        AND co.c_doctypetarget_id = 1000539 
+                        AND co.ad_org_id = 1000000
+                )
+                ORDER BY sort_order, montant DESC
+            """
+            
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            
+            columns = [col[0] for col in cursor.description]
+            result = [dict(zip(columns, row)) for row in rows]
+            
+            return result
+
+    except Exception as e:
+        logging.error(f"Error fetching order confirmed: {e}")
+        return {"error": "An error occurred while fetching order confirmed."}
+
+@app.route('/order_confirmed', methods=['GET'])
+def get_order_confirmed():
+    result = fetch_order_confirmed()
+    return jsonify(result)
+
+
+
+
 
 
 if __name__ == "__main__":

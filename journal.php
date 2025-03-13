@@ -38,328 +38,35 @@ $_SESSION['last_activity'] = time();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
-    <link rel="stylesheet" href="recap.css">
-    <style>
-        .dark td {
-            color: #000000 !important;
-            /* Force black text in dark mode */
-            background-color: #d1d5db;
-            /* Light gray background for contrast */
-        }
+    <link rel="stylesheet" href="journal.css">
 
-        .dark h2 {
-            color: #000000 !important;
-            /* Force black text in dark mode */
-            background-color: #d1d5db;
-            /* Light gray background for contrast */
-        }
-
-
-        .dark label {
-            color: white !important;
-        }
-
-        /* Positioning the Dark Mode Toggle on Top Right */
-        #themeSwitcher {
-            position: sticky;
-            top: 0;
-            right: 0;
-            padding: 10px;
-            z-index: 50;
-        }
-        .download-container {
-    display: flex;
-    justify-content: flex-end;
-    padding: 0 16px 12px 16px;
-}
-.download-wrapper {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 50px; /* Reduced for responsiveness */
-      margin-top: 20px;
-      padding: 10px;
-  }
-
-  .download-wrapper button {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background-color: white;
-      border: 1px solid #d1d5db;
-      color: #374151;
-      padding: 12px 24px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      transition: all 0.3s ease-in-out;
-  }
-
-  .download-wrapper button:hover {
-      background-color: #f3f4f6;
-      transform: scale(1.05);
-  }
-
-  .download-wrapper button img {
-      width: 24px;
-      height: 24px;
-  }
-
-  /* Responsive Styles */
-  @media (max-width: 768px) {
-      .download-wrapper {
-          flex-direction: column;
-          align-items: center;
-          gap: 20px;
-      }
-
-      .download-wrapper button {
-          width: 90%; /* Full width for smaller screens */
-          justify-content: center;
-      }
-  }
-
-  .search-container {
-    width: 40%;
-
-      display: grid;
-      grid-template-columns: repeat(1, minmax(150px, 1fr)); /* 3 columns per row */
-      gap: 16px;
-      padding: 20px;
-      background: #f9fafb;
-      border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-
-  .search-container label {
-      display: block;
-      font-weight: 600;
-      color: #374151;
-      margin-bottom: 6px;
-  }
-
-  .search-container input {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-      font-size: 16px;
-      transition: all 0.3s ease-in-out;
-      background-color: white;
-      color: #111827;
-      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-  }
-
-  .search-container input:focus {
-      outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
-  }
-
-  /* Dark Mode */
-  .dark .search-container {
-      background: #1f2937;
-      box-shadow: none;
-  }
-
-  .dark .search-container label {
-      color: #e5e7eb;
-  }
-
-  .dark .search-container input {
-      background-color: #374151;
-      color: white;
-      border: 1px solid #4b5563;
-      box-shadow: none;
-  }
-
-  .dark .search-container input:focus {
-      border-color: #3b82f6;
-      box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
-  }
-
-  /* Responsive Design */
-  @media (max-width: 1024px) {
-      .search-container {
-          grid-template-columns: repeat(2, minmax(250px, 1fr)); /* 2 per row on tablets */
-      }
-  }
-
-  @media (max-width: 768px) {
-      .search-container {
-          grid-template-columns: 1fr; /* 1 per row on mobile */
-      }
-  }
-
-  .date-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    align-items: center;
-    padding: 16px;
-    background: #f9fafb;
-    border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    max-width: 600px; /* Adjust width as needed */
-    width: 100%; /* Ensures it doesn't exceed max-width */
-    margin: 0 auto; /* Centers the container */
-}
-
-@media (max-width: 768px) {
-    .date-container {
-        flex-direction: column;
-        gap: 12px;
-        align-items: flex-start;
-        max-width: 90%; /* Allows slight expansion on smaller screens */
-    }
-}
-
-.date-container label {
-    font-weight: 600;
-    color: #374151;
-}
-
-.date-container input {
-    padding: 10px 14px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 16px;
-    transition: all 0.3s ease-in-out;
-    background-color: white;
-    color: #111827;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.date-container input:focus {
-    outline: none;
-    border-color: #2563eb;
-    box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
-}
-
-/* Dark Mode */
-.dark .date-container {
-    background: #1f2937;
-    box-shadow: none;
-}
-
-.dark .date-container label {
-    color: #e5e7eb;
-}
-
-.dark .date-container input {
-    background-color: #374151;
-    color: white;
-    border: 1px solid #4b5563;
-}
-
-.dark .date-container input:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .date-container {
-        flex-direction: column;
-        gap: 12px;
-        align-items: flex-start;
-    }
-}
-/* Hide Default Checkbox */
-.checkbox {
-    display: none;
-}
-
-/* Toggle Background */
-.checkbox-label {
-    width: 60px;
-    height: 30px;
-    background: #f97316; /* Light Mode Orange */
-    display: flex;
-    align-items: center;
-    border-radius: 50px;
-    position: relative;
-    cursor: pointer;
-    padding: 5px;
-    transition: background 0.3s ease-in-out;
-}
-
-/* Ball */
-.ball {
-    width: 24px;
-    height: 24px;
-    background: white;
-    position: absolute;
-    border-radius: 50%;
-    transition: transform 0.3s ease-in-out;
-    left: 5px;
-}
-
-/* Icons */
-.icon {
-    font-size: 16px;
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    transition: opacity 0.3s ease-in-out;
-}
-
-/* Sun (Left) */
-.sun {
-    left: 10px;
-    color: white;
-}
-
-/* Moon (Right) */
-.moon {
-    right: 10px;
-    color: white;
-    opacity: 0; /* Hidden in Light Mode */
-}
-
-/* Dark Mode */
-html.dark .checkbox-label {
-    background: #1f2937; /* Dark Mode Gray */
-}
-
-html.dark .ball {
-    transform: translateX(30px);
-}
-
-html.dark .sun {
-    opacity: 0; /* Hide Sun */
-}
-
-html.dark .moon {
-    opacity: 1; /* Show Moon */
-}
-
-/* Theme Switcher Position */
-#themeSwitcher {
-    position: sticky;
-    top: 10px;
-    right: 10px;
-    padding: 10px;
-    z-index: 50;
-}
-
-
-    </style>
 
 </head>
 
 <body class="flex h-screen bg-gray-100 dark:bg-gray-900">
     <!-- Sidebar Toggle Button -->
  <!-- Include SweetAlert2 Library (Add this to your HTML head if not already included) -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+ <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     Swal.fire({
-        title: "⚠️ Warning",
-        text: "You are in Facturation Server!",
-        icon: "warning",
+        title: "You are in Facturation Server!",
+        html: '<div id="lte-alert-icon" style="width:150px; height:150px; margin:0 auto;"></div>',
+        
         confirmButtonText: "OK",
-        allowOutsideClick: false // Prevent closing by clicking outside
+        allowOutsideClick: false,
+        didOpen: () => {
+            // Load Lottie Animation
+            lottie.loadAnimation({
+                container: document.getElementById("lte-alert-icon"),
+                renderer: "svg",
+                loop: true,
+                autoplay: true,
+                path: "json_files/alrt.json" // Make sure this file is accessible
+            });
+        }
     });
 });
 </script>
@@ -372,7 +79,7 @@ document.addEventListener("DOMContentLoaded", function() {
             <span class="icon sun">☀️</span>
             <span class="icon moon">🌙</span>
         </label>
-        <div id="lottieContainer" style="width: 250px; height: 200px; margin-top: 10px;"></div>
+        <div id="lottieContainer" style="width: 200px; height: 150px; margin-top: 10px;"></div>
     
     </div>
 
@@ -392,77 +99,90 @@ document.addEventListener("DOMContentLoaded", function() {
 <div id="sidebar-container"></div>
 
 <script>
-    
     // Fetch sidebar content dynamically
-    fetch("side")
-        .then(response => response.text())
-        .then(html => {
-            let container = document.getElementById("sidebar-container");
-            let tempDiv = document.createElement("div");
-            tempDiv.innerHTML = html;
+ fetch("side")
+    .then(response => response.text())
+    .then(html => {
+        let container = document.getElementById("sidebar-container");
+        let tempDiv = document.createElement("div");
+        tempDiv.innerHTML = html;
 
-            // Insert the sidebar content into the page
-            container.innerHTML = tempDiv.innerHTML;
+        // Insert sidebar content into the page
+        container.innerHTML = tempDiv.innerHTML;
 
-            // Reattach event listeners for the submenu toggles (Products, Recaps)
-            const productsToggle = document.getElementById("products-toggle");
-            if (productsToggle) {
-                productsToggle.addEventListener("click", function () {
-                    let submenu = document.getElementById("products-submenu");
-                    submenu.classList.toggle("hidden");
-                });
+        // Reattach event listeners for submenu toggles (Products, Recaps)
+        const productsToggle = document.getElementById("products-toggle");
+        if (productsToggle) {
+            productsToggle.addEventListener("click", function () {
+                let submenu = document.getElementById("products-submenu");
+                submenu.classList.toggle("hidden");
+            });
+        }
+
+        const recapsToggle = document.getElementById("recaps-toggle");
+        if (recapsToggle) {
+            recapsToggle.addEventListener("click", function () {
+                let submenu = document.getElementById("recaps-submenu");
+                submenu.classList.toggle("hidden");
+            });
+        }
+
+        // Initialize Lottie animation after sidebar is inserted
+        const ramAnimation = document.getElementById('ram-animation');
+        if (ramAnimation) {
+            lottie.loadAnimation({
+                container: ramAnimation,
+                renderer: 'svg',
+                loop: true,
+                autoplay: true,
+                path: 'json_files/ram.json',
+                rendererSettings: {
+                    clearCanvas: true,
+                    preserveAspectRatio: 'xMidYMid meet',
+                    progressiveLoad: true,
+                    hideOnTransparent: true
+                }
+            });
+        }
+
+        // Sidebar toggle functionality
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        const content = document.querySelector('.content');
+
+        if (sidebarToggle && sidebar && content) {
+            sidebarToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('sidebar-hidden');
+                content.classList.toggle('content-full');
+
+                // Adjust button position when sidebar is hidden or shown
+                if (sidebar.classList.contains('sidebar-hidden')) {
+                    sidebarToggle.style.left = '10px';  // Sidebar hidden
+                } else {
+                    sidebarToggle.style.left = '260px'; // Sidebar visible
+                }
+            });
+        } else {
+            console.error("Sidebar or Toggle Button not found!");
+        }
+
+        // Auto-hide sidebar when not hovered
+        document.addEventListener('mousemove', (event) => {
+            if (event.clientX < 50) {  // Mouse near the left edge (50px)
+                sidebar.classList.remove('sidebar-hidden');
+                content.classList.remove('content-full');
             }
+        });
 
-            const recapsToggle = document.getElementById("recaps-toggle");
-            if (recapsToggle) {
-                recapsToggle.addEventListener("click", function () {
-                    let submenu = document.getElementById("recaps-submenu");
-                    submenu.classList.toggle("hidden");
-                });
-            }
+        // Hide sidebar when the mouse leaves it
+        sidebar.addEventListener('mouseleave', () => {
+            sidebar.classList.add('sidebar-hidden');
+            content.classList.add('content-full');
+        });
 
-            // Initialize Lottie animation after sidebar is inserted
-            const ramAnimation = document.getElementById('ram-animation');
-            if (ramAnimation) {
-                lottie.loadAnimation({
-                    container: ramAnimation,
-                    renderer: 'svg',
-                    loop: true,
-                    autoplay: true,
-                    path: 'json_files/ram.json',
-                    rendererSettings: {
-                        clearCanvas: true,
-                        preserveAspectRatio: 'xMidYMid meet',
-                        progressiveLoad: true,
-                        hideOnTransparent: true
-                    }
-                });
-            }
+    })
+    .catch(error => console.error("Error loading sidebar:", error));
 
-            // Sidebar toggle functionality
-            const sidebarToggle = document.getElementById('sidebarToggle');
-            const sidebar = document.getElementById('sidebar');
-            const content = document.querySelector('.content');
-
-            // Ensure sidebarToggle is initialized after sidebar is loaded
-            if (sidebarToggle && sidebar && content) {
-                sidebarToggle.addEventListener('click', () => {
-                    sidebar.classList.toggle('sidebar-hidden');
-                    content.classList.toggle('content-full');
-
-                    // Adjust button position when sidebar is hidden or shown
-                    if (sidebar.classList.contains('sidebar-hidden')) {
-                        sidebarToggle.style.left = '10px';  // Sidebar hidden
-                    } else {
-                        sidebarToggle.style.left = '260px'; // Sidebar visible
-                    }
-                });
-            } else {
-                console.error("Sidebar or Toggle Button not found!");
-            }
-
-        })
-        .catch(error => console.error("Error loading sidebar:", error));
 </script>
     <!-- Main Content -->
     <div id="content" class="content flex-grow p-4">
@@ -515,12 +235,61 @@ document.addEventListener("DOMContentLoaded", function() {
         </div>
         <br>
 
-        <button id="downloadExcel_journal"
+        <!-- <button id="downloadExcel_journal"
             class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
             <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
             <span>Journal de vente Download</span>
-        </button>
+        </button> -->
 
+<!-- From Uiverse.io by Rodrypaladin --> 
+<button id="downloadExcel_journal"
+ class="button">
+  <span class="button__span">Journal de vente Download</span>
+  
+</button>
+<STYle>
+   .button {
+  font-size: 1.4em; /* Slightly smaller text */
+  padding: 8px 16px;
+  background-color: transparent;
+  transition: all 0.2s ease-out;
+  border: none;
+}
+
+.button__span {
+  color: #131313;
+  transition: all 0.2s ease-out;
+  letter-spacing: 0.1em;
+  text-shadow: 1px -1px 0 #767676, 
+      -1px 2px 1px #737272, 
+      -2px 3px 1px #767474, 
+      -3px 4px 1px #787777, 
+      -4px 5px 1px #7b7a7a, 
+      -5px 6px 1px #7f7d7d, 
+      -6px 7px 1px #828181, 
+      -7px 8px 1px #868585, 
+      -8px 9px 1px #8b8a89, 
+      -9px 10px 1px #8f8e8d;
+}
+
+.button__span:hover {
+  text-shadow: -1px -1px 0 #767676, 
+      1px 2px 1px #737272, 
+      2px 3px 1px #767474, 
+      3px 4px 1px #787777, 
+      4px 5px 1px #7b7a7a, 
+      5px 6px 1px #7f7d7d, 
+      6px 7px 1px #828181, 
+      7px 8px 1px #868585, 
+      8px 9px 1px #8b8a89, 
+      9px 10px 1px #8f8e8d;
+}
+
+.button:active .button__span {
+  text-shadow: none;
+}
+
+</STYle>
         <br>
         
         <!-- Table -->
