@@ -2,11 +2,9 @@
 session_start();
 include 'db_connect.php';
 
-header('Content-Type: application/json');
-
-if (isset($_POST['username']) && isset($_POST['password'])) {
-    $username = $_POST['username'];
-    $password = $_POST['password'];
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $username = trim($_POST['username']);
+    $password = trim($_POST['password']);
 
     $sql = "SELECT * FROM users WHERE username = ?";
     $stmt = $conn->prepare($sql);
@@ -20,16 +18,18 @@ if (isset($_POST['username']) && isset($_POST['password'])) {
         if ($password === $user['password']) { // Plain text comparison
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
-
-            echo json_encode(["success" => true, "redirect" => "Main"]);
+            header("Location: Main"); // Redirect to main page on success
+            exit();
         } else {
-            echo json_encode(["success" => false, "error" => "Invalid password"]);
+            $_SESSION['login_error'] = "Incorrect password";
         }
     } else {
-        echo json_encode(["success" => false, "error" => "Username not found"]);
+        $_SESSION['login_error'] = "Username not found";
     }
 
     $stmt->close();
     $conn->close();
+
+    header("Location: BNM"); // Redirect back to login page with error
+    exit();
 }
-?>

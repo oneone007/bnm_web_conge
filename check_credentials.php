@@ -1,11 +1,9 @@
 <?php
-include 'db_connect.php'; // Database connection
-
-header('Content-Type: application/json');
+include 'db_connect.php';
 
 if (isset($_POST['username']) && isset($_POST['password'])) {
-    $username = $_POST['username'];
-    $password = $_POST['password'];
+    $username = trim($_POST['username']);
+    $password = trim($_POST['password']);
 
     $sql = "SELECT password FROM users WHERE username = ?";
     $stmt = $conn->prepare($sql);
@@ -15,15 +13,15 @@ if (isset($_POST['username']) && isset($_POST['password'])) {
 
     if ($result->num_rows === 1) {
         $user = $result->fetch_assoc();
-        
-        // Compare as plain text (no hashing)
+
+        // Plain text comparison (No hashing)
         if ($password === $user['password']) {
-            echo json_encode(["valid" => true]);
+            echo "valid";
         } else {
-            echo json_encode(["valid" => false, "error" => "Incorrect password"]);
+            echo "error: Incorrect password";
         }
     } else {
-        echo json_encode(["valid" => false, "error" => "Username not found"]);
+        echo "error: Username not found";
     }
 
     $stmt->close();

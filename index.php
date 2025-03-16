@@ -40,11 +40,6 @@
             text-align: center;
             width: 350px;
         }
-        .login-btn {
-    position: absolute;
-   
-    transform: translate(-50%, -50%);
-}
 
 
         .subheading {
@@ -188,8 +183,11 @@
 }
 
 
+
+
+
 .login-btn {
-    background-color: #007bff; /* Primary blue */
+    background-color:rgb(12, 152, 207); /* Primary blue */
     color: white;
     border: none;
     padding: 10px 20px;
@@ -382,35 +380,38 @@ if (isset($_GET['session_expired'])) {
 
      <p class="subheading">Please enter your credentials to log in.</p>
 
-            <form id="loginForm">
-                <div class="textbox">
-                    <i class="fas fa-user"></i> <!-- Username icon --> 
+    <form id="loginForm" method="POST" action="login.php">
+        <div class="textbox">
+            <i class="fas fa-user"></i> <!-- Username icon -->
+            <input type="text" id="username" placeholder="Username" name="username" autocomplete="off" required>
+            <div class="error-message" id="usernameError"></div>
+        </div>
 
-                    <input type="text" id="username" placeholder="Username" name="username" autocomplete="off" required>
-                    <div class="error-message" id="usernameError"></div>
-                </div>
+        <div class="textbox password-container">
+            <div id="lookAnimation"></div> <!-- Look animation above password -->
+            <div class="password-container">
+                <i class="fas fa-lock"></i> <!-- Password icon -->
+                <input type="password" id="password" placeholder="Password" name="password" required>
+                <div id="eyeIcon"></div> <!-- Eye icon inside input field -->
+                <div class="error-message" id="passwordError"></div>
+            </div>
+        </div>
 
-                <div class="textbox password-container">
-                       <!-- Look animation (Above Password) -->
-                       <div id="lookAnimation"></div>
-                    <!-- Password input -->
-                    <div class="password-container">
-                        <i class="fas fa-lock"></i> <!-- Password icon --> 
-
-                    <input type="password" id="password" placeholder="Password" name="password" required>
-                    <div id="eyeIcon"></div> <!-- Eye icon inside input field -->
-                    <div class="error-message" id="passwordError"></div>
-                </div>
-                </div>
-                <div class="signup-link">
-                    <p>Don't have an account? <a href="signup">Sign Up</a></p>
-                    <br>
-                </div>
-
-                <div class="error-message" id="errorMessage"></div>
-                <button type="submit" class="login-btn">Login</button>
-            </form>
+        <div class="signup-link">
+            <p>Don't have an account? <a href="signup">Sign Up</a></p>
+         <br>
           
+            <button type="submit" class="login-btn">Login</button>
+
+        </div>
+
+        <?php if (!empty($error)): ?>
+            <div class="error-message" id="errorMessage" style="display: block;">
+                <?php echo htmlspecialchars($error); ?>
+            </div>
+        <?php endif; ?>
+
+    </form>
         </div>
     </div>
 <!-- Rocket animation container (Initially hidden) -->
@@ -423,19 +424,17 @@ if (isset($_GET['session_expired'])) {
     
 <script>
 // Select elements
-const loginButton = document.querySelector(".login-btn");
 const usernameField = document.getElementById("username");
 const passwordField = document.getElementById("password");
+const loginButton = document.querySelector(".login-btn");
 const usernameError = document.getElementById("usernameError");
 const passwordError = document.getElementById("passwordError");
-const loginForm = document.getElementById("loginForm");
 
-// Store original button position
-const originalTop = loginButton.offsetTop;
-const originalLeft = loginButton.offsetLeft;
-let isCorrectLogin = false; // Track login correctness
+let isCorrectLogin = false;
+let originalTop = loginButton.offsetTop;
+let originalLeft = loginButton.offsetLeft;
 
-// Function to move the login button randomly
+// Function to move the button randomly
 const moveButtonRandomly = () => {
     if (!isCorrectLogin) {
         const top = Math.floor(Math.random() * (window.innerHeight - loginButton.offsetHeight));
@@ -447,44 +446,54 @@ const moveButtonRandomly = () => {
     }
 };
 
-// Function to check credentials
+// Function to check credentials dynamically while typing
 const checkCredentials = () => {
     const username = usernameField.value.trim();
     const password = passwordField.value.trim();
 
-    fetch("check_credentials.php", {
-        method: "POST",
-        body: new URLSearchParams({ username, password }),
-        headers: { "Content-Type": "application/x-www-form-urlencoded" }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.valid) {
-            isCorrectLogin = true; // Stop moving
-            loginButton.style.pointerEvents = "auto";
-            loginButton.style.top = `${originalTop}px`;
-            loginButton.style.left = `${originalLeft}px`;
-            loginButton.style.backgroundColor = "green"; // Turn green
-            usernameError.style.display = "none";
-            passwordError.style.display = "none";
-            usernameField.style.border = "2px solid green";
-            passwordField.style.border = "2px solid green";
-        } else {
-            isCorrectLogin = false; // Keep moving on hover
-            loginButton.style.backgroundColor = "red"; // Turn red
+    if (username === "" || password === "") {
+        return;
+    }
 
-            if (data.error.includes("Username")) {
-                usernameError.textContent = data.error;
-                usernameError.style.display = "block";
-                usernameField.style.border = "2px solid red";
+    // Send data using PHP instead of JSON
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "check_credentials.php", true);
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            const response = xhr.responseText.trim();
+
+            if (response === "valid") {
+                isCorrectLogin = true;
+                loginButton.style.pointerEvents = "auto";
+                loginButton.style.top = `${originalTop}px`;
+                loginButton.style.left = `${originalLeft}px`;
+                loginButton.style.backgroundColor = "green";
+                usernameError.style.display = "none";
+                passwordError.style.display = "none";
+                usernameField.style.border = "2px solid green";
+                passwordField.style.border = "2px solid green";
             } else {
-                passwordError.textContent = data.error;
-                passwordError.style.display = "block";
-                passwordField.style.border = "2px solid red";
+                isCorrectLogin = false;
+                loginButton.style.backgroundColor = "red";
+
+                if (response.includes("Username")) {
+                    usernameError.textContent = response;
+                    usernameError.style.display = "block";
+                    usernameField.style.border = "2px solid red";
+                } else {
+                    passwordError.textContent = response;
+                    passwordError.style.display = "block";
+                    passwordField.style.border = "2px solid red";
+                }
+
+                moveButtonRandomly();
             }
         }
-    })
-    .catch(error => console.error("Error:", error));
+    };
+
+    xhr.send(`username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`);
 };
 
 // Move button away only on hover if credentials are incorrect
@@ -494,41 +503,10 @@ loginButton.addEventListener("mouseover", () => {
     }
 });
 
-// Prevent form submission and check login
-loginForm.addEventListener("submit", function(event) {
-    event.preventDefault();
-
-    const formData = new FormData(this);
-
-    fetch("login.php", {
-        method: "POST",
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            window.location.href = data.redirect;
-        } else {
-            isCorrectLogin = false; // Keep moving on hover if wrong
-            moveButtonRandomly();
-
-            if (data.error.includes("Username")) {
-                usernameError.textContent = data.error;
-                usernameError.style.display = "block";
-                usernameField.style.border = "2px solid red";
-            } else {
-                passwordError.textContent = data.error;
-                passwordError.style.display = "block";
-                passwordField.style.border = "2px solid red";
-            }
-        }
-    })
-    .catch(error => console.error("Error:", error));
-});
-
-// Check credentials while typing (but don't move button)
+// Check credentials while typing
 usernameField.addEventListener("input", checkCredentials);
 passwordField.addEventListener("input", checkCredentials);
+
 
 
     // Load Lottie animations
