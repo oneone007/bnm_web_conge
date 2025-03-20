@@ -25,21 +25,9 @@
             height: 100vh;
         }
 
-        .login-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-        }
+      
 
-        .login-box {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-            text-align: center;
-            width: 350px;
-        }
+    
 
 
         .subheading {
@@ -47,52 +35,12 @@
             margin-bottom: 20px;
         }
     
-        .textbox i { 
-            position: absolute; 
-            left: -10px; 
-            top: 50%; 
-            transform: translateY(-50%); 
-            color: #888; 
-        } 
-        .textbox {
-    position: relative;
-    margin-bottom: 20px;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Center everything */
-}
-
-.textbox input {
-    width: 100%; /* Ensure both fields have the same width */
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 16px;
-    text-align: left; /* Keep text alignment normal */
-    padding: 10px 10px 10px 40px; /* Add padding to the left for the icon */ 
-
-}
-
-
-        /* Password Container */
-  .password-container {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-}
 
 
 
-        /* Look animation */
-        #lookAnimation {
-            width: 60px;
-            height: 60px;
-            margin-bottom: -10px; /* Moves it closer to password field */
-            display: none;
-        }
+
+
+    
 
         /* Eye icon inside password field */
         #eyeIcon {
@@ -105,10 +53,8 @@
             cursor: pointer;
         }
 
-        .error-message {
-            color: red;
-            font-size: 14px;
-        }
+       
+
 
         input[type="submit"] {
             width: 100%;
@@ -185,26 +131,6 @@
 
 
 
-
-.login-btn {
-    background-color:rgb(12, 152, 207); /* Primary blue */
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    font-size: 16px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background 0.3s, box-shadow 0.3s;
-}
-
-.login-btn:hover {
-    background-color: #0056b3; /* Darker blue on hover */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.login-btn:active {
-    background-color: #004494;
-}
 
 @font-face {
     font-family: 'GrrrExtraLight';
@@ -291,6 +217,7 @@ body {
 }
 
 
+
     </style>
 </head>
 <body>
@@ -337,82 +264,262 @@ var animation = lottie.loadAnimation({
 
 </script>
 
-<div class="login-container">
+
+       
+<form class="form" id="loginForm" method="POST" action="db/login.php">
+
+  <div class="form-header">
+      <div class="title">Welcome to</div>
+      <div class="logo-text">bnm parapharm</div>
+      <img src="assets/tab.png" alt="Logo" class="logo">
+  </div>
+
+  <?php
+  if (isset($_GET['session_expired'])) {
+      echo "<p style='color: red; text-align: center;'>Your session has expired. Please log in again.</p>";
+  }
+  ?>
+
+  <input class="input" type="text" id="username" placeholder="Username" name="username" autocomplete="off" required>
+  <div class="error-message" id="usernameError"></div>
+
+  <!-- <div id="lookAnimation"></div> -->
+  <div class="password-container">
+      <input class="input" type="password" id="password" placeholder="Password" name="password" required>
+      <div id="eyeIcon"></div>
+      <div class="error-message" id="passwordError"></div>
+  </div>
+
+  <div class="content__or-text">
+      <span></span>
+      <span>OR</span>
+      <span></span>
+  </div>
+
+  <div class="signup-link">
+      <p>Don't have an account? <a href="signup">Sign Up</a></p>
+  </div>
+  <br>
+
+  <button type="submit" class="login-btn">Let's go →</button>
+</form>
 
 
-        <div class="login-box">
-            <!-- <img src="bnm.png" alt="Logo" class="logo"> -->
 
-<div id="ramadan-animation"></div>
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
-<script>
-var animation = lottie.loadAnimation({
-    container: document.getElementById('ramadan-animation'),
-    renderer: 'svg',
-    loop: true,
-    autoplay: true,
-    path: 'json_files/ramadan.json',
-    rendererSettings: {
-        clearCanvas: true,
-        preserveAspectRatio: 'xMidYMid meet',
-        progressiveLoad: true,
-        hideOnTransparent: true
-    }
-});
-
-// Slow down the animation (default speed is 1)
-animation.setSpeed(0.6); // Adjust to a slower speed (0.6x)
-
-// Change the color to #b5e0f1
-animation.addEventListener('DOMLoaded', function () {
-    let elements = document.querySelectorAll('#ramadan-animation svg *');
-    elements.forEach(el => el.style.fill = "#ffffff");
-});
-
-</script>       
-<div class="logo-text">bnm parapharm</div>
-<?php
-if (isset($_GET['session_expired'])) {
-    echo "<p style='color: red; text-align: center;'>Your session has expired. Please log in again.</p>";
+<style>
+.signup-link {
+    text-align: center;
+    font-size: 14px;
+    color: var(--font-color-sub);
 }
-?>
+
+.signup-link p {
+    margin: 0;
+}
+
+.signup-link a {
+    color: var(--main-color);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.3s, text-decoration 0.3s;
+}
+
+.signup-link a:hover {
+    color: var(--input-focus);
+    text-decoration: underline;
+}
+
+.form-header {
+    text-align: center;
+    width: 100%;
+}
+
+.logo {
+    max-width: 150px;
+}
+
+.logo-text {
+    font-family: 'GrrrExtraLight', sans-serif;
+    font-size: 40px;
+    font-weight: 200; /* Extra Light */
+    color: #C2A159; /* Gold-like color */
+    text-transform: lowercase;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    letter-spacing: 1px;
+}
 
 
-     <p class="subheading">Please enter your credentials to log in.</p>
+.login-btn {
+    background-color: var(--bg-color);
+    box-shadow: 4px 4px var(--main-color);
 
-    <form id="loginForm" method="POST" action="login.php">
-        <div class="textbox">
-            <i class="fas fa-user"></i> <!-- Username icon -->
-            <input type="text" id="username" placeholder="Username" name="username" autocomplete="off" required>
-            <div class="error-message" id="usernameError"></div>
-        </div>
+    color: var(--font-color);
+    border: 2px solid var(--main-color);
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s, box-shadow 0.3s;
+}
 
-        <div class="textbox password-container">
-            <div id="lookAnimation"></div> <!-- Look animation above password -->
-            <div class="password-container">
-                <i class="fas fa-lock"></i> <!-- Password icon -->
-                <input type="password" id="password" placeholder="Password" name="password" required>
-                <div id="eyeIcon"></div> <!-- Eye icon inside input field -->
-                <div class="error-message" id="passwordError"></div>
-            </div>
-        </div>
+.login-btn:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
 
-        <div class="signup-link">
-            <p>Don't have an account? <a href="signup">Sign Up</a></p>
-         <br>
-          
-            <button type="submit" class="login-btn">Login</button>
+.login-btn:active {
+    box-shadow: 0px 0px var(--main-color);
+    transform: translate(3px, 3px);}
+            /* Password Container */
 
-        </div>
+            
+  .password-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
 
-        <?php if (!empty($error)): ?>
-            <div class="error-message" id="errorMessage" style="display: block;">
-                <?php echo htmlspecialchars($error); ?>
-            </div>
-        <?php endif; ?>
 
-    </form>
-        </div>
+
+        /* Look animation */
+        #lookAnimation {
+    width: 50px;
+    height: 50px;
+    margin: 0 auto -10px auto; /* Center horizontally and adjust bottom */
+    display: none;
+
+}
+
+
+
+
+        /* Eye icon inside password field */
+        #eyeIcon {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+        }
+    .logo {
+  display: inline-block;
+  max-width: 100%; /* optional if you want it responsive */
+}
+ .error-message {
+            color: red;
+            font-size: 14px;
+        }
+
+    .form {
+        width: 350px;
+  --input-focus: #2d8cf0;
+  --font-color: #323232;
+  --font-color-sub: #666;
+  --bg-color: #fff;
+  --main-color: #323232;
+  padding: 20px;
+  background: lightgrey;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 20px;
+  border-radius: 5px;
+  border: 2px solid var(--main-color);
+  box-shadow: 4px 4px var(--main-color);
+  height:590px;
+}
+
+.title {
+  color: var(--font-color);
+  font-weight: 900;
+  font-size: 20px;
+  margin-bottom: -10px;
+}
+
+.title span {
+  color: var(--font-color-sub);
+  font-weight: 600;
+  font-size: 17px;
+}
+
+.input {
+  width: 320px;
+  height: 40px;
+  border-radius: 5px;
+  border: 2px solid var(--main-color);
+  background-color: var(--bg-color);
+  box-shadow: 4px 4px var(--main-color);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--font-color);
+  padding: 5px 10px;
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--font-color-sub);
+  opacity: 0.8;
+}
+
+.input:focus {
+  border: 2px solid var(--input-focus);
+}
+
+.login-with {
+  display: flex;
+  gap: 20px;
+}
+
+.button-log {
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  border-radius: 100%;
+  border: 2px solid var(--main-color);
+  background-color: var(--bg-color);
+  box-shadow: 4px 4px var(--main-color);
+  color: var(--font-color);
+  font-size: 25px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+  fill: var(--main-color);
+}
+
+
+
+
+.content__or-text {
+    display: flex;
+    align-items: center;
+    text-transform: uppercase;
+    font-size: 13px;
+    gap: 10px;
+    width: 100%;
+    height: 30px; /* Fixed height */
+}
+
+.content__or-text span:nth-child(2) {
+    white-space: nowrap;
+}
+
+.content__or-text span:nth-child(1),
+.content__or-text span:nth-child(3) {
+    flex-grow: 1;
+    height: 1px;
+    background-color: #555; /* Line color */
+}
+
+</style>
     </div>
 <!-- Rocket animation container (Initially hidden) -->
 <!-- Rocket animation container (Initially hidden) -->
@@ -446,7 +553,7 @@ const moveButtonRandomly = () => {
     }
 };
 
-// Function to check credentials dynamically while typing
+// Check credentials dynamically while typing
 const checkCredentials = () => {
     const username = usernameField.value.trim();
     const password = passwordField.value.trim();
@@ -455,9 +562,8 @@ const checkCredentials = () => {
         return;
     }
 
-    // Send data using PHP instead of JSON
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", "check_credentials.php", true);
+    xhr.open("POST", "db/check_credentials.php", true);
     xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
 
     xhr.onreadystatechange = function () {
@@ -487,14 +593,20 @@ const checkCredentials = () => {
                     passwordError.style.display = "block";
                     passwordField.style.border = "2px solid red";
                 }
-
-                moveButtonRandomly();
             }
         }
     };
 
     xhr.send(`username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`);
 };
+
+// Attach hover event to move the button ONLY when credentials are wrong
+loginButton.addEventListener("mouseover", () => {
+    if (!isCorrectLogin) {
+        moveButtonRandomly();
+    }
+});
+
 
 // Move button away only on hover if credentials are incorrect
 loginButton.addEventListener("mouseover", () => {
@@ -513,8 +625,8 @@ passwordField.addEventListener("input", checkCredentials);
     let eyeIcon = lottie.loadAnimation({
         container: document.getElementById('eyeIcon'),
         renderer: 'svg',
-        loop: false,
-        autoplay: false,
+        loop: true,
+        autoplay: true,
         path: 'json_files/eye.json' // Replace with correct path
     });
     

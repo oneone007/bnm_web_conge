@@ -653,3 +653,4 @@ ORDER BY
 ;
 
 ----------------------------
+SELECT * FROM c_order WHERE c_order_id = '3216369';

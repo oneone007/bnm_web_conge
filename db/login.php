@@ -18,7 +18,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         if ($password === $user['password']) { // Plain text comparison
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
-            header("Location: Main"); // Redirect to main page on success
+            header("Location: ../Main"); // Redirect to main page on success
             exit();
         } else {
             $_SESSION['login_error'] = "Incorrect password";
@@ -30,6 +30,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $stmt->close();
     $conn->close();
 
-    header("Location: BNM"); // Redirect back to login page with error
+    header("Location: ../BNM"); // Redirect back to login page with error
     exit();
 }
