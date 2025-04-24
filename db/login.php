@@ -18,7 +18,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         if ($password === $user['password']) { // Plain text comparison
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
-            header("Location: ../Main"); // Redirect to main page on success
+            $_SESSION['Role'] = $user['Role'];  // Store role in session
+            
+            // Redirect based on role
+            if ($user['role'] === 'admin') {
+                header("Location: ../Main"); // Admin page
+            } else {
+                header("Location: ../Main"); // Normal user page
+            }
             exit();
         } else {
             $_SESSION['login_error'] = "Incorrect password";

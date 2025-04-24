@@ -35,13 +35,14 @@ thead {
 }
 
 th,
-td {
-    white-space: nowrap;
-    /* Prevents text wrapping */
+  td {
     text-align: left;
     padding: 10px;
     border: 1px solid #ddd;
-}
+    white-space: normal; /* ALLOW MULTILINE */
+    word-break: break-word; /* Wrap long words */
+    line-height: 1.4;
+  }
 
 .dark .table-container {
     border-color: #374151;

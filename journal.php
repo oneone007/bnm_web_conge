@@ -25,6 +25,12 @@ if (isset($_SESSION['last_activity'])) {
 
 // Update last activity timestamp
 $_SESSION['last_activity'] = time();
+
+// Restrict access for 'vente' and 'achat'
+if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['vente', 'achat'])) {
+    header("Location: Acess_Denied");
+    exit();
+}
 ?>
 
 <!DOCTYPE html>
@@ -33,7 +39,7 @@ $_SESSION['last_activity'] = time();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BNM</title>
+    <title>BNM Web</title>
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
@@ -353,96 +359,33 @@ document.addEventListener("DOMContentLoaded", function() {
 
 <!-- Sidebar -->
 <div id="sidebar-container"></div>
-
 <script>
-    // Fetch sidebar content dynamically
- fetch("side")
-    .then(response => response.text())
-    .then(html => {
-        let container = document.getElementById("sidebar-container");
-        let tempDiv = document.createElement("div");
-        tempDiv.innerHTML = html;
+fetch("side")
+  .then(response => response.text())
+  .then(html => {
+    const container = document.getElementById("sidebar-container");
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = html;
+    container.innerHTML = tempDiv.innerHTML;
 
-        // Insert sidebar content into the page
-        container.innerHTML = tempDiv.innerHTML;
+    // After DOM injection, dynamically load sidebar script
+    const script = document.createElement('script');
+    script.src = 'sidebar.js'; // Move all logic into sidebar.js
+    document.body.appendChild(script);
+  })
+  .catch(error => console.error("Error loading sidebar:", error));
 
-        // Reattach event listeners for submenu toggles (Products, Recaps)
-        const productsToggle = document.getElementById("products-toggle");
-        if (productsToggle) {
-            productsToggle.addEventListener("click", function () {
-                let submenu = document.getElementById("products-submenu");
-                submenu.classList.toggle("hidden");
-            });
-        }
-
-        const recapsToggle = document.getElementById("recaps-toggle");
-        if (recapsToggle) {
-            recapsToggle.addEventListener("click", function () {
-                let submenu = document.getElementById("recaps-submenu");
-                submenu.classList.toggle("hidden");
-            });
-        }
-
-        // Initialize Lottie animation after sidebar is inserted
-        const ramAnimation = document.getElementById('ram-animation');
-        if (ramAnimation) {
-            lottie.loadAnimation({
-                container: ramAnimation,
-                renderer: 'svg',
-                loop: true,
-                autoplay: true,
-                path: 'json_files/ram.json',
-                rendererSettings: {
-                    clearCanvas: true,
-                    preserveAspectRatio: 'xMidYMid meet',
-                    progressiveLoad: true,
-                    hideOnTransparent: true
-                }
-            });
-        }
-
-        // Sidebar toggle functionality
-        const sidebarToggle = document.getElementById('sidebarToggle');
-        const sidebar = document.getElementById('sidebar');
-        const content = document.querySelector('.content');
-
-        if (sidebarToggle && sidebar && content) {
-            sidebarToggle.addEventListener('click', () => {
-                sidebar.classList.toggle('sidebar-hidden');
-                content.classList.toggle('content-full');
-
-                // Adjust button position when sidebar is hidden or shown
-                if (sidebar.classList.contains('sidebar-hidden')) {
-                    sidebarToggle.style.left = '10px';  // Sidebar hidden
-                } else {
-                    sidebarToggle.style.left = '260px'; // Sidebar visible
-                }
-            });
-        } else {
-            console.error("Sidebar or Toggle Button not found!");
-        }
-
-        // Auto-hide sidebar when not hovered
-        document.addEventListener('mousemove', (event) => {
-            if (event.clientX < 50) {  // Mouse near the left edge (50px)
-                sidebar.classList.remove('sidebar-hidden');
-                content.classList.remove('content-full');
-            }
-        });
-
-        // Hide sidebar when the mouse leaves it
-        sidebar.addEventListener('mouseleave', () => {
-            sidebar.classList.add('sidebar-hidden');
-            content.classList.add('content-full');
-        });
-
-    })
-    .catch(error => console.error("Error loading sidebar:", error));
 
 </script>
     <!-- Main Content -->
     <div id="content" class="content flex-grow p-4">
 
+
+    <div class="flex justify-center items-center mb-6">
+        <h1 class="text-5xl font-bold dark:text-white text-center  ">
+        Journal de Vente Fact 
+            </h1>
+        </div>
 
         <!-- Filters -->
    
@@ -631,6 +574,33 @@ document.addEventListener("DOMContentLoaded", function() {
 
         <br>
         
+        <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 p-6 text-center">
+    <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Total journal de vente</h2>
+    <table class="min-w-full border-collapse text-sm text-left dark:text-white">
+    <thead>
+        <tr class="table-header dark:bg-gray-700">
+
+            <th data-column="totalTotalHT" onclick="sortJournalVenteTable('TotalHT')" class="border px-4 py-2">Total HT</th>
+            <th data-column="totalTotalTVA" onclick="sortJournalVenteTable('TotalTVA')" class="border px-4 py-2">Total TVA</th>
+            <th data-column="totalTotalDT" onclick="sortJournalVenteTable('TotalDT')" class="border px-4 py-2">Total DT</th>
+            <th data-column="totalTotalTTC" onclick="sortJournalVenteTable('TotalTTC')" class="border px-4 py-2">Total TTC</th>
+            <th data-column="totalNETAPAYER" onclick="sortJournalVenteTable('NETAPAYER')" class="border px-4 py-2">Net à Payer</th>
+
+
+        </tr>
+    </thead>
+    <tbody id="totaljournal-vente-table" class="dark:bg-gray-800">
+
+  
+    </tbody>
+</table>
+
+
+</div>
+
+<br> <br>
+
+
         <!-- Table -->
     <!-- Table -->
 <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 p-6 text-center">
@@ -638,7 +608,9 @@ document.addEventListener("DOMContentLoaded", function() {
     <table class="min-w-full border-collapse text-sm text-left dark:text-white">
     <thead>
         <tr class="table-header dark:bg-gray-700">
-        <th data-column="DocumentNo" onclick="sortJournalVenteTable('DocumentNo')" class="border px-4 py-2">Document No</th>
+        <th data-column="DocumentNo" onclick="sortJournalVenteTable('DocumentNo')" class="border px-4 py-2">
+    Document No <span id="sort-icon-DocumentNo"></span>
+</th>
         <th data-column="DateInvoiced" onclick="sortJournalVenteTable('DateInvoiced')" class="border px-4 py-2">Date Invoiced</th>
 
             <th data-column="Client" onclick="sortJournalVenteTable('Client')" class="border px-4 py-2">Client</th>
@@ -667,7 +639,15 @@ document.addEventListener("DOMContentLoaded", function() {
 </div>
 
 
-
+<div class="flex justify-center items-center mt-4 text-sm text-gray-700 dark:text-white">
+    <div id="pagination-info" class="mr-4">Page 1</div>
+    <div class="space-x-2">
+        <button onclick="goToFirstPage()" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300">First</button>
+        <button onclick="goToPreviousPage()" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300">Previous</button>
+        <button onclick="goToNextPage()" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300">Next</button>
+        <button onclick="goToLastPage()" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300">Last</button>
+    </div>
+</div>
 
 
      
@@ -750,7 +730,139 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 });
 
-         
+    // Show loader animation
+function showJournalVenteLoader() {
+    document.getElementById("journal-vente-table").innerHTML = `
+        <tr id="loading-row">
+            <td colspan="10" class="text-center p-4">Loading...</td>
+        </tr>
+    `;
+}
+
+// Hide loader after fetching data
+function hideJournalVenteLoader() {
+    const loaderRow = document.getElementById("loading-row");
+    if (loaderRow) loaderRow.remove();
+}
+
+// Format number with thousand separators & two decimals
+function formatNumber(value) {
+    if (value === null || value === undefined || isNaN(value)) return "";
+    return parseFloat(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function formatDate(dateString) {
+    if (!dateString) return ''; // Return an empty string if no date provided
+
+    const date = new Date(dateString);
+    
+    // Format the date as 'Wed, 26 Mar 2025'
+    const options = { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' };
+    return date.toLocaleDateString('en-GB', options); // 'en-GB' for British date format
+}
+
+
+
+ // Function to fetch and display total journal data
+async function fetchAndDisplayTotalJournal() {
+    const startDate = document.getElementById("start-date").value;
+    const endDate = document.getElementById("end-date").value;
+    
+    try {
+        // Fetch data from the API endpoint
+        const response = await fetch(`http://127.0.0.1:5000/totalJournal?start_date=${startDate}&end_date=${endDate}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Format numbers with thousands separators and 2 decimal places
+        const formatNumber = (num) => {
+            return new Intl.NumberFormat('fr-FR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(num);
+        };
+        
+        // Create the table row with the data
+        const tableBody = document.getElementById('totaljournal-vente-table');
+        tableBody.innerHTML = `
+            <tr>
+                <td class="border px-4 py-2">${formatNumber(data.TotalHT)}</td>
+                <td class="border px-4 py-2">${formatNumber(data.TotalTVA)}</td>
+                <td class="border px-4 py-2">${formatNumber(data.TotalDT)}</td>
+                <td class="border px-4 py-2">${formatNumber(data.TotalTTC)}</td>
+                <td class="border px-4 py-2">${formatNumber(data.NETAPAYER)}</td>
+            </tr>
+        `;
+        
+    } catch (error) {
+        console.error('Error fetching total journal data:', error);
+        // Display error message in the table
+        document.getElementById('totaljournal-vente-table').innerHTML = `
+            <tr>
+                <td colspan="5" class="border px-4 py-2 text-red-500">Error loading data: ${error.message}</td>
+            </tr>
+        `;
+    }
+}
+
+// Call the function when the page loads or when date inputs change
+document.addEventListener('DOMContentLoaded', fetchAndDisplayTotalJournal);
+
+// If you have date inputs that should trigger a refresh when changed:
+document.getElementById("start-date")?.addEventListener('change', fetchAndDisplayTotalJournal);
+document.getElementById("end-date")?.addEventListener('change', fetchAndDisplayTotalJournal);
+
+
+
+// Optional: Auto-fetch on page load or hook it to a filter button
+
+
+
+
+let journalData = [];
+let currentPage = 1;
+const rowsPerPage = 8;
+let sortColumn = null;
+let sortDirection = 'asc'; // or 'desc'
+// Sorting function (as referenced in your table headers)
+function sortJournalVenteTable(column) {
+    if (sortColumn === column) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortColumn = column;
+        sortDirection = 'asc';
+    }
+
+    journalData.sort((a, b) => {
+        let valA = a[column];
+        let valB = b[column];
+
+        if (column === 'DateInvoiced') {
+            valA = new Date(valA);
+            valB = new Date(valB);
+        }
+
+        if (typeof valA === 'number' && typeof valB === 'number') {
+            return sortDirection === 'asc' ? valA - valB : valB - valA;
+        }
+
+        valA = (valA || '').toString().toUpperCase();
+        valB = (valB || '').toString().toUpperCase();
+
+        if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+        if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    updateSortIcons(); // Call to update icons
+    currentPage = 1;
+    renderPage();
+}
+
+
 // Fetch data when filters are applied for journal vente
 async function fetchJournalVente() {
     const startDate = document.getElementById("start-date").value;
@@ -780,68 +892,96 @@ async function fetchJournalVente() {
     }
 }
 
-// Show loader animation
-function showJournalVenteLoader() {
-    document.getElementById("journal-vente-table").innerHTML = `
-        <tr id="loading-row">
-            <td colspan="10" class="text-center p-4">Loading...</td>
-        </tr>
-    `;
-}
 
-// Hide loader after fetching data
-function hideJournalVenteLoader() {
-    const loaderRow = document.getElementById("loading-row");
-    if (loaderRow) loaderRow.remove();
-}
-
-// Format number with thousand separators & two decimals
-function formatNumber(value) {
-    if (value === null || value === undefined || isNaN(value)) return "";
-    return parseFloat(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-// Update table with fetched data for journal vente
 function updateJournalVenteTable(data) {
+    journalData = data || [];
+    currentPage = 1;
+    renderPage();
+}
+
+function renderPage() {
     const tableBody = document.getElementById("journal-vente-table");
     tableBody.innerHTML = "";
 
-    if (!data || data.length === 0) {
+    const start = (currentPage - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+    const pageData = journalData.slice(start, end);
+
+    if (pageData.length === 0) {
         tableBody.innerHTML = `<tr><td colspan="10" class="text-center p-4">No data available</td></tr>`;
-        return;
     }
 
-    // Loop through the data and add rows
-    data.forEach(row => {
+    pageData.forEach(row => {
         const tr = document.createElement("tr");
         tr.className = "dark:bg-gray-700 cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600";
         tr.innerHTML = `
             <td class="border px-4 py-2 dark:border-gray-600">${row.DocumentNo}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${row.DateInvoiced}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatDate(row.DateInvoiced)}</td>
             <td class="border px-4 py-2 dark:border-gray-600">${row.Client}</td>
             <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.TotalHT)}</td>
             <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.TotalTVA)}</td>
             <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.TotalDT)}</td>
             <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.TotalTTC)}</td>
             <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.NETAPAYER)}</td>
-<td class="border px-4 py-2 dark:border-gray-600">
-    ${row.Region ? row.Region.replace(/</g, "&lt;").replace(/>/g, "&gt;") : "Aucune"}
-</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.Region ? row.Region.replace(/</g, "&lt;").replace(/>/g, "&gt;") : "Aucune"}</td>
             <td class="border px-4 py-2 dark:border-gray-600">${row.Entreprise || "N/A"}</td>
         `;
-
-        // Add click event to fill in the search input
         tr.addEventListener("click", () => {
             const searchInput = document.getElementById("client_journal");
             if (row.Client) {
                 searchInput.value = row.Client;
-                searchInput.dispatchEvent(new Event("input")); // Trigger input event
+                searchInput.dispatchEvent(new Event("input"));
             }
         });
-
         tableBody.appendChild(tr);
     });
+
+    updatePaginationInfo();
 }
+function updateSortIcons() {
+    const headers = document.querySelectorAll("th[data-column]");
+    headers.forEach(th => {
+        const col = th.getAttribute("data-column");
+        const icon = th.querySelector("span");
+        if (!icon) return;
+        if (col === sortColumn) {
+            icon.innerHTML = sortDirection === 'asc' ? '▲' : '▼';
+        } else {
+            icon.innerHTML = '';
+        }
+    });
+}
+
+function updatePaginationInfo() {
+    const totalPages = Math.ceil(journalData.length / rowsPerPage) || 1;
+    document.getElementById("pagination-info").textContent = `Page ${currentPage} of ${totalPages}`;
+}
+
+function goToFirstPage() {
+    currentPage = 1;
+    renderPage();
+}
+
+function goToPreviousPage() {
+    if (currentPage > 1) {
+        currentPage--;
+        renderPage();
+    }
+}
+
+function goToNextPage() {
+    const totalPages = Math.ceil(journalData.length / rowsPerPage);
+    if (currentPage < totalPages) {
+        currentPage++;
+        renderPage();
+    }
+}
+
+function goToLastPage() {
+    currentPage = Math.ceil(journalData.length / rowsPerPage);
+    renderPage();
+}
+
 
 
 // Attach event listeners

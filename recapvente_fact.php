@@ -25,6 +25,11 @@ if (isset($_SESSION['last_activity'])) {
 
 // Update last activity timestamp
 $_SESSION['last_activity'] = time();
+// Restrict access for 'vente' and 'achat'
+if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['vente', 'achat'])) {
+    header("Location: Acess_Denied");
+    exit();
+}
 ?>
 
 
@@ -34,16 +39,522 @@ $_SESSION['last_activity'] = time();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BNM</title>
+    <title>BNM Web</title>
     <script src="main.js" defer></script>
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
                 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
                 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
-    <link rel="stylesheet" href="recapventefac.css">
+    <!-- <link rel="stylesheet" href="recapvente.css"> -->
+
+<style>
+
+body {
+    font-family: 'Inter', sans-serif;
+}
 
 
+.table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    overflow-x: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .table-container table {
+    width: 100%;
+    table-layout: auto;
+    border-collapse: collapse;
+  }
+  
+  thead {
+    position: sticky;
+    top: 0;
+    background-color: #f3f4f6;
+    z-index: 10;
+  }
+  
+  th,
+  td {
+    text-align: left;
+    padding: 10px;
+    border: 1px solid #ddd;
+    white-space: normal; /* ALLOW MULTILINE */
+    word-break: break-word; /* Wrap long words */
+    line-height: 1.4;
+  }
+  
+  tbody tr {
+    height: auto; /* Allow row height to adjust */
+  }
+  
+  .table-container.placement-table {
+    flex: 0.5;
+    width: 10px;
+  }
+.dark .table-container {
+    border-color: #374151;
+}
+
+.dark .table-header {
+    background-color: #374151;
+    color: #f9fafb;
+    /* White text in dark mode */
+}
+
+
+.dark .table-row:nth-child(odd) {
+    background-color: #1f2937;
+    color: #f9fafb;
+    /* White text on dark background */
+}
+
+.dark .table-row:nth-child(even) {
+    background-color: #474d53;
+    color: #ececec;
+}
+
+
+.table-wrapper {
+    display: flex;
+    justify-content: space-between;
+    /* Ensures tables are spaced apart */
+    gap: 20px;
+    /* Adds spacing between tables */
+}
+
+.paginatio-wrapper {
+    display: flex;
+    justify-content: center;
+    /* Ensures tables are spaced apart */
+    gap: 250px;
+    /* Adds spacing between tables */
+}
+
+/* .download-wrapper {
+    display: flex;
+
+    gap: 550px;
+} */
+
+.title-wrapper {
+    display: flex;
+
+    /* Ensures tables are spaced apart */
+    gap: 730px;
+    /* Adds spacing between tables */
+}
+
+
+
+
+
+
+.sidebar {
+    min-width: 200px;
+    max-width: 250px;
+    background-color: #f9fafb;
+    border-right: 1px solid #e5e7eb;
+    transition: transform 0.3s ease-in-out;
+    position: fixed;
+    height: 100vh;
+    z-index: 40;
+}
+
+.sidebar-hidden {
+    transform: translateX(-100%);
+}
+
+.content {
+    margin-left: 250px;
+    /* Adjust this value based on the sidebar width */
+    transition: margin-left 0.3s ease-in-out;
+    width: calc(100% - 250px);
+    /* Adjust this value based on the sidebar width */
+}
+
+.content-full {
+    margin-left: 0;
+    width: 100%;
+}
+
+.table-header {
+    background-color: #f3f4f6;
+    text-align: left;
+    color: #000;
+    /* Default text color */
+    position: sticky;
+    top: 0;
+}
+
+.table-row {
+    color: #000;
+    /* Default black text */
+}
+
+.table-row:nth-child(odd) {
+    background-color: #f9fafb;
+}
+
+/* Dark mode styles */
+.dark .sidebar {
+    background-color: #1f2937;
+    border-right-color: #374151;
+}
+
+
+
+.dark body {
+    background-color: #111827;
+    color: #010911;
+}
+
+
+/* Dark Mode */
+html.dark .sidebar {
+    background-color: #1f2937;
+    border-right-color: #374151;
+}
+
+html.dark body {
+    background-color: #111827;
+    color: white;
+}
+
+/* Dark Mode Toggle - Styled Checkbox */
+/* Hide Default Checkbox */
+/* Hide Default Checkbox */
+
+
+
+
+.dark td {
+    color: #000000 !important;
+    /* Force black text in dark mode */
+    background-color: #d1d5db;
+    /* Light gray background for contrast */
+}
+
+.dark h2 {
+    color: #000000 !important;
+    /* Force black text in dark mode */
+    background-color: #d1d5db;
+    /* Light gray background for contrast */
+}
+
+
+.dark label {
+    color: white !important;
+}
+
+/* Positioning the Dark Mode Toggle on Top Right */
+
+.download-container {
+display: flex;
+justify-content: flex-end;
+padding: 0 16px 12px 16px;
+}
+.download-wrapper {
+display: flex;
+flex-wrap: wrap;
+justify-content: center;
+gap: 50px; /* Reduced for responsiveness */
+margin-top: 20px;
+padding: 10px;
+}
+
+.download-wrapper button {
+display: flex;
+align-items: center;
+gap: 10px;
+background-color: white;
+border: 1px solid #d1d5db;
+color: #374151;
+padding: 12px 24px;
+border-radius: 8px;
+box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+transition: all 0.3s ease-in-out;
+}
+
+.download-wrapper button:hover {
+background-color: #f3f4f6;
+transform: scale(1.05);
+}
+
+.download-wrapper button img {
+width: 24px;
+height: 24px;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+.download-wrapper {
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.download-wrapper button {
+  width: 90%; /* Full width for smaller screens */
+  justify-content: center;
+}
+}
+
+.search-container {
+display: grid;
+grid-template-columns: repeat(3, minmax(250px, 1fr)); /* 3 columns per row */
+gap: 16px;
+padding: 20px;
+background: #f9fafb;
+border-radius: 12px;
+box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.search-container label {
+display: block;
+font-weight: 600;
+color: #374151;
+margin-bottom: 6px;
+}
+
+.search-container input {
+width: 100%;
+padding: 12px;
+border: 1px solid #d1d5db;
+border-radius: 8px;
+font-size: 16px;
+transition: all 0.3s ease-in-out;
+background-color: white;
+color: #111827;
+box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.search-container input:focus {
+outline: none;
+border-color: #2563eb;
+box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
+}
+
+/* Dark Mode */
+.dark .search-container {
+background: #1f2937;
+box-shadow: none;
+}
+
+.dark .search-container label {
+color: #e5e7eb;
+}
+
+.dark .search-container input {
+background-color: #374151;
+color: white;
+border: 1px solid #4b5563;
+box-shadow: none;
+}
+
+.dark .search-container input:focus {
+border-color: #3b82f6;
+box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+.search-container {
+  grid-template-columns: repeat(2, minmax(250px, 1fr)); /* 2 per row on tablets */
+}
+}
+
+@media (max-width: 768px) {
+.search-container {
+  grid-template-columns: 1fr; /* 1 per row on mobile */
+}
+}
+
+
+.date-container {
+display: flex;
+flex-wrap: wrap;
+gap: 16px;
+align-items: center;
+padding: 16px;
+background: #f9fafb;
+border-radius: 12px;
+box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+max-width: 600px; /* Adjust width as needed */
+width: 100%; /* Ensures it doesn't exceed max-width */
+margin: 0 auto; /* Centers the container */
+}
+
+@media (max-width: 768px) {
+.date-container {
+flex-direction: column;
+gap: 12px;
+align-items: flex-start;
+max-width: 90%; /* Allows slight expansion on smaller screens */
+}
+}
+
+
+.date-container label {
+font-weight: 600;
+color: #374151;
+}
+
+.date-container input {
+padding: 10px 14px;
+border: 1px solid #d1d5db;
+border-radius: 8px;
+font-size: 16px;
+transition: all 0.3s ease-in-out;
+background-color: white;
+color: #111827;
+box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.date-container input:focus {
+outline: none;
+border-color: #2563eb;
+box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
+}
+
+/* Dark Mode */
+.dark .date-container {
+background: #1f2937;
+box-shadow: none;
+}
+
+.dark .date-container label {
+color: #e5e7eb;
+}
+
+.dark .date-container input {
+background-color: #374151;
+color: white;
+border: 1px solid #4b5563;
+}
+
+.dark .date-container input:focus {
+border-color: #3b82f6;
+box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+.date-container {
+flex-direction: column;
+gap: 12px;
+align-items: flex-start;
+}
+}
+
+/* Hide Default Checkbox */
+/* Hide Default Checkbox */
+.checkbox {
+display: none;
+}
+
+/* Toggle Background */
+.checkbox-label {
+width: 60px;
+height: 30px;
+background: #f97316; /* Light Mode Orange */
+display: flex;
+align-items: center;
+border-radius: 50px;
+position: relative;
+cursor: pointer;
+padding: 5px;
+transition: background 0.3s ease-in-out;
+}
+
+/* Ball */
+.ball {
+width: 24px;
+height: 24px;
+background: white;
+position: absolute;
+border-radius: 50%;
+transition: transform 0.3s ease-in-out;
+left: 5px;
+}
+
+/* Icons */
+.icon {
+font-size: 16px;
+position: absolute;
+top: 50%;
+transform: translateY(-50%);
+transition: opacity 0.3s ease-in-out;
+}
+
+/* Sun (Left) */
+.sun {
+left: 10px;
+color: white;
+}
+
+/* Moon (Right) */
+.moon {
+right: 10px;
+color: white;
+opacity: 0; /* Hidden in Light Mode */
+}
+
+/* Dark Mode */
+html.dark .checkbox-label {
+background: #1f2937; /* Dark Mode Gray */
+}
+
+html.dark .ball {
+transform: translateX(30px);
+}
+
+html.dark .sun {
+opacity: 0; /* Hide Sun */
+}
+
+html.dark .moon {
+opacity: 1; /* Show Moon */
+}
+
+/* Theme Switcher Position */
+#themeSwitcher {
+position: sticky;
+top: 10px;
+right: 10px;
+padding: 10px;
+z-index: 50;
+}
+
+
+
+
+
+.selected-row {
+background-color: #d1d5db !important; /* Light gray */
+font-weight: bold;
+}
+
+/* Sidebar Hidden by Default */
+.sidebar-hidden {
+    transform: translateX(-100%);
+}
+
+/* Sidebar Appears Smoothly */
+.sidebar {
+    transition: transform 0.3s ease-in-out;
+}
+
+/* Sidebar Stays Open Until Mouse Leaves */
+.sidebar:hover {
+    transform: translateX(0);
+}
+</style>
 </head>
 
 <body class="flex h-screen bg-gray-100 dark:bg-gray-900">
@@ -52,7 +563,6 @@ $_SESSION['last_activity'] = time();
 
     <!-- Dark/Light Mode Toggle Button -->
 <!-- Dark/Light Mode Toggle Button -->
- <!-- Dark/Light Mode Toggle Button -->
 
   <!-- Dark Mode Toggle (Top Right) -->
 <!-- From Uiverse.io by Galahhad --> 
@@ -315,37 +825,27 @@ $_SESSION['last_activity'] = time();
   -ms-transform: translateY(-50%);
   transform: translateY(-50%);
 }
+
+
+  /* Resizable Columns */
+  th.resizable {
+    position: relative;
+  }
+  
+  th.resizable .resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 5px;
+    cursor: col-resize;
+    user-select: none;
+    height: 100%;
+  }
+  .resizer:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
 </style>
-
-
-
-<!-- Include SweetAlert2 Library (Add this to your HTML head if not already included) -->
-
-<!-- Include Lottie and SweetAlert2 -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
-
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    Swal.fire({
-        title: "You are in Facturation Server!",
-        html: '<div id="lte-alert-icon" style="width:150px; height:150px; margin:0 auto;"></div>',
-        
-        confirmButtonText: "OK",
-        allowOutsideClick: false,
-        didOpen: () => {
-            // Load Lottie Animation
-            lottie.loadAnimation({
-                container: document.getElementById("lte-alert-icon"),
-                renderer: "svg",
-                loop: true,
-                autoplay: true,
-                path: "json_files/alrt.json" // Make sure this file is accessible
-            });
-        }
-    });
-});
-</script>
 
 
 
@@ -363,99 +863,36 @@ document.addEventListener("DOMContentLoaded", function() {
 <!-- Sidebar -->
 <div id="sidebar-container"></div>
 
+
 <script>
-    // Fetch sidebar content dynamically
- fetch("side")
-    .then(response => response.text())
-    .then(html => {
-        let container = document.getElementById("sidebar-container");
-        let tempDiv = document.createElement("div");
-        tempDiv.innerHTML = html;
+fetch("side")
+  .then(response => response.text())
+  .then(html => {
+    const container = document.getElementById("sidebar-container");
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = html;
+    container.innerHTML = tempDiv.innerHTML;
 
-        // Insert sidebar content into the page
-        container.innerHTML = tempDiv.innerHTML;
+    // After DOM injection, dynamically load sidebar script
+    const script = document.createElement('script');
+    script.src = 'sidebar.js'; // Move all logic into sidebar.js
+    document.body.appendChild(script);
+  })
+  .catch(error => console.error("Error loading sidebar:", error));
 
-        // Reattach event listeners for submenu toggles (Products, Recaps)
-        const productsToggle = document.getElementById("products-toggle");
-        if (productsToggle) {
-            productsToggle.addEventListener("click", function () {
-                let submenu = document.getElementById("products-submenu");
-                submenu.classList.toggle("hidden");
-            });
-        }
-
-        const recapsToggle = document.getElementById("recaps-toggle");
-        if (recapsToggle) {
-            recapsToggle.addEventListener("click", function () {
-                let submenu = document.getElementById("recaps-submenu");
-                submenu.classList.toggle("hidden");
-            });
-        }
-
-        // Initialize Lottie animation after sidebar is inserted
-        const ramAnimation = document.getElementById('ram-animation');
-        if (ramAnimation) {
-            lottie.loadAnimation({
-                container: ramAnimation,
-                renderer: 'svg',
-                loop: true,
-                autoplay: true,
-                path: 'json_files/ram.json',
-                rendererSettings: {
-                    clearCanvas: true,
-                    preserveAspectRatio: 'xMidYMid meet',
-                    progressiveLoad: true,
-                    hideOnTransparent: true
-                }
-            });
-        }
-
-        // Sidebar toggle functionality
-        const sidebarToggle = document.getElementById('sidebarToggle');
-        const sidebar = document.getElementById('sidebar');
-        const content = document.querySelector('.content');
-
-        if (sidebarToggle && sidebar && content) {
-            sidebarToggle.addEventListener('click', () => {
-                sidebar.classList.toggle('sidebar-hidden');
-                content.classList.toggle('content-full');
-
-                // Adjust button position when sidebar is hidden or shown
-                if (sidebar.classList.contains('sidebar-hidden')) {
-                    sidebarToggle.style.left = '10px';  // Sidebar hidden
-                } else {
-                    sidebarToggle.style.left = '260px'; // Sidebar visible
-                }
-            });
-        } else {
-            console.error("Sidebar or Toggle Button not found!");
-        }
-
-        // Auto-hide sidebar when not hovered
-        document.addEventListener('mousemove', (event) => {
-            if (event.clientX < 50) {  // Mouse near the left edge (50px)
-                sidebar.classList.remove('sidebar-hidden');
-                content.classList.remove('content-full');
-            }
-        });
-
-        // Hide sidebar when the mouse leaves it
-        sidebar.addEventListener('mouseleave', () => {
-            sidebar.classList.add('sidebar-hidden');
-            content.classList.add('content-full');
-        });
-
-    })
-    .catch(error => console.error("Error loading sidebar:", error));
 
 </script>
-
 
 
 
     <!-- Main Content -->
     <div id="content" class="content flex-grow p-4">
 
+    <div class="flex justify-center items-center mb-6">
+        <h1 class="text-5xl font-bold dark:text-white text-center  ">
+        Reacap Vente Facturation
+            </h1>
+        </div>
 
         <!-- Filters -->
 
@@ -501,7 +938,6 @@ document.addEventListener("DOMContentLoaded", function() {
             <span>Total Recap Download</span>
         </button> -->
 
-        
         <div class="container">
   <button id="downloadExcel_totalrecap" class="button">
     <img src="assets/excel.png" alt="Excel Icon" class="icon" style="width: 24px; height: 24px;" />
@@ -533,6 +969,13 @@ document.addEventListener("DOMContentLoaded", function() {
   justify-content: center;
   width: 100%;
   margin: 0 auto;
+}
+.dark .button .text {
+  color: #000;  /* Black text */
+}
+
+.dark .button .text span {
+  color: #000;  /* Ensures each span is also black */
 }
 
 
@@ -636,10 +1079,23 @@ document.addEventListener("DOMContentLoaded", function() {
 
 }
 
+th {
+    position: relative;
+}
+
+.resizer {
+    background: transparent;
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 1;
+}
+
+
 </style>
-
- 
-
 
         <br>
         
@@ -707,8 +1163,7 @@ document.addEventListener("DOMContentLoaded", function() {
       <span style="transition-duration: 700ms">e</span>
       <span style="transition-duration: 750ms">l</span>
     </p>
-  </button>  
-  <button id="download-product-excel" class="button">
+  </button>  <button id="download-product-excel" class="button">
     <img src="assets/excel.png" alt="Excel Icon" class="icon" style="width: 24px; height: 24px;" />
     <p class="text">
       <span style="transition-duration: 100ms">D</span>
@@ -726,8 +1181,7 @@ document.addEventListener("DOMContentLoaded", function() {
       <span style="transition-duration: 700ms">e</span>
       <span style="transition-duration: 750ms">l</span>
     </p>
-  </button>  
-            
+  </button>
              <!-- <button id="download-product-excel"
                 class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
                 <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
@@ -749,6 +1203,7 @@ document.addEventListener("DOMContentLoaded", function() {
         
                 <div class="overflow-x-auto">
 
+                
 
                     <table class="min-w-full border-collapse text-sm text-left dark:text-white">
                         <thead>
@@ -778,8 +1233,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
                 </div>
-                <!-- Pagination for First Table -->
-            </div>
+                <div id="pagination" class="mt-4 flex justify-center items-center gap-4 text-sm dark:text-white">
+    <button id="firstPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">First</button>
+    <button id="prevPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Previous</button>
+    <span id="pageIndicator"></span>
+    <button id="nextPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Next</button>
+    <button id="lastPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Last</button>
+</div>            </div>
 
 
             <!-- Second Table -->
@@ -819,17 +1279,74 @@ document.addEventListener("DOMContentLoaded", function() {
                         </tr>
                     </table>
                 </div>
-                <!-- Pagination for Second Table -->
-            </div>
+                <div id="productPagination" class="mt-4 flex justify-center items-center gap-4 text-sm dark:text-white">
+    <button id="firstProductPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">First</button>
+    <button id="prevProductPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Previous</button>
+    <span id="productPageIndicator"></span>
+    <button id="nextProductPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Next</button>
+    <button id="lastProductPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Last</button>
+</div>
+           </div>
         </div>
-      
+        <script>
+function makeTableColumnsResizable(table) {
+    const cols = table.querySelectorAll("th");
+    const tableContainer = table.parentElement;
+
+    cols.forEach((col) => {
+        // Create a resizer handle
+        const resizer = document.createElement("div");
+        resizer.classList.add("resizer");
+        col.style.position = "relative";
+        resizer.style.width = "5px";
+        resizer.style.height = "100%";
+        resizer.style.position = "absolute";
+        resizer.style.top = "0";
+        resizer.style.right = "0";
+        resizer.style.cursor = "col-resize";
+        resizer.style.userSelect = "none";
+        resizer.style.zIndex = "10";
+
+        col.appendChild(resizer);
+
+        let x = 0;
+        let w = 0;
+
+        resizer.addEventListener("mousedown", (e) => {
+            x = e.clientX;
+            w = col.offsetWidth;
+
+            document.addEventListener("mousemove", mouseMoveHandler);
+            document.addEventListener("mouseup", mouseUpHandler);
+        });
+
+        const mouseMoveHandler = (e) => {
+            const dx = e.clientX - x;
+            col.style.width = `${w + dx}px`;
+        };
+
+        const mouseUpHandler = () => {
+            document.removeEventListener("mousemove", mouseMoveHandler);
+            document.removeEventListener("mouseup", mouseUpHandler);
+        };
+    });
+}
+
+// Wait for the DOM to load before applying resizable
+document.addEventListener("DOMContentLoaded", () => {
+    const tables = document.querySelectorAll(".table-container table");
+tables.forEach((table) => makeTableColumnsResizable(table));
+});
+</script>
+
         <div class="download-wrapper">
 
             <!-- <button id="download-zone-excel"
                 class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
                 <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
                 <span>Zone Download </span> -->
-            
+
+
                 <button id="download-zone-excel" class="button">
     <img src="assets/excel.png" alt="Excel Icon" class="icon" style="width: 24px; height: 24px;" />
     <p class="text">
@@ -848,7 +1365,7 @@ document.addEventListener("DOMContentLoaded", function() {
       <span style="transition-duration: 700ms">e</span>
       <span style="transition-duration: 750ms">l</span>
     </p>
-  </button>        <button id="download-client-excel" class="button">
+  </button>  <button id="download-client-excel" class="button">
     <img src="assets/excel.png" alt="Excel Icon" class="icon" style="width: 24px; height: 24px;" />
     <p class="text">
       <span style="transition-duration: 100ms">D</span>
@@ -867,6 +1384,7 @@ document.addEventListener("DOMContentLoaded", function() {
       <span style="transition-duration: 750ms">l</span>
     </p>
   </button>
+                
             <!-- </button> <button id="download-client-excel"
                 class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
                 <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
@@ -911,6 +1429,14 @@ document.addEventListener("DOMContentLoaded", function() {
                         </tbody>
                     </table>
                 </div>
+                <div id="zonePagination" class="mt-4 flex justify-center items-center gap-4 text-sm dark:text-white">
+    <button id="firstzonePage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">First</button>
+    <button id="prevzonePage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Previous</button>
+    <span id="zonePageIndicator"></span>
+    <button id="nextzonePage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Next</button>
+    <button id="lastzonePage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Last</button>
+</div>
+
             </div>
             
 
@@ -945,11 +1471,25 @@ document.addEventListener("DOMContentLoaded", function() {
                         </tbody>
                     </table>
                 </div>
+                <div id="clpagination" class="mt-4 flex justify-center items-center gap-4 text-sm dark:text-white">
+    <button id="clfirstPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">First</button>
+    <button id="clprevPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Previous</button>
+    <span id="clpageIndicator"></span>
+    <button id="clnextPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Next</button>
+    <button id="cllastPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Last</button>
+</div>
             </div>
         </div>
      
         <div class="download-wrapper">
-        <button id="download-Opérateur-excel" class="button">
+
+            <!-- <button id="download-Opérateur-excel"
+                class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
+                <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
+                <span>Opérateur Download </span>
+             -->
+
+                <button id="download-Opérateur-excel" class="button">
     <img src="assets/excel.png" alt="Excel Icon" class="icon" style="width: 24px; height: 24px;" />
     <p class="text">
       <span style="transition-duration: 100ms">D</span>
@@ -967,8 +1507,7 @@ document.addEventListener("DOMContentLoaded", function() {
       <span style="transition-duration: 700ms">e</span>
       <span style="transition-duration: 750ms">l</span>
     </p>
-  </button>
-   <button id="download-BCCB-excel-fac" class="button">
+  </button>  <button id="download-BCCB-excel" class="button">
     <img src="assets/excel.png" alt="Excel Icon" class="icon" style="width: 24px; height: 24px;" />
     <p class="text">
       <span style="transition-duration: 100ms">D</span>
@@ -988,13 +1527,8 @@ document.addEventListener("DOMContentLoaded", function() {
     </p>
   </button>
 
-            <!-- <button id="download-Opérateur-excel"
-                class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
-                <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
-                <span>Opérateur Download </span>
-            
                 
-            </button> <button id="download-BCCB-excel-fac"
+            <!-- </button> <button id="download-BCCB-excel"
                 class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
                 <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
                 <span>BCCB Download</span>
@@ -1040,6 +1574,14 @@ document.addEventListener("DOMContentLoaded", function() {
                         </tbody>
                     </table>
                 </div>
+                <div id="oppagination" class="mt-4 flex justify-center items-center gap-4 text-sm dark:text-white">
+    <button id="opfirstPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">First</button>
+    <button id="opprevPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Previous</button>
+    <span id="oppageIndicator"></span>
+    <button id="opnextPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Next</button>
+    <button id="oplastPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Last</button>
+</div>
+
             </div>
             
 
@@ -1076,17 +1618,24 @@ document.addEventListener("DOMContentLoaded", function() {
                     </table>
 
                 </div>
+                <div id="bpagination" class="mt-4 flex justify-center items-center gap-4 text-sm dark:text-white">
+    <button id="bfirstPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">First</button>
+    <button id="bprevPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Previous</button>
+    <span id="bpageIndicator"></span>
+    <button id="bnextPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Next</button>
+    <button id="blastPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Last</button>
+</div>
             </div>
         </div>
 
 <br>
-<!-- <button id="download-bccb-product-excel-f"
+<!-- <button id="download-bccb-product-excel"
             class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
             <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
             <span>BCCB Product Recap Download</span>
         </button> -->
         <div class="container">
-  <button id="download-bccb-product-excel-f" class="button">
+  <button id="download-bccb-product-excel" class="button">
     <img src="assets/excel.png" alt="Excel Icon" class="icon" style="width: 24px; height: 24px;" />
     <p class="text">
       <span style="transition-duration: 100ms">D</span>
@@ -1224,6 +1773,7 @@ document.addEventListener("DOMContentLoaded", function() {
 };
 
 
+
             // Fetch data when both dates are selected
             async function fetchTotalRecap() {
                 const startDate = document.getElementById("start-date").value;
@@ -1232,7 +1782,9 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (!startDate || !endDate) return; // Don't fetch until both dates are selected
 
                 try {
+                    
                     const response = await fetch(`http://192.168.1.94:5000/fetchTotalrecapData?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000012`);
+
                     if (!response.ok) throw new Error("Network response was not ok");
 
                     const data = await response.json();
@@ -1253,7 +1805,7 @@ document.addEventListener("DOMContentLoaded", function() {
             }
 
             // Format number with thousand separators & two decimals
-            function formatNumberT(value) {
+            function formatNumbert(value) {
                 if (value === null || value === undefined || isNaN(value)) return "";
                 return parseFloat(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
@@ -1278,9 +1830,9 @@ document.addEventListener("DOMContentLoaded", function() {
                 tableBody.innerHTML = `
 <tr class="dark:bg-gray-700">
     <td class="border px-4 py-2 dark:border-gray-600">From ${startDate} to ${endDate}</td>
-    <td class="border px-4 py-2 dark:border-gray-600">${formatNumberT(row.CHIFFRE)}</td>
-    <td class="border px-4 py-2 dark:border-gray-600">${formatNumberT(row.QTY)}</td>
-    <td class="border px-4 py-2 dark:border-gray-600">${formatNumberT(row.MARGE)}</td>
+    <td class="border px-4 py-2 dark:border-gray-600">${formatNumbert(row.CHIFFRE)}</td>
+    <td class="border px-4 py-2 dark:border-gray-600">${formatNumbert(row.QTY)}</td>
+    <td class="border px-4 py-2 dark:border-gray-600">${formatNumbert(row.MARGE)}</td>
     <td class="border px-4 py-2 dark:border-gray-600">${formatPercentage(row.POURCENTAGE)}</td>
 </tr>
 `;
@@ -1306,6 +1858,9 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 
+let currentPage = 1;
+const rowsPerPage = 10;
+let fullData = [];
 
 
             // Debounce function to limit requests
@@ -1316,49 +1871,47 @@ document.addEventListener("DOMContentLoaded", function() {
                     timeout = setTimeout(() => func(...args), delay);
                 };
             }
-
+   
             // Fetch data when filters are applied
             async function fetchFournisseurRecap() {
-    const startDate = document.getElementById("start-date").value;
-    const endDate = document.getElementById("end-date").value;
-    const fournisseur = document.getElementById("recap_fournisseur").value.trim().toUpperCase();
-    const product = document.getElementById("recap_product").value.trim().toUpperCase();
-    const client = document.getElementById("recap_client").value.trim().toUpperCase();
-    const operateur = document.getElementById("recap_operateur").value.trim().toUpperCase();
-    const bccb = document.getElementById("recap_bccbclient").value.trim().toUpperCase();
-    const zone = document.getElementById("recap_zone").value.trim().toUpperCase();
+                const startDate = document.getElementById("start-date").value;
+                const endDate = document.getElementById("end-date").value;
+                const fournisseur = document.getElementById("recap_fournisseur").value.trim();
+                const product = document.getElementById("recap_product").value.trim();
+                const client = document.getElementById("recap_client").value.trim();
+                const operateur = document.getElementById("recap_operateur").value.trim();
+                const bccb = document.getElementById("recap_bccbclient").value.trim();
+                const zone = document.getElementById("recap_zone").value.trim();
 
-    if (!startDate || !endDate) return;
+                if (!startDate || !endDate) return;
 
-    const url = new URL("http://192.168.1.94:5000/fetchFournisseurData");
-    url.searchParams.append("start_date", startDate);
-    url.searchParams.append("end_date", endDate);
-    url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
+                const url = new URL("http://192.168.1.94:5000/fetchFournisseurData");
+                url.searchParams.append("start_date", startDate);
+                url.searchParams.append("end_date", endDate);
+                url.searchParams.append("ad_org_id", "1000012"); 
+                if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
+                if (product) url.searchParams.append("product", product);
+                if (client) url.searchParams.append("client", client);
+                if (operateur) url.searchParams.append("operateur", operateur);
+                if (bccb) url.searchParams.append("bccb", bccb);
+                if (zone) url.searchParams.append("zone", zone);
 
-    if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
-    if (product) url.searchParams.append("product", product);
-    if (client) url.searchParams.append("client", client);
-    if (operateur) url.searchParams.append("operateur", operateur);
-    if (bccb) url.searchParams.append("bccb", bccb);
-    if (zone) url.searchParams.append("zone", zone);
+                try {
+                    showLoader();
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error("Network response was not ok");
 
-    try {
-        showLoader();
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Network response was not ok");
-
-        const data = await response.json();
-        console.log("Fetched Data:", data);  // Debugging line to check if response contains data
-        updateFournisseurTable(data);
-        hideLoader();
-    } catch (error) {
-        console.error("Error fetching fournisseur data:", error);
-        document.getElementById('recap-frnsr-table').innerHTML =
-            `<tr><td colspan="5" class="text-center text-red-500 p-4">Failed to load data</td></tr>`;
-        hideLoader();
-    }
-}
-
+                    const data = await response.json();
+                    console.log("Fetched Data:", data);  // Debugging line to check if response contains data
+                    updateFournisseurTable(data);
+                    hideLoader();
+                } catch (error) {
+                    console.error("Error fetching fournisseur data:", error);
+                    document.getElementById('recap-frnsr-table').innerHTML =
+                        `<tr><td colspan="5" class="text-center text-red-500 p-4">Failed to load data</td></tr>`;
+                    hideLoader();
+                }
+            }
 
 
             // Show loader animation
@@ -1412,22 +1965,33 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 
-            // Update table with fetched data
-            function updateFournisseurTable(data) {
-                const tableBody = document.getElementById("recap-frnsr-table");
-                tableBody.innerHTML = "";
+   
+function updateFournisseurTable(data) {
+    const tableBody = document.getElementById("recap-frnsr-table");
+    tableBody.innerHTML = "";
 
-                if (!data || data.length === 0) {
-                    tableBody.innerHTML = `<tr><td colspan="5" class="text-center p-4">No data available</td></tr>`;
-                    return;
-                }
+    if (!data || data.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="5" class="text-center p-4">No data available</td></tr>`;
+        return;
+    }
 
-                // Find and separate the total row
-                const totalRow = data.find(row => row.FOURNISSEUR === "Total");
-                const filteredData = data.filter(row => row.FOURNISSEUR !== "Total");
+    // Save data globally for pagination
+    fullData = data;
 
-                if (totalRow) {
-                    tableBody.innerHTML += `
+    // Separate total row
+    const totalRow = data.find(row => row.FOURNISSEUR === "Total");
+    const filteredData = data.filter(row => row.FOURNISSEUR !== "Total");
+
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+    currentPage = Math.min(currentPage, totalPages);
+
+    const start = (currentPage - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+    const pageData = filteredData.slice(start, end);
+
+    // Append total row first
+    if (totalRow) {
+        tableBody.innerHTML += `
             <tr class="bg-gray-200 font-bold">
                 <td class="border px-4 py-2 dark:border-gray-600">${totalRow.FOURNISSEUR}</td>
                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumberf(totalRow.TOTAL)}</td>
@@ -1435,10 +1999,11 @@ document.addEventListener("DOMContentLoaded", function() {
                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumberf(totalRow.MARGE)}%</td>
             </tr>
         `;
-                }
+    }
 
-                filteredData.forEach(row => {
-                    tableBody.innerHTML += `
+    // Then add paginated rows
+    pageData.forEach(row => {
+        tableBody.innerHTML += `
             <tr class="dark:bg-gray-700">
                 <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || "N/A"}</td>
                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumberf(row.TOTAL)}</td>
@@ -1446,20 +2011,44 @@ document.addEventListener("DOMContentLoaded", function() {
                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumberf(row.MARGE)}%</td>
             </tr>
         `;
-                });
-            }
+    });
+
+    // Update pagination text
+    document.getElementById("pageIndicator").textContent = `Page ${currentPage} of ${totalPages}`;
+}
 
 
+document.getElementById("firstPage").addEventListener("click", () => {
+    currentPage = 1;
+    updateFournisseurTable(fullData);
+});
 
-            document.getElementById("download-fournisseur").addEventListener("click", async function () {
+document.getElementById("prevPage").addEventListener("click", () => {
+    if (currentPage > 1) currentPage--;
+    updateFournisseurTable(fullData);
+});
+
+document.getElementById("nextPage").addEventListener("click", () => {
+    const totalPages = Math.ceil((fullData.filter(r => r.FOURNISSEUR !== "Total").length) / rowsPerPage);
+    if (currentPage < totalPages) currentPage++;
+    updateFournisseurTable(fullData);
+});
+
+document.getElementById("lastPage").addEventListener("click", () => {
+    currentPage = Math.ceil((fullData.filter(r => r.FOURNISSEUR !== "Total").length) / rowsPerPage);
+    updateFournisseurTable(fullData);
+});
+
+
+document.getElementById("download-fournisseur").addEventListener("click", async function () {
     const startDate = document.getElementById("start-date").value;
-    const endDate = document.getElementById("end-date").value;
-    const fournisseur = document.getElementById("recap_fournisseur").value.trim().toUpperCase();
-    const product = document.getElementById("recap_product").value.trim().toUpperCase();
-    const client = document.getElementById("recap_client").value.trim().toUpperCase();
-    const operateur = document.getElementById("recap_operateur").value.trim().toUpperCase();
-    const bccb = document.getElementById("recap_bccbclient").value.trim().toUpperCase();
-    const zone = document.getElementById("recap_zone").value.trim().toUpperCase();
+                const endDate = document.getElementById("end-date").value;
+                const fournisseur = document.getElementById("recap_fournisseur").value.trim();
+                const product = document.getElementById("recap_product").value.trim();
+                const client = document.getElementById("recap_client").value.trim();
+                const operateur = document.getElementById("recap_operateur").value.trim();
+                const bccb = document.getElementById("recap_bccbclient").value.trim();
+                const zone = document.getElementById("recap_zone").value.trim();
 
     if (!startDate || !endDate) {
         alert("Please select a start and end date.");
@@ -1497,55 +2086,12 @@ document.addEventListener("DOMContentLoaded", function() {
             document.getElementById("recap_bccbclient").addEventListener("input", debounce(fetchFournisseurRecap, 500));
             document.getElementById("recap_zone").addEventListener("input", debounce(fetchFournisseurRecap, 500));
 
-            // Debounce function to limit requests
-            function debounce(func, delay) {
-                let timeout;
-                return function (...args) {
-                    clearTimeout(timeout);
-                    timeout = setTimeout(() => func(...args), delay);
-                };
-            }
+            let currentProductPage = 1;
+const productRowsPerPage = 10;
+let fullProductData = [];
 
-            // Fetch data when filters are applied
-            async function fetchProductRecap() {
-                const startDate = document.getElementById("start-date").value;
-                const endDate = document.getElementById("end-date").value;
-                const fournisseur = document.getElementById("recap_fournisseur").value.trim().toUpperCase();
-                const product = document.getElementById("recap_product").value.trim().toUpperCase();
-                const client = document.getElementById("recap_client").value.trim().toUpperCase();
-                const operateur = document.getElementById("recap_operateur").value.trim().toUpperCase();
-                const bccb = document.getElementById("recap_bccbclient").value.trim().toUpperCase();
-                const zone = document.getElementById("recap_zone").value.trim().toUpperCase();
-
-                if (!startDate || !endDate) return;
-
-                const url = new URL("http://192.168.1.94:5000/fetchProductData");
-                url.searchParams.append("start_date", startDate);
-                url.searchParams.append("end_date", endDate);
-                url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
-                if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
-                if (product) url.searchParams.append("product", product);
-                if (client) url.searchParams.append("client", client);
-                if (operateur) url.searchParams.append("operateur", operateur);
-                if (bccb) url.searchParams.append("bccb", bccb);
-                if (zone) url.searchParams.append("zone", zone);
-
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error("Network response was not ok");
-
-                    const data = await response.json();
-                    console.log("Received Data:", data);  // 🚀 Debugging line
-                    updateProductTable(data);
-                } catch (error) {
-                    console.error("Error fetching product data:", error);
-                }
-            }
-
-
-            document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", () => {
     const productTableBody = document.getElementById("recap-prdct-table");
-    const productInput = document.getElementById("recap_product");
 
     productTableBody.addEventListener("click", function (event) {
         let row = event.target.closest("tr");
@@ -1559,72 +2105,149 @@ document.addEventListener("DOMContentLoaded", function() {
             .map(row => row.cells[0].textContent.trim());
 
         // Update the input field (simulate manual typing)
-        productInput.value = selectedProducts.join(", ");
+        document.getElementById("recap_product").value = selectedProducts.join(", ");
 
         // Manually trigger the input event to simulate user search
-        productInput.dispatchEvent(new Event("input"));
+        document.getElementById("recap_product").dispatchEvent(new Event("input"));
 
         // Auto-trigger full search (same as manual input)
         fetchProductRecap();
     });
 });
 
-            // Update table with fetched data
-            function updateProductTable(data) {
-                const tableBody = document.getElementById("recap-prdct-table");
-                tableBody.innerHTML = ""; // Clear table before inserting new rows
-
-                if (!data || data.length === 0) {
-                    tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">No data available</td></tr>`;
-                    return;
-                }
-
-                const fragment = document.createDocumentFragment();
-
-                // Find and extract the "Total" row
-                const totalRow = data.find(row => row.PRODUIT === "Total");
-                const filteredData = data.filter(row => row.PRODUIT !== "Total");
-
-                // Create and append the "Total" row first
-                if (totalRow) {
-                    const totalTr = document.createElement("tr");
-                    totalTr.classList.add("bg-gray-200", "font-bold", "dark:bg-gray-700");
-                    totalTr.innerHTML = `
-            <td class="border px-4 py-2 dark:border-gray-600">${totalRow.PRODUIT}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.TOTAL)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.QTY)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.MARGE * 100)}%</td>
-        `;
-                    fragment.appendChild(totalTr);
-                }
-
-                // Append remaining rows
-                filteredData.forEach(row => {
-                    const tr = document.createElement("tr");
-                    tr.classList.add("dark:bg-gray-700");
-                    tr.innerHTML = `
-            <td class="border px-4 py-2 dark:border-gray-600">${row.PRODUIT || "N/A"}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.TOTAL)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.MARGE * 100)}%</td>
-        `;
-                    fragment.appendChild(tr);
-                });
-
-                tableBody.appendChild(fragment); // Append rows efficiently
-            }
-
-
-            document.getElementById("download-product-excel").addEventListener("click", async function () {
+// Fetch data for product table
+async function fetchProductRecap() {
     const startDate = document.getElementById("start-date").value;
-    const endDate = document.getElementById("end-date").value;
-    const fournisseur = document.getElementById("recap_fournisseur").value.trim().toUpperCase();
-    const product = document.getElementById("recap_product").value.trim().toUpperCase();
-    const client = document.getElementById("recap_client").value.trim().toUpperCase();
-    const operateur = document.getElementById("recap_operateur").value.trim().toUpperCase();
-    const bccb = document.getElementById("recap_bccbclient").value.trim().toUpperCase();
-    const zone = document.getElementById("recap_zone").value.trim().toUpperCase();
+                const endDate = document.getElementById("end-date").value;
+                const fournisseur = document.getElementById("recap_fournisseur").value.trim();
+                const product = document.getElementById("recap_product").value.trim();
+                const client = document.getElementById("recap_client").value.trim();
+                const operateur = document.getElementById("recap_operateur").value.trim();
+                const bccb = document.getElementById("recap_bccbclient").value.trim();
+                const zone = document.getElementById("recap_zone").value.trim();
 
+    if (!startDate || !endDate) return;
+
+    const url = new URL("http://192.168.1.94:5000/fetchProductData");
+    url.searchParams.append("start_date", startDate);
+    url.searchParams.append("end_date", endDate);
+    url.searchParams.append("ad_org_id", "1000012"); 
+    if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
+    if (product) url.searchParams.append("product", product);
+    if (client) url.searchParams.append("client", client);
+    if (operateur) url.searchParams.append("operateur", operateur);
+    if (bccb) url.searchParams.append("bccb", bccb);
+    if (zone) url.searchParams.append("zone", zone);
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Network response was not ok");
+
+        const data = await response.json();
+        console.log("Received Data:", data);  // 🚀 Debugging line
+        updateProductTable(data);
+    } catch (error) {
+        console.error("Error fetching product data:", error);
+    }
+}
+
+// Update product table with pagination
+function updateProductTable(data) {
+    const tableBody = document.getElementById("recap-prdct-table");
+    tableBody.innerHTML = ""; // Clear table before inserting new rows
+
+    if (!data || data.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">No data available</td></tr>`;
+        return;
+    }
+
+    // Save data globally for pagination
+    fullProductData = data;
+
+    // Separate the "Total" row
+    const totalRow = data.find(row => row.PRODUIT === "Total");
+    const filteredData = data.filter(row => row.PRODUIT !== "Total");
+
+    const totalPages = Math.ceil(filteredData.length / productRowsPerPage);
+    currentProductPage = Math.min(currentProductPage, totalPages);
+
+    const start = (currentProductPage - 1) * productRowsPerPage;
+    const end = start + productRowsPerPage;
+    const pageData = filteredData.slice(start, end);
+
+    const fragment = document.createDocumentFragment();
+
+    // Add total row first
+    if (totalRow) {
+        const totalTr = document.createElement("tr");
+        totalTr.classList.add("bg-gray-200", "font-bold", "dark:bg-gray-700");
+        totalTr.innerHTML = `
+            <td class="border px-4 py-2 dark:border-gray-600">${totalRow.PRODUIT}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.TOTAL)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.MARGE * 100)}%</td>
+        `;
+        fragment.appendChild(totalTr);
+    }
+
+    // Add paginated rows
+    pageData.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.classList.add("dark:bg-gray-700");
+        tr.innerHTML = `
+            <td class="border px-4 py-2 dark:border-gray-600">${row.PRODUIT || "N/A"}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.TOTAL)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.MARGE * 100)}%</td>
+        `;
+        fragment.appendChild(tr);
+    });
+
+    tableBody.appendChild(fragment); // Append rows efficiently
+
+    // Update pagination text
+    document.getElementById("productPageIndicator").textContent = `Page ${currentProductPage} of ${totalPages}`;
+}
+
+// Pagination controls
+document.getElementById("firstProductPage").addEventListener("click", () => {
+    currentProductPage = 1;
+    updateProductTable(fullProductData);
+});
+
+document.getElementById("prevProductPage").addEventListener("click", () => {
+    if (currentProductPage > 1) currentProductPage--;
+    updateProductTable(fullProductData);
+});
+
+document.getElementById("nextProductPage").addEventListener("click", () => {
+    const totalPages = Math.ceil(fullProductData.filter(r => r.PRODUIT !== "Total").length / productRowsPerPage);
+    if (currentProductPage < totalPages) currentProductPage++;
+    updateProductTable(fullProductData);
+});
+
+document.getElementById("lastProductPage").addEventListener("click", () => {
+    currentProductPage = Math.ceil(fullProductData.filter(r => r.PRODUIT !== "Total").length / productRowsPerPage);
+    updateProductTable(fullProductData);
+});
+
+// Format number for product table with thousand separators & two decimals
+function formatNumberp(value) {
+    if (value === null || value === undefined || isNaN(value)) return "";
+    return parseFloat(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+
+
+document.getElementById("download-product-excel").addEventListener("click", async function () {
+    const startDate = document.getElementById("start-date").value;
+                const endDate = document.getElementById("end-date").value;
+                const fournisseur = document.getElementById("recap_fournisseur").value.trim();
+                const product = document.getElementById("recap_product").value.trim();
+                const client = document.getElementById("recap_client").value.trim();
+                const operateur = document.getElementById("recap_operateur").value.trim();
+                const bccb = document.getElementById("recap_bccbclient").value.trim();
+                const zone = document.getElementById("recap_zone").value.trim();
     if (!startDate || !endDate) {
         alert("Please select a start and end date.");
         return;
@@ -1677,7 +2300,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 };
             }
 
-
             document.addEventListener("DOMContentLoaded", () => {
     const productTableBody = document.getElementById("recap-zone-table");
     const productInput = document.getElementById("recap_zone");
@@ -1704,46 +2326,51 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 });
 
+// Pagination state for zone
+let currentZonePage = 1;
+let totalZonePages = 1;
+const itemsPerZonePage = 10; // Number of items to display per page
 
-            // Fetch data when filters are applied
-            async function fetchZoneRecap() {
-                const startDate = document.getElementById("start-date").value;
+// Fetch data when filters are applied for zone recap
+async function fetchZoneRecap(page = 1) {
+    const startDate = document.getElementById("start-date").value;
                 const endDate = document.getElementById("end-date").value;
-                const fournisseur = document.getElementById("recap_fournisseur").value.trim().toUpperCase();
-                const product = document.getElementById("recap_product").value.trim().toUpperCase();
-                const client = document.getElementById("recap_client").value.trim().toUpperCase();
-                const operateur = document.getElementById("recap_operateur").value.trim().toUpperCase();
-                const bccb = document.getElementById("recap_bccbclient").value.trim().toUpperCase();
-                const zone = document.getElementById("recap_zone").value.trim().toUpperCase();
+                const fournisseur = document.getElementById("recap_fournisseur").value.trim();
+                const product = document.getElementById("recap_product").value.trim();
+                const client = document.getElementById("recap_client").value.trim();
+                const operateur = document.getElementById("recap_operateur").value.trim();
+                const bccb = document.getElementById("recap_bccbclient").value.trim();
+                const zone = document.getElementById("recap_zone").value.trim();
 
-                if (!startDate || !endDate) return;
+    if (!startDate || !endDate) return;
 
-                const url = new URL("http://192.168.1.94:5000/fetchZoneRecap");
-                url.searchParams.append("start_date", startDate);
-                url.searchParams.append("end_date", endDate);
-                url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
+    const url = new URL("http://192.168.1.94:5000/fetchZoneRecap");
+    url.searchParams.append("start_date", startDate);
+    url.searchParams.append("end_date", endDate);
+    url.searchParams.append("ad_org_id", "1000012");
+    url.searchParams.append("page", page);  // Add the page parameter for pagination
+    if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
+    if (product) url.searchParams.append("product", product);
+    if (client) url.searchParams.append("client", client);
+    if (operateur) url.searchParams.append("operateur", operateur);
+    if (bccb) url.searchParams.append("bccb", bccb);
+    if (zone) url.searchParams.append("zone", zone);
 
-                if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
-                if (product) url.searchParams.append("product", product);
-                if (client) url.searchParams.append("client", client);
-                if (operateur) url.searchParams.append("operateur", operateur);
-                if (bccb) url.searchParams.append("bccb", bccb);
-                if (zone) url.searchParams.append("zone", zone);
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Network response was not ok");
 
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error("Network response was not ok");
+        const data = await response.json();
+        console.log("Received Data:", data); // Debugging log
+        updateZoneTable(data);
+        return data; // Ensure function returns data
+    } catch (error) {
+        console.error("Error fetching zone recap data:", error);
+    }
+}
 
-                    const data = await response.json();
-                    console.log("Received Data:", data); // Debugging log
-                    updateZoneTable(data);
-                    return data;  // ✅ Fix: Ensure function returns data
-                } catch (error) {
-                    console.error("Error fetching zone recap data:", error);
-                }
-            }
-
-            function updateZoneTable(data) {
+// Update table with fetched zone data
+function updateZoneTable(data) {
     const tableBody = document.getElementById("recap-zone-table");
     tableBody.innerHTML = ""; // Clear table before inserting new rows
 
@@ -1764,34 +2391,64 @@ document.addEventListener("DOMContentLoaded", function() {
         totalTr.classList.add("bg-gray-200", "font-bold", "dark:bg-gray-700");
         totalTr.innerHTML = `
             <td class="border px-4 py-2 dark:border-gray-600">${totalRow.ZONE}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.TOTAL)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.QTY)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.MARGE * 100)}%</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.TOTAL)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.MARGE * 100)}%</td>
         `;
         fragment.appendChild(totalTr);
     }
 
-    // Append remaining rows
-    filteredData.forEach(row => {
+    // Append remaining rows (apply pagination by slicing the data)
+    const paginatedData = filteredData.slice((currentZonePage - 1) * itemsPerZonePage, currentZonePage * itemsPerZonePage);
+    paginatedData.forEach(row => {
         const tr = document.createElement("tr");
         tr.classList.add("dark:bg-gray-700");
         tr.innerHTML = `
-            <td class="border px-4 py-2 dark:border-gray-600">${row.ZONE === "<Aucune>" || !row.ZONE ? "Aucun" : row.ZONE}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberz(row.TOTAL)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberz(row.QTY)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberz(row.MARGE * 100)}%</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${row.ZONE || "N/A"}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.TOTAL)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.MARGE * 100)}%</td>
         `;
         fragment.appendChild(tr);
     });
 
     tableBody.appendChild(fragment); // Append rows efficiently
+
+    // Update pagination
+    updatePagination(filteredData.length);
 }
 
+// Update pagination controls for zone
+function updatePagination(totalItems) {
+    totalZonePages = Math.ceil(totalItems / itemsPerZonePage);
 
-            // Format numbers with commas (thousands separator)
-            function formatNumberz(value) {
-                return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value || 0);
-            }
+    const zonePageIndicator = document.getElementById("zonePageIndicator");
+    zonePageIndicator.textContent = `Page ${currentZonePage} of ${totalZonePages}`;
+
+    document.getElementById("firstzonePage").disabled = currentZonePage === 1;
+    document.getElementById("prevzonePage").disabled = currentZonePage === 1;
+    document.getElementById("nextzonePage").disabled = currentZonePage === totalZonePages;
+    document.getElementById("lastzonePage").disabled = currentZonePage === totalZonePages;
+}
+
+// Handle pagination button clicks for zone
+document.getElementById("firstzonePage").addEventListener("click", () => changeZonePage(1));
+document.getElementById("prevzonePage").addEventListener("click", () => changeZonePage(currentZonePage - 1));
+document.getElementById("nextzonePage").addEventListener("click", () => changeZonePage(currentZonePage + 1));
+document.getElementById("lastzonePage").addEventListener("click", () => changeZonePage(totalZonePages));
+
+// Change page for zone
+function changeZonePage(page) {
+    if (page < 1 || page > totalZonePages) return;
+    currentZonePage = page;
+    fetchZoneRecap(currentZonePage); // Fetch data for the new page
+}
+
+// Format numbers with commas (thousands separator)
+function formatNumber(value) {
+    return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value || 0);
+}
+
 
             // Attach event listeners to all search fields
             document.getElementById("start-date").addEventListener("change", fetchZoneRecap);
@@ -1818,26 +2475,21 @@ document.getElementById("download-Opérateur-excel").addEventListener("click", f
 });
 
 // Download BCCB Recap as Excel
-document.getElementById("download-BCCB-excel-fac").addEventListener("click", function () {
-    downloadExcel("download-BCCB-excel-fac");
+document.getElementById("download-BCCB-excel").addEventListener("click", function () {
+    downloadExcel("download-bccb-excel");
 });
-
-document.getElementById("download-bccb-product-excel-f").addEventListener("click", function () {
-    downloadExcel("download-bccb-product-excel-f");
+document.getElementById("download-bccb-product-excel").addEventListener("click", function () {
+    downloadExcel("download-bccb-product-excel");
 });
-
-
-
-
 function downloadExcel(endpoint) {
     const startDate = document.getElementById("start-date").value;
-    const endDate = document.getElementById("end-date").value;
-    const fournisseur = document.getElementById("recap_fournisseur").value.trim().toUpperCase();
-    const product = document.getElementById("recap_product").value.trim().toUpperCase();
-    const client = document.getElementById("recap_client").value.trim().toUpperCase();
-    const operateur = document.getElementById("recap_operateur").value.trim().toUpperCase();
-    const bccb = document.getElementById("recap_bccbclient").value.trim().toUpperCase();
-    const zone = document.getElementById("recap_zone").value.trim().toUpperCase();
+                const endDate = document.getElementById("end-date").value;
+                const fournisseur = document.getElementById("recap_fournisseur").value.trim();
+                const product = document.getElementById("recap_product").value.trim();
+                const client = document.getElementById("recap_client").value.trim();
+                const operateur = document.getElementById("recap_operateur").value.trim();
+                const bccb = document.getElementById("recap_bccbclient").value.trim();
+                const zone = document.getElementById("recap_zone").value.trim();
 
     if (!startDate || !endDate) {
         alert("Please select a start and end date.");
@@ -1860,42 +2512,47 @@ function downloadExcel(endpoint) {
 }
 
 
-            // Fetch data for Recap by Client
-            async function fetchClientRecap() {
-                const startDate = document.getElementById("start-date").value;
+let currentClientPage = 1;
+let totalClientPages = 1;
+const itemsPerClientPage = 10; // Number of items to display per page
+
+
+async function fetchClientRecap(page = 1) {
+    const startDate = document.getElementById("start-date").value;
                 const endDate = document.getElementById("end-date").value;
-                const fournisseur = document.getElementById("recap_fournisseur").value.trim().toUpperCase();
-                const product = document.getElementById("recap_product").value.trim().toUpperCase();
-                const client = document.getElementById("recap_client").value.trim().toUpperCase();
-                const operateur = document.getElementById("recap_operateur").value.trim().toUpperCase();
-                const bccb = document.getElementById("recap_bccbclient").value.trim().toUpperCase();
-                const zone = document.getElementById("recap_zone").value.trim().toUpperCase();
+                const fournisseur = document.getElementById("recap_fournisseur").value.trim();
+                const product = document.getElementById("recap_product").value.trim();
+                const client = document.getElementById("recap_client").value.trim();
+                const operateur = document.getElementById("recap_operateur").value.trim();
+                const bccb = document.getElementById("recap_bccbclient").value.trim();
+                const zone = document.getElementById("recap_zone").value.trim();
 
-                if (!startDate || !endDate) return;
+    if (!startDate || !endDate) return;
 
-                const url = new URL("http://192.168.1.94:5000/fetchClientRecap");
-                url.searchParams.append("start_date", startDate);
-                url.searchParams.append("end_date", endDate);
-                url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
+    const url = new URL("http://192.168.1.94:5000/fetchClientRecap");
+    url.searchParams.append("start_date", startDate);
+    url.searchParams.append("end_date", endDate);
+    url.searchParams.append("ad_org_id", "1000012");
+    url.searchParams.append("page", page);  // Add the page parameter for pagination
+    if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
+    if (product) url.searchParams.append("product", product);
+    if (client) url.searchParams.append("client", client);
+    if (operateur) url.searchParams.append("operateur", operateur);
+    if (bccb) url.searchParams.append("bccb", bccb);
+    if (zone) url.searchParams.append("zone", zone);
 
-                if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
-                if (product) url.searchParams.append("product", product);
-                if (client) url.searchParams.append("client", client);
-                if (operateur) url.searchParams.append("operateur", operateur);
-                if (bccb) url.searchParams.append("bccb", bccb);
-                if (zone) url.searchParams.append("zone", zone);
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Network response was not ok");
 
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error("Network response was not ok");
-
-                    const data = await response.json();
-                    console.log("Received Client Recap Data:", data); // Debugging log
-                    updateClientTable(data);
-                } catch (error) {
-                    console.error("Error fetching client recap data:", error);
-                }
-            }
+        const data = await response.json();
+        console.log("Received Client Recap Data:", data); // Debugging log
+        updateClientTable(data);
+        return data; // Ensure function returns data
+    } catch (error) {
+        console.error("Error fetching client recap data:", error);
+    }
+}
 
 
             document.addEventListener("DOMContentLoaded", () => {
@@ -1924,50 +2581,89 @@ function downloadExcel(endpoint) {
     });
 });
 
-            // Update table with fetched data
-            function updateClientTable(data) {
-                const tableBody = document.getElementById("recap-client-table");
-                tableBody.innerHTML = ""; // Clear table before inserting new rows
 
-                if (!data || data.length === 0) {
-                    tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">No data available</td></tr>`;
-                    return;
-                }
+function updateClientTable(data) {
+    const tableBody = document.getElementById("recap-client-table");
+    tableBody.innerHTML = ""; // Clear table before inserting new rows
 
-                const fragment = document.createDocumentFragment();
+    if (!data || data.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">No data available</td></tr>`;
+        return;
+    }
 
-                // Find and extract the "Total" row
-                const totalRow = data.find(row => row.CLIENT === "Total");
-                const filteredData = data.filter(row => row.CLIENT !== "Total");
+    const fragment = document.createDocumentFragment();
 
-                // Create and append the "Total" row first
-                if (totalRow) {
-                    const totalTr = document.createElement("tr");
-                    totalTr.classList.add("bg-gray-200", "font-bold", "dark:bg-gray-700");
-                    totalTr.innerHTML = `
+    // Find and extract the "Total" row
+    const totalRow = data.find(row => row.CLIENT === "Total");
+    const filteredData = data.filter(row => row.CLIENT !== "Total");
+
+    // Create and append the "Total" row first
+    if (totalRow) {
+        const totalTr = document.createElement("tr");
+        totalTr.classList.add("bg-gray-200", "font-bold", "dark:bg-gray-700");
+        totalTr.innerHTML = `
             <td class="border px-4 py-2 dark:border-gray-600">${totalRow.CLIENT}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.TOTAL)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.QTY)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.MARGE * 100)}%</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.TOTAL)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.MARGE * 100)}%</td>
         `;
-                    fragment.appendChild(totalTr);
-                }
+        fragment.appendChild(totalTr);
+    }
 
-                // Append remaining rows
-                filteredData.forEach(row => {
-                    const tr = document.createElement("tr");
-                    tr.classList.add("dark:bg-gray-700");
-                    tr.innerHTML = `
+    // Append remaining rows (apply pagination by slicing the data)
+    const paginatedData = filteredData.slice((currentClientPage - 1) * itemsPerClientPage, currentClientPage * itemsPerClientPage);
+    paginatedData.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.classList.add("dark:bg-gray-700");
+        tr.innerHTML = `
             <td class="border px-4 py-2 dark:border-gray-600">${row.CLIENT || "N/A"}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.TOTAL)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.MARGE * 100)}%</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.TOTAL)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.MARGE * 100)}%</td>
         `;
-                    fragment.appendChild(tr);
-                });
+        fragment.appendChild(tr);
+    });
 
-                tableBody.appendChild(fragment); // Append rows efficiently
-            }
+    tableBody.appendChild(fragment); // Append rows efficiently
+
+    // Update pagination
+    updateClientPagination(filteredData.length);
+}
+function updateClientPagination(totalItems) {
+    totalClientPages = Math.ceil(totalItems / itemsPerClientPage);
+
+    const clientPageIndicator = document.getElementById("clpageIndicator");
+    clientPageIndicator.textContent = `Page ${currentClientPage} of ${totalClientPages}`;
+
+    document.getElementById("clfirstPage").disabled = currentClientPage === 1;
+    document.getElementById("clprevPage").disabled = currentClientPage === 1;
+    document.getElementById("clnextPage").disabled = currentClientPage === totalClientPages;
+    document.getElementById("cllastPage").disabled = currentClientPage === totalClientPages;
+}
+document.getElementById("clfirstPage").addEventListener("click", () => {
+    currentClientPage = 1;
+    fetchClientRecap(currentClientPage);
+});
+
+document.getElementById("clprevPage").addEventListener("click", () => {
+    if (currentClientPage > 1) {
+        currentClientPage--;
+        fetchClientRecap(currentClientPage);
+    }
+});
+
+document.getElementById("clnextPage").addEventListener("click", () => {
+    if (currentClientPage < totalClientPages) {
+        currentClientPage++;
+        fetchClientRecap(currentClientPage);
+    }
+});
+
+document.getElementById("cllastPage").addEventListener("click", () => {
+    currentClientPage = totalClientPages;
+    fetchClientRecap(currentClientPage);
+});
+
 
             // Attach event listeners to fetch data when filters change
             document.getElementById("start-date").addEventListener("change", fetchClientRecap);
@@ -1981,23 +2677,31 @@ function downloadExcel(endpoint) {
 
 // Button click triggers the fetching and chart creation
 // Fetch the operator recap data normally, without waiting for the button click
-async function fetchOperatorRecap() {
+
+let currentOperatorPage = 1;
+let totalOperatorPages = 1;
+const itemsPerOperatorPage = 10; // Number of items per page for operator recap
+
+
+
+
+async function fetchOperatorRecap(page = 1) {
     const startDate = document.getElementById("start-date").value;
-    const endDate = document.getElementById("end-date").value;
-    const fournisseur = document.getElementById("recap_fournisseur").value.trim().toUpperCase();
-    const product = document.getElementById("recap_product").value.trim().toUpperCase();
-    const client = document.getElementById("recap_client").value.trim().toUpperCase();
-    const operateur = document.getElementById("recap_operateur").value.trim().toUpperCase();
-    const bccb = document.getElementById("recap_bccbclient").value.trim().toUpperCase();
-    const zone = document.getElementById("recap_zone").value.trim().toUpperCase();
+                const endDate = document.getElementById("end-date").value;
+                const fournisseur = document.getElementById("recap_fournisseur").value.trim();
+                const product = document.getElementById("recap_product").value.trim();
+                const client = document.getElementById("recap_client").value.trim();
+                const operateur = document.getElementById("recap_operateur").value.trim();
+                const bccb = document.getElementById("recap_bccbclient").value.trim();
+                const zone = document.getElementById("recap_zone").value.trim();
 
     if (!startDate || !endDate) return;
 
     const url = new URL("http://192.168.1.94:5000/fetchOperatorRecap");
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
-    url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
-
+    url.searchParams.append("ad_org_id", "1000012");
+    url.searchParams.append("page", page);  // Add page parameter for pagination
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
     if (product) url.searchParams.append("product", product);
     if (client) url.searchParams.append("client", client);
@@ -2011,13 +2715,13 @@ async function fetchOperatorRecap() {
 
         const data = await response.json();
         console.log("Received Operator Recap Data:", data); // Debugging log
-        updateOperatorTable(data);  // Always update table with fetched data
+        updateOperatorTable(data);  // Update table with fetched data
         return data; // Return fetched data
     } catch (error) {
         console.error("Error fetching operator recap data:", error);
-        return null; // In case of error, return null
     }
 }
+
 
 
 
@@ -2070,28 +2774,55 @@ function updateOperatorTable(data) {
         totalTr.classList.add("bg-gray-200", "font-bold", "dark:bg-gray-700");
         totalTr.innerHTML = `
             <td class="border px-4 py-2 dark:border-gray-600">${totalRow.OPERATEUR}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.TOTAL)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.QTY)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.MARGE * 100)}%</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.TOTAL)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(totalRow.MARGE * 100)}%</td>
         `;
         fragment.appendChild(totalTr);
     }
 
-    // Append remaining rows
-    filteredData.forEach(row => {
+    // Apply pagination by slicing the data
+    const paginatedData = filteredData.slice((currentOperatorPage - 1) * itemsPerOperatorPage, currentOperatorPage * itemsPerOperatorPage);
+    paginatedData.forEach(row => {
         const tr = document.createElement("tr");
         tr.classList.add("dark:bg-gray-700");
         tr.innerHTML = `
             <td class="border px-4 py-2 dark:border-gray-600">${row.OPERATEUR || "N/A"}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.TOTAL)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.MARGE * 100)}%</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.TOTAL)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.QTY)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumberp(row.MARGE * 100)}%</td>
         `;
         fragment.appendChild(tr);
     });
 
     tableBody.appendChild(fragment); // Append rows efficiently
+
+    // Update pagination
+    updatePaginationop(filteredData.length);
 }
+function updatePaginationop(totalItems) {
+    totalOperatorPages = Math.ceil(totalItems / itemsPerOperatorPage);
+
+    const pageIndicator = document.getElementById("oppageIndicator");
+    pageIndicator.textContent = `Page ${currentOperatorPage} of ${totalOperatorPages}`;
+
+    document.getElementById("opfirstPage").disabled = currentOperatorPage === 1;
+    document.getElementById("opprevPage").disabled = currentOperatorPage === 1;
+    document.getElementById("opnextPage").disabled = currentOperatorPage === totalOperatorPages;
+    document.getElementById("oplastPage").disabled = currentOperatorPage === totalOperatorPages;
+}
+
+document.getElementById("opfirstPage").addEventListener("click", () => changeOperatorPage(1));
+document.getElementById("opprevPage").addEventListener("click", () => changeOperatorPage(currentOperatorPage - 1));
+document.getElementById("opnextPage").addEventListener("click", () => changeOperatorPage(currentOperatorPage + 1));
+document.getElementById("oplastPage").addEventListener("click", () => changeOperatorPage(totalOperatorPages));
+
+function changeOperatorPage(page) {
+    if (page < 1 || page > totalOperatorPages) return;
+    currentOperatorPage = page;
+    fetchOperatorRecap(currentOperatorPage); // Fetch data for the new page
+}
+
 
 // Update chart with fetched data (only when clicking the button)
 let allcharts = null; // Global chart variable
@@ -2228,95 +2959,140 @@ function formatNumber(num) {
 
 
 
+let currentBccbPage = 1;
+let totalBccbPages = 1;
+const itemsPerBccbPage = 10; // Adjust this to the number of items per page
 
         
   // Fetch data for Recap by BCCB
-  async function fetchBccbRecap() {
-                const startDate = document.getElementById("start-date").value;
+  async function fetchBccbRecap(page = 1) {
+    const startDate = document.getElementById("start-date").value;
                 const endDate = document.getElementById("end-date").value;
-                const fournisseur = document.getElementById("recap_fournisseur").value.trim().toUpperCase();
-                const product = document.getElementById("recap_product").value.trim().toUpperCase();
-                const client = document.getElementById("recap_client").value.trim().toUpperCase();
-                const operateur = document.getElementById("recap_operateur").value.trim().toUpperCase();
-                const bccb = document.getElementById("recap_bccbclient").value.trim().toUpperCase();
-                const zone = document.getElementById("recap_zone").value.trim().toUpperCase();
+                const fournisseur = document.getElementById("recap_fournisseur").value.trim();
+                const product = document.getElementById("recap_product").value.trim();
+                const client = document.getElementById("recap_client").value.trim();
+                const operateur = document.getElementById("recap_operateur").value.trim();
+                const bccb = document.getElementById("recap_bccbclient").value.trim();
+                const zone = document.getElementById("recap_zone").value.trim();
 
-                if (!startDate || !endDate) return;
+    if (!startDate || !endDate) return;
 
-                const url = new URL("http://192.168.1.94:5000/fetchBCCBRecapfact");
-                url.searchParams.append("start_date", startDate);
-                url.searchParams.append("end_date", endDate);
+    const url = new URL("http://192.168.1.94:5000/fetchBCCBRecapfact"); 
+    url.searchParams.append("start_date", startDate);
+    url.searchParams.append("end_date", endDate);
+    url.searchParams.append("page", page);  // Add page parameter for pagination
+    
+    if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
+    if (product) url.searchParams.append("product", product);
+    if (client) url.searchParams.append("client", client);
+    if (operateur) url.searchParams.append("operateur", operateur);
+    if (bccb) url.searchParams.append("bccb", bccb);
+    if (zone) url.searchParams.append("zone", zone);
 
-                if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
-                if (product) url.searchParams.append("product", product);
-                if (client) url.searchParams.append("client", client);
-                if (operateur) url.searchParams.append("operateur", operateur);
-                if (bccb) url.searchParams.append("bccb", bccb);
-                if (zone) url.searchParams.append("zone", zone);
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Network response was not ok");
 
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error("Network response was not ok");
-
-                    const data = await response.json();
-                    console.log("Received BCCB Recap Data:", data); // Debugging log
-                    updateBccbTable(data);
-                } catch (error) {
-                    console.error("Error fetching BCCB recap data:", error);
-                }
-            }
-
-
-            function formatNumberb(value) {
+        const data = await response.json();
+        console.log("Received BCCB Recap Data:", data); // Debugging log
+        updateBccbTable(data);
+        return data; // Return data for pagination
+    } catch (error) {
+        console.error("Error fetching BCCB recap data:", error);
+    }
+}
+function formatNumberb(value) {
     return parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function formatDate(dateString) {
+    if (!dateString) return ''; // Return an empty string if no date provided
+
+    const date = new Date(dateString);
+    
+    // Format the date as 'Wed, 26 Mar 2025'
+    const options = { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' };
+    return date.toLocaleDateString('en-GB', options); // 'en-GB' for British date format
+}
+// Debounce function to limit API calls on input change
+function debounce(fn, delay) {
+    let timeout;
+    return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fn(...args), delay);
+    };
+}
+
+
  // Update table with fetched data
-            function updateBccbTable(data) {
-                const tableBody = document.getElementById("recap-bccb-table");
-                tableBody.innerHTML = ""; // Clear table before inserting new rows
+ function updateBccbTable(data) {
+    const tableBody = document.getElementById("recap-bccb-table");
+    tableBody.innerHTML = ""; // Clear table before inserting new rows
 
-                if (!data || data.length === 0) {
-                    tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">No data available</td></tr>`;
-                    return;
-                }
+    if (!data || data.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">No data available</td></tr>`;
+        return;
+    }
 
-                const fragment = document.createDocumentFragment();
+    const fragment = document.createDocumentFragment();
+    const totalRow = data.find(row => row.DOCUMENTNO === "Total");
+    const filteredData = data.filter(row => row.DOCUMENTNO !== "Total");
 
-                // Find and separate the "Total" row
-                const totalRow = data.find(row => row.DOCUMENTNO === "Total");
-                const filteredData = data.filter(row => row.DOCUMENTNO !== "Total");
+    const paginatedData = filteredData.slice((currentBccbPage - 1) * itemsPerBccbPage, currentBccbPage * itemsPerBccbPage);
 
-                // Append regular rows first
-                filteredData.forEach(row => {
-                    const tr = document.createElement("tr");
-                    tr.classList.add("dark:bg-gray-700");
-                    tr.innerHTML = `
+    paginatedData.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.classList.add("dark:bg-gray-700");
+        tr.innerHTML = `
             <td class="border px-4 py-2 dark:border-gray-600">${row.DOCUMENTNO || "N/A"}</td>
-            <td class="border px-4 py-2 dark:border-gray-600">${row.DATEORDERED || "N/A"}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatDate(row.DATEORDERED)}</td>
             <td class="border px-4 py-2 dark:border-gray-600">${formatNumberb(row.GRANDTOTAL)}</td>
-
             <td class="border px-4 py-2 dark:border-gray-600">${row.MARGE !== null ? row.MARGE.toFixed(2) + '%' : "N/A"}</td>
         `;
-                    fragment.appendChild(tr);
-                });
+        fragment.appendChild(tr);
+    });
 
-                // Append total row at the bottom
-                if (totalRow) {
-                    const totalTr = document.createElement("tr");
-                    totalTr.classList.add("bg-gray-200", "font-bold", "dark:bg-gray-700");
-                    totalTr.innerHTML = `
+    // Append total row at the bottom
+    if (totalRow) {
+        const totalTr = document.createElement("tr");
+        totalTr.classList.add("bg-gray-200", "font-bold", "dark:bg-gray-700");
+        totalTr.innerHTML = `
             <td class="border px-4 py-2 dark:border-gray-600 text-right" colspan="2">Total:</td>
             <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.GRANDTOTAL)}</td>
             <td class="border px-4 py-2 dark:border-gray-600">${totalRow.MARGE !== null ? totalRow.MARGE.toFixed(2) + '%' : "N/A"}</td>
         `;
-                    fragment.appendChild(totalTr);
-                }
+        fragment.appendChild(totalTr);
+    }
 
-                // Append everything to the table
-                tableBody.appendChild(fragment);
-            }
+    // Append everything to the table
+    tableBody.appendChild(fragment);
 
+    // Update pagination
+    updatePaginationbccb(filteredData.length);
+}
+function updatePaginationbccb(totalItems) {
+    totalBccbPages = Math.ceil(totalItems / itemsPerBccbPage);
+
+    const pageIndicator = document.getElementById("bpageIndicator");
+    pageIndicator.textContent = `Page ${currentBccbPage} of ${totalBccbPages}`;
+
+    document.getElementById("bfirstPage").disabled = currentBccbPage === 1;
+    document.getElementById("bprevPage").disabled = currentBccbPage === 1;
+    document.getElementById("bnextPage").disabled = currentBccbPage === totalBccbPages;
+    document.getElementById("blastPage").disabled = currentBccbPage === totalBccbPages;
+}
+
+
+document.getElementById("bfirstPage").addEventListener("click", () => changeBccbPage(1));
+document.getElementById("bprevPage").addEventListener("click", () => changeBccbPage(currentBccbPage - 1));
+document.getElementById("bnextPage").addEventListener("click", () => changeBccbPage(currentBccbPage + 1));
+document.getElementById("blastPage").addEventListener("click", () => changeBccbPage(totalBccbPages));
+
+function changeBccbPage(page) {
+    if (page < 1 || page > totalBccbPages) return;
+    currentBccbPage = page;
+    fetchBccbRecap(currentBccbPage); // Fetch data for the new page
+}
 
 
 
@@ -2372,7 +3148,7 @@ function formatNumber(num) {
             document.getElementById("recap_bccbclient").addEventListener("input", debounce(fetchBccbRecap, 500));
             document.getElementById("recap_zone").addEventListener("input", debounce(fetchBccbRecap, 500));
 
-            async function fetchBccbProduct(bccb) {
+ async function fetchBccbProduct(bccb) {
     if (!bccb) return;
 
     const tableContainer = document.getElementById("bccb-product-container");
@@ -2380,8 +3156,7 @@ function formatNumber(num) {
 
     const url = new URL("http://192.168.1.94:5000/fetchBCCBProductfact");
     url.searchParams.append("bccb", bccb);
-    url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
-
+    url.searchParams.append("ad_org_id", "1000012"); 
 
     try {
         const response = await fetch(url);
@@ -2430,10 +3205,6 @@ function updateBccbProductTable(data) {
 
     tableBody.appendChild(fragment);
 }
-
-
-
-
 
 
 

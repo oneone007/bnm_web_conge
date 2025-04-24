@@ -50,7 +50,7 @@ file_put_contents(__DIR__ . "/login_logs.txt", $log_entry, FILE_APPEND);
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>BNM</title>
+        <title>BNM Web</title>
         <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
         <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
         <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
@@ -294,84 +294,187 @@ html.dark .moon {
 <div id="sidebar-container"></div>
 
 <script>
+fetch("side")
+  .then(response => response.text())
+  .then(html => {
+    const container = document.getElementById("sidebar-container");
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = html;
+    container.innerHTML = tempDiv.innerHTML;
 
-    
-    // Fetch sidebar content dynamically
-    fetch("side")
-        .then(response => response.text())
-        .then(html => {
-            let container = document.getElementById("sidebar-container");
-            let tempDiv = document.createElement("div");
-            tempDiv.innerHTML = html;
-
-            // Insert the sidebar content into the page
-            container.innerHTML = tempDiv.innerHTML;
-
-            // Reattach event listeners for the submenu toggles (Products, Recaps)
-            const productsToggle = document.getElementById("products-toggle");
-            if (productsToggle) {
-                productsToggle.addEventListener("click", function () {
-                    let submenu = document.getElementById("products-submenu");
-                    submenu.classList.toggle("hidden");
-                });
-            }
-
-            const recapsToggle = document.getElementById("recaps-toggle");
-            if (recapsToggle) {
-                recapsToggle.addEventListener("click", function () {
-                    let submenu = document.getElementById("recaps-submenu");
-                    submenu.classList.toggle("hidden");
-                });
-            }
-
-            // Initialize Lottie animation after sidebar is inserted
-            const ramAnimation = document.getElementById('ram-animation');
-            if (ramAnimation) {
-                lottie.loadAnimation({
-                    container: ramAnimation,
-                    renderer: 'svg',
-                    loop: true,
-                    autoplay: true,
-                    path: 'json_files/ram.json',
-                    rendererSettings: {
-                        clearCanvas: true,
-                        preserveAspectRatio: 'xMidYMid meet',
-                        progressiveLoad: true,
-                        hideOnTransparent: true
-                    }
-                });
-            }
-
-            // Sidebar toggle functionality
-            const sidebarToggle = document.getElementById('sidebarToggle');
-            const sidebar = document.getElementById('sidebar');
-            const content = document.querySelector('.content');
-
-            // Ensure sidebarToggle is initialized after sidebar is loaded
-            if (sidebarToggle && sidebar && content) {
-                sidebarToggle.addEventListener('click', () => {
-                    sidebar.classList.toggle('sidebar-hidden');
-                    content.classList.toggle('content-full');
-
-                    // Adjust button position when sidebar is hidden or shown
-                    if (sidebar.classList.contains('sidebar-hidden')) {
-                        sidebarToggle.style.left = '10px';  // Sidebar hidden
-                    } else {
-                        sidebarToggle.style.left = '260px'; // Sidebar visible
-                    }
-                });
-            } else {
-                console.error("Sidebar or Toggle Button not found!");
-            }
-
-        })
-        .catch(error => console.error("Error loading sidebar:", error));
+    // After DOM injection, dynamically load sidebar script
+    const script = document.createElement('script');
+    script.src = 'sidebar.js'; // Move all logic into sidebar.js
+    document.body.appendChild(script);
+  })
+  .catch(error => console.error("Error loading sidebar:", error));
 
 
-        
 </script>
 
+<style>
+  .chart-controls {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#dataChart {
+    background-color: white;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dark #dataChart {
+    background-color: #374151;
+}
+</style>
 <div class="canvas-container">
+
+
+<!-- <div class="card">
+  <img
+    class="image"
+    alt=""
+    src="https://uiverse.io/astronaut.png"
+  />
+  <div class="heading">For more information Contact Service INFO</div>
+
+</div> -->
+<style>
+  /* From Uiverse.io by joe-herbert */ 
+.card {
+  border-radius: 10px;
+  width: 150px;
+  height: 200px;
+  transition: all 0.3s;
+  position: absolute;
+  transition-delay: 0.3s;
+}
+
+.card:hover {
+  width: 500px;
+  height: 250px;
+  transition-delay: 0s;
+}
+
+.card::after {
+  /* content: "\2193  Hover me \2193"; */
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  position: absolute;
+  top: -30px;
+  left: 0;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.3s, visibility 0.3s;
+  transition-delay: 0.3s;
+}
+
+.card:hover::after {
+  opacity: 0;
+  visibility: hidden;
+  transition-delay: 0s;
+}
+
+.image {
+  width: 100%;
+  float: left;
+  transition: all 0.3s;
+  margin: 0%;
+  transition-delay: 0.3s;
+}
+
+.card:hover .image {
+  transition-delay: 0s;
+  width: 50%;
+  margin: 0 15px 0 0;
+  filter: drop-shadow(-5px 5px 4px #000000aa);
+}
+
+.heading,
+.icons {
+  opacity: 0;
+  visibility: hidden;
+  overflow: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+  transition-delay: 0s;
+}
+
+.heading {
+  display: block;
+  font-size: 30px;
+  font-weight: bold;
+  font-family: Montserrat, sans-serif;
+  margin: 25px 20px;
+  text-align: right;
+  position: relative;
+  z-index: 1;
+  color: white;
+  text-shadow: 1px 1px 3px #0004;
+  user-select: none;
+  background: linear-gradient(
+    130deg,
+    pink 20%,
+    rgb(196, 91, 196) 50%,
+    rgb(85, 183, 228) 100%
+  );
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.card:hover .heading {
+  transition-delay: 0.3s;
+  opacity: 1;
+  visibility: visible;
+}
+
+.heading::after {
+  content: "!";
+}
+
+.card:hover .icons {
+  transition-delay: 0.3s;
+  opacity: 1;
+  visibility: visible;
+}
+
+.icons {
+  text-align: center;
+  transform: translateX(-10px);
+}
+
+.icons a {
+  text-decoration: none;
+}
+
+.icons svg {
+  width: 50px;
+  height: 50px;
+  margin: 10px;
+  transition: transform 0.3s;
+}
+
+.icons svg:hover {
+  transform: translateY(-5px);
+  transform-origin: center -10px;
+}
+
+.icons svg:active {
+  transform: scale(0.9);
+}
+
+.icons svg path {
+  stroke: black;
+  opacity: 0.6;
+  transition: opacity 0.6s;
+}
+
+.icons svg:hover path {
+  opacity: 1;
+}
+
+</style>
     <!-- <div class="container arrow" onclick="location.href='c';">Arrow</div>
     <div class="container rabbit" onclick="location.href='b';">Rabbit</div> -->
 </div>
@@ -658,6 +761,32 @@ html.dark .moon {
 }
 </style>
 
+
+<div>
+  
+</div>
+
+<SCRipt>
+             // Dark Mode Toggle Functionality
+             const themeToggle = document.getElementById('themeToggle');
+            const htmlElement = document.documentElement;
+
+            // Load Dark Mode Preference from Local Storage
+            const savedDarkMode = localStorage.getItem('darkMode');
+            if (savedDarkMode === 'true') {
+                htmlElement.classList.add('dark');
+                themeToggle.checked = true;
+            }
+
+            // Toggle Dark Mode on Click
+            themeToggle.addEventListener('change', () => {
+                htmlElement.classList.toggle('dark');
+                const isDarkMode = htmlElement.classList.contains('dark');
+                localStorage.setItem('darkMode', isDarkMode);
+            });
+
+
+</SCRipt>
     
     </body>
     </html>

@@ -128,7 +128,7 @@ def fetch_marge_data():
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
             query = """
-            SELECT
+SELECT
     *
 FROM
     (
@@ -147,7 +147,8 @@ FROM
             "source"."MARGE" "MARGE",
             "source"."LABO" "LABO",
             "source"."LOT" "LOT",
-            "source"."QTY" "QTY"
+            "source"."QTY" "QTY",
+            "source"."LOCATION" "LOCATION"
         FROM
             (
                 SELECT
@@ -162,10 +163,20 @@ FROM
                     remise_auto,
                     bonus_auto,
                     round(p_revient, 2) AS p_revient,
-                    LEAST(round((marge), 2), 100) AS marge,  -- Cap margin at 100%
+                    LEAST(round((marge), 2), 100) AS marge,
                     labo,
                     lot,
-                    qty
+                    qty,
+                    CASE 
+                        WHEN m_locator_id = 1000614 THEN 'Préparation'
+                        WHEN m_locator_id = 1001135 THEN 'HANGAR'
+                               WHEN m_locator_id = 1001128 THEN 'Dépot_réserve'
+                                      WHEN m_locator_id = 1001136 THEN 'HANGAR_'
+                        WHEN m_locator_id = 1001020 THEN 'Depot_Vente'
+
+                        
+
+                    END AS location
                 FROM
                     (
                         SELECT
@@ -176,7 +187,7 @@ FROM
                                     2
                                 ), 
                                 100
-                            ) AS marge  -- Ensure margin does not exceed 100%
+                            ) AS marge
                         FROM
                             (
                                 SELECT
@@ -205,6 +216,7 @@ FROM
                                                     XX_Laboratory_id = p.XX_Laboratory_id
                                             ) labo,
                                             mst.qtyonhand qty,
+                                            mst.m_locator_id,
                                             mati.value fournisseur,
                                             mats.guaranteedate,
                                             md.name remise_auto,
@@ -289,7 +301,7 @@ FROM
                                             LEFT JOIN XX_SalesContext sal ON p.XX_SalesContext_ID = sal.XX_SalesContext_ID
                                         WHERE
                                             mati.m_attribute_id = 1000508
-                                            AND mst.m_locator_id IN (1000614, 1001135)
+                                            AND mst.m_locator_id IN (1001135, 1000614, 1001128,1001136,1001020)
                                             AND mst.qtyonhand != 0
                                         ORDER BY
                                             p.name
@@ -313,14 +325,14 @@ FROM
                     marge,
                     labo,
                     lot,
-                    qty
+                    qty,
+                    m_locator_id
                 ORDER BY
                     fournisseur
             ) "source"
     )
 WHERE
     rownum <= 1048575
-
             """
             cursor.execute(query)
             rows = cursor.fetchall()
@@ -330,6 +342,8 @@ WHERE
     except Exception as e:
         logger.error(f"Error fetching marge data: {e}")
         return {"error": "An error occurred while fetching marge data."}
+
+
 
 # Fetch bonus data from Oracle DB
 def fetch_bonus_data():
@@ -548,7 +562,7 @@ def generate_excel(data, value):
     return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
-def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None):
+def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None, name=None):
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
@@ -563,7 +577,15 @@ def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None):
                 SUM(M_ATTRIBUTEINSTANCE.valuenumber * (m_storage.qtyonhand - m_storage.QTYRESERVED)) AS prix_dispo,
                 ml.M_Locator_ID AS locatorid,
                 m.m_product_id AS productid,
-                1 AS sort_order
+                1 AS sort_order,
+                CASE 
+                    WHEN ml.M_Locator_ID = 1000614 THEN 'Préparation'
+                    WHEN ml.M_Locator_ID = 1001135 THEN 'HANGAR'
+                    WHEN ml.M_Locator_ID = 1001128 THEN 'Dépot_réserve'
+                    WHEN ml.M_Locator_ID = 1001136 THEN 'HANGAR_'
+                    WHEN ml.M_Locator_ID = 1001020 THEN 'Depot_Vente'
+                    ELSE 'Unknown' 
+                END AS place
             FROM 
                 M_ATTRIBUTEINSTANCE
             JOIN 
@@ -586,6 +608,10 @@ def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None):
             if fournisseur:
                 query += " AND mati.value LIKE :fournisseur || '%'"
                 params["fournisseur"] = fournisseur
+
+            if name:
+                query += " AND m.name LIKE :name || '%'"
+                params["name"] = name
 
             if magasin:
                 query += """
@@ -645,15 +671,16 @@ def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None):
                 SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand) AS prix,
                 SUM(m_storage.qtyonhand - m_storage.QTYRESERVED) AS qty_dispo, 
                 SUM(M_ATTRIBUTEINSTANCE.valuenumber * (m_storage.qtyonhand - m_storage.QTYRESERVED)) AS prix_dispo,
-                NULL AS locatorid,  -- Changed from ml.M_Locator_ID to NULL, since it's not relevant for the total row
-                NULL AS productid,  -- Changed from m.m_product_id to NULL
-                0 AS sort_order
+                NULL AS locatorid,
+                NULL AS productid,
+                0 AS sort_order,
+                NULL AS place
             FROM 
                 M_ATTRIBUTEINSTANCE
             JOIN 
                 m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
             JOIN 
-                M_PRODUCT m ON m.M_PRODUCT_id = m_storage.M_PRODUCT_id
+                M_PRODUCT m ON m.M_PRODUCT_ID = m_storage.M_PRODUCT_ID
             JOIN 
                 M_Locator ml ON ml.M_Locator_ID = m_storage.M_Locator_ID
             INNER JOIN 
@@ -667,6 +694,9 @@ def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None):
 
             if fournisseur:
                 query += " AND mati.value LIKE :fournisseur || '%'"
+
+            if name:
+                query += " AND m.name LIKE :name || '%'"
 
             if magasin:
                 query += """
@@ -716,8 +746,6 @@ def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None):
             ORDER BY sort_order, fournisseur, name
             """
 
-           
-
             cursor.execute(query, params)
             rows = cursor.fetchall()
             columns = [col[0] for col in cursor.description]
@@ -736,8 +764,9 @@ def fetch_stock_data():
         fournisseur = request.args.get("fournisseur", None)
         magasin = request.args.get("magasin", None)
         emplacement = request.args.get("emplacement", None)
+        name = request.args.get("name", None)
 
-        data = fetch_stock_data_from_db(fournisseur, magasin, emplacement)
+        data = fetch_stock_data_from_db(fournisseur, magasin, emplacement, name)
         return jsonify(data)
 
     except Exception as e:
@@ -1883,7 +1912,7 @@ def generate_excel_fournisseur(data, filename):
     return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
-
+ 
 
 def fetch_product_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id):
     try:
@@ -1977,7 +2006,7 @@ def fetch_product():
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     fournisseur = request.args.get('fournisseur')
-    product = request.args.get('product')
+    product = request.args.get("product", "").strip()
     client = request.args.get('client')
     operateur = request.args.get('operateur')
     bccb = request.args.get('bccb')
@@ -3094,7 +3123,7 @@ def generate_excel_product_achat(data, filename):
     # Send the file to the client for download
     return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-
+  
 @app.route('/download-recap-fournisseur-achat-excel', methods=['GET'])
 def download_recap_fournisseur_achat_excel():
     start_date = request.args.get('start_date')
@@ -4211,28 +4240,34 @@ def journal_vente(start_date, end_date, client):
             SELECT ci.DocumentNo,
                    ci.DateInvoiced,
                    cb.name as client,
-                   CASE WHEN ci.isreturntrx='Y'
-                        THEN -(ci.GRANDTOTAL - getinvoicetaxamt(ci.c_invoice_id) - ci.chargeamt) 
-                        ELSE  ci.GRANDTOTAL - getinvoicetaxamt(ci.c_invoice_id) - ci.chargeamt 
+                   CASE WHEN ci.isreturntrx = 'Y'
+                        THEN -(ci.GRANDTOTAL - getinvoicetaxamt(ci.c_invoice_id)) 
+                        ELSE ci.GRANDTOTAL - getinvoicetaxamt(ci.c_invoice_id) 
                    END as TotalHT,
-                   CASE WHEN ci.isreturntrx='Y'           
+                   CASE WHEN ci.isreturntrx = 'Y'           
                         THEN -getinvoicetaxamt(ci.c_invoice_id) 
-                        ELSE  getinvoicetaxamt(ci.c_invoice_id) 
+                        ELSE getinvoicetaxamt(ci.c_invoice_id) 
                    END as TotalTVA,
-                   CASE WHEN ci.isreturntrx='Y'
+                   CASE WHEN ci.isreturntrx = 'Y'
                         THEN -ci.chargeamt 
                         ELSE ci.chargeamt 
                    END as TotalDT,
-                   CASE WHEN ci.isreturntrx='Y'
-                        THEN -ci.GRANDTOTAL + ci.chargeamt  
-                        ELSE ci.GRANDTOTAL - ci.chargeamt 
-                   END as TotalTTC,
-                   CASE WHEN ci.isreturntrx='Y'
+                   CASE WHEN ci.isreturntrx = 'Y'
                         THEN -ci.GRANDTOTAL 
                         ELSE ci.GRANDTOTAL 
+                   END as TotalTTC,
+                   CASE WHEN ci.isreturntrx = 'Y'
+                        THEN -ci.GRANDTOTAL - ci.chargeamt 
+                        ELSE ci.GRANDTOTAL + ci.chargeamt 
                    END as NETAPAYER,   
                    sr.name as region,
-                   adc.name as Entreprise
+                   adc.name as Entreprise,
+                   COALESCE((
+                        SELECT sum(tax.taxbaseamt)
+                        FROM C_InvoiceTax tax 
+                        WHERE tax.C_Invoice_ID = ci.C_Invoice_ID 
+                        AND tax.taxamt = 0
+                    ), 0) as Montant_Exonere
             FROM C_INVOICE ci
             INNER JOIN AD_CLIENT adc ON (adc.ad_client_id = ci.ad_client_id)
             INNER JOIN AD_ORG ado ON (ado.ad_org_id = ci.ad_org_id)
@@ -4272,7 +4307,8 @@ def journal_vente(start_date, end_date, client):
                     "TotalTTC": row[6],
                     "NETAPAYER": row[7],
                     "Region": row[8],
-                    "Entreprise": row[9]
+                    "Entreprise": row[9],
+                    "Montant_Exonere": row[10]
                 }
                 for row in rows
             ]
@@ -4294,6 +4330,82 @@ def fetch_journal():
     data = journal_vente(start_date, end_date, client)
     return jsonify(data)
 
+def total_journal(start_date, end_date, client):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+            SELECT 
+                SUM(CASE 
+                    WHEN ci.isreturntrx = 'Y' THEN -(ci.GRANDTOTAL - getinvoicetaxamt(ci.c_invoice_id)) 
+                    ELSE ci.GRANDTOTAL - getinvoicetaxamt(ci.c_invoice_id) 
+                END) AS TotalHT,
+                SUM(CASE 
+                    WHEN ci.isreturntrx = 'Y' THEN -getinvoicetaxamt(ci.c_invoice_id) 
+                    ELSE getinvoicetaxamt(ci.c_invoice_id) 
+                END) AS TotalTVA,
+                SUM(CASE 
+                    WHEN ci.isreturntrx = 'Y' THEN -ci.chargeamt 
+                    ELSE ci.chargeamt 
+                END) AS TotalDT,
+                SUM(CASE 
+                    WHEN ci.isreturntrx = 'Y' THEN -ci.GRANDTOTAL  
+                    ELSE ci.GRANDTOTAL 
+                END) AS TotalTTC,
+                SUM(CASE 
+                    WHEN ci.isreturntrx = 'Y' THEN -ci.GRANDTOTAL - ci.chargeamt
+                    ELSE ci.GRANDTOTAL + ci.chargeamt
+                END) AS NETAPAYER
+            FROM C_INVOICE ci
+            INNER JOIN AD_CLIENT adc ON adc.ad_client_id = ci.ad_client_id
+            INNER JOIN AD_ORG ado ON ado.ad_org_id = ci.ad_org_id
+            INNER JOIN C_BPARTNER cb ON cb.c_bpartner_id = ci.c_bpartner_id 
+            INNER JOIN C_BPARTNER_Location bpl ON bpl.C_BPARTNER_Location_id = ci.C_BPARTNER_Location_id 
+            LEFT OUTER JOIN C_SALESREGION sr ON bpl.C_SalesRegion_ID = sr.C_SalesRegion_ID
+            WHERE ci.dateInvoiced BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                                     AND TO_DATE(:end_date, 'YYYY-MM-DD')
+            AND ci.ad_Org_id = 1000012
+            AND ci.ISSOTRX = 'Y' 
+            AND ci.docstatus IN ('CO', 'CL')
+            AND ci.c_doctype_id IN (SELECT c_doctype_id FROM c_doctype WHERE Xx_Excluejournalvente = 'N')
+            """
+
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+            }
+
+            if client:
+                query += " AND cb.name LIKE :client"
+                params['client'] = f"%{client}%"
+
+            cursor.execute(query, params)
+            row = cursor.fetchone()
+
+            # Assuming there's only one row of results, we return the aggregated totals
+            total_data = {
+                "TotalHT": row[0],
+                "TotalTVA": row[1],
+                "TotalDT": row[2],
+                "TotalTTC": row[3],
+                "NETAPAYER": row[4]
+            }
+
+            return total_data
+
+    except Exception as e:
+        logger.error(f"Error fetching total journal data: {e}")
+        return {"error": "An error occurred while fetching total journal data."}
+
+@app.route('/totalJournal', methods=['GET'])
+def fetch_total_journal():
+    client = request.args.get('client')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    total_data = total_journal(start_date, end_date, client)
+    return jsonify(total_data)
 
 
 
@@ -4405,11 +4517,13 @@ def fetch_etat_fournisseur():
                       AND inv.ad_client_id = 1000000
                       AND inv.ISSOTRX = 'N'
                       AND bp.isactive = 'Y'
+                      AND bp.isactive = 'Y'
+
                       AND bp.isvendor = 'Y'
                       AND COALESCE(invoiceOpen(inv.C_Invoice_ID, 0), 0) <> 0
                       AND inv.AD_Org_ID = 1000000
                       AND inv.AD_Client_ID = 1000000
-                      AND (inv.dateinvoiced + pt.netdays) BETWEEN TO_DATE('01/01/2020', 'DD/MM/YYYY') AND SYSDATE
+                      AND (inv.dateinvoiced + pt.netdays) BETWEEN TO_DATE('01/01/2000', 'DD/MM/YYYY') AND SYSDATE
                       AND bp.name NOT LIKE 'solde initial%'
 
                     UNION ALL
@@ -4425,7 +4539,7 @@ def fetch_etat_fournisseur():
                         FROM xx_vendor_status cs
                         WHERE cs.AD_Client_ID = 1000000
                           AND cs.AD_Org_ID = 1000000
-                          AND cs.dateinvoiced BETWEEN TO_DATE('01/01/2015', 'DD/MM/YYYY') AND TO_DATE('30/12/3000', 'DD/MM/YYYY')
+                          AND cs.dateinvoiced BETWEEN TO_DATE('01/01/2000', 'DD/MM/YYYY') AND TO_DATE('30/12/3000', 'DD/MM/YYYY')
                           AND cs.name NOT LIKE 'solde initial%'
                     ) cs
                     WHERE cs.rn = 1
@@ -4475,21 +4589,23 @@ def get_etat_fournisseur():
     result = fetch_etat_fournisseur()
     return jsonify(result)
 
-
+ 
 
 def fetch_fournisseur_dette(fournisseur=None):
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
 
-            query = """
+            fournisseur_filter = "AND bp.name LIKE :fournisseur || '%'" if fournisseur else ""
+            fournisseur_filter_cs = "AND cs.name LIKE :fournisseur || '%'" if fournisseur else ""
+
+            query = f"""
                 SELECT 
                     fournisseur,
-                    ROUND(COALESCE(SUM(total_echu), 0), 2) AS "TOTAL ECHU",
-                    ROUND(COALESCE(SUM(total_dette), 0), 2) AS "TOTAL DETTE",
-                    ROUND(COALESCE(SUM(STOCK), 0), 2) AS "TOTAL STOCK"
+                    ROUND(SUM(total_echu), 2) AS "TOTAL ECHU",
+                    ROUND(SUM(total_dette), 2) AS "TOTAL DETTE",
+                    ROUND(SUM(STOCK), 2) AS "TOTAL STOCK"
                 FROM (
-                    -- TOTAL ECHU Calculation
                     SELECT  
                         bp.name AS fournisseur,
                         SUM(COALESCE(invoiceOpen(inv.C_Invoice_ID, 0), 0)) AS total_echu,
@@ -4497,6 +4613,8 @@ def fetch_fournisseur_dette(fournisseur=None):
                         0 AS STOCK
                     FROM C_Invoice inv
                     INNER JOIN c_bpartner bp ON bp.c_bpartner_id = inv.c_bpartner_id
+                    LEFT OUTER JOIN C_BPARTNER_LOCATION bpl ON bp.c_bpartner_id = bpl.c_bpartner_id
+                    LEFT OUTER JOIN C_SalesRegion SR ON SR.C_SalesRegion_ID = bpl.C_SalesRegion_ID
                     INNER JOIN C_PAYMENTTERM pt ON inv.C_PaymentTerm_ID = pt.C_PaymentTerm_ID
                     WHERE inv.docstatus IN ('CO', 'CL')
                       AND inv.ad_client_id = 1000000
@@ -4507,12 +4625,11 @@ def fetch_fournisseur_dette(fournisseur=None):
                       AND inv.AD_Org_ID = 1000000
                       AND (inv.dateinvoiced + pt.netdays) BETWEEN TO_DATE('01/01/2020', 'DD/MM/YYYY') AND SYSDATE
                       AND bp.name NOT LIKE 'solde initial%'
-                    {fournisseur_filter}
+                      {fournisseur_filter}
                     GROUP BY bp.name
 
                     UNION ALL
 
-                    -- TOTAL DETTE Calculation
                     SELECT  
                         cs.name AS fournisseur,
                         0 AS total_echu,
@@ -4526,14 +4643,13 @@ def fetch_fournisseur_dette(fournisseur=None):
                           AND cs.AD_Org_ID = 1000000
                           AND cs.dateinvoiced BETWEEN TO_DATE('01/01/2015', 'DD/MM/YYYY') AND TO_DATE('30/12/3000', 'DD/MM/YYYY')
                           AND cs.name NOT LIKE 'solde initial%'
+                          {fournisseur_filter_cs}
                     ) cs
                     WHERE cs.rn = 1
-                    {fournisseur_filter}
                     GROUP BY cs.name
 
                     UNION ALL
 
-                    -- TOTAL STOCK Calculation
                     SELECT 
                         bp.name AS fournisseur,
                         0 AS total_echu,
@@ -4550,7 +4666,7 @@ def fetch_fournisseur_dette(fournisseur=None):
                         AND ms.qtyonhand > 0
                         AND ms.m_locator_id IN (1000614, 1001128, 1001135, 1001136)
                         AND bp.name NOT LIKE 'solde initial%'
-                    {fournisseur_filter}
+                        {fournisseur_filter}
                     GROUP BY bp.name
                 ) temp
                 GROUP BY fournisseur
@@ -4558,12 +4674,8 @@ def fetch_fournisseur_dette(fournisseur=None):
                 ORDER BY "TOTAL DETTE" DESC, "TOTAL ECHU" DESC, "TOTAL STOCK" DESC
             """
 
-            # Conditionally add the fournisseur filter if a value is provided
-            fournisseur_filter = "AND bp.name LIKE :fournisseur || '%'" if fournisseur else ""
-            final_query = query.format(fournisseur_filter=fournisseur_filter)
             params = {'fournisseur': fournisseur} if fournisseur else {}
-
-            cursor.execute(final_query, params)
+            cursor.execute(query, params)
             rows = cursor.fetchall()
 
             result = []
@@ -4679,6 +4791,1013 @@ def get_order_confirmed():
 
 
 
+# Updated function that returns only the total price
+def fetch_total_stock_price():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+            SELECT 
+                SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand) AS prix_total
+            FROM 
+                M_ATTRIBUTEINSTANCE
+            JOIN 
+                m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
+            JOIN 
+                M_PRODUCT m ON m.M_PRODUCT_ID = m_storage.M_PRODUCT_ID
+            JOIN 
+                M_Locator ml ON ml.M_Locator_ID = m_storage.M_Locator_ID
+            INNER JOIN 
+                m_attributeinstance mati ON m_storage.M_ATTRIBUTEsetINSTANCE_id = mati.M_ATTRIBUTEsetINSTANCE_id
+            WHERE 
+                M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
+                AND m_storage.qtyonhand > 0
+                AND mati.m_attribute_id = 1000508
+                AND m_storage.AD_Client_ID = 1000000
+                AND m_storage.M_Locator_ID IN (
+                    SELECT M_Locator_ID 
+                    FROM M_Locator 
+                    WHERE M_Warehouse_ID IN (
+                        SELECT M_Warehouse_ID 
+                        FROM M_Warehouse 
+                        WHERE VALUE IN (
+                            'HANGAR', '1-Dépôt Principal', '8-Dépot réserve', '88-Dépot Hangar réserve'
+                        )
+                    )
+                )
+            """
+
+            cursor.execute(query)
+            result = cursor.fetchone()
+
+            return {"prix_total": result[0] if result else 0}
+
+    except Exception as e:
+        logger.error(f"Database error: {e}")
+        return {"error": "An error occurred while fetching total price."}
+
+
+
+@app.route('/total-stock', methods=['GET'])
+def get_total_stock_price():
+    try:
+        total_data = fetch_total_stock_price()
+        return jsonify(total_data)
+    except Exception as e:
+        logger.error(f"Error fetching total stock price: {e}")
+        return jsonify({"error": "Failed to fetch total price"}), 500
+
+def fetch_total_stock_by_location():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+                WITH stock_principale_data AS (
+                    SELECT 
+                        ROUND(SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand), 2) AS stock_principale
+                    FROM 
+                        M_ATTRIBUTEINSTANCE
+                    JOIN 
+                        m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
+                    WHERE 
+                        M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
+                        AND m_storage.qtyonhand > 0
+                        AND m_storage.m_locator_id = 1000614
+                ),
+                hangar_data AS (
+                    SELECT 
+                        ROUND(SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand), 2) AS hangar
+                    FROM 
+                        M_ATTRIBUTEINSTANCE
+                    JOIN 
+                        m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
+                    WHERE 
+                        M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
+                        AND m_storage.qtyonhand > 0
+                        AND m_storage.m_locator_id = 1001135
+                ),
+                hangarresrev_data AS (
+                    SELECT 
+                        ROUND(SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand), 2) AS hangarresrev
+                    FROM 
+                        M_ATTRIBUTEINSTANCE
+                    JOIN 
+                        m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
+                    WHERE 
+                        M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
+                        AND m_storage.qtyonhand > 0
+                        AND m_storage.m_locator_id = 1001136
+                ),
+                depot_reserver_data AS (
+                    SELECT 
+                        ROUND(SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand), 2) AS depot_reserver
+                    FROM 
+                        M_ATTRIBUTEINSTANCE
+                    JOIN 
+                        m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
+                    WHERE 
+                        M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
+                        AND m_storage.qtyonhand > 0
+                        AND m_storage.m_locator_id = 1001128
+                )
+
+                SELECT 
+                    ROUND(SUM(sp.stock_principale), 2) AS STOCK_principale,
+                    ROUND(SUM(h.hangar), 2) AS hangar,
+                    ROUND(SUM(hr.hangarresrev), 2) AS hangarréserve,
+                    ROUND(SUM(dr.depot_reserver), 2) AS depot_reserver,
+                    ROUND(
+                        NVL(SUM(sp.stock_principale), 0) + 
+                        NVL(SUM(h.hangar), 0) + 
+                        NVL(SUM(hr.hangarresrev), 0) + 
+                        NVL(SUM(dr.depot_reserver), 0), 
+                        2
+                    ) AS total_stock
+                FROM 
+                    stock_principale_data sp,
+                    hangar_data h,
+                    hangarresrev_data hr,
+                    depot_reserver_data dr
+            """
+
+            cursor.execute(query)
+            result = cursor.fetchone()
+
+            return {
+                "STOCK_principale": result[0] or 0,
+                "hangar": result[1] or 0,
+                "hangarréserve": result[2] or 0,
+                "depot_reserver": result[3] or 0,
+                "total_stock": result[4] or 0
+            }
+
+    except Exception as e:
+        logger.error(f"Database error: {e}")
+        return {"error": "An error occurred while fetching stock data."}
+
+
+
+@app.route('/stock-summary', methods=['GET'])
+def get_stock_summary():
+    try:
+        stock_data = fetch_total_stock_by_location()
+        return jsonify(stock_data)
+    except Exception as e:
+        logger.error(f"Error fetching stock summary: {e}")
+        return jsonify({"error": "Failed to fetch stock summary"}), 500
+
+
+
+
+
+@app.route('/download-quota-excel', methods=['GET'])
+def download_quota_excel():
+    data = fetch_quota_product()  # Fetch all data
+    produit_filter = request.args.get("produit", "").strip()
+
+    # Apply filter if provided (already applied inside fetch_quota_product, but double check here)
+    if produit_filter:
+        data = [row for row in data if produit_filter.lower() in row["NAME"].lower()]
+
+    return generate_excel_quota(data, produit_filter)
+
+#----------------------------
+def generate_excel_quota(data, produit_filter):
+    if not data:
+        return {"error": "No data available"}, 400
+
+    df = pd.DataFrame(data)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Filtered Quota"
+
+    # Apply header styles
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+    ws.append(df.columns.tolist())
+    
+    for cell in ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Append data with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Generate filename dynamically based on filter
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    filter_text = f"produit-{produit_filter}" if produit_filter else ""
+    filename = f"Quota_{filter_text}_{today_date}.xlsx" if filter_text else f"Quota_{today_date}.xlsx"
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+# Fetch product quota data from Oracle DB
+def fetch_quota_product():
+    try:
+        produit = request.args.get('produit', '')  # Get 'produit' param from URL, default to empty string
+
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            # Base SQL with optional filtering
+            query = """
+                SELECT m.name, SUM(s.QTYONHAND) AS QTY , sum(s.QTYONHAND * at.valuenumber) as Prix
+                
+                FROM m_product m
+
+                JOIN m_storage s ON s.M_PRODUCT_ID = m.M_PRODUCT_ID
+                INNER JOIN m_attributeinstance at
+                ON at.m_attributesetinstance_id = s.m_attributesetinstance_id
+
+
+
+                WHERE m.XX_SalesContext_ID = 1000100
+                    AND m.AD_Client_ID = 1000000
+                    AND s.QTYONHAND > 0
+                    AND s.M_Locator_ID = 1000614
+                    and at.M_Attribute_ID=1000502
+            """
+
+            # If produit filter is provided, add it to the query
+            if produit:
+                query += " AND LOWER(m.name) LIKE :produit"
+
+            query += """
+                GROUP BY m.name
+                ORDER BY m.name
+            """
+
+            # Bind parameter if filtering
+            if produit:
+                cursor.execute(query, {"produit": produit.lower() + '%'})
+            else:
+                cursor.execute(query)
+
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+            return data
+
+    except Exception as e:
+        logger.error(f"Error fetching product quota data: {e}")
+        return {"error": "An error occurred while fetching product quota data."}
+
+
+
+
+
+@app.route('/quota-product', methods=['GET'])
+def quota_product():
+    if not test_db_connection():
+        return jsonify({"error": "Failed to connect to the database."}), 500
+    data = fetch_quota_product()
+    return jsonify(data)
+
+
+
+def fetch_quota_operator():
+    try:
+        produit = request.args.get('produit', '')
+
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            # SQL query with optional filtering
+            query = """
+                SELECT a.name, SUM(q.quantity - q.QTYORDERED) AS qty
+                FROM AD_USER a
+                JOIN XX_Quota q ON q.AD_USER_id = a.AD_USER_id
+                JOIN M_PRODUCT m ON m.M_PRODUCT_id = q.M_PRODUCT_ID
+                WHERE q.M_Warehouse_ID = 1000000
+            """
+
+            # Apply filter if produit is provided
+            if produit:
+                query += " AND LOWER(m.name) LIKE :produit"
+
+            query += """
+                GROUP BY a.name
+                ORDER BY qty DESC
+            """
+
+            # Execute with binding
+            if produit:
+                cursor.execute(query, {"produit": f"%{produit.lower()}%"})
+            else:
+                cursor.execute(query)
+
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+            return data
+
+    except Exception as e:
+        logger.error(f"Error fetching operator quota data: {e}")
+        return {"error": "An error occurred while fetching operator quota data."}
+
+@app.route('/quota-operator', methods=['GET'])
+def quota_operator():
+    if not test_db_connection():
+        return jsonify({"error": "Failed to connect to the database."}), 500
+    data = fetch_quota_operator()
+    return jsonify(data)
+
+
+
+
+def fetch_credit_client():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+                SELECT 
+                    ROUND(SUM(SoldeFact + SoldeBL), 2) AS credit_client
+                FROM (
+                    SELECT 
+                        bp.c_bpartner_id, 
+                        (
+                            SELECT COALESCE(SUM(invoiceOpen(inv.C_Invoice_ID, 0)), 0) 
+                            FROM C_Invoice inv 
+                            WHERE bp.c_bpartner_id = inv.c_bpartner_id 
+                            AND paymentTermDueDays(inv.C_PAYMENTTERM_ID, inv.DATEINVOICED, TO_DATE('01/01/3000', 'DD/MM/YYYY')) >= 0
+                            AND inv.docstatus IN ('CO', 'CL') 
+                            AND inv.AD_ORGTRX_ID = inv.ad_org_id 
+                            AND inv.ad_client_id = 1000000
+                            AND inv.C_PaymentTerm_ID != 1000000
+                        ) AS SoldeFact,
+                        (
+                            SELECT COALESCE(SUM(invoiceOpen(inv.C_Invoice_ID, 0)), 0) 
+                            FROM C_Invoice inv 
+                            WHERE bp.c_bpartner_id = inv.c_bpartner_id 
+                            AND paymentTermDueDays(inv.C_PAYMENTTERM_ID, inv.DATEINVOICED, TO_DATE('01/01/3000', 'DD/MM/YYYY')) >= 0
+                            AND inv.docstatus IN ('CO', 'CL') 
+                            AND inv.AD_ORGTRX_ID <> inv.ad_org_id 
+                            AND inv.ad_client_id = 1000000
+                            AND inv.C_PaymentTerm_ID != 1000000
+                        ) AS SoldeBL
+                    FROM 
+                        c_bpartner bp 
+                        INNER JOIN C_BPartner_Location bpl ON bp.C_BPartner_id = bpl.C_BPartner_id
+                        INNER JOIN ad_user u ON bp.salesrep_id = u.ad_user_id
+                        LEFT OUTER JOIN AD_User u2 ON u2.AD_User_ID = bp.XX_TempSalesRep_ID
+                        LEFT OUTER JOIN C_SalesRegion sr ON sr.C_SalesRegion_id = bpl.C_SalesRegion_id
+                        LEFT OUTER JOIN C_City sr2 ON sr2.C_City_id = bpl.C_City_id
+                    WHERE 
+                        bp.iscustomer = 'Y' 
+                        AND bp.C_BP_Group_ID IN (1000003, 1000926, 1001330)
+                        AND bp.isactive = 'Y' 
+                        AND sr.isactive = 'Y'
+                        AND bp.C_PaymentTerm_ID != 1000000
+                        AND bpl.c_salesregion_id IN (
+                            101, 102, 1000032, 1001776, 1001777, 1001778, 1001779, 1001780, 1001781,
+                            1001782, 1001783, 1001784, 1001785, 1001786, 1001787, 1001788, 1001789,
+                            1001790, 1001791, 1001792, 1001793, 1001794, 1002076, 1002077, 1002078,
+                            1002079, 1002080, 1002176, 1002177, 1002178, 1002179, 1002180, 1002181,
+                            1002283, 1002285, 1002286, 1002287, 1002288
+                        )
+                ) subquery
+            """
+
+            cursor.execute(query)
+            row = cursor.fetchone()
+            credit_client = row[0] if row else 0.0
+            return {"credit_client": credit_client}
+
+    except Exception as e:
+        logger.error(f"Error fetching credit client data: {e}")
+        return {"error": "An error occurred while fetching credit client data."}
+
+
+
+
+@app.route('/credit-client', methods=['GET'])
+def credit_client():
+    if not test_db_connection():
+        return jsonify({"error": "Failed to connect to the database."}), 500
+    data = fetch_credit_client()
+    return jsonify(data)
+
+def fetch_caisse():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+                SELECT 
+                    ROUND(endingbalance, 2) AS caisse
+                FROM 
+                    C_BankStatement
+                WHERE 
+                    C_BankAccount_ID = 1000205
+                    AND docstatus = 'CO'
+                    AND AD_Client_ID = 1000000
+                ORDER BY 
+                    statementdate DESC
+                FETCH FIRST 1 ROW ONLY
+            """
+
+            cursor.execute(query)
+            row = cursor.fetchone()
+            caisse = row[0] if row else 0.0
+            return {"caisse": caisse}
+
+    except Exception as e:
+        logger.error(f"Error fetching caisse data: {e}")
+        return {"error": "An error occurred while fetching caisse data."}
+
+
+@app.route('/caisse', methods=['GET'])
+def caisse():
+    if not test_db_connection():
+        return jsonify({"error": "Failed to connect to the database."}), 500
+    data = fetch_caisse()
+    return jsonify(data)
+
+
+
+def fourniseurdettfond():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+                SELECT 
+                    ROUND(SUM(invopenamt), 2) AS credit_fournisseur
+                FROM (
+                    SELECT 
+                        COALESCE(invoiceOpen(inv.C_Invoice_ID, 0), 0) AS invopenamt
+                    FROM
+                        C_Invoice inv
+                        INNER JOIN c_bpartner bp ON bp.c_bpartner_id = inv.c_bpartner_id
+                        LEFT OUTER JOIN C_BPARTNER_LOCATION bpl ON bp.c_bpartner_id = bpl.c_bpartner_id
+                        LEFT OUTER JOIN C_SalesRegion SR ON SR.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                        INNER JOIN C_PAYMENTTERM pt ON inv.C_PaymentTerm_ID = pt.C_PaymentTerm_ID
+                        LEFT OUTER JOIN ad_user usr ON usr.ad_user_id = inv.salesrep_id
+                        LEFT OUTER JOIN ad_user usr2 ON usr2.ad_user_id = bp.salesrep_id
+                        LEFT OUTER JOIN C_City ct ON ct.C_City_ID = bpl.C_City_ID
+                    WHERE
+                        inv.docstatus IN ('CO', 'CL')
+                        AND inv.ad_client_id = 1000000
+                        --AND inv.ISSOTRX = 'N'
+                        AND bp.isactive = 'Y'
+                        AND bp.isvendor = 'Y'
+                )
+            """
+
+            cursor.execute(query)
+            result = cursor.fetchone()
+            return result[0] if result else 0.0
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+
+
+@app.route('/fourniseurdettfond', methods=['GET'])
+def get_fourniseurdettfond():
+    result = fourniseurdettfond()
+    return jsonify({"value": result})  # Now the frontend gets a key
+
+
+
+from flask import Flask, request, jsonify
+import os
+import json
+from datetime import datetime
+
+
+# Path to store the previous values
+DATA_FILE = os.path.join(os.path.dirname(__file__), 'kpi_data.json')
+
+# Initialize data file if it doesn't exist
+if not os.path.exists(DATA_FILE):
+    with open(DATA_FILE, 'w') as f:
+        json.dump({"fonds_propre": []}, f)
+
+@app.route('/previous-fonds-propre', methods=['GET'])
+def get_previous_fonds_propre():
+    try:
+        with open(DATA_FILE, 'r') as f:
+            data = json.load(f)
+        
+        last_value = data['fonds_propre'][-1] if data['fonds_propre'] else None
+        return jsonify(last_value)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/store-fonds-propre', methods=['POST'])
+def store_fonds_propre():
+    try:
+        with open(DATA_FILE, 'r') as f:
+            data = json.load(f)
+        
+        new_data = request.get_json()
+        value = new_data.get('value')
+        date = new_data.get('date', datetime.now().isoformat())
+        
+        # Keep only the last 12 months of data
+        if len(data['fonds_propre']) >= 12:
+            data['fonds_propre'].pop(0)
+        
+        # Ensure that the data is stored correctly
+        data['fonds_propre'].append({"value": value, "date": date})
+        
+        with open(DATA_FILE, 'w') as f:
+            json.dump(data, f, indent=2)
+        
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# @app.route('/fonds-propre-chart-data')
+# def get_fonds_propre_chart_data():
+#     try:
+#         # Load the data from JSON file
+#         with open('kpi_data.json', 'r') as f:
+#             data = json.load(f)
+        
+#         # Extract and format the data
+#         chart_data = []
+#         for entry in data.get('fonds_propre', []):
+#             # Convert date string to datetime object for sorting
+#             date = datetime.strptime(entry['date'], '%Y-%m-%dT%H:%M:%S.%fZ')
+#             chart_data.append({
+#                 'date': date.strftime('%Y-%m-%d %H:%M:%S'),  # Format for display
+#                 'timestamp': date.timestamp(),  # For sorting
+#                 'value': entry['value']
+#             })
+        
+#         # Sort data by timestamp (oldest first)
+#         chart_data.sort(key=lambda x: x['timestamp'])
+        
+#         # Prepare response data
+#         response = {
+#             'labels': [entry['date'] for entry in chart_data],
+#             'values': [entry['value'] for entry in chart_data],
+#             'min_date': chart_data[0]['date'] if chart_data else None,
+#             'max_date': chart_data[-1]['date'] if chart_data else None
+#         }
+        
+#         return jsonify(response)
+    
+#     except Exception as e:
+#         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/fonds-propre-chart-data')
+def get_fonds_propre_chart_data():
+    try:
+        with open(DATA_FILE, 'r') as f:
+            data = json.load(f)
+        
+        sorted_data = sorted(data['fonds_propre'], key=lambda x: x['date'])
+        labels = [entry['date'] for entry in sorted_data]
+        values = [entry['value'] for entry in sorted_data]
+        
+        return jsonify({
+            "labels": labels,
+            "values": values,
+            "min_date": labels[0] if labels else None,
+            "max_date": labels[-1] if labels else None
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/dette-fournisseur-chart-data')
+def get_dette_fournisseur_chart_data():
+    try:
+        with open(DETTE_FILE, 'r') as f:
+            data = json.load(f)
+        
+        sorted_data = sorted(data['dette_fournisseur'], key=lambda x: x['date'])
+        labels = [entry['date'] for entry in sorted_data]
+        values = [entry['value'] for entry in sorted_data]
+        
+        return jsonify({
+            "labels": labels,
+            "values": values,
+            "min_date": labels[0] if labels else None,
+            "max_date": labels[-1] if labels else None
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Add similar endpoints for other metrics (credit-client, caisse, tresorerie)
+
+
+# Update your existing DATA_FILE path or create a new one
+DETTE_FILE = 'kpi_dette.json'
+
+if not os.path.exists(DETTE_FILE):
+    with open(DETTE_FILE, 'w') as f:
+        json.dump({"dette_fournisseur": []}, f)
+
+@app.route('/previous-dette-fournisseur', methods=['GET'])
+def get_previous_dette_fournisseur():
+    try:
+        with open(DETTE_FILE, 'r') as f:
+            data = json.load(f)
+        
+        last_value = data['dette_fournisseur'][-1] if data['dette_fournisseur'] else None
+        return jsonify(last_value)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/store-dette-fournisseur', methods=['POST'])
+def store_dette_fournisseur():
+    try:
+        with open(DETTE_FILE, 'r') as f:
+            data = json.load(f)
+        
+        new_data = request.get_json()
+        value = new_data.get('value')
+        date = new_data.get('date', datetime.now().isoformat())
+        
+        # Keep only the last 12 months of data
+        if len(data['dette_fournisseur']) >= 12:
+            data['dette_fournisseur'].pop(0)
+        
+        data['dette_fournisseur'].append({"value": value, "date": date})
+        
+        with open(DETTE_FILE, 'w') as f:
+            json.dump(data, f, indent=2)
+        
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+STOCK_FILE = 'kpi_stock.json'
+
+if not os.path.exists(STOCK_FILE):
+    with open(STOCK_FILE, 'w') as f:
+        json.dump({
+            "total_stock": [],
+            "stock_principale": [],
+            "hangar": [],
+            "hangar_reserve": [],
+            "depot_reserver": []
+        }, f)
+
+@app.route('/previous-stock/<stock_type>', methods=['GET'])
+def get_previous_stock(stock_type):
+    try:
+        with open(STOCK_FILE, 'r') as f:
+            data = json.load(f)
+        
+        key = {
+            'total': 'total_stock',
+            'principale': 'stock_principale',
+            'hangar': 'hangar',
+            'hangar_reserve': 'hangar_reserve',
+            'depot': 'depot_reserver'
+        }.get(stock_type)
+        
+        if not key:
+            return jsonify({"error": "Invalid stock type"}), 400
+            
+        last_value = data[key][-1] if data[key] else None
+        return jsonify(last_value)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/store-stock', methods=['POST'])
+def store_stock():
+    try:
+        with open(STOCK_FILE, 'r') as f:
+            data = json.load(f)
+        
+        new_data = request.get_json()
+        
+        # Store all stock values
+        stock_types = ['total_stock', 'stock_principale', 'hangar', 'hangar_reserve', 'depot_reserver']
+        current_date = datetime.now().isoformat()
+        
+        for stype in stock_types:
+            value = new_data.get(stype)
+            if value is not None:
+                # Keep only the last 12 months of data
+                if len(data[stype]) >= 12:
+                    data[stype].pop(0)
+                
+                data[stype].append({
+                    "value": value,
+                    "date": current_date
+                })
+        
+        with open(STOCK_FILE, 'w') as f:
+            json.dump(data, f, indent=2)
+        
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+        
+# Add this to your Flask app
+CREDIT_FILE = 'kpi_credit.json'
+
+if not os.path.exists(CREDIT_FILE):
+    with open(CREDIT_FILE, 'w') as f:
+        json.dump({"credit_client": []}, f)
+
+@app.route('/previous-credit-client', methods=['GET'])
+def get_previous_credit_client():
+    try:
+        with open(CREDIT_FILE, 'r') as f:
+            data = json.load(f)
+        
+        last_value = data['credit_client'][-1] if data['credit_client'] else None
+        return jsonify(last_value)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/store-credit-client', methods=['POST'])
+def store_credit_client():
+    try:
+        with open(CREDIT_FILE, 'r') as f:
+            data = json.load(f)
+        
+        new_data = request.get_json()
+        value = new_data.get('value')
+        date = new_data.get('date', datetime.now().isoformat())
+        
+        # Keep only the last 12 months of data
+        if len(data['credit_client']) >= 12:
+            data['credit_client'].pop(0)
+        
+        data['credit_client'].append({"value": value, "date": date})
+        
+        with open(CREDIT_FILE, 'w') as f:
+            json.dump(data, f, indent=2)
+        
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+CAISSE_FILE = 'kpi_caisse.json'
+
+if not os.path.exists(CAISSE_FILE):
+    with open(CAISSE_FILE, 'w') as f:
+        json.dump({"caisse": []}, f)
+
+@app.route('/previous-caisse', methods=['GET'])
+def get_previous_caisse():
+    try:
+        with open(CAISSE_FILE, 'r') as f:
+            data = json.load(f)
+        
+        last_value = data['caisse'][-1] if data['caisse'] else None
+        return jsonify(last_value)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/store-caisse', methods=['POST'])
+def store_caisse():
+    try:
+        with open(CAISSE_FILE, 'r') as f:
+            data = json.load(f)
+        
+        new_data = request.get_json()
+        value = new_data.get('value')
+        date = new_data.get('date', datetime.now().isoformat())
+        
+        # Keep only the last 12 months of data
+        if len(data['caisse']) >= 12:
+            data['caisse'].pop(0)
+        
+        data['caisse'].append({"value": value, "date": date})
+        
+        with open(CAISSE_FILE, 'w') as f:
+            json.dump(data, f, indent=2)
+        
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/test-caisse', methods=['GET'])
+def test_caisse():
+    try:
+        # Return a fixed value of 10000 as JSON
+        return jsonify({"caisse": 10000})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/test-fournisseur-dette', methods=['GET'])
+def test_fournisseur_dette():
+    try:
+        # Return a fixed test value of 20000 as JSON
+        return jsonify({"value": 20000})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+TRESORERIE_FILE = 'kpi_tresorerie.json'
+
+if not os.path.exists(TRESORERIE_FILE):
+    with open(TRESORERIE_FILE, 'w') as f:
+        json.dump({"tresorerie": []}, f)
+
+@app.route('/previous-tresorerie', methods=['GET'])
+def get_previous_tresorerie():
+    try:
+        with open(TRESORERIE_FILE, 'r') as f:
+            data = json.load(f)
+        
+        last_value = data['tresorerie'][-1] if data['tresorerie'] else None
+        return jsonify(last_value)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/store-tresorerie', methods=['POST'])
+def store_tresorerie():
+    try:
+        with open(TRESORERIE_FILE, 'r') as f:
+            data = json.load(f)
+        
+        new_data = request.get_json()
+        value = new_data.get('value')
+        date = new_data.get('date', datetime.now().isoformat())
+        
+        # Keep only the last 12 months of data
+        if len(data['tresorerie']) >= 12:
+            data['tresorerie'].pop(0)
+        
+        data['tresorerie'].append({"value": value, "date": date})
+        
+        with open(TRESORERIE_FILE, 'w') as f:
+            json.dump(data, f, indent=2)
+        
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/credit-client-chart-data')
+def get_credit_client_chart_data():
+    try:
+        with open(CREDIT_FILE, 'r') as f:
+            data = json.load(f)
+
+        sorted_data = sorted(data['credit_client'], key=lambda x: x['date'])
+        labels = [entry['date'] for entry in sorted_data]
+        values = [entry['value'] for entry in sorted_data]
+
+        return jsonify({
+            "labels": labels,
+            "values": values,
+            "min_date": labels[0] if labels else None,
+            "max_date": labels[-1] if labels else None
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+@app.route('/caisse-chart-data')
+def get_caisse_chart_data():
+    try:
+        with open('kpi_caisse.json', 'r') as f:
+            data = json.load(f)
+
+        sorted_data = sorted(data['caisse'], key=lambda x: x['date'])
+        labels = [entry['date'] for entry in sorted_data]
+        values = [entry['value'] for entry in sorted_data]
+
+        return jsonify({
+            "labels": labels,
+            "values": values,
+            "min_date": labels[0] if labels else None,
+            "max_date": labels[-1] if labels else None
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+@app.route('/tresorerie-chart-data')
+def get_tresorerie_chart_data():
+    try:
+        with open('kpi_tresorerie.json', 'r') as f:
+            data = json.load(f)
+
+        sorted_data = sorted(data['tresorerie'], key=lambda x: x['date'])
+        labels = [entry['date'] for entry in sorted_data]
+        values = [entry['value'] for entry in sorted_data]
+
+        return jsonify({
+            "labels": labels,
+            "values": values,
+            "min_date": labels[0] if labels else None,
+            "max_date": labels[-1] if labels else None
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/combined-stock-chart-data')
+def get_combined_stock_chart_data():
+    try:
+        with open(STOCK_FILE, 'r') as f:
+            data = json.load(f)
+        
+        # Get all dates from all stock types
+        all_dates = set()
+        for stock_type in ['total_stock', 'stock_principale', 'hangar', 'hangar_reserve', 'depot_reserver']:
+            for entry in data[stock_type]:
+                all_dates.add(entry['date'])
+        
+        sorted_dates = sorted(all_dates)
+        
+        # Prepare datasets for each stock type
+        datasets = []
+        colors = ['#4e73df', '#e74a3b', '#f6c23e', '#1cc88a', '#36b9cc']
+        stock_types = [
+            ('total_stock', 'Total Stock'),
+            ('stock_principale', 'Stock Principale'),
+            ('hangar', 'Hangar'),
+            ('hangar_reserve', 'Hangar Reserve'),
+            ('depot_reserver', 'Dépôt Reserve')
+        ]
+        
+        for i, (stock_type, label) in enumerate(stock_types):
+            values = []
+            stock_data = {entry['date']: entry['value'] for entry in data[stock_type]}
+            
+            for date in sorted_dates:
+                values.append(stock_data.get(date, None))
+            
+            datasets.append({
+                "label": label,
+                "data": values,
+                "borderColor": colors[i],
+                "backgroundColor": f"{colors[i]}20",
+                "pointBackgroundColor": colors[i],
+                "pointBorderColor": '#fff',
+                "pointHoverRadius": 5,
+                "pointHoverBackgroundColor": colors[i],
+                "pointHoverBorderColor": '#fff',
+                "pointHitRadius": 10,
+                "pointBorderWidth": 2,
+                "borderWidth": 2,
+                "tension": 0.3,
+                "fill": i == 0  # Only fill the first dataset for better visibility
+            })
+        
+        return jsonify({
+            "labels": sorted_dates,
+            "datasets": datasets,
+            "min_date": sorted_dates[0] if sorted_dates else None,
+            "max_date": sorted_dates[-1] if sorted_dates else None
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+def fetch_paiment():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+SELECT
+    NVL(SUM(
+        CASE 
+            WHEN z.name = 'Encaiss: Espèces' THEN ROUND(ci.PayAmt, 2)
+            WHEN z.name = 'Décaiss: Espèces' THEN -ROUND(ci.PayAmt, 2)
+            ELSE 0 
+        END
+    ), 0) AS total_difference
+FROM 
+    C_Payment ci
+    INNER JOIN ZSubPaymentRule z ON ci.ZSubPaymentRule_ID = z.ZSubPaymentRule_ID
+WHERE 
+    TRUNC(ci.DATETRX) = TRUNC(SYSDATE)
+    AND ci.DOCACTION IN ('CO', 'CL', 'co', 'cl')
+    AND ci.AD_Client_ID = 1000000
+    AND z.name IN ('Encaiss: Espèces', 'Décaiss: Espèces')
+
+
+            """
+
+            cursor.execute(query)
+            row = cursor.fetchone()
+            paiment = row[0] if row else 0.0
+            return {"Total_Paiment": paiment}
+
+    except Exception as e:
+        logger.error(f"Error fetching paiment data: {e}")
+        return {"error": "An error occurred while fetching paiment data."}
+
+
+@app.route('/paiement-net', methods=['GET'])
+def paiment():
+    if not test_db_connection():
+        return jsonify({"error": "Failed to connect to the database."}), 500
+    data = fetch_paiment()
+    return jsonify(data)
 
 
 if __name__ == "__main__":

@@ -499,4 +499,4 @@ font-weight: bold;
 /* Sidebar Stays Open Until Mouse Leaves */
 .sidebar:hover {
     transform: translateX(0);
-}
+}  

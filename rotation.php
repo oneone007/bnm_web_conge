@@ -25,6 +25,11 @@ if (isset($_SESSION['last_activity'])) {
 
 // Update last activity timestamp
 $_SESSION['last_activity'] = time();
+// Restrict access for 'vente' and 'achat'
+if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser'])) {
+    header("Location: Acess_Denied");
+    exit();
+}
 ?>
 
 
@@ -34,7 +39,7 @@ $_SESSION['last_activity'] = time();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BNM</title>
+    <title>BNM Web</title>
     <script src="main.js" defer></script>
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
                 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
@@ -356,6 +361,197 @@ $_SESSION['last_activity'] = time();
   -ms-transform: translateY(-50%);
   transform: translateY(-50%);
 }
+
+   /* From Uiverse.io by Spacious74 */ 
+   @keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes drop {
+  0% {
+    bottom: 0px;
+    opacity: 1;
+  }
+
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 1;
+    bottom: -400px;
+  }
+}
+
+.loader {
+  text-align: center;
+  font-size: 16px;
+  display: flex;
+  justify-content: center;
+  width: -20%;
+  position: relative;
+  border: none;
+  cursor: pointer;
+  margin-left: 20%;
+  background-color: transparent;
+}
+
+.loader-bg {
+  border-radius: 12px;
+  padding: 10px 15px;
+  z-index: 2;
+  width: 140px;
+  color: #ace3f8;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background-color: #18798a;
+  background-image: radial-gradient(circle 80px at 50% 150%, #63d44d, #18798a);
+  margin-bottom: 10px;
+}
+
+.loader-bg:hover {
+  text-shadow: 0px 0px 4px #63d44d;
+}
+.loader-bg:active {
+  background-image: radial-gradient(circle 140px at 50% 150%, #63d44d, #18798a);
+}
+.loader-bg:hover + .drops .drop2,
+.drop3 {
+  animation: drop 1s cubic-bezier(1, 0.19, 0.66, 0.12) 0.2s infinite;
+}
+.loader-bg:active + .drops .drop1,
+.drop2,
+.drop3 {
+  background-color: #63d44d;
+}
+.drops {
+  -webkit-filter: url("#liquid");
+  filter: url("#liquid");
+  position: absolute;
+  top: 35%;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  z-index: 1;
+  opacity: 0;
+  animation: fade-in 0.1s linear 0.4s forwards;
+}
+
+.drop1,
+.drop2,
+.drop3 {
+  width: 20px;
+  height: 28px;
+  border-radius: 50%;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  margin: auto;
+  background-color: #18798a;
+}
+
+.drop1 {
+  width: 125px;
+  height: 16px;
+  bottom: 2px;
+  border-radius: 0;
+}
+
+.drop3 {
+  background-color: #63d44d;
+}
+
+.drop2,
+.drop3 {
+  animation: drop 2s cubic-bezier(1, 0.19, 0.66, 0.12) 1s infinite;
+}
+
+
+.btn {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background 0.3s ease, transform 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .btn:hover {
+        background-color: #45a049;
+        transform: scale(1.05);
+    }
+
+    .btn i {
+        font-size: 18px;
+    }
+
+
+    .products-table-container {
+    display: none;
+    position: absolute;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    z-index: 1000;
+    max-height: 400px;
+    overflow-y: auto;
+    width: 50%;
+    margin-top: 5px;
+}
+
+.products-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.products-table th, .products-table td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.products-table tr:hover {
+    background-color: #f5f5f5;
+    cursor: pointer;
+}
+
+.products-table tr.selected {
+    background-color: #e0e0e0;
+}
+
+.table-pagination {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background-color: #f9f9f9;
+    border-top: 1px solid #ddd;
+}
+
+.table-pagination button {
+    padding: 4px 8px;
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.table-pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 </style>
 
 
@@ -377,170 +573,32 @@ $_SESSION['last_activity'] = time();
 <!-- Sidebar -->
 <div id="sidebar-container"></div>
 
-<!-- <script>
-    // Fetch sidebar content dynamically
-    fetch("side")
-        .then(response => response.text())
-        .then(html => {
-            let container = document.getElementById("sidebar-container");
-            let tempDiv = document.createElement("div");
-            tempDiv.innerHTML = html;
-
-            // Insert the sidebar content into the page
-            container.innerHTML = tempDiv.innerHTML;
-
-            // Reattach event listeners for the submenu toggles (Products, Recaps)
-            const productsToggle = document.getElementById("products-toggle");
-            if (productsToggle) {
-                productsToggle.addEventListener("click", function () {
-                    let submenu = document.getElementById("products-submenu");
-                    submenu.classList.toggle("hidden");
-                });
-            }
-
-            const recapsToggle = document.getElementById("recaps-toggle");
-            if (recapsToggle) {
-                recapsToggle.addEventListener("click", function () {
-                    let submenu = document.getElementById("recaps-submenu");
-                    submenu.classList.toggle("hidden");
-                });
-            }
-
-            // Initialize Lottie animation after sidebar is inserted
-            const ramAnimation = document.getElementById('ram-animation');
-            if (ramAnimation) {
-                lottie.loadAnimation({
-                    container: ramAnimation,
-                    renderer: 'svg',
-                    loop: true,
-                    autoplay: true,
-                    path: 'json_files/ram.json',
-                    rendererSettings: {
-                        clearCanvas: true,
-                        preserveAspectRatio: 'xMidYMid meet',
-                        progressiveLoad: true,
-                        hideOnTransparent: true
-                    }
-                });
-            }
-
-            // Sidebar toggle functionality
-            const sidebarToggle = document.getElementById('sidebarToggle');
-            const sidebar = document.getElementById('sidebar');
-            const content = document.querySelector('.content');
-
-            // Ensure sidebarToggle is initialized after sidebar is loaded
-            if (sidebarToggle && sidebar && content) {
-                sidebarToggle.addEventListener('click', () => {
-                    sidebar.classList.toggle('sidebar-hidden');
-                    content.classList.toggle('content-full');
-
-                    // Adjust button position when sidebar is hidden or shown
-                    if (sidebar.classList.contains('sidebar-hidden')) {
-                        sidebarToggle.style.left = '10px';  // Sidebar hidden
-                    } else {
-                        sidebarToggle.style.left = '260px'; // Sidebar visible
-                    }
-                });
-            } else {
-                console.error("Sidebar or Toggle Button not found!");
-            }
-
-        })
-        .catch(error => console.error("Error loading sidebar:", error));
-</script> -->
 <script>
-    // Fetch sidebar content dynamically
- fetch("side")
-    .then(response => response.text())
-    .then(html => {
-        let container = document.getElementById("sidebar-container");
-        let tempDiv = document.createElement("div");
-        tempDiv.innerHTML = html;
+fetch("side")
+  .then(response => response.text())
+  .then(html => {
+    const container = document.getElementById("sidebar-container");
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = html;
+    container.innerHTML = tempDiv.innerHTML;
 
-        // Insert sidebar content into the page
-        container.innerHTML = tempDiv.innerHTML;
+    // After DOM injection, dynamically load sidebar script
+    const script = document.createElement('script');
+    script.src = 'sidebar.js'; // Move all logic into sidebar.js
+    document.body.appendChild(script);
+  })
+  .catch(error => console.error("Error loading sidebar:", error));
 
-        // Reattach event listeners for submenu toggles (Products, Recaps)
-        const productsToggle = document.getElementById("products-toggle");
-        if (productsToggle) {
-            productsToggle.addEventListener("click", function () {
-                let submenu = document.getElementById("products-submenu");
-                submenu.classList.toggle("hidden");
-            });
-        }
-
-        const recapsToggle = document.getElementById("recaps-toggle");
-        if (recapsToggle) {
-            recapsToggle.addEventListener("click", function () {
-                let submenu = document.getElementById("recaps-submenu");
-                submenu.classList.toggle("hidden");
-            });
-        }
-
-        // Initialize Lottie animation after sidebar is inserted
-        const ramAnimation = document.getElementById('ram-animation');
-        if (ramAnimation) {
-            lottie.loadAnimation({
-                container: ramAnimation,
-                renderer: 'svg',
-                loop: true,
-                autoplay: true,
-                path: 'json_files/ram.json',
-                rendererSettings: {
-                    clearCanvas: true,
-                    preserveAspectRatio: 'xMidYMid meet',
-                    progressiveLoad: true,
-                    hideOnTransparent: true
-                }
-            });
-        }
-
-        // Sidebar toggle functionality
-        const sidebarToggle = document.getElementById('sidebarToggle');
-        const sidebar = document.getElementById('sidebar');
-        const content = document.querySelector('.content');
-
-        if (sidebarToggle && sidebar && content) {
-            sidebarToggle.addEventListener('click', () => {
-                sidebar.classList.toggle('sidebar-hidden');
-                content.classList.toggle('content-full');
-
-                // Adjust button position when sidebar is hidden or shown
-                if (sidebar.classList.contains('sidebar-hidden')) {
-                    sidebarToggle.style.left = '10px';  // Sidebar hidden
-                } else {
-                    sidebarToggle.style.left = '260px'; // Sidebar visible
-                }
-            });
-        } else {
-            console.error("Sidebar or Toggle Button not found!");
-        }
-
-        // Auto-hide sidebar when not hovered
-        document.addEventListener('mousemove', (event) => {
-            if (event.clientX < 50) {  // Mouse near the left edge (50px)
-                sidebar.classList.remove('sidebar-hidden');
-                content.classList.remove('content-full');
-            }
-        });
-
-        // Hide sidebar when the mouse leaves it
-        sidebar.addEventListener('mouseleave', () => {
-            sidebar.classList.add('sidebar-hidden');
-            content.classList.add('content-full');
-        });
-
-    })
-    .catch(error => console.error("Error loading sidebar:", error));
 
 </script>
 
-
-
     <!-- Main Content -->
     <div id="content" class="content flex-grow p-4">
-
+        <div class="flex justify-center items-center mb-6">
+        <h1 class="text-5xl font-bold dark:text-white text-center  ">
+        Rotation 
+            </h1>
+        </div>
 
         <!-- Filters -->
 
@@ -549,37 +607,9 @@ $_SESSION['last_activity'] = time();
 
 
 
-        <!-- Search Fields -->
-<!-- Search Fields -->
-<!-- Search Fields -->
-
-
-
-        <br>
-
-
 
       
-<!-- Popup (Modal) -->
-<div class="modal" id="product-modal">
-    <div class="modal-content">
-        <span class="close-btn" id="close-modal">&times;</span>
-        <h3>All Products</h3>
-        <table class="popup-table">
-    <thead>
-        <tr>
-            <th>#</th> <!-- Numbering Column -->
-            <th>Product Name</th>
-        </tr>
-    </thead>
-    <tbody id="product-table-body">
-        <!-- Rows will be added dynamically -->
-    </tbody>
-</table>
 
-
-    </div>
-</div>
 
 
 
@@ -597,46 +627,68 @@ $_SESSION['last_activity'] = time();
 
 </div>
 
+
+
+
 <div class="product-container">
     <input type="text" id="product-search" placeholder="Search product...">
     
-    <div class="custom-dropdown">
-        <select id="product-select">
-            <option value="">Select a product</option>
-        </select>
-        <div class="dropdown-list" id="dropdown-list"></div>
-    </div>
 
-    <button class="see-all-btn" id="see-all-btn">See All Products</button>
+
+
 </div>
-
-<!-- Modal for showing all products -->
-<div id="product-modal" class="modal">
-    <div class="modal-content">
-        <span id="close-modal" class="close">&times;</span>
-        <table class="product-table">
+<div class="products-table-container" id="products-table-container">
+        <table class="products-table" id="products-table">
             <thead>
                 <tr>
                     <th>#</th>
                     <th>Product Name</th>
                 </tr>
             </thead>
-            <tbody id="product-table-body"></tbody>
+            <tbody id="products-table-body">
+                <!-- Products will be loaded here -->
+            </tbody>
         </table>
+        <div class="table-pagination" id="table-pagination">
+            <button id="prev-page">Previous</button>
+            <span id="page-info">Page 1 of 1</span>
+            <button id="next-page">Next</button>
+        </div>
     </div>
-</div>
 
 
 
+<button id="downloadExcel_rotation" class="loader">
+  <div class="loader-bg">
+    <span>Download</span>
+  </div>
+  <div class="drops">
+    <div class="drop1"></div>
+    <div class="drop2"></div>
+    <div class="drop3"></div>
+  </div>
+</button>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" style="position: absolute; width: 0; height: 0;">
+  <defs>
+    <filter id="liquid">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur"></feGaussianBlur>
+      <feColorMatrix
+        in="blur"
+        mode="matrix"
+        values="1 0 0 0 0  
+                0 1 0 0 0  
+                0 0 1 0 0  
+                0 0 0 18 -7"
+        result="liquid">
+      </feColorMatrix>
+    </filter>
+  </defs>
+</svg>
 
-        <br>
 
-        <button id="downloadExcel_rotation"
-            class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
-            <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
-            <span> ROTATION PAR MOIS Download</span>
-        </button>
-<br>
+       
+
+
  
 <div class="flex gap-6">
     <!-- Left Side: Tables -->
@@ -698,30 +750,6 @@ $_SESSION['last_activity'] = time();
 <br><br>
 
 <!-- Button Styles -->
-<style>
-    .btn {
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        font-size: 16px;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: background 0.3s ease, transform 0.2s;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    
-    .btn:hover {
-        background-color: #45a049;
-        transform: scale(1.05);
-    }
-
-    .btn i {
-        font-size: 18px;
-    }
-</style>
 
 </div>
 
@@ -733,51 +761,7 @@ $_SESSION['last_activity'] = time();
 
 
 
-document.addEventListener("DOMContentLoaded", () => {
-    updateToggleButtonText();
 
-    const startDate = document.getElementById("start-date");
-    const endDate = document.getElementById("end-date");
-    const productSearch = document.getElementById("product-search");
-
-    // Initially disable date inputs
-    startDate.disabled = true;
-    endDate.disabled = true;
-
-    // Enable dates only if a product is selected
-    productSearch.addEventListener("input", function () {
-        if (this.value.trim()) {
-            startDate.disabled = false;
-            endDate.disabled = false;
-        } else {
-            startDate.disabled = true;
-            endDate.disabled = true;
-            startDate.value = "";
-            endDate.value = "";
-        }
-    });
-
-    // Prevent date change if no product is selected
-    startDate.addEventListener("click", function (event) {
-        if (startDate.disabled) {
-            event.preventDefault();
-            alert("Please select a product first.");
-        }
-    });
-
-    endDate.addEventListener("click", function (event) {
-        if (endDate.disabled) {
-            event.preventDefault();
-            alert("Please select a product first.");
-        }
-    });
-});
-
-
-
-
-let chartInstance = null; 
-let currentChartType = Math.random() < 0.5 ? "bar" : "line"; // Random chart on first load
 
 document.addEventListener("DOMContentLoaded", () => {
     updateToggleButtonText();
@@ -903,11 +887,49 @@ function toggleFullscreen() {
 
 
 
+let chartInstance = null; 
+let currentChartType = Math.random() < 0.5 ? "bar" : "line";
 let allProducts = [];
+let filteredProducts = [];
+let currentPage = 1;
+const rowsPerPage = 10;
 let lastFetchTime = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 5 * 60 * 1000;
 
-// ✅ Fetch products from API (Only if data is outdated)
+document.addEventListener("DOMContentLoaded", async function() {
+    updateToggleButtonText();
+    await fetchProducts();
+    setupProductSearch();
+    setupDateInputs();
+    
+    // Event listeners for chart updates
+    document.getElementById("product-search")?.addEventListener("input", fetchHistogramData);
+    document.getElementById("start-date")?.addEventListener("change", fetchHistogramData);
+    document.getElementById("end-date")?.addEventListener("change", fetchHistogramData);
+});
+
+function setupDateInputs() {
+    const productSearch = document.getElementById("product-search");
+    const startDate = document.getElementById("start-date");
+    const endDate = document.getElementById("end-date");
+    
+    // Set end date to today initially
+    const today = new Date().toISOString().split("T")[0];
+    endDate.value = today;
+    
+    // Enable dates only when product is selected
+    productSearch.addEventListener("input", function() {
+        if (this.value.trim()) {
+            startDate.disabled = false;
+            endDate.disabled = false;
+        } else {
+            startDate.disabled = true;
+            endDate.disabled = true;
+            startDate.value = "";
+            endDate.value = today;
+        }
+    });
+}
 async function fetchProducts(forceRefresh = false) {
     const currentTime = Date.now();
     if (!forceRefresh && allProducts.length && (currentTime - lastFetchTime) < CACHE_DURATION) {
@@ -921,119 +943,114 @@ async function fetchProducts(forceRefresh = false) {
 
         allProducts = await response.json();
         lastFetchTime = currentTime;
+        filteredProducts = [...allProducts];
+        renderTable();
     } catch (error) {
         console.error("❌ Error fetching products:", error);
-        document.getElementById("product-select").innerHTML = "<option value=''>Failed to load products</option>";
     }
 }
 
-// ✅ Debounced input handling for search field
+function setupProductSearch() {
+    const productSearch = document.getElementById("product-search");
+    const productsTableContainer = document.getElementById("products-table-container");
+    
+    productSearch.addEventListener("focus", function() {
+        if (filteredProducts.length > 0) {
+            productsTableContainer.style.display = "block";
+        }
+    });
+    
+    productSearch.addEventListener("input", debounce(function(e) {
+        const searchValue = e.target.value.toLowerCase();
+        
+        if (!searchValue.trim()) {
+            filteredProducts = [...allProducts];
+        } else {
+            filteredProducts = allProducts.filter(product => 
+                product.NAME.toLowerCase().includes(searchValue)
+            );
+        }
+        
+        currentPage = 1;
+        renderTable();
+        productsTableContainer.style.display = filteredProducts.length > 0 ? "block" : "none";
+    }, 300));
+    
+    // Close table when clicking outside
+    document.addEventListener("click", function(e) {
+        if (!productSearch.contains(e.target) && !productsTableContainer.contains(e.target)) {
+            productsTableContainer.style.display = "none";
+        }
+    });
+    
+    // Pagination controls
+    document.getElementById("prev-page").addEventListener("click", function() {
+        if (currentPage > 1) {
+            currentPage--;
+            renderTable();
+        }
+    });
+    
+    document.getElementById("next-page").addEventListener("click", function() {
+        const totalPages = Math.ceil(filteredProducts.length / rowsPerPage);
+        if (currentPage < totalPages) {
+            currentPage++;
+            renderTable();
+        }
+    });
+}
+
+function renderTable() {
+    const tableBody = document.getElementById("products-table-body");
+    const paginationInfo = document.getElementById("page-info");
+    const prevBtn = document.getElementById("prev-page");
+    const nextBtn = document.getElementById("next-page");
+    
+    tableBody.innerHTML = "";
+    
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = Math.min(startIndex + rowsPerPage, filteredProducts.length);
+    const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
+    
+    paginatedProducts.forEach((product, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${startIndex + index + 1}</td>
+            <td>${product.NAME}</td>
+        `;
+        
+        row.addEventListener("click", function() {
+            document.getElementById("product-search").value = product.NAME;
+            document.getElementById("products-table-container").style.display = "none";
+            
+            // Enable date inputs
+            document.getElementById("start-date").disabled = false;
+            document.getElementById("end-date").disabled = false;
+            
+            // Trigger all necessary functions
+            fetchHistoriqueRotation();
+            fetchRotationData();
+            fetchHistogramData();
+        });
+        
+        tableBody.appendChild(row);
+    });
+    
+    const totalPages = Math.ceil(filteredProducts.length / rowsPerPage);
+    paginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+    prevBtn.disabled = currentPage <= 1;
+    nextBtn.disabled = currentPage >= totalPages;
+}
+
+
+
 function debounce(func, delay) {
     let timer;
-    return function (...args) {
+    return function(...args) {
         clearTimeout(timer);
         timer = setTimeout(() => func.apply(this, args), delay);
     };
 }
-
-// ✅ Filter products based on search input
-async function filterProducts(searchValue) {
-    if (!allProducts.length) await fetchProducts(); // Ensure data is available
-
-    const dropdownList = document.getElementById("dropdown-list");
-    dropdownList.innerHTML = ""; // Clear previous options
-
-    if (!searchValue.trim()) {
-        dropdownList.style.display = "none";
-        return;
-    }
-
-    const filteredProducts = allProducts.filter(product =>
-        product.NAME.toLowerCase().includes(searchValue.toLowerCase())
-    );
-
-    if (!filteredProducts.length) {
-        dropdownList.style.display = "none";
-        return;
-    }
-
-    const fragment = document.createDocumentFragment();
-
-    filteredProducts.forEach(product => {
-        const div = document.createElement("div");
-        div.textContent = product.NAME;
-        div.classList.add("dropdown-item");
-        div.dataset.value = product.NAME.trim();
-
-        div.addEventListener("click", function () {
-            document.getElementById("product-search").value = product.NAME;
-            document.getElementById("product-select").value = product.NAME;
-            dropdownList.style.display = "none";
-            console.log("✅ Selected Product:", product.NAME);
-            fetchHistoriqueRotation();
-        });
-
-        fragment.appendChild(div);
-    });
-
-    dropdownList.appendChild(fragment);
-    dropdownList.style.display = "block";
-}
-
-// ✅ Populate table when "See All Products" is clicked
-async function populateTable() {
-    await fetchProducts();
-    const productTableBody = document.getElementById("product-table-body");
-    productTableBody.innerHTML = "";
-
-    const fragment = document.createDocumentFragment();
-    
-    allProducts.forEach((product, index) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `<td>${index + 1}</td><td>${product.NAME}</td>`;
-
-        row.addEventListener("click", function () {
-            document.getElementById("product-search").value = product.NAME;
-            document.getElementById("product-select").value = product.NAME;
-            document.getElementById("product-modal").style.display = "none";
-            fetchHistoriqueRotation();
-        });
-
-        fragment.appendChild(row);
-    });
-
-    productTableBody.appendChild(fragment);
-    document.getElementById("product-modal").style.display = "flex";
-}
-
-document.addEventListener("DOMContentLoaded", async function () {
-    await fetchProducts(); // Prefetch products
-
-    const productSearch = document.getElementById("product-search");
-    const dropdownList = document.getElementById("dropdown-list");
-    const seeAllBtn = document.getElementById("see-all-btn");
-    const closeModal = document.getElementById("close-modal");
-    const productSelect = document.getElementById("product-select");
-
-    // ✅ Attach event listeners
-    productSearch.addEventListener("input", debounce(function () {
-        filterProducts(this.value);
-    }, 300));
-
-    productSearch.addEventListener("focus", function () {
-        if (productSearch.value.trim()) dropdownList.style.display = "block";
-    });
-
-    document.addEventListener("click", function (event) {
-        if (!document.querySelector(".custom-dropdown").contains(event.target)) {
-            dropdownList.style.display = "none";
-        }
-    });
-
-    seeAllBtn.addEventListener("click", populateTable);
-    closeModal.addEventListener("click", () => (document.getElementById("product-modal").style.display = "none"));
-    productSelect.addEventListener("change", fetchHistoriqueRotation);
-});
 
 
 async function fetchHistoriqueRotation() {

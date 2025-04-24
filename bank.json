@@ -1,0 +1,217 @@
+[
+    {
+        "date": "2025-04-14 11:52:47",
+        "bna_sold": 100,
+        "bna_remise": 100,
+        "baraka_sold": 200,
+        "baraka_remise": 200
+    },
+    {
+        "date": "2025-04-15 12:09:21",
+        "bna_sold": 1000,
+        "bna_remise": 1000,
+        "baraka_sold": 1000,
+        "baraka_remise": 1000
+    },
+    {
+        "date": "2025-04-15 15:42:00",
+        "bna_sold": 5000,
+        "bna_remise": 50000,
+        "baraka_sold": 100000,
+        "baraka_remise": 100000
+    },
+    {
+        "date": "2025-04-15 15:42:36",
+        "bna_sold": 1,
+        "bna_remise": 1,
+        "baraka_sold": 1,
+        "baraka_remise": 1
+    },
+    {
+        "date": "2025-04-15 16:00:40",
+        "bna_sold": 555,
+        "bna_remise": 555,
+        "baraka_sold": 5555,
+        "baraka_remise": 5555
+    },
+    {
+        "date": "2025-04-15 16:05:30",
+        "bna_sold": 1,
+        "bna_remise": 1,
+        "baraka_sold": 1,
+        "baraka_remise": 1
+    },
+    {
+        "date": "2025-04-15 16:10:37",
+        "bna_sold": 100000,
+        "bna_remise": 10100010,
+        "baraka_sold": 999999,
+        "baraka_remise": 999999999999
+    },
+    {
+        "date": "2025-04-15 16:14:32",
+        "bna_sold": 1,
+        "bna_remise": 1,
+        "baraka_sold": 1,
+        "baraka_remise": 1
+    },
+    {
+        "date": "2025-04-15 16:15:13",
+        "bna_sold": 99999999999,
+        "bna_remise": 999999999999,
+        "baraka_sold": 999999999,
+        "baraka_remise": 999999999
+    },
+    {
+        "date": "2025-04-15 16:17:15",
+        "bna_sold": 11,
+        "bna_remise": 11,
+        "baraka_sold": 11,
+        "baraka_remise": 11
+    },
+    {
+        "date": "2025-04-15 16:19:31",
+        "bna_sold": 999999,
+        "bna_remise": 999999999,
+        "baraka_sold": 99999999999,
+        "baraka_remise": 9999999999
+    },
+    {
+        "date": "2025-04-15 16:20:25",
+        "bna_sold": 100,
+        "bna_remise": 100,
+        "baraka_sold": 100,
+        "baraka_remise": 100
+    },
+    {
+        "date": "2025-04-17 09:42:32",
+        "bna_sold": 5000000000,
+        "bna_remise": 500000000,
+        "baraka_sold": 5000000,
+        "baraka_remise": 50000000
+    },
+    {
+        "date": "2025-04-17 09:43:07",
+        "bna_sold": 1,
+        "bna_remise": 1,
+        "baraka_sold": 1,
+        "baraka_remise": 1
+    },
+    {
+        "date": "2025-04-17 09:43:43",
+        "bna_sold": 10000000000,
+        "bna_remise": 100000000000000,
+        "baraka_sold": 1000000000000000,
+        "baraka_remise": 100000000000
+    },
+    {
+        "date": "2025-04-17 09:47:23",
+        "bna_sold": 500,
+        "bna_remise": 500,
+        "baraka_sold": 500,
+        "baraka_remise": 500
+    },
+    {
+        "date": "2025-04-17 09:49:29",
+        "bna_sold": 1,
+        "bna_remise": 1,
+        "baraka_sold": 1,
+        "baraka_remise": 1
+    },
+    {
+        "date": "2025-04-17 09:56:21",
+        "bna_sold": 1233333,
+        "bna_remise": 999999999,
+        "baraka_sold": 852659595,
+        "baraka_remise": 946558
+    },
+    {
+        "date": "2025-04-17 09:56:56",
+        "bna_sold": 10,
+        "bna_remise": 10,
+        "baraka_sold": 10,
+        "baraka_remise": 10
+    },
+    {
+        "date": "2025-04-17 10:00:35",
+        "bna_sold": 20,
+        "bna_remise": 20,
+        "baraka_sold": 20,
+        "baraka_remise": 20
+    },
+    {
+        "date": "2025-04-20 12:58:08",
+        "bna_sold": 100,
+        "bna_remise": 100,
+        "baraka_sold": 100,
+        "baraka_remise": 100
+    },
+    {
+        "date": "2025-04-20 12:59:09",
+        "bna_sold": 100,
+        "bna_remise": 100,
+        "baraka_sold": 100,
+        "baraka_remise": 100
+    },
+    {
+        "date": "2025-04-20 12:59:42",
+        "bna_sold": 5555,
+        "bna_remise": 555555,
+        "baraka_sold": 55555555,
+        "baraka_remise": 5555555555
+    },
+    {
+        "date": "2025-04-20 13:00:51",
+        "bna_sold": 99,
+        "bna_remise": 99,
+        "bna_check": 99,
+        "baraka_sold": 99,
+        "baraka_remise": 99,
+        "baraka_check": 99
+    },
+    {
+        "date": "2025-04-20 15:08:45",
+        "bna_sold": 1,
+        "bna_remise": 1,
+        "bna_check": 10,
+        "baraka_sold": 1,
+        "baraka_remise": 1,
+        "baraka_check": 10
+    },
+    {
+        "date": "2025-04-20 15:15:51",
+        "bna_sold": 10,
+        "bna_remise": 10,
+        "bna_check": 10,
+        "baraka_sold": 10,
+        "baraka_remise": 10,
+        "baraka_check": 10
+    },
+    {
+        "date": "2025-04-20 15:58:21",
+        "bna_sold": 67450864.73999999463558197021484375,
+        "bna_remise": 3623737.370000000111758708953857421875,
+        "bna_check": 10,
+        "baraka_sold": 97070.89999999999417923390865325927734375,
+        "baraka_remise": 0,
+        "baraka_check": 10
+    },
+    {
+        "date": "2025-04-20 17:39:22",
+        "bna_sold": 100,
+        "bna_remise": 100,
+        "bna_check": 100,
+        "baraka_sold": 100,
+        "baraka_remise": 100,
+        "baraka_check": 10
+    },
+    {
+        "date": "2025-04-20 17:45:05",
+        "bna_sold": 99,
+        "bna_remise": 99,
+        "bna_check": 88,
+        "baraka_sold": 88,
+        "baraka_remise": 99,
+        "baraka_check": 55
+    }
+]

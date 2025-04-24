@@ -654,3 +654,40 @@ ORDER BY
 
 ----------------------------
 SELECT * FROM c_order WHERE c_order_id = '3216369';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+select ml.M_LOCATOR_ID, ml.value AS EMPLACEMENT
+from M_Locator ml
+join M_Warehouse m on m.M_WAREHOUSE_ID=ml.M_WAREHOUSE_ID
+
+and m.ISACTIVE ='Y'
+and m.AD_Client_ID = 1000000
+and ml.ISACTIVE = 'Y'
+and ml.AD_Client_ID = 1000000
+order by m.value;
+
+
+
+
+
+SELECT C_SalesRegion_id from C_SalesRegion;
+-------------------------
+
+
+
+
+
+
+

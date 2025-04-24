@@ -10,7 +10,8 @@ $pages = [
     "Recap_Vente_Facturation" => "recapvente_fact.php",
     
     "CONFIRMED_ORDERS" => "confirm_order.php",
-
+    
+    "ETAT_Fourniseeur" => "etatfournisseur.php",
 
     "recap_achat_facturation" => "recap_achat_facturation.php",
     "Rotation" => "rotation.php",
@@ -18,9 +19,19 @@ $pages = [
     "Journal_Vente" => "journal.php",
     
     "bat" => "batman.html",
+    "l" => "l.php",
 
     "signup" => "signup.html",
-    "side" => "sidebar.html",
+    "mony" => "money.php",
+
+    "Acess_Denied" => "access_denied.html",
+    "view_data" => "view_data.php",
+
+    "side" => "sidebar.php",
+    "Quota" => "quota.php",
+    "bank" => "bank.php",
+
+
     "login" => "login.php",
     "bar" => "bar.html",
     "a" => "a.html",

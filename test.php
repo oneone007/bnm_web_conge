@@ -533,13 +533,6 @@ z-index: 50;
 
 
 
-.last-updated {
-  font-size: 14px;
-  color: #666;
-}
-#update-countdown {
-  color: #007bff;
-}
 
 
 .selected-row {
@@ -1103,9 +1096,6 @@ th {
 
 
 </style>
-<div class="last-updated" style="font-weight: bold; margin-bottom: 10px;">
-  Last update in: <span id="update-countdown">30</span> seconds
-</div>
 
         <br>
         
@@ -1793,7 +1783,7 @@ tables.forEach((table) => makeTableColumnsResizable(table));
 
                 try {
                     
-                    const response = await fetch(`http://192.168.1.94:5000/fetchTotalrecapData?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000000`);
+                    const response = await fetch(`http://192.168.1.94:5000/fetchTotalrecapData?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000012`);
 
                     if (!response.ok) throw new Error("Network response was not ok");
 
@@ -1863,7 +1853,7 @@ tables.forEach((table) => makeTableColumnsResizable(table));
         return;
     }
 
-    const downloadUrl = `http://192.168.1.94:5000/download-totalrecap-excel?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000000`;
+    const downloadUrl = `http://192.168.1.94:5000/download-totalrecap-excel?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000012`;
     window.location.href = downloadUrl;  // Triggers file download
 });
 
@@ -1898,7 +1888,7 @@ let fullData = [];
                 const url = new URL("http://192.168.1.94:5000/fetchFournisseurData");
                 url.searchParams.append("start_date", startDate);
                 url.searchParams.append("end_date", endDate);
-                url.searchParams.append("ad_org_id", "1000000"); 
+                url.searchParams.append("ad_org_id", "1000012"); 
                 if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
                 if (product) url.searchParams.append("product", product);
                 if (client) url.searchParams.append("client", client);
@@ -2068,7 +2058,7 @@ document.getElementById("download-fournisseur").addEventListener("click", async 
     const url = new URL("http://192.168.1.94:5000/download-fournisseur-excel");
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
-    url.searchParams.append("ad_org_id", "1000000"); // Added ad_org_id parameter
+    url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
 
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
     if (product) url.searchParams.append("product", product);
@@ -2141,7 +2131,7 @@ async function fetchProductRecap() {
     const url = new URL("http://192.168.1.94:5000/fetchProductData");
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
-    url.searchParams.append("ad_org_id", "1000000"); 
+    url.searchParams.append("ad_org_id", "1000012"); 
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
     if (product) url.searchParams.append("product", product);
     if (client) url.searchParams.append("client", client);
@@ -2266,7 +2256,7 @@ document.getElementById("download-product-excel").addEventListener("click", asyn
     const url = new URL("http://192.168.1.94:5000/download-product-excel");
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
-    url.searchParams.append("ad_org_id", "1000000"); // Added ad_org_id parameter
+    url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
 
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
     if (product) url.searchParams.append("product", product);
@@ -2357,7 +2347,7 @@ async function fetchZoneRecap(page = 1) {
     const url = new URL("http://192.168.1.94:5000/fetchZoneRecap");
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
-    url.searchParams.append("ad_org_id", "1000000");
+    url.searchParams.append("ad_org_id", "1000012");
     url.searchParams.append("page", page);  // Add the page parameter for pagination
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
     if (product) url.searchParams.append("product", product);
@@ -2509,7 +2499,7 @@ function downloadExcel(endpoint) {
     const url = new URL(`http://192.168.1.94:5000/${endpoint}`);
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
-    url.searchParams.append("ad_org_id", "1000000"); // Added ad_org_id parameter
+    url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
 
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
     if (product) url.searchParams.append("product", product);
@@ -2542,7 +2532,7 @@ async function fetchClientRecap(page = 1) {
     const url = new URL("http://192.168.1.94:5000/fetchClientRecap");
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
-    url.searchParams.append("ad_org_id", "1000000");
+    url.searchParams.append("ad_org_id", "1000012");
     url.searchParams.append("page", page);  // Add the page parameter for pagination
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
     if (product) url.searchParams.append("product", product);
@@ -2710,7 +2700,7 @@ async function fetchOperatorRecap(page = 1) {
     const url = new URL("http://192.168.1.94:5000/fetchOperatorRecap");
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
-    url.searchParams.append("ad_org_id", "1000000");
+    url.searchParams.append("ad_org_id", "1000012");
     url.searchParams.append("page", page);  // Add page parameter for pagination
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
     if (product) url.searchParams.append("product", product);
@@ -2987,7 +2977,7 @@ const itemsPerBccbPage = 10; // Adjust this to the number of items per page
 
     if (!startDate || !endDate) return;
 
-    const url = new URL("http://192.168.1.94:5000/fetchBCCBRecap"); 
+    const url = new URL("http://192.168.1.94:5000/fetchBCCBRecapfact"); 
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
     url.searchParams.append("page", page);  // Add page parameter for pagination
@@ -3164,9 +3154,9 @@ function changeBccbPage(page) {
     const tableContainer = document.getElementById("bccb-product-container");
     tableContainer.style.display = "none"; // Hide table before fetching
 
-    const url = new URL("http://192.168.1.94:5000/fetchBCCBProduct");
+    const url = new URL("http://192.168.1.94:5000/fetchBCCBProductfact");
     url.searchParams.append("bccb", bccb);
-    url.searchParams.append("ad_org_id", "1000000"); 
+    url.searchParams.append("ad_org_id", "1000012"); 
 
     try {
         const response = await fetch(url);
@@ -3217,35 +3207,6 @@ function updateBccbProductTable(data) {
 }
 
 
-let countdown = 30;
-const countdownDisplay = document.getElementById('update-countdown');
-
-function updateCountdown() {
-  countdown--;
-  countdownDisplay.textContent = countdown;
-
-  if (countdown === 0) {
-    refreshAllRecaps();
-    countdown = 30; // reset countdown
-  }
-}
-
-// This function will refresh all your recaps
-function refreshAllRecaps() {
-  fetchTotalRecap();
-  fetchFournisseurRecap();
-  fetchProductRecap();
-  fetchZoneRecap(); // or fetchZoneRecap(currentPage) if using pagination
-  fetchClientRecap();
-  fetchOperatorRecap();
-  fetchBccbRecap();
-}
-
-// Start the interval to update countdown every second
-setInterval(updateCountdown, 1000);
-
-// Run immediately at first load
-refreshAllRecaps();
 
 
             // Dark Mode Toggle Functionality

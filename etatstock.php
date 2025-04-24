@@ -1,41 +1,50 @@
+
+
 <?php
 session_start();
 
 // Set session timeout to 1 hour (3600 seconds)
 $inactive_time = 3600;
 
-// Check if the user is logged in
+// Function to check session timeout
+function check_session_timeout($inactive_time) {
+    if (isset($_SESSION['last_activity'])) {
+        $session_lifetime = time() - $_SESSION['last_activity'];
+        if ($session_lifetime > $inactive_time) {
+            session_unset(); // Unset session variables
+            session_destroy(); // Destroy the session
+            header("Location: BNM?session_expired=1");
+            exit();
+        }
+    }
+    $_SESSION['last_activity'] = time();
+}
+
+// Check if the user is logged in and session is valid
 if (!isset($_SESSION['user_id'])) {
     header("Location: BNM"); // Redirect to login if not logged in
     exit();
 }
 
-// Check if last activity is set
-if (isset($_SESSION['last_activity'])) {
-    // Calculate session lifetime
-    $session_lifetime = time() - $_SESSION['last_activity'];
-
-    if ($session_lifetime > $inactive_time) {
-        session_unset(); // Unset session variables
-        session_destroy(); // Destroy the session
-        header("Location: BNM?session_expired=1"); // Redirect to login page with message
-        exit();
-    }
+// Call the function to check session timeout
+check_session_timeout($inactive_time);
+// Restrict access for 'vente' and 'achat'
+if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser'])) {
+    header("Location: Acess_Denied");
+    exit();
 }
-
-// Update last activity timestamp
-$_SESSION['last_activity'] = time();
 ?>
+
 <!DOCTYPE html>
 <html lang="en" >
 <head>
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BNM</title>
+    <title>BNM Web</title>
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="etatstock.css">
+    <link rel="stylesheet" href="etatstck.css">
 
 </head>
 <body class="flex h-screen bg-gray-100 dark:bg-gray-900">
@@ -74,388 +83,67 @@ $_SESSION['last_activity'] = time();
 </div>
 
 <!-- CSS to position top-right -->
-<style>
-.theme-switch-wrapper {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 9999;
-}
-
-/* Optional: Add cursor pointer */
-.theme-switch {
-  cursor: pointer;
-}
-</style>
 
 
 
-<style>
 
 
 
-.theme-switch {
-    position: sticky;
-    top: 10px;
-    left: 10px;
-    padding: 10px;
-    z-index: 50;
-  --toggle-size: 20px; /* Reduced from 30px */
-  
-  --container-width: 3.75em;   /* Reduced from 5.625em */
-  --container-height: 1.7em;   /* Reduced from 2.5em */
-  --container-radius: 4em;     /* Scaled down proportionally */
-  
-  --container-light-bg: #3D7EAE;
-  --container-night-bg: #1D1F2C;
-  
-  --circle-container-diameter: 2.3em;  /* Reduced from 3.375em */
-  --sun-moon-diameter: 1.5em;          /* Reduced from 2.125em */
-  
-  --sun-bg: #ECCA2F;
-  --moon-bg: #C4C9D1;
-  --spot-color: #959DB1;
-  
-  --circle-container-offset: calc((var(--circle-container-diameter) - var(--container-height)) / 2 * -1);
-  
-  --stars-color: #fff;
-  --clouds-color: #F3FDFF;
-  --back-clouds-color: #AACADF;
-  
-  --transition: .5s cubic-bezier(0, -0.02, 0.4, 1.25);
-  --circle-transition: .3s cubic-bezier(0, -0.02, 0.35, 1.17);
-  
-}
 
-.theme-switch, .theme-switch *, .theme-switch *::before, .theme-switch *::after {
-  -webkit-box-sizing: border-box;
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  font-size: var(--toggle-size);
-}
-
-.theme-switch__container {
-  width: var(--container-width);
-  height: var(--container-height);
-  background-color: var(--container-light-bg);
-  border-radius: var(--container-radius);
-  overflow: hidden;
-  cursor: pointer;
-  -webkit-box-shadow: 0em -0.062em 0.062em rgba(0, 0, 0, 0.25), 0em 0.062em 0.125em rgba(255, 255, 255, 0.94);
-  box-shadow: 0em -0.062em 0.062em rgba(0, 0, 0, 0.25), 0em 0.062em 0.125em rgba(255, 255, 255, 0.94);
-  -webkit-transition: var(--transition);
-  -o-transition: var(--transition);
-  transition: var(--transition);
-  position: relative;
-}
-
-.theme-switch__container::before {
-  content: "";
-  position: absolute;
-  z-index: 1;
-  inset: 0;
-  -webkit-box-shadow: 0em 0.05em 0.187em rgba(0, 0, 0, 0.25) inset, 0em 0.05em 0.187em rgba(0, 0, 0, 0.25) inset;
-  box-shadow: 0em 0.05em 0.187em rgba(0, 0, 0, 0.25) inset, 0em 0.05em 0.187em rgba(0, 0, 0, 0.25) inset;
-  border-radius: var(--container-radius)
-}
-
-.theme-switch__checkbox {
-  display: none;
-}
-
-.theme-switch__circle-container {
-  width: var(--circle-container-diameter);
-  height: var(--circle-container-diameter);
-  background-color: rgba(255, 255, 255, 0.1);
-  position: absolute;
-  left: var(--circle-container-offset);
-  top: var(--circle-container-offset);
-  border-radius: var(--container-radius);
-  -webkit-box-shadow: inset 0 0 0 3.375em rgba(255, 255, 255, 0.1), inset 0 0 0 3.375em rgba(255, 255, 255, 0.1), 0 0 0 0.625em rgba(255, 255, 255, 0.1), 0 0 0 1.25em rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 0 0 3.375em rgba(255, 255, 255, 0.1), inset 0 0 0 3.375em rgba(255, 255, 255, 0.1), 0 0 0 0.625em rgba(255, 255, 255, 0.1), 0 0 0 1.25em rgba(255, 255, 255, 0.1);
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-transition: var(--circle-transition);
-  -o-transition: var(--circle-transition);
-  transition: var(--circle-transition);
-  pointer-events: none;
-}
-
-.theme-switch__sun-moon-container {
-  pointer-events: auto;
-  position: relative;
-  z-index: 2;
-  width: var(--sun-moon-diameter);
-  height: var(--sun-moon-diameter);
-  margin: auto;
-  border-radius: var(--container-radius);
-  background-color: var(--sun-bg);
-  -webkit-box-shadow: 0.062em 0.062em 0.062em 0em rgba(254, 255, 239, 0.61) inset, 0em -0.062em 0.062em 0em #a1872a inset;
-  box-shadow: 0.062em 0.062em 0.062em 0em rgba(254, 255, 239, 0.61) inset, 0em -0.062em 0.062em 0em #a1872a inset;
-  -webkit-filter: drop-shadow(0.062em 0.125em 0.125em rgba(0, 0, 0, 0.25)) drop-shadow(0em 0.062em 0.125em rgba(0, 0, 0, 0.25));
-  filter: drop-shadow(0.062em 0.125em 0.125em rgba(0, 0, 0, 0.25)) drop-shadow(0em 0.062em 0.125em rgba(0, 0, 0, 0.25));
-  overflow: hidden;
-  -webkit-transition: var(--transition);
-  -o-transition: var(--transition);
-  transition: var(--transition);
-}
-
-.theme-switch__moon {
-  -webkit-transform: translateX(100%);
-  -ms-transform: translateX(100%);
-  transform: translateX(100%);
-  width: 100%;
-  height: 100%;
-  background-color: var(--moon-bg);
-  border-radius: inherit;
-  -webkit-box-shadow: 0.062em 0.062em 0.062em 0em rgba(254, 255, 239, 0.61) inset, 0em -0.062em 0.062em 0em #969696 inset;
-  box-shadow: 0.062em 0.062em 0.062em 0em rgba(254, 255, 239, 0.61) inset, 0em -0.062em 0.062em 0em #969696 inset;
-  -webkit-transition: var(--transition);
-  -o-transition: var(--transition);
-  transition: var(--transition);
-  position: relative;
-}
-
-.theme-switch__spot {
-  position: absolute;
-  top: 0.75em;
-  left: 0.312em;
-  width: 0.75em;
-  height: 0.75em;
-  border-radius: var(--container-radius);
-  background-color: var(--spot-color);
-  -webkit-box-shadow: 0em 0.0312em 0.062em rgba(0, 0, 0, 0.25) inset;
-  box-shadow: 0em 0.0312em 0.062em rgba(0, 0, 0, 0.25) inset;
-}
-
-.theme-switch__spot:nth-of-type(2) {
-  width: 0.375em;
-  height: 0.375em;
-  top: 0.937em;
-  left: 1.375em;
-}
-
-.theme-switch__spot:nth-last-of-type(3) {
-  width: 0.25em;
-  height: 0.25em;
-  top: 0.312em;
-  left: 0.812em;
-}
-
-.theme-switch__clouds {
-  width: 1.25em;
-  height: 1.25em;
-  background-color: var(--clouds-color);
-  border-radius: var(--container-radius);
-  position: absolute;
-  bottom: -0.625em;
-  left: 0.312em;
-  -webkit-box-shadow: 0.937em 0.312em var(--clouds-color), -0.312em -0.312em var(--back-clouds-color), 1.437em 0.375em var(--clouds-color), 0.5em -0.125em var(--back-clouds-color), 2.187em 0 var(--clouds-color), 1.25em -0.062em var(--back-clouds-color), 2.937em 0.312em var(--clouds-color), 2em -0.312em var(--back-clouds-color), 3.625em -0.062em var(--clouds-color), 2.625em 0em var(--back-clouds-color), 4.5em -0.312em var(--clouds-color), 3.375em -0.437em var(--back-clouds-color), 4.625em -1.75em 0 0.437em var(--clouds-color), 4em -0.625em var(--back-clouds-color), 4.125em -2.125em 0 0.437em var(--back-clouds-color);
-  box-shadow: 0.937em 0.312em var(--clouds-color), -0.312em -0.312em var(--back-clouds-color), 1.437em 0.375em var(--clouds-color), 0.5em -0.125em var(--back-clouds-color), 2.187em 0 var(--clouds-color), 1.25em -0.062em var(--back-clouds-color), 2.937em 0.312em var(--clouds-color), 2em -0.312em var(--back-clouds-color), 3.625em -0.062em var(--clouds-color), 2.625em 0em var(--back-clouds-color), 4.5em -0.312em var(--clouds-color), 3.375em -0.437em var(--back-clouds-color), 4.625em -1.75em 0 0.437em var(--clouds-color), 4em -0.625em var(--back-clouds-color), 4.125em -2.125em 0 0.437em var(--back-clouds-color);
-  -webkit-transition: 0.5s cubic-bezier(0, -0.02, 0.4, 1.25);
-  -o-transition: 0.5s cubic-bezier(0, -0.02, 0.4, 1.25);
-  transition: 0.5s cubic-bezier(0, -0.02, 0.4, 1.25);
-}
-
-.theme-switch__stars-container {
-  position: absolute;
-  color: var(--stars-color);
-  top: -100%;
-  left: 0.312em;
-  width: 2.75em;
-  height: auto;
-  -webkit-transition: var(--transition);
-  -o-transition: var(--transition);
-  transition: var(--transition);
-}
-
-/* actions */
-
-.theme-switch__checkbox:checked + .theme-switch__container {
-  background-color: var(--container-night-bg);
-}
-
-.theme-switch__checkbox:checked + .theme-switch__container .theme-switch__circle-container {
-  left: calc(100% - var(--circle-container-offset) - var(--circle-container-diameter));
-}
-
-.theme-switch__checkbox:checked + .theme-switch__container .theme-switch__circle-container:hover {
-  left: calc(100% - var(--circle-container-offset) - var(--circle-container-diameter) - 0.187em)
-}
-
-.theme-switch__circle-container:hover {
-  left: calc(var(--circle-container-offset) + 0.187em);
-}
-
-.theme-switch__checkbox:checked + .theme-switch__container .theme-switch__moon {
-  -webkit-transform: translate(0);
-  -ms-transform: translate(0);
-  transform: translate(0);
-}
-
-.theme-switch__checkbox:checked + .theme-switch__container .theme-switch__clouds {
-  bottom: -4.062em;
-}
-
-.theme-switch__checkbox:checked + .theme-switch__container .theme-switch__stars-container {
-  top: 50%;
-  -webkit-transform: translateY(-50%);
-  -ms-transform: translateY(-50%);
-  transform: translateY(-50%);
-}
-</style>
-
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
-    <script>
-        lottie.loadAnimation({
-            container: document.getElementById("lottieContainer"),
-            renderer: "svg",
-            loop: true,
-            autoplay: true,
-            path: "json_files/r.json" // Replace with actual path to your .rjson file
-        });
-    </script>
-    
     
 
 <!-- Sidebar -->
 <!-- Sidebar -->
 <div id="sidebar-container"></div>
-
 <script>
-    // Fetch sidebar content dynamically
- fetch("side")
-    .then(response => response.text())
-    .then(html => {
-        let container = document.getElementById("sidebar-container");
-        let tempDiv = document.createElement("div");
-        tempDiv.innerHTML = html;
+fetch("side")
+  .then(response => response.text())
+  .then(html => {
+    const container = document.getElementById("sidebar-container");
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = html;
+    container.innerHTML = tempDiv.innerHTML;
 
-        // Insert sidebar content into the page
-        container.innerHTML = tempDiv.innerHTML;
+    // After DOM injection, dynamically load sidebar script
+    const script = document.createElement('script');
+    script.src = 'sidebar.js'; // Move all logic into sidebar.js
+    document.body.appendChild(script);
+  })
+  .catch(error => console.error("Error loading sidebar:", error));
 
-        // Reattach event listeners for submenu toggles (Products, Recaps)
-        const productsToggle = document.getElementById("products-toggle");
-        if (productsToggle) {
-            productsToggle.addEventListener("click", function () {
-                let submenu = document.getElementById("products-submenu");
-                submenu.classList.toggle("hidden");
-            });
-        }
-
-        const recapsToggle = document.getElementById("recaps-toggle");
-        if (recapsToggle) {
-            recapsToggle.addEventListener("click", function () {
-                let submenu = document.getElementById("recaps-submenu");
-                submenu.classList.toggle("hidden");
-            });
-        }
-
-        // Initialize Lottie animation after sidebar is inserted
-        const ramAnimation = document.getElementById('ram-animation');
-        if (ramAnimation) {
-            lottie.loadAnimation({
-                container: ramAnimation,
-                renderer: 'svg',
-                loop: true,
-                autoplay: true,
-                path: 'json_files/ram.json',
-                rendererSettings: {
-                    clearCanvas: true,
-                    preserveAspectRatio: 'xMidYMid meet',
-                    progressiveLoad: true,
-                    hideOnTransparent: true
-                }
-            });
-        }
-
-        // Sidebar toggle functionality
-        const sidebarToggle = document.getElementById('sidebarToggle');
-        const sidebar = document.getElementById('sidebar');
-        const content = document.querySelector('.content');
-
-        if (sidebarToggle && sidebar && content) {
-            sidebarToggle.addEventListener('click', () => {
-                sidebar.classList.toggle('sidebar-hidden');
-                content.classList.toggle('content-full');
-
-                // Adjust button position when sidebar is hidden or shown
-                if (sidebar.classList.contains('sidebar-hidden')) {
-                    sidebarToggle.style.left = '10px';  // Sidebar hidden
-                } else {
-                    sidebarToggle.style.left = '260px'; // Sidebar visible
-                }
-            });
-        } else {
-            console.error("Sidebar or Toggle Button not found!");
-        }
-
-        // Auto-hide sidebar when not hovered
-        document.addEventListener('mousemove', (event) => {
-            if (event.clientX < 50) {  // Mouse near the left edge (50px)
-                sidebar.classList.remove('sidebar-hidden');
-                content.classList.remove('content-full');
-            }
-        });
-
-        // Hide sidebar when the mouse leaves it
-        sidebar.addEventListener('mouseleave', () => {
-            sidebar.classList.add('sidebar-hidden');
-            content.classList.add('content-full');
-        });
-
-    })
-    .catch(error => console.error("Error loading sidebar:", error));
 
 </script>
-
     
     
 
     <!-- Main Content -->
     <div id="content" class="content flex-grow p-4">
         <div class="flex justify-center items-center mb-6">
-            <h1 class="text-5xl font-bold dark:text-white text-center text-blue-600 ">
-                 Etat de Stock 
+        <h1 class="text-5xl font-bold dark:text-white text-center  ">
+        Etat de Stock 
             </h1>
         </div>
         
-        <!-- Filters -->
 
-        <br>
- <!-- <div class="placement-dropdown bg-white shadow-md dark:bg-gray-800 rounded-lg p-4 w-80">
-    <label for="emplacement-dropdown" class="block text-sm font-medium text-gray-700 dark:text-white mb-2">
-        Select Emplacement:
-    </label>
-    <select id="emplacement-dropdown" class="w-full border border-gray-300 px-4 py-2 rounded-md dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-        <option value="">Loading...</option> 
-    </select>
-</div> 
--->
 
 <div class="search-container relative">
     <input type="text" id="recap_fournisseur" placeholder="Search Fournisseur">
     <div id="fournisseur-dropdown" class="dropdown"></div>
+</div>
+<br>
+<div class="search-container relative">
+    <input type="text" id="recap_product" placeholder="Search Product">
+    <div id="product-dropdown" class="dropdown"></div>
 </div>
 
 
 
 
 
-        <br><br>
-     
-        <!-- <button id="stock_excel" class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
-            <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
-            <span>Download Stock Table</span>
-        </button> -->
 
         <br>
         <br>
         <!-- Data Table -->
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">MARGE</h2>
         <div class="table-wrapper">
         <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
             <div class="overflow-x-auto">
@@ -470,33 +158,22 @@ $_SESSION['last_activity'] = time();
 
         <!-- Pagination -->
 
-        <div class="tables-wrapper">
-    <!-- Magasins Table -->
-    <div class="table-box small">
-        <table>
-            <thead>
-                <tr><th>Magasin</th></tr>
-            </thead>
-            <tbody id="magasin-table-body">
-                <tr><td>Loading...</td></tr>
-            </tbody>
-        </table>
+        <div class="tables-wrapper flex space-x-4">
+    <!-- Magasins Dropdown -->
+    <div class="dropdown-container flex-1">
+        <label for="magasinDropdown" class="block text-sm font-semibold">Magasin</label>
+        <select id="magasinDropdown" class="w-full p-2 border rounded-md dark:bg-gray-800 dark:text-white">
+            <option value="">Loading magasins...</option>
+        </select>
     </div>
 
-    <!-- Emplacements Table -->
-    <div class="table-box small">
-        <table>
-            <thead>
-                <tr><th>Emplacement</th></tr>
-            </thead>
-            <tbody id="emplacement-table-body">
-                <tr><td>Loading...</td></tr>
-            </tbody>
-        </table>
+    <!-- Emplacements Dropdown -->
+    <div class="dropdown-container flex-1">
+        <label for="emplacementDropdown" class="block text-sm font-semibold">Emplacement</label>
+        <select id="emplacementDropdown" class="w-full p-2 border rounded-md dark:bg-gray-800 dark:text-white" disabled>
+            <option value="">Select magasin first</option>
+        </select>
     </div>
-
-    <!-- Large Table (Etat de Stock) -->
-
 </div>
 
 
@@ -516,100 +193,95 @@ $_SESSION['last_activity'] = time();
 
 
 
-<style>
-    .center-btn {
-  display: block;
-  margin: 0 auto;
-}
 
-  .Btn {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    width: 50px;
-    height: 50px;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    transition: 0.3s;
-    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
-    background-color: #217346; /* Excel green */
-  }
 
-  .svgWrapper {
-    width: 100%;
-    transition: 0.3s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+<div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
+    <div class="overflow-x-auto">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">ETAT DE STOCK </h2>
 
-  .excelIcon {
-    width: 24px;
-    height: 24px;
-  }
 
-  .text {
-    position: absolute;
-    right: 0;
-    width: 0;
-    opacity: 0;
-    color: white;
-    font-size: 1.1em;
-    font-weight: 600;
-    transition: 0.3s;
-    white-space: nowrap;
-  }
 
-  .Btn:hover {
-    width: 140px;
-    border-radius: 40px;
-  }
+        <table class="min-w-full border-collapse text-sm text-left dark:text-white">
+    <thead>
+        <tr class="table-header dark:bg-gray-700">
+            <th data-column="FOURNISSEUR" onclick="sortTable('FOURNISSEUR')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                Fournisseur
+                <div class="resizer"></div>
+            </th>
+            <th data-column="NAME" onclick="sortTable('NAME')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                NAME
+                <div class="resizer"></div>
+            </th>
+            <th data-column="QTY" onclick="sortTable('QTY')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                QTY
+                <div class="resizer"></div>
+            </th>
+            <th data-column="PRIX" onclick="sortTable('PRIX')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                PRIX
+                <div class="resizer"></div>
+            </th>
+            <th data-column="QTY_DISPO" onclick="sortTable('QTY_DISPO')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                QTY_DISPO
+                <div class="resizer"></div>
+            </th>
+            <th data-column="PRIX_DISPO" onclick="sortTable('PRIX_DISPO')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                PRIX_DISPO
+                <div class="resizer"></div>
+            </th>
+            <th data-column="PLACE" onclick="sortTable('PLACE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                PLACE
+                <div class="resizer"></div>
+            </th>
+        </tr>
+    </thead>
+    <tbody id="data-table" class="dark:bg-gray-800">
+        <!-- Dynamic Rows -->
+    </tbody>
+</table>
 
-  .Btn:hover .svgWrapper {
-    width: 30%;
-    padding-left: 20px;
-  }
+    </div>
+</div>
+<div id="pagination" class="mt-4 flex justify-center items-center gap-4 text-sm dark:text-white">
+    <button id="firstPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">First</button>
+    <button id="prevPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Previous</button>
+    <span id="pageIndicator"></span>
+    <button id="nextPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Next</button>
+    <button id="lastPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Last</button>
+</div>
 
-  .Btn:hover .text {
-    opacity: 1;
-    width: 70%;
-    padding-right: 10px;
-  }
 
-  .Btn:active {
-    transform: translate(2px, 2px);
-  }
-</style>
-        <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
-            <div class="overflow-x-auto">
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2"> ETAT DE STOCK</h2>
-                
+<script>
+      document.querySelectorAll("th.resizable").forEach(function (th) {
+        const resizer = th.querySelector(".resizer");
 
-                <table class="min-w-full border-collapse text-sm text-left dark:text-white">
-                    <thead>
-                        <tr class="table-header dark:bg-gray-700">
-                            <th data-column="FOURNISSEUR" onclick="sortTable('FOURNISSEUR')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">Fournisseur</th>
-                            <th data-column="NAME" onclick="sortTable('NAME')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">NAME</th>
-                            <th data-column="QTY" onclick="sortTable('QTY')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">QTY</th>
-                            <th data-column="PRIX" onclick="sortTable('PRIX')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">PRIX</th>
-                            <th data-column="QTY_DISPO" onclick="sortTable('QTY_DISPO')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">QTY_DISPO</th>
-                            <th data-column="PRIX_DISPO" onclick="sortTable('PRIX_DISPO')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">PRIX_DISPO</th>
+        resizer.addEventListener("mousedown", function initResize(e) {
+            e.preventDefault();
+            window.addEventListener("mousemove", resizeColumn);
+            window.addEventListener("mouseup", stopResize);
 
-                    </thead>
-                    <tbody id="data-table" class="dark:bg-gray-800">
-                        <!-- Dynamic Rows -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
+            function resizeColumn(e) {
+                const newWidth = e.clientX - th.getBoundingClientRect().left;
+                th.style.width = newWidth + "px";
+            }
 
-        <script >
-let allData = [];
+            function stopResize() {
+                window.removeEventListener("mousemove", resizeColumn);
+                window.removeEventListener("mouseup", stopResize);
+            }
+        });
+    });
+</script>
+
+<!-- <script src="etatstock.js"></script> -->
+
+
+
+ <script>
+  let allData = [];
 let selectedMagasin = null;
 let selectedEmplacement = null;
+
+
 
 // Debounce function to limit API calls
 function debounce(func, delay) {
@@ -620,116 +292,123 @@ function debounce(func, delay) {
     };
 }
 
-
-
-// Add event listener for the Refresh button
-document.getElementById("refreshButton").addEventListener("click", () => {
-    console.log("Refreshing data...");
-    const fournisseur = document.getElementById("recap_fournisseur").value.trim();
-    fetchData(fournisseur, selectedMagasin, selectedEmplacement);
-});
-
-
-
-document.getElementById('stock_excel').addEventListener('click', function() {
-    // Get parameters (if available)
-    const fournisseur = document.getElementById('recap_fournisseur').value.trim() || null;
-    const magasin = selectedMagasin; // Use the selectedMagasin variable
-    const emplacement = selectedEmplacement; // Use the selectedEmplacement variable
-
-    // Build the URL with parameters
-    let url = 'http://192.168.1.94:5000/download-stock-excel?';
-    if (fournisseur) url += `fournisseur=${fournisseur}&`;
-    if (magasin) url += `magasin=${magasin}&`;
-    if (emplacement) url += `emplacement=${emplacement}&`;
-
-    // Remove the trailing '&' if no parameters are provided
-    if (url.endsWith('&')) url = url.slice(0, -1);
-
-    // Trigger the download
-    window.location.href = url;
-});
-
-
-
-// Fetch data on page load
+// Initialize the application
 document.addEventListener("DOMContentLoaded", () => {
+    initializeDropdowns();
     fetchData(); // Initial fetch without any filters
-    fetchAndDisplayMagasins(); // Fetch magasins
+    
+    // Set up other event listeners
+    document.getElementById("refreshButton").addEventListener("click", () => {
+        console.log("Refreshing data...");
+        const fournisseur = document.getElementById("recap_fournisseur").value.trim();
+        fetchData(fournisseur, selectedMagasin, selectedEmplacement);
+    });
+
+    document.getElementById('stock_excel').addEventListener('click', exportToExcel);
+    setupFournisseurSearch();
+    setupThemeToggle();
 });
 
-const fournisseurInput = document.getElementById("recap_fournisseur");
-const fournisseurDropdown = document.getElementById("fournisseur-dropdown");
-
-function clearSearch() {
-    fournisseurInput.value = ""; // Clear input field
-    fournisseurDropdown.style.display = "none"; // Hide dropdown
-    fetchData("", selectedMagasin, selectedEmplacement); // Refresh data
+// Initialize dropdown functionality
+function initializeDropdowns() {
+    // Load magasins dropdown
+    loadMagasinsDropdown();
+    
+    // Set up dropdown event listeners
+    document.getElementById("magasinDropdown").addEventListener("change", function() {
+        selectedMagasin = this.value || null;
+        updateEmplacementDropdown();
+        fetchFilteredData();
+    });
+    
+    document.getElementById("emplacementDropdown").addEventListener("change", function() {
+        selectedEmplacement = this.value || null;
+        fetchFilteredData();
+    });
 }
 
-// Search input event listener with debounce
-fournisseurInput.addEventListener("input", debounce(function () {
-    const searchValue = this.value.trim().toLowerCase();
-
-    if (searchValue) {
-        showFournisseurDropdown(searchValue);
-    } else {
-        clearSearch();
+// Load magasins into dropdown
+async function loadMagasinsDropdown() {
+    const dropdown = document.getElementById("magasinDropdown");
+    try {
+        const response = await fetch("http://192.168.1.94:5000/fetch-magasins");
+        if (!response.ok) throw new Error("Failed to load magasins");
+        
+        const data = await response.json();
+        dropdown.innerHTML = '<option value="">Default Magasins</option>';
+        
+        data.forEach(magasin => {
+            const option = document.createElement("option");
+            option.value = magasin.MAGASIN;
+            option.textContent = magasin.MAGASIN || "Unknown";
+            dropdown.appendChild(option);
+        });
+    } catch (error) {
+        console.error("Error loading magasins:", error);
+        dropdown.innerHTML = '<option value="">Error loading magasins</option>';
     }
-}, 300));
+}
 
-// Add event listener for click to clear search and refresh
-fournisseurInput.addEventListener("click", clearSearch);
+// Update emplacement dropdown based on selected magasin
+async function updateEmplacementDropdown() {
+    const dropdown = document.getElementById("emplacementDropdown");
+    
+    if (!selectedMagasin) {
+        dropdown.innerHTML = '<option value="">Select magasin first</option>';
+        dropdown.disabled = true;
+        return;
+    }
+    
+    dropdown.innerHTML = '<option value="">Loading emplacements...</option>';
+    dropdown.disabled = false;
+    
+    try {
+        const url = new URL("http://192.168.1.94:5000/fetch-emplacements");
+        url.searchParams.append("magasin", selectedMagasin);
+        
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Failed to load emplacements");
+        
+        const data = await response.json();
+        dropdown.innerHTML = '<option value="">All Emplacements</option>';
+        
+        data.forEach(emplacement => {
+            const option = document.createElement("option");
+            option.value = emplacement.EMPLACEMENT;
+            option.textContent = emplacement.EMPLACEMENT || "Unknown";
+            dropdown.appendChild(option);
+        });
+    } catch (error) {
+        console.error("Error loading emplacements:", error);
+        dropdown.innerHTML = '<option value="">Error loading emplacements</option>';
+    }
+}
 
-
-// Fetch data with optional filters
-async function fetchData(fournisseur = "", magasin = null, emplacement = null) {
+// Fetch data with current filters
+async function fetchData(fournisseur = "", magasin = null, emplacement = null, name = null) {
     try {
         const url = new URL("http://192.168.1.94:5000/fetch-stock-data");
         if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
         if (magasin) url.searchParams.append("magasin", magasin);
         if (emplacement) url.searchParams.append("emplacement", emplacement);
+        if (name) url.searchParams.append("name", name); // add product name as filter
 
         const response = await fetch(url);
         if (!response.ok) throw new Error('Network response was not ok');
 
         allData = await response.json();
-        console.log("Fetched Data:", allData); // Debugging
+        currentPage = 1; // Reset to first page
         renderTable();
     } catch (error) {
         console.error("Error fetching data:", error);
     }
 }
 
-// Show fournisseur dropdown
-function showFournisseurDropdown(searchValue) {
-    fournisseurDropdown.innerHTML = "";
-    fournisseurDropdown.style.display = "block";
 
-    // Get unique fournisseurs matching search
-    const uniqueFournisseurs = [...new Set(allData.map(row => row.FOURNISSEUR))]
-        .filter(f => f && f.toLowerCase().includes(searchValue));
 
-    if (uniqueFournisseurs.length === 0) {
-        fournisseurDropdown.style.display = "none";
-        return;
-    }
+let currentPage = 1;
+const rowsPerPage = 10;
 
-    // Populate dropdown
-    uniqueFournisseurs.forEach(fournisseur => {
-        const option = document.createElement("div");
-        option.classList.add("dropdown-item");
-        option.textContent = fournisseur;
-        option.addEventListener("click", () => {
-            fournisseurInput.value = fournisseur;
-            fournisseurDropdown.style.display = "none";
-            fetchData(fournisseur, selectedMagasin, selectedEmplacement);
-        });
-        fournisseurDropdown.appendChild(option);
-    });
-}
-
-// Render table function
 function renderTable() {
     const tableBody = document.getElementById("data-table");
     tableBody.innerHTML = "";
@@ -737,24 +416,152 @@ function renderTable() {
     let totalRow = allData.find(row => row.FOURNISSEUR?.toLowerCase() === "total");
     let filteredData = allData.filter(row => row.FOURNISSEUR?.toLowerCase() !== "total");
 
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const paginatedData = filteredData.slice(startIndex, startIndex + rowsPerPage);
+
     if (totalRow) {
         const tr = createTableRow(totalRow, true);
         tableBody.appendChild(tr);
     }
 
-    filteredData.forEach(row => {
+    paginatedData.forEach(row => {
         const tr = createTableRow(row);
         tableBody.appendChild(tr);
     });
+
+    updatePagination(filteredData.length);
 }
 
-// Helper function to create a table row
+function updatePagination(totalItems) {
+    const pageIndicator = document.getElementById("pageIndicator");
+    const prevBtn = document.getElementById("prevPage");
+    const nextBtn = document.getElementById("nextPage");
+    const firstBtn = document.getElementById("firstPage");
+    const lastBtn = document.getElementById("lastPage");
+
+    const totalPages = Math.ceil(totalItems / rowsPerPage);
+    pageIndicator.textContent = `Page ${currentPage} of ${totalPages}`;
+
+    prevBtn.disabled = currentPage === 1;
+    nextBtn.disabled = currentPage === totalPages;
+    firstBtn.disabled = currentPage === 1;
+    lastBtn.disabled = currentPage === totalPages;
+
+    prevBtn.onclick = () => {
+        if (currentPage > 1) {
+            currentPage--;
+            renderTable();
+        }
+    };
+
+    nextBtn.onclick = () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            renderTable();
+        }
+    };
+
+    firstBtn.onclick = () => {
+        currentPage = 1;
+        renderTable();
+    };
+
+    lastBtn.onclick = () => {
+        currentPage = totalPages;
+        renderTable();
+    };
+}
+
+
+
+// Alias for fetchData to maintain compatibility
+
+// Export to Excel function
+function exportToExcel() {
+    const fournisseur = document.getElementById('recap_fournisseur').value.trim() || null;
+    const magasin = selectedMagasin;
+    const emplacement = selectedEmplacement;
+
+    let url = 'http://192.168.1.94:5000/download-stock-excel?';
+    if (fournisseur) url += `fournisseur=${fournisseur}&`;
+    if (magasin) url += `magasin=${magasin}&`;
+    if (emplacement) url += `emplacement=${emplacement}&`;
+
+    if (url.endsWith('&')) url = url.slice(0, -1);
+    window.location.href = url;
+}
+
+// Fournisseur search functionality
+function setupFournisseurSearch() {
+    const fournisseurInput = document.getElementById("recap_fournisseur");
+    const fournisseurDropdown = document.getElementById("fournisseur-dropdown");
+
+    function clearSearch() {
+        fournisseurInput.value = "";
+        fournisseurDropdown.style.display = "none";
+        fetchData("", selectedMagasin, selectedEmplacement);
+    }
+
+    fournisseurInput.addEventListener("input", debounce(function() {
+        const searchValue = this.value.trim().toLowerCase();
+        if (searchValue) {
+            showFournisseurDropdown(searchValue);
+        } else {
+            clearSearch();
+        }
+    }, 300));
+
+    fournisseurInput.addEventListener("click", clearSearch);
+}
+
+// Show fournisseur dropdown
+function showFournisseurDropdown(searchValue) {
+    const dropdown = document.getElementById("fournisseur-dropdown");
+    dropdown.innerHTML = "";
+    dropdown.style.display = "block";
+
+    const uniqueFournisseurs = [...new Set(allData.map(row => row.FOURNISSEUR))]
+        .filter(f => f && f.toLowerCase().includes(searchValue));
+
+    if (uniqueFournisseurs.length === 0) {
+        dropdown.style.display = "none";
+        return;
+    }
+
+    uniqueFournisseurs.forEach(fournisseur => {
+        const option = document.createElement("div");
+        option.classList.add("dropdown-item");
+        option.textContent = fournisseur;
+        option.addEventListener("click", () => {
+            document.getElementById("recap_fournisseur").value = fournisseur;
+            dropdown.style.display = "none";
+            fetchData(fournisseur, selectedMagasin, selectedEmplacement);
+        });
+        dropdown.appendChild(option);
+    });
+}
+
+// Theme toggle functionality
+function setupThemeToggle() {
+    document.getElementById('themeToggle').addEventListener('click', () => {
+        document.documentElement.classList.toggle('dark');
+        localStorage.setItem('darkMode', document.documentElement.classList.contains('dark'));
+    });
+
+    if (localStorage.getItem('darkMode') === 'true') {
+        document.documentElement.classList.add('dark');
+    }
+}
+
+// Keep your existing renderTable and createTableRow functions exactly as they were
+
+
 function createTableRow(row, isTotal = false) {
     const tr = document.createElement("tr");
     tr.classList.add('table-row', 'dark:bg-gray-700');
 
     if (isTotal) {
-        tr.classList.add('font-bold', 'bg-gray-200', 'dark:bg-gray-800'); // Highlight total row
+        tr.classList.add('font-bold', 'bg-gray-200', 'dark:bg-gray-800');
     }
 
     const formatNumber = (num) => num ? parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
@@ -766,178 +573,127 @@ function createTableRow(row, isTotal = false) {
         <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.PRIX)}</td>
         <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY_DISPO)}</td>
         <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.PRIX_DISPO)}</td>
-
+        <td class="border px-4 py-2 dark:border-gray-600">${row.PLACE || ''}</td>  <!-- New place column -->
     `;
     return tr;
 }
 
 
+function setupProductSearch() {
+    const productInput = document.getElementById("recap_product");
+    const productDropdown = document.getElementById("product-dropdown");
 
+    function clearProductSearch() {
+        productInput.value = "";
+        productDropdown.style.display = "none";
+        fetchFilteredData(); // Re-fetch data without product filter
+    }
 
+    productInput.addEventListener("input", debounce(function () {
+        const searchValue = this.value.trim().toLowerCase();
+        if (searchValue) {
+            showProductDropdown(searchValue);
+        } else {
+            clearProductSearch();
+        }
+    }, 300));
 
+    productInput.addEventListener("click", clearProductSearch);
 
+    function showProductDropdown(searchValue) {
+        productDropdown.innerHTML = "";
+        productDropdown.style.display = "block";
 
-// Fetch and display magasins
-async function fetchAndDisplayMagasins() {
-    try {
-        const response = await fetch("http://192.168.1.94:5000/fetch-magasins");
-        if (!response.ok) throw new Error("Network response was not ok");
+        const uniqueProducts = [...new Set(allData.map(row => row.NAME))]
+            .filter(p => p && p.toLowerCase().includes(searchValue));
 
-        const data = await response.json();
-        console.log("Received Magasins Data:", data);
-        updateMagasinTable(data);
-    } catch (error) {
-        console.error("Error fetching magasins:", error);
+        if (uniqueProducts.length === 0) {
+            productDropdown.style.display = "none";
+            return;
+        }
+
+        uniqueProducts.forEach(product => {
+            const option = document.createElement("div");
+            option.classList.add("dropdown-item");
+            option.textContent = product;
+            option.addEventListener("click", () => {
+                productInput.value = product;
+                productDropdown.style.display = "none";
+                fetchFilteredData(); // ✅ Fetch with backend param
+            });
+            productDropdown.appendChild(option);
+        });
     }
 }
 
-// Update magasin table
-function updateMagasinTable(data) {
-    const tableBody = document.getElementById("magasin-table-body");
+function showProductDropdown(searchValue) {
+    const dropdown = document.getElementById("product-dropdown");
+    dropdown.innerHTML = "";
+    dropdown.style.display = "block";
+
+    const uniqueProducts = [...new Set(allData.map(row => row.NAME))]
+        .filter(p => p && p.toLowerCase().includes(searchValue));
+
+    if (uniqueProducts.length === 0) {
+        dropdown.style.display = "none";
+        return;
+    }
+
+    uniqueProducts.forEach(product => {
+        const option = document.createElement("div");
+        option.classList.add("dropdown-item");
+        option.textContent = product;
+        option.addEventListener("click", () => {
+            document.getElementById("recap_product").value = product;
+            dropdown.style.display = "none";
+            filterByProduct(product);
+        });
+        dropdown.appendChild(option);
+    });
+}
+
+
+function fetchFilteredData() {
+    const fournisseur = document.getElementById("recap_fournisseur").value.trim();
+    const name = document.getElementById("recap_product").value.trim();
+    fetchData(fournisseur, selectedMagasin, selectedEmplacement, name || null);
+}
+
+function filterByProduct(product) {
+    let filtered = allData.filter(row =>
+        row.FOURNISSEUR?.toLowerCase() !== "total" &&
+        row.NAME?.toLowerCase().includes(product.toLowerCase())
+    );
+
+    let totalRow = allData.find(row => row.FOURNISSEUR?.toLowerCase() === "total");
+
+    const tableBody = document.getElementById("data-table");
     tableBody.innerHTML = "";
 
-    if (!Array.isArray(data) || data.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="1">No data available</td></tr>`;
-        return;
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const paginated = filtered.slice(startIndex, startIndex + rowsPerPage);
+
+    if (totalRow) {
+        const tr = createTableRow(totalRow, true);
+        tableBody.appendChild(tr);
     }
 
-    // Add cancel selection row
-    const cancelRow = document.createElement("tr");
-    cancelRow.innerHTML = `<td class="cancel-selection">❌ Cancel Selection</td>`;
-    cancelRow.addEventListener("click", () => resetSelection("magasin"));
-    tableBody.appendChild(cancelRow);
-
-    data.forEach(item => {
-        const row = document.createElement("tr");
-        row.innerHTML = `<td>${item.MAGASIN || "Unknown"}</td>`;
-        row.dataset.magasin = item.MAGASIN;
-        row.addEventListener("click", () => selectMagasin(row));
-        tableBody.appendChild(row);
-    });
-}
-
-// Magasin selection logic
-function selectMagasin(selectedRow) {
-    // Remove 'selected' class from all magasin rows
-    document.querySelectorAll("#magasin-table-body tr").forEach(row => {
-        row.classList.remove("selected");
+    paginated.forEach(row => {
+        const tr = createTableRow(row);
+        tableBody.appendChild(tr);
     });
 
-    // Add 'selected' class to the clicked row
-    selectedRow.classList.add("selected");
-
-    selectedMagasin = selectedRow.dataset.magasin;
-    console.log("Selected Magasin:", selectedMagasin);
-
-    // Fetch and display emplacements for the selected magasin
-    fetchAndDisplayEmplacements(selectedMagasin);
-
-    // Fetch stock data with the selected magasin
-    const fournisseur = document.getElementById("recap_fournisseur").value.trim();
-    fetchData(fournisseur, selectedMagasin, selectedEmplacement);
+    updatePagination(filtered.length);
 }
-
-// Fetch and display emplacements
-async function fetchAndDisplayEmplacements(magasin) {
-    if (!magasin) {
-        document.getElementById("emplacement-table-body").innerHTML = "";
-        return;
-    }
-
-    try {
-        const url = new URL("http://192.168.1.94:5000/fetch-emplacements");
-        url.searchParams.append("magasin", magasin);
-
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Network response was not ok");
-
-        const data = await response.json();
-        console.log("Received Emplacements Data:", data);
-        updateEmplacementTable(data);
-    } catch (error) {
-        console.error("Error fetching emplacements:", error);
-    }
-}
-
-// Update emplacement table
-function updateEmplacementTable(data) {
-    const tableBody = document.getElementById("emplacement-table-body");
-    tableBody.innerHTML = "";
-
-    if (!Array.isArray(data) || data.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="1">No data available</td></tr>`;
-        return;
-    }
-
-    // Add cancel selection row
-    const cancelRow = document.createElement("tr");
-    cancelRow.innerHTML = `<td class="cancel-selection">❌ Cancel Selection</td>`;
-    cancelRow.addEventListener("click", () => resetSelection("emplacement"));
-    tableBody.appendChild(cancelRow);
-
-    data.forEach(item => {
-        const row = document.createElement("tr");
-        row.innerHTML = `<td>${item.EMPLACEMENT || "Unknown"}</td>`;
-        row.dataset.emplacement = item.EMPLACEMENT;
-        row.addEventListener("click", () => selectEmplacement(row));
-        tableBody.appendChild(row);
-    });
-}
-
-// Emplacement selection logic
-function selectEmplacement(selectedRow) {
-    // Remove 'selected' class from all emplacement rows
-    document.querySelectorAll("#emplacement-table-body tr").forEach(row => {
-        row.classList.remove("selected");
-    });
-
-    // Add 'selected' class to the clicked row
-    selectedRow.classList.add("selected");
-
-    selectedEmplacement = selectedRow.dataset.emplacement;
-    console.log("Selected Emplacement:", selectedEmplacement);
-
-    // Fetch stock data with the selected emplacement
-    const fournisseur = document.getElementById("recap_fournisseur").value.trim();
-    fetchData(fournisseur, selectedMagasin, selectedEmplacement);
-}
-
-// Reset selection logic
-function resetSelection(type) {
-    console.log(`Resetting ${type} selection...`);
-
-    if (type === "magasin") {
-        document.querySelectorAll("#magasin-table-body tr").forEach(row => row.classList.remove("selected"));
-        selectedMagasin = null;
-        // Clear emplacement table when magasin selection is reset
-        document.getElementById("emplacement-table-body").innerHTML = "";
-        selectedEmplacement = null;
-    } else if (type === "emplacement") {
-        document.querySelectorAll("#emplacement-table-body tr").forEach(row => row.classList.remove("selected"));
-        selectedEmplacement = null;
-    }
-
-    // Fetch stock data without the reset filter
-    const fournisseur = document.getElementById("recap_fournisseur").value.trim();
-    fetchData(fournisseur, selectedMagasin, selectedEmplacement);
-}
-
-
-document.getElementById('themeToggle').addEventListener('click', () => {
-    document.documentElement.classList.toggle('dark');
-    localStorage.setItem('darkMode', document.documentElement.classList.contains('dark'));
+document.addEventListener("DOMContentLoaded", () => {
+    fetchData(); // Load initial data
+    setupFournisseurSearch();
+    setupProductSearch();
+    setupThemeToggle();
 });
 
-if (localStorage.getItem('darkMode') === 'true') {
-    document.documentElement.classList.add('dark');
-}
-
   
-
-        </script>
-
-
-
+ </script>
 
 <br><br><br> <br>
 
