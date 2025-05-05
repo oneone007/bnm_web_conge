@@ -42,7 +42,9 @@ if (isset($_SESSION['username']) && in_array($_SESSION['username'], [ 'achat', '
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BNM Web</title>
+    <title>
+Order a Confirmer
+</title>
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
@@ -347,7 +349,7 @@ fetch("side")
 
     // After DOM injection, dynamically load sidebar script
     const script = document.createElement('script');
-    script.src = 'sidebar.js'; // Move all logic into sidebar.js
+    script.src = 'sid.js'; // Move all logic into sid.js
     document.body.appendChild(script);
   })
   .catch(error => console.error("Error loading sidebar:", error));
@@ -634,13 +636,8 @@ document.getElementById("refresh-btn").addEventListener("click", async function 
         searchInput.dispatchEvent(new Event("input"));
     }
 
-    // Reset the countdown timer to 30 seconds
-    countdown = 30;
-    countdownElement.textContent = countdown;
-    updateTimestamp(); // Optionally update the last update time
+    console.log("✅ Data refreshed manually via refresh button.");
 });
-
-
 
 
 async function fetchOrderConfirmed() {

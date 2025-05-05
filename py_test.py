@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 DB_POOL = oracledb.create_pool(
     user="compiere",
     password="compiere",
-    dsn="192.168.1.213/compiere",
+    dsn="192.168.1.241/compiere",
     min=2,
     max=10,
     increment=1
@@ -1030,7 +1030,7 @@ def fetch_rcap_data(start_date, end_date, ad_org_id):
 
 # Fetch fournisseur data
 
-
+ 
 
 def fetch_bccb_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone):
     try:
@@ -5791,6 +5791,325 @@ def get_combined_stock_chart_data():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def build_conditions(invoice_docno, order_docno):
+    """Build WHERE conditions dynamically based on input."""
+    conditions = []
+    params = {}
+    
+    if invoice_docno:
+        conditions.append("""
+            c_orderline_id IN (
+                SELECT c_orderline_id FROM c_invoiceline
+                WHERE c_invoice_id IN (
+                    SELECT c_invoice_id FROM c_invoice WHERE documentno = :invoice_docno
+                )
+            )
+        """)
+        params['invoice_docno'] = invoice_docno
+    
+    if order_docno:
+        conditions.append("""
+            c_orderline_id IN (
+                SELECT c_orderline_id FROM c_orderline
+                WHERE c_order_id IN (
+                    SELECT c_order_id FROM c_order WHERE documentno = :order_docno
+                )
+            )
+        """)
+        params['order_docno'] = order_docno
+    
+    return " OR ".join(conditions) if conditions else "", params
+
+@app.route('/api/update_discount', methods=['POST'])
+def update_discount():
+    """
+    Endpoint to update discounts in the database
+    Expects JSON payload with:
+    - product_id (int)
+    - discount (float, 0-100)
+    - invoice_docno (optional string)
+    - order_docno (optional string)
+    """
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data or 'product_id' not in data or 'discount' not in data:
+            return jsonify({"error": "product_id and discount are required"}), 400
+        
+        product_id = data['product_id']
+        discount = float(data['discount'])
+        invoice_docno = data.get('invoice_docno')
+        order_docno = data.get('order_docno')
+        
+        # Validate discount range
+        if discount < 0 or discount > 100:
+            return jsonify({"error": "Discount must be between 0 and 100"}), 400
+        
+        # Build conditions
+        condition_clause, condition_params = build_conditions(invoice_docno, order_docno)
+        if not condition_clause:
+            return jsonify({"error": "Either invoice_docno or order_docno must be provided"}), 400
+        
+        # Combine parameters
+        params = {
+            'product_id': product_id,
+            'discount': discount,
+            **condition_params
+        }
+        
+        # Execute updates in a transaction
+        with DB_POOL.acquire() as connection:
+            try:
+                cursor = connection.cursor()
+                
+                # Start transaction
+                connection.autocommit = False
+                
+                # --- Update 1: c_orderline ---
+                update_orderline = f"""
+                    UPDATE c_orderline
+                    SET 
+                    discount = :discount,
+                    priceentered = pricelist - (pricelist * (:discount) / 100),
+                    priceactual = pricelist - (pricelist * (:discount) / 100),
+                    linenetamt = (pricelist - (pricelist * (:discount) / 100)) * qtyentered,
+                    xx_linenetamtorig = (pricelist - (pricelist * (:discount) / 100)) * qtyentered
+                    WHERE 
+                    m_product_id = :product_id
+                    AND ({condition_clause})
+                    AND discount != 100
+                """
+                cursor.execute(update_orderline, params)
+                orderline_count = cursor.rowcount
+                
+                # --- Update 2: c_invoiceline ---
+                update_invoiceline = f"""
+                    UPDATE c_invoiceline
+                    SET 
+                    priceentered = pricelist - (pricelist * (:discount) / 100),
+                    priceactual = pricelist - (pricelist * (:discount) / 100),
+                    linetotalamt = (pricelist - (pricelist * (:discount) / 100)) * qtyentered,
+                    linenetamt = (pricelist - (pricelist * (:discount) / 100)) * qtyentered
+                    WHERE 
+                    m_product_id = :product_id
+                    AND ({condition_clause})
+                """
+                cursor.execute(update_invoiceline, params)
+                invoiceline_count = cursor.rowcount
+                
+                # --- Update 3: M_InOutLine ---
+                # Create params without discount for this query
+                params_without_discount = {'product_id': product_id, **condition_params}
+                
+                update_inoutline = f"""
+                    UPDATE M_InOutLine
+                    SET prixvente = (
+                        SELECT pricelist FROM c_orderline 
+                        WHERE c_orderline_id = M_InOutLine.c_orderline_id
+                    )
+                    WHERE M_Product_ID = :product_id 
+                    AND ({condition_clause})
+                """
+                cursor.execute(update_inoutline, params_without_discount)
+                inoutline_count = cursor.rowcount
+                
+                # --- Update 4: C_order ---
+                update_order = f"""
+                    UPDATE c_order co
+                    SET co.grandtotal = (
+                        SELECT ROUND(SUM(linenetamt), 2)
+                        FROM c_orderline
+                        WHERE c_order_id = co.c_order_id
+                    ),
+                    co.totallines = (
+                        SELECT ROUND(SUM(linenetamt), 2)
+                        FROM c_orderline
+                        WHERE c_order_id = co.c_order_id
+                    )
+                    WHERE c_order_id IN (
+                        SELECT c_order_id
+                        FROM c_orderline
+                        WHERE M_Product_ID = :product_id
+                        AND ({condition_clause})
+                    )
+                """
+                cursor.execute(update_order, params_without_discount)
+                order_count = cursor.rowcount
+                
+                # --- Update 5: C_invoice ---
+                update_invoice = f"""
+                    UPDATE c_invoice ci
+                    SET ci.grandtotal = (
+                        SELECT ROUND(SUM(linenetamt), 2)
+                        FROM c_invoiceline
+                        WHERE c_invoice_id = ci.c_invoice_id
+                    ),
+                    ci.totallines = (
+                        SELECT ROUND(SUM(linenetamt), 2)
+                        FROM c_invoiceline
+                        WHERE c_invoice_id = ci.c_invoice_id
+                    )
+                    WHERE c_order_id IN (
+                        SELECT c_order_id
+                        FROM c_orderline
+                        WHERE M_Product_ID = :product_id
+                        AND ({condition_clause})
+                    )
+                """
+                cursor.execute(update_invoice, params_without_discount)
+                invoice_count = cursor.rowcount
+                
+                # Commit transaction
+                connection.commit()
+                
+                return jsonify({
+                    "success": True,
+                    "message": "Discount updated successfully",
+                    "rows_updated": {
+                        "c_orderline": orderline_count,
+                        "c_invoiceline": invoiceline_count,
+                        "M_InOutLine": inoutline_count,
+                        "c_order": order_count,
+                        "c_invoice": invoice_count
+                    }
+                })
+                
+            except Exception as e:
+                connection.rollback()
+                logger.error(f"Database error during discount update: {str(e)}")
+                return jsonify({"error": f"Database error: {str(e)}"}), 500
+                
+    except Exception as e:
+        logger.error(f"Error in update_discount endpoint: {str(e)}")
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+@app.route('/api/fetch_products', methods=['GET'])
+def fetch_products():
+    """Endpoint to fetch products with optional filtering by document"""
+    try:
+        invoice_docno = request.args.get('invoice_docno')
+        order_docno = request.args.get('order_docno')
+        
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            
+            if invoice_docno:
+                # Fetch products by invoice documentno
+                query = """
+                    SELECT DISTINCT p.M_Product_ID, p.Name 
+                    FROM M_Product p
+                    JOIN c_invoiceline il ON p.M_Product_ID = il.M_Product_ID
+                    JOIN c_invoice i ON il.c_invoice_id = i.c_invoice_id
+                    WHERE i.documentno = :docno
+                    AND p.ad_client_id = 1000000 
+                    AND p.isactive='Y' 
+                    AND p.zlasttransactiondate IS NOT NULL
+                """
+                cursor.execute(query, {'docno': invoice_docno})
+                
+            elif order_docno:
+                # Fetch products by order documentno
+                query = """
+                    SELECT DISTINCT p.M_Product_ID, p.Name 
+                    FROM M_Product p
+                    JOIN c_orderline ol ON p.M_Product_ID = ol.M_Product_ID
+                    JOIN c_order o ON ol.c_order_id = o.c_order_id
+                    WHERE o.documentno = :docno
+                    AND p.ad_client_id = 1000000 
+                    AND p.isactive='Y' 
+                    AND p.zlasttransactiondate IS NOT NULL
+                """
+                cursor.execute(query, {'docno': order_docno})
+                
+            else:
+                # Fetch all active products
+                query = """
+                    SELECT DISTINCT M_Product_ID, Name 
+                    FROM M_Product 
+                    WHERE ad_client_id = 1000000 
+                    AND isactive='Y' 
+                    AND zlasttransactiondate IS NOT NULL
+                """
+                cursor.execute(query)
+            
+            products = [{"id": row[0], "name": row[1]} for row in cursor.fetchall()]
+            return jsonify({"products": products})
+            
+    except Exception as e:
+        logger.error(f"Error fetching products: {str(e)}")
+        return jsonify({"error": f"Failed to fetch products: {str(e)}"}), 500
+
+@app.route('/api/fetch_document_relation', methods=['GET'])
+def fetch_document_relation():
+    """Endpoint to find related documents (invoice to order or vice versa)"""
+    try:
+        invoice_docno = request.args.get('invoice_docno')
+        order_docno = request.args.get('order_docno')
+        
+        if not invoice_docno and not order_docno:
+            return jsonify({"error": "Either invoice_docno or order_docno must be provided"}), 400
+            
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            
+            if invoice_docno:
+                # Find order documentno from invoice
+                query = """
+                    SELECT o.documentno
+                    FROM c_invoice i 
+                    JOIN c_invoiceline inl ON i.c_invoice_id = inl.c_invoice_id
+                    JOIN c_orderline cl ON cl.c_orderline_id = inl.c_orderline_id
+                    JOIN c_order o ON o.c_order_id = cl.c_order_id
+                    WHERE i.documentno = :invoice_docno
+                    AND ROWNUM = 1
+                """
+                cursor.execute(query, {'invoice_docno': invoice_docno})
+                result = cursor.fetchone()
+                if result:
+                    return jsonify({"order_docno": result[0]})
+                else:
+                    return jsonify({"error": "No matching order found"}), 404
+                    
+            else:  # order_docno
+                # Find invoice documentno from order
+                query = """
+                    SELECT i.documentno
+                    FROM c_order o
+                    JOIN c_orderline cl ON o.c_order_id = cl.c_order_id
+                    JOIN c_invoiceline inl ON cl.c_orderline_id = inl.c_orderline_id
+                    JOIN c_invoice i ON i.c_invoice_id = inl.c_invoice_id
+                    WHERE o.documentno = :order_docno
+                    AND ROWNUM = 1
+                """
+                cursor.execute(query, {'order_docno': order_docno})
+                result = cursor.fetchone()
+                if result:
+                    return jsonify({"invoice_docno": result[0]})
+                else:
+                    return jsonify({"error": "No matching invoice found"}), 404
+                    
+    except Exception as e:
+        logger.error(f"Error fetching document relation: {str(e)}")
+        return jsonify({"error": f"Failed to fetch document relation: {str(e)}"}), 500
+
 
 
 

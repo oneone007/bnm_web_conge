@@ -85,17 +85,200 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
 
         <script src="https://kit.fontawesome.com/YOUR_KIT_CODE.js" crossorigin="anonymous"></script>
-        <link rel="stylesheet" href="sidebar.css">
+        <link rel="stylesheet" href="sidebarr.css">
     </head>
-    <script src="js/sidebar.js"></script> <!-- Your sidebar.js script -->
+    <script src="sid.js"></script> <!-- Your sid.js script -->
+<style>
 
+.logoutButton {
+--figure-duration: 100ms;
+--transform-figure: none;
+--walking-duration: 100ms;
+--transform-arm1: none;
+--transform-wrist1: none;
+--transform-arm2: none;
+--transform-wrist2: none;
+--transform-leg1: none;
+--transform-calf1: none;
+--transform-leg2: none;
+--transform-calf2: none;
+background: none;
+border: 0;
+color: grey;
+cursor: pointer;
+display: block;
+font-family: 'Quicksand', sans-serif;
+font-size: 14px;
+font-weight: 500;
+height: 60px;
+outline: none;
+padding: 0 0 0 20px;
+perspective: 100px;
+position: relative;
+width: 140px;
+-webkit-tap-highlight-color: transparent; }
+
+.logoutButton::before {
+background-color: white;
+border-radius: 5px;
+content: '';
+display: block;
+height: 100%;
+left: 0;
+position: absolute;
+top: 0;
+transform: none;
+transition: transform 50ms ease;
+width: 100%;
+z-index: 2; }
+.logoutButton:hover .door {
+transform: rotateY(20deg); }
+.logoutButton:active::before {
+transform: scale(0.96); }
+.logoutButton:active .door {
+transform: rotateY(28deg); }
+.logoutButton.clicked::before {
+transform: none; }
+.logoutButton.clicked .door {
+transform: rotateY(35deg); }
+.logoutButton.door-slammed .door {
+transform: none;
+transition: transform 100ms ease-in 250ms; }
+.logoutButton.falling {
+animation: shake 200ms linear; }
+.logoutButton.falling .bang {
+animation: flash 300ms linear; }
+.logoutButton.falling .figure {
+animation: spin 1000ms infinite linear;
+bottom: -450px;
+opacity: 0;
+right: 1px;
+transition: transform calc(var(--figure-duration) * 1ms) linear, bottom calc(var(--figure-duration) * 1ms) cubic-bezier(0.7, 0.1, 1, 1) 100ms, opacity calc(var(--figure-duration) * 0.25ms) linear calc(var(--figure-duration) * 0.75ms);
+z-index: 1; }
+.logoutButton--light::before {
+background-color: grey; }
+.logoutButton--light .button-text {
+color: white; }
+.logoutButton--light .door,
+.logoutButton--light .doorway {
+fill: white; }
+
+.button-text {
+color: rgb(10, 0, 0);
+font-weight: 900;
+font-size:25px;
+position: relative;
+z-index: 10; }
+
+.logoutButton svg {
+display: block;
+position: absolute; }
+
+.figure {
+bottom: 5px;
+fill: black;
+right: 18px;
+transform: var(--transform-figure);
+transition: transform calc(var(--figure-duration) * 1ms) cubic-bezier(0.2, 0.1, 0.8, 0.9);
+width: 30px;
+z-index: 4; }
+
+.door,
+.doorway {
+bottom: 4px;
+fill: grey;
+right: 12px;
+width: 32px; }
+
+.door {
+transform: rotateY(20deg);
+transform-origin: 100% 50%;
+transform-style: preserve-3d;
+transition: transform 200ms ease;
+z-index: 5; }
+.door path {
+fill: black;
+stroke: black;
+stroke-width: 4; }
+
+.doorway {
+z-index: 3; }
+
+.bang {
+opacity: 0; }
+
+.arm1, .wrist1, .arm2, .wrist2, .leg1, .calf1, .leg2, .calf2 {
+transition: transform calc(var(--walking-duration) * 1ms) ease-in-out; }
+
+.arm1 {
+transform: var(--transform-arm1);
+transform-origin: 52% 45%; }
+
+.wrist1 {
+transform: var(--transform-wrist1);
+transform-origin: 59% 55%; }
+
+.arm2 {
+transform: var(--transform-arm2);
+transform-origin: 47% 43%; }
+
+.wrist2 {
+transform: var(--transform-wrist2);
+transform-origin: 35% 47%; }
+
+.leg1 {
+transform: var(--transform-leg1);
+transform-origin: 47% 64.5%; }
+
+.calf1 {
+transform: var(--transform-calf1);
+transform-origin: 55.5% 71.5%; }
+
+.leg2 {
+transform: var(--transform-leg2);
+transform-origin: 43% 63%; }
+
+.calf2 {
+transform: var(--transform-calf2);
+transform-origin: 41.5% 73%; }
+
+@keyframes spin {
+from {
+transform: rotate(0deg) scale(0.94); }
+to {
+transform: rotate(359deg) scale(0.94); } }
+@keyframes shake {
+0% {
+transform: rotate(-1deg); }
+50% {
+transform: rotate(2deg); }
+100% {
+transform: rotate(-1deg); } }
+@keyframes flash {
+0% {
+opacity: 0.4; }
+100% {
+opacity: 0; } }
+
+
+
+.logoutButton svg {
+    width: 50px;
+    height: 50px;
+    /* Optional: add some margin if needed */
+    margin: 0 5px;
+  }
+
+/**** Wrapper styles ****************/
+
+
+/*# sourceMappingURL=c.css.map */   
+</style>
     <!-- <button id="sidebarToggle"
 class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700">
 ☰
 </button> -->
 
-
-<div id="sidebar" class="sidebar p-4">
     <!-- <div id="ram-animation"></div> -->
     <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
 
@@ -128,12 +311,27 @@ class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg h
   </div>
 </div> -->
 
-
-    <img src="assets/log.png" alt="Logo" class="logo">
     <!-- <div>
     <span style="margin-left: 10px; font-weight: bold;">
         </span>
     </div> -->
+<!-- Place this outside of <nav> and not inside any container -->
+<button id="sidebarToggle" style="
+    position: fixed;
+    top: 20px;
+    left: 260px;
+    z-index: 1000;
+    transition: left 0.3s ease;
+">
+    ☰
+</button>
+
+
+<div id="sidebar" class="sidebar p-4">
+
+
+
+    <img src="assets/log.png" alt="Logo" class="logo">
 
 
     <!-- From Uiverse.io by alexruix --> 
@@ -154,174 +352,204 @@ class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg h
     </div>
   </div>
     <!-- <h1 class="text-xl font-bold mb-6">📂 Collections</h1> -->
-    <nav>
-    
-        <ul>
-            <li class="mb-3">
-                <button onclick="location.href='Main'" class="w-full flex items-center p-2 rounded-lg hover:bg-gray-300 transition">
-                    <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9.5L12 3l9 6.5M4 10v10h16V10" />
-                    </svg>
-                    Accueil
-                </button>
-            </li>
-            
-            <!-- <li class="mb-3">
-                <button onclick="location.href='Coming'" class="w-full flex items-center p-2 rounded-lg hover:bg-gray-300 transition">
-                    <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                    </svg>
-                    Parcourir les données
-                </button>
-            </li> -->
-            <li class="mb-3">
-                <button onclick="location.href='Coming'" class="w-full flex items-center p-2 rounded-lg hover:bg-gray-300 transition">
-                    <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                    </svg>
-                    Nos analyses
-                </button>
-            </li>
+    <style>
+    nav {
+        padding: 1rem;
+    }
+    nav ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    nav li {
+        margin-bottom: 0.5rem;
+    }
+    nav button {
+        width: 100%;
+        text-align: left;
+        padding: 0.5rem;
+        border: none;
+        background: none;
+        display: flex; /* already good */
+        align-items: center; /* makes icon and text centered vertically */
+        gap: 0.5rem; /* adds space between icon and text */
+        border-radius: 0.5rem;
+        transition: background-color 0.3s;
+        cursor: pointer;
+        font-size: 1rem; /* ensure consistent size */
+    }
+    nav button:hover {
+        background-color: #f3f4f6; /* light gray hover */
+    }
+    nav hr {
+        margin: 1rem 0;
+        border: 0;
+        height: 1px;
+        background-color: #e5e7eb;
+    }
 
-            <li class="mb-3 flex flex-col">
-                <div id="fond-toggle" class="flex items-center cursor-pointer p-2 rounded-lg hover:bg-gray-300 transition  ">
-                  <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18v4H3V4zM3 10h18v10H3V10zM8 14h8" />
-                  </svg>
-                  FONDS PROPRE
-                </div>
-              
-                <ul id="fond-submenu" class="mt-2 ml-4 hidden">
-                  <li>
-                    <button onclick="location.href='mony'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition text-gray-300 hover:text-black">
-                    Data
-                    </button>
-                  </li>
-                  <li>
-                    <button onclick="location.href='bank'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition text-gray-300 hover:text-black">
-                      Banks
-                    </button>
-                  </li>
-                </ul>
-              </li>
+    .submenu button {
+        padding-left: 1rem;
+        font-size: 0.95rem;
+        gap: 0.5rem; /* same gap between icon and text inside submenu */
+    }
+    .submenu.show {
+        display: block;
+    }
+
+    /* Initially hide the submenus */
+.submenu {
+    display: none;
+    list-style-type: none;
+    padding-left: 20px; /* Indentation for submenu items */
+}
+
+.sidebar-mode-toggle {
+  margin: 10px 0;
+  text-align: center;
+}
+
+.mode-label {
+  display: block;
+  font-weight: bold;
+  color: #222;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.mode-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.mode-buttons input[type="radio"] {
+  display: none;
+}
+
+.mode-btn {
+  padding: 6px 14px;
+  background-color: #f3f3f3;
+  border: 2px solid #ccc;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: bold;
+  font-size: 13px;
+  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+}
+
+.mode-btn:hover {
+  background-color: #e0e0e0;
+  box-shadow: 0 0 6px rgba(0, 123, 255, 0.3);
+}
+
+.mode-buttons input[type="radio"]:checked + .mode-btn {
+  background: linear-gradient(135deg, #007BFF, #00A6FF);
+  color: white;
+  border-color: #007BFF;
+  box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+  transform: scale(1.03);
+}
+
+
+</style>
 
 
 
-        <li class="mb-3">
-  <button onclick="location.href='ETAT_Fourniseeur'" class="w-full flex items-center p-2 rounded-lg hover:bg-gray-300 transition">
-    <svg class="w-5 h-5 mr-2 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M5 10v10h14V10M3 6h18v4H3V6z" />
-    </svg>
-    <span class="text-base">CREANCES/DETTES</span>
-  </button>
+<nav>
+
+<li class="sidebar-mode-toggle">
+  <label class="mode-label">🧭 Sidebar Mode:</label>
+  <div class="mode-buttons">
+    <input type="radio" id="autoMode" name="mode" value="auto">
+    <label for="autoMode" class="mode-btn">🤖 Auto</label>
+
+    <input type="radio" id="manualMode" name="mode" value="manual">
+    <label for="manualMode" class="mode-btn">🖐️ Manual</label>
+  </div>
 </li>
 
+
+    <ul>
+
+        <li>
+            <button onclick="location.href='Main'">🏠 Accueil</button>
+        </li>
+
+        <!-- <li>
+            <button onclick="location.href='Coming'">📊 Nos analyses</button>
+        </li> -->
+
+        <hr>
+
+
+
+        <li>
+            <button onclick="toggleSubmenu('fond-submenu')">🪙 FONDS PROPRE</button>
+            <ul id="fond-submenu" class="submenu">
+                <li><button onclick="location.href='mony'">📈 Analysis</button></li>
+                <li><button onclick="location.href='bank'">🏦 Banks</button></li>
+            </ul>
+        </li>
+
+
+        <li>
+            <button onclick="location.href='ETAT_Fourniseeur'">🤝 CREANCES/DETTES</button>
+        </li>
+
+        <hr>
+
+
+
+        <li>
+        <button onclick="toggleSubmenu('products-submenu')">🛍️ PRODUCTS</button>
+        <ul id="products-submenu" class="submenu">
+                <li><button onclick="location.href='Etatstock'">📦 ÉTAT DE STOCK</button></li>
+                <li><button onclick="location.href='Product'">🛍️ PRODUCTS</button></li>
+                <li><button onclick="location.href='Rotation'">🔄 ROTATION</button></li>
+                <li><button onclick="location.href='Quota'">🎯 PRODUIT QUOTA</button></li>
+            </ul>
+        </li>
+        <hr>
+
+        <li>
+            <button onclick="toggleSubmenu('recapsa-submenu')">🛒 RECAPS ACHAT</button>
+            <ul id="recapsa-submenu" class="submenu">
+
             
-            <li class="mb-3 flex flex-col">
-                <div id="products-toggle" class="flex items-center cursor-pointer p-2 rounded-lg hover:bg-gray-300 transition  ">
-                  <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18v4H3V4zM3 10h18v10H3V10zM8 14h8" />
-                  </svg>
-                  PRODUCTS
-                </div>
-              
-                <ul id="products-submenu" class="mt-2 ml-4 hidden">
-                  <li>
-                    <button onclick="location.href='Etatstock'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition text-gray-300 hover:text-black">
-                      ÉTAT DE STOCK
-                    </button>
-                  </li>
-                  <li>
-                    <button onclick="location.href='Product'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition text-gray-300 hover:text-black">
-                      PRODUCTS
-                    </button>
-                  </li>
-                  <li>
-                    <button onclick="location.href='Rotation'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition text-gray-300 hover:text-black">
-                      ROTATION
-                    </button>
-                  </li>
-                  <li>
-                    <button onclick="location.href='Quota'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition text-gray-300 hover:text-black">
-                      
-PRODUIT QUOTA
-                    </button>
-                  </li>
-                </ul>
-              </li>
-              
-      
-            <li class="mb-3 flex flex-col">
-                <div id="recaps-toggle" class="flex items-center cursor-pointer p-2 rounded-lg hover:bg-gray-300 transition">
-                  <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18v16H3zM7 8h10M7 12h7M7 16h4" />
-                  </svg>
-                  RECAPS
-                </div>
-              
-                <ul id="recaps-submenu" class="mt-2 ml-4 hidden">
-                  <li>
-                    <button onclick="location.href='Recap_Achat'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition text-gray-300 hover:text-black">
-                        Recap Achat
-                    </button>
-                  </li>
-                  <li>
-                    <button onclick="location.href='Recap_Vente'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition text-gray-300 hover:text-black">
-                      Recap Vente
-                    </button>
-                  </li>
-                  <li>
-                    <button onclick="location.href='recap_achat_facturation'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition text-gray-300 hover:text-black">
-                      Recap Achat F
-                    </button>
-                  </li>
-                  <li>
-                    <button onclick="location.href='Recap_Vente_Facturation'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition text-gray-300 hover:text-black">
-                      Recap Vente F
-                    </button>
-                  </li>
-                </ul>
-              </li>
-              
-              
-                        <!-- <button onclick="location.href='Recap_Vente_Facturation'" class="w-full text-left p-2 rounded-lg hover:bg-gray-300 transition">Récap Vente FACTURATION</button> -->
-                
+                <li><button onclick="location.href='Recap_Achat'">🛒 Recap Achat</button></li>
+                <li><button onclick="location.href='recap_achat_facturation'">🧾 Recap Achat F</button></li>
+                <li><button onclick="location.href='Annual_Recap_A'">📆 Annual Recap</button></li>
 
-           
-            <li class="mb-3">
-                <button onclick="location.href='Journal_Vente'" class="w-full flex items-center p-2 rounded-lg hover:bg-gray-300 transition">
-                    <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h16v16H4zM8 8h8M8 12h5M8 16h3" />
-                    </svg>
-                    Journal de Vente FACT
-                </button>
-                
-            </li>
+            </ul>
+        </li>
 
-            <li class="mb-3">
-                <button onclick="location.href='CONFIRMED_ORDERS'" class="w-full flex items-center p-2 rounded-lg hover:bg-gray-300 transition">
-                    <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h16v16H4zM8 8h8M8 12h5M8 16h3" />
-                    </svg>
-                    Confirm Order
-                </button>
-                
-            </li>
+
+        <li>
+            <button onclick="toggleSubmenu('recapsv-submenu')">💰 RECAPS VENTE</button>
+            <ul id="recapsv-submenu" class="submenu">
+
             
-        </ul>
+                <li><button onclick="location.href='Recap_Vente'">💰 Recap Vente</button></li>
+                <li><button onclick="location.href='Recap_Vente_Facturation'">🧾 Recap Vente F</button></li>
+                <li><button onclick="location.href='Annual_Recap_V'">📆 Annual Recap</button></li>
 
+            </ul>
+        </li>
+        <hr>
 
+        <li>
+            <button onclick="location.href='Journal_Vente'">📝 Journal de Vente</button>
+        </li>
+        <hr>
+        <li>
+            <button onclick="location.href='CONFIRMED_ORDERS'">✅ Confirm Order</button>
+        </li>
 
-
-        
-    </nav>
-
-
-
-
-
-    <div class="background background--light">
-        <button  class="logoutButton logoutButton--dark">
+    </ul>
+    <br><br>
+    <button  class="logoutButton logoutButton--dark">
           <svg class="doorway" viewBox="0 0 100 100">
             <path d="M93.4 86.3H58.6c-1.9 0-3.4-1.5-3.4-3.4V17.1c0-1.9 1.5-3.4 3.4-3.4h34.8c1.9 0 3.4 1.5 3.4 3.4v65.8c0 1.9-1.5 3.4-3.4 3.4z" />
             <path class="bang" d="M40.5 43.7L26.6 31.4l-2.5 6.7zM41.9 50.4l-19.5-4-1.4 6.3zM40 57.4l-17.7 3.9 3.9 5.7z" />
@@ -350,9 +578,13 @@ PRODUIT QUOTA
             <path d="M93.4 86.3H58.6c-1.9 0-3.4-1.5-3.4-3.4V17.1c0-1.9 1.5-3.4 3.4-3.4h34.8c1.9 0 3.4 1.5 3.4 3.4v65.8c0 1.9-1.5 3.4-3.4 3.4z" />
             <circle cx="66" cy="50" r="3.7" />
           </svg>
-          <span class="button-text">Log Out</span>
-        </button>
-      </div>
+          <span class="button-text">Exit</span>
+    </button>
+</nav>
+
+
+
+
   
 </div>
 
@@ -369,5 +601,7 @@ PRODUIT QUOTA
   
 </div>
 
-
+<script>
+    
+</script>
 </html>

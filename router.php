@@ -3,6 +3,8 @@ $pages = [
     "BNM" => "index.php",
     "Main" => "main.php",
     "Etatstock" => "etatstock.php",
+    "remise" => "remise.html",
+
     "Coming" => "no.html",
     "Product" => "product.php",
     "Recap_Achat" => "recap_achat.php",
@@ -10,7 +12,9 @@ $pages = [
     "Recap_Vente_Facturation" => "recapvente_fact.php",
     
     "CONFIRMED_ORDERS" => "confirm_order.php",
-    
+    "Annual_Recap_V" => "year.php",
+    "Annual_Recap_A" => "yeara.php",
+
     "ETAT_Fourniseeur" => "etatfournisseur.php",
 
     "recap_achat_facturation" => "recap_achat_facturation.php",

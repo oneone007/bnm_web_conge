@@ -875,7 +875,7 @@ fetch("side")
 
     // After DOM injection, dynamically load sidebar script
     const script = document.createElement('script');
-    script.src = 'sidebar.js'; // Move all logic into sidebar.js
+    script.src = 'sid.js'; // Move all logic into sid.js
     document.body.appendChild(script);
   })
   .catch(error => console.error("Error loading sidebar:", error));

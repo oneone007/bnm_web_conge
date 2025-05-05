@@ -579,6 +579,10 @@ z-index: 50;
 </head>
 
 <body class="flex h-screen bg-gray-100 dark:bg-gray-900">
+<div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+  <div class="text-white text-lg font-semibold">Chargement des données...</div>
+</div>
+
     <!-- Sidebar Toggle Button -->
  
 
@@ -615,6 +619,10 @@ z-index: 50;
 
 <!-- CSS to position top-right -->
 <style>
+  .hidden {
+  display: none;
+}
+
 .theme-switch-wrapper {
   position: fixed;
   top: 20px;
@@ -852,86 +860,6 @@ z-index: 50;
   -ms-transform: translateY(-50%);
   transform: translateY(-50%);
 }
-</style>
-
-
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
-    <script>
-        lottie.loadAnimation({
-            container: document.getElementById("lottieContainer"),
-            renderer: "svg",
-            loop: true,
-            autoplay: true,
-            path: "json_files/r.json" // Replace with actual path to your .rjson file
-        });
-    </script>
-
-
-<!-- Sidebar -->
-<div id="sidebar-container"></div>
-
-
-
-
-<script>
-fetch("side")
-  .then(response => response.text())
-  .then(html => {
-    const container = document.getElementById("sidebar-container");
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = html;
-    container.innerHTML = tempDiv.innerHTML;
-
-    // After DOM injection, dynamically load sidebar script
-    const script = document.createElement('script');
-    script.src = 'sid.js'; // Move all logic into sid.js
-    document.body.appendChild(script);
-  })
-  .catch(error => console.error("Error loading sidebar:", error));
-
-
-</script>
-
-
-
-    <!-- Main Content -->
-    <div id="content" class="content flex-grow p-4">
-
-        <div class="flex justify-center items-center mb-6">
-        <h1 class="text-5xl font-bold dark:text-white text-center  ">
-        Annual Recap 
-            </h1>
-        </div>
-        <!-- Filters -->
-   
-        
-
-        <br>
-
-
-
-        <!-- Search Fields -->
-<!-- Search Fields -->
-<!-- Search Fields -->
-
-
-        <br>
-
-
-
-
-        <br>
-
-        <!-- <button id="downloadExcel_totalrecap"
-            class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
-            <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
-            <span>Total Recap Download</span>
-        </button> -->
-
-
-
-<style>
 .container {
   padding: 0;
   box-sizing: border-box;
@@ -1048,21 +976,6 @@ fetch("side")
   margin-bottom: 20px; /* Adds space between buttons and tables */
 
 }
-
-</style>
-        <br>
-
-
-
-
-
-     
-
-        <!-- second table remise aauto  -->
-
-
-      
-        <style>
     .autocomplete-suggestions {
         position: absolute;
         border: 1px solid #ccc;
@@ -1174,33 +1087,122 @@ fetch("side")
 .dark .autocomplete-suggestion:hover {
   background-color: #4b5563;
 }
+
 </style>
-<div class="search-container">
-    <div>
-        <label for="recap_fournisseur">Search Fournisseur:</label>
-        <input type="text" id="recap_fournisseur" placeholder="Search...">
-        <div id="fournisseur_suggestions" class="autocomplete-suggestions"></div>
-    </div>
 
-    <div>
-        <label for="recap_client">Search Client:</label>
-        <input type="text" id="recap_client" placeholder="Search...">
-        <div id="client_suggestions" class="autocomplete-suggestions"></div>
-    </div>
 
-    <div>
-        <label for="recap_zone">Search Zone:</label>
-        <input type="text" id="recap_zone" placeholder="Search...">
-        <div id="zone_suggestions" class="autocomplete-suggestions"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
+    <script>
+        lottie.loadAnimation({
+            container: document.getElementById("lottieContainer"),
+            renderer: "svg",
+            loop: true,
+            autoplay: true,
+            path: "json_files/r.json" // Replace with actual path to your .rjson file
+        });
+    </script>
+
+
+<!-- Sidebar -->
+<div id="sidebar-container"></div>
+
+
+
+
+<script>
+fetch("side")
+  .then(response => response.text())
+  .then(html => {
+    const container = document.getElementById("sidebar-container");
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = html;
+    container.innerHTML = tempDiv.innerHTML;
+
+    // After DOM injection, dynamically load sidebar script
+    const script = document.createElement('script');
+    script.src = 'sid.js'; // Move all logic into sid.js
+    document.body.appendChild(script);
+  })
+  .catch(error => console.error("Error loading sidebar:", error));
+
+
+</script>
+
+
+
+    <!-- Main Content -->
+    <div id="content" class="content flex-grow p-4">
+
+        <div class="flex justify-center items-center mb-6">
+        <h1 class="text-5xl font-bold dark:text-white text-center  ">
+        Annual Recap 
+            </h1>
+        </div>
+        <!-- Filters -->
+
+<div class="dashboard-container">
+<div class="search-controls bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md mb-6">
+  <!-- Year Selection -->
+  <div class="mb-4">
+    <label class="block text-sm font-medium dark:text-white mb-2">Select Years</label>
+    <div class="flex flex-wrap gap-4">
+      <label class="inline-flex items-center">
+        <input type="checkbox" class="year-checkbox" value="2022" >
+        <span class="ml-2 dark:text-white">2022</span>
+      </label>
+      <label class="inline-flex items-center">
+        <input type="checkbox" class="year-checkbox" value="2023" >
+        <span class="ml-2 dark:text-white">2023</span>
+      </label>
+      <label class="inline-flex items-center">
+        <input type="checkbox" class="year-checkbox" value="2024" >
+        <span class="ml-2 dark:text-white">2024</span>
+      </label>
+      <label class="inline-flex items-center">
+        <input type="checkbox" class="year-checkbox" value="2025" >
+        <span class="ml-2 dark:text-white">2025</span>
+      </label>
     </div>
+  </div>
+  
+  <!-- Rest of your existing search controls -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+    <div>
+        <label for="recap_fournisseur" class="block text-sm font-medium dark:text-white">Fournisseur</label>
+        <div class="relative">
+            <input type="text" id="recap_fournisseur" placeholder="Search..." 
+                   class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+            <div id="fournisseur_suggestions" class="autocomplete-suggestions absolute z-10 w-full mt-1 hidden"></div>
+        </div>
+    </div>
+    
+    <div>
+        <label for="recap_product" class="block text-sm font-medium dark:text-white">Product</label>
+        <div class="relative">
+            <input type="text" id="recap_product" placeholder="Search..." 
+                   class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+            <div id="product_suggestions" class="autocomplete-suggestions absolute z-10 w-full mt-1 hidden"></div>
+        </div>
+    </div>
+    
 </div>
+  <button id="applyFilters" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition">
+    Apply Filters
+  </button>
+  <button id="resetFilters" class="ml-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded transition hidden">
+  Reset
+</button>
 
-<br>
+</div>
+  <!-- Search Controls -->
 
+
+  <!-- Data Tables -->
 <div class="table-wrapper mt-6">
   <!-- Year 2022 -->
-  <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 mb-6">
-    <h2 class="text-lg font-semibold p-4 dark:text-white text-center">Year 2022</h2>
+  <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 mb-6" data-year="2022">
+        <h2 class="text-lg font-semibold p-4 dark:text-white text-center">Year 2022</h2>
 
     <div class="overflow-x-auto">
       <table class="min-w-full border-collapse text-sm text-left dark:text-white">
@@ -1208,7 +1210,6 @@ fetch("side")
           <tr class="table-header dark:bg-gray-700">
             <th onclick="sort2022Table('MONTH')" class="border px-4 py-2">Month</th>
             <th onclick="sort2022Table('TOTAL')" class="border px-4 py-2">Total</th>
-            <th onclick="sort2022Table('MARGE')" class="border px-4 py-2">Marge (%)</th>
           </tr>
         </thead>
         <tbody id="table-body-2022" class="dark:bg-gray-800">
@@ -1223,15 +1224,14 @@ fetch("side")
   </div>
 
   <!-- Year 2023 -->
-  <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 mb-6">
-    <h2 class="text-lg font-semibold p-4 dark:text-white text-center">Year 2023</h2>
+  <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 mb-6" data-year="2023">
+        <h2 class="text-lg font-semibold p-4 dark:text-white text-center">Year 2023</h2>
     <div class="overflow-x-auto">
       <table class="min-w-full border-collapse text-sm text-left dark:text-white">
         <thead>
           <tr class="table-header dark:bg-gray-700">
             <th onclick="sort2023Table('MONTH')" class="border px-4 py-2">Month</th>
             <th onclick="sort2023Table('TOTAL')" class="border px-4 py-2">Total</th>
-            <th onclick="sort2023Table('MARGE')" class="border px-4 py-2">Marge (%)</th>
           </tr>
         </thead>
         <tbody id="table-body-2023" class="dark:bg-gray-800">
@@ -1246,15 +1246,14 @@ fetch("side")
   </div>
 
   <!-- Year 2024 -->
-  <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 mb-6">
-    <h2 class="text-lg font-semibold p-4 dark:text-white text-center">Year 2024</h2>
+  <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 mb-6" data-year="2024">
+        <h2 class="text-lg font-semibold p-4 dark:text-white text-center">Year 2024</h2>
     <div class="overflow-x-auto">
       <table class="min-w-full border-collapse text-sm text-left dark:text-white">
         <thead>
           <tr class="table-header dark:bg-gray-700">
             <th onclick="sort2024Table('MONTH')" class="border px-4 py-2">Month</th>
             <th onclick="sort2024Table('TOTAL')" class="border px-4 py-2">Total</th>
-            <th onclick="sort2024Table('MARGE')" class="border px-4 py-2">Marge (%)</th>
           </tr>
         </thead>
         <tbody id="table-body-2024" class="dark:bg-gray-800">
@@ -1269,15 +1268,14 @@ fetch("side")
   </div>
 
   <!-- Year 2025 -->
-  <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 mb-6">
-    <h2 class="text-lg font-semibold p-4 dark:text-white text-center">Year 2025</h2>
+  <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 mb-6" data-year="2025">
+        <h2 class="text-lg font-semibold p-4 dark:text-white text-center">Year 2025</h2>
     <div class="overflow-x-auto">
       <table class="min-w-full border-collapse text-sm text-left dark:text-white">
         <thead>
           <tr class="table-header dark:bg-gray-700">
             <th onclick="sort2025Table('MONTH')" class="border px-4 py-2">Month</th>
             <th onclick="sort2025Table('TOTAL')" class="border px-4 py-2">Total</th>
-            <th onclick="sort2025Table('MARGE')" class="border px-4 py-2">Marge (%)</th>
           </tr>
         </thead>
         <tbody id="table-body-2025" class="dark:bg-gray-800">
@@ -1290,17 +1288,19 @@ fetch("side")
       </table>
     </div>
   </div>
-</div>
-<!-- Add this after your tables section -->
-<!-- Add this after your tables section -->
-<div class="chart-container mt-8">
+ </div>
+
+  <!-- Charts Section -->
+
+
+  <div class="chart-container mt-8">
   <div class="chart-controls bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md mb-6">
     <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
       <div>
         <label for="chart-type" class="block text-sm font-medium dark:text-white">Chart Type</label>
         <select id="chart-type" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+        <option value="line">Line Chart</option>
           <option value="bar">Bar Chart</option>
-          <option value="line">Line Chart</option>
           <option value="pie">Pie Chart</option>
           <option value="doughnut">Doughnut Chart</option>
           <option value="radar">Radar Chart</option>
@@ -1316,14 +1316,27 @@ fetch("side")
         <canvas id="totalChart"></canvas>
       </div>
     </div>
-    <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md h-full">
-      <h3 class="text-lg font-semibold mb-4 dark:text-white">Margin Percentage</h3>
+
+    <div id="qtyChartContainer" class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md h-full hidden">
+      <h3 class="text-lg font-semibold mb-4 dark:text-white">Quantity</h3>
       <div class="chart-wrapper relative h-64 w-full">
-        <canvas id="margeChart"></canvas>
+        <canvas id="qtyChart"></canvas>
       </div>
     </div>
   </div>
 </div>
+
+
+
+</div>
+
+
+<br>
+
+
+<!-- Add this after your tables section -->
+<!-- Add this after your tables section -->
+
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -1331,184 +1344,283 @@ fetch("side")
 
 
 
-async function fetchAndDisplayFournisseurData() {
-  showAllLoaders();
+// Update the appState to include selected years
+const appState = {
+  selected: {
+    fournisseur: null,
+    product: null,
+    years: []
+  },
+  isLoading: false,
+  cache: new Map(),
+  debounceTimer: null
+};
 
-  const params = new URLSearchParams();
-  if (selectedSuggestions.fournisseur) params.append('fournisseur', selectedSuggestions.fournisseur);
-  if (selectedSuggestions.client) params.append('client', selectedSuggestions.client);
-  if (selectedSuggestions.zone) params.append('zone', selectedSuggestions.zone);
+// DOM Elements
+const elements = {
+  applyBtn: document.getElementById('applyFilters'),
+  resetBtn: document.getElementById('resetFilters'),
+  inputs: {
+    fournisseur: document.getElementById('recap_fournisseur'),
+    product: document.getElementById('recap_product')
+  },
+  suggestionBoxes: {
+    fournisseur: document.getElementById('fournisseur_suggestions'),
+    product: document.getElementById('product_suggestions')
+  },
+  yearCheckboxes: document.querySelectorAll('.year-checkbox')
+};
+
+// Constants
+const API_ENDPOINTS = {
+  fetchData: 'http://192.168.1.94:5000/fetchFournisseurRecapAchatByYear',
+  listFournisseur: 'http://192.168.1.94:5000/listfournisseur',
+  listProduct: 'http://192.168.1.94:5000/listproduct'
+};
+const monthNames = {
+  '01': 'Janvier', '02': 'Février', '03': 'Mars', '04': 'Avril',
+  '05': 'Mai', '06': 'Juin', '07': 'Juillet', '08': 'Août',
+  '09': 'Septembre', '10': 'Octobre', '11': 'Novembre', '12': 'Décembre'
+};
+
+// Initialize the application
+function init() {
+  setupEventListeners();
+  loadInitialData();
+}
+
+// Set up all event listeners
+function setupEventListeners() {
+  // Search input handlers with debouncing
+  Object.entries(elements.inputs).forEach(([type, input]) => {
+    input.addEventListener('input', debounce(() => handleSearchInput(type), 300));
+    
+    // Prevent hiding suggestions when clicking inside the input
+    input.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+    });
+  });
+
+  // Year checkbox handlers
+  elements.yearCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', handleYearSelection);
+  });
+
+  // Apply/reset buttons
+  elements.applyBtn.addEventListener('click', fetchAndDisplayData);
+  elements.resetBtn.addEventListener('click', resetFilters);
+
+  // Enhanced click outside handler
+  document.addEventListener('click', (e) => {
+    let isSuggestion = false;
+    let isInput = false;
+    
+    Object.values(elements.suggestionBoxes).forEach(box => {
+      if (box.contains(e.target)) {
+        isSuggestion = true;
+      }
+    });
+    
+    Object.values(elements.inputs).forEach(input => {
+      if (input === e.target || input.contains(e.target)) {
+        isInput = true;
+      }
+    });
+    
+    if (!isSuggestion && !isInput) {
+      hideAllSuggestions();
+    }
+  });
+}
+
+function handleYearSelection() {
+  const selectedYears = [];
+  elements.yearCheckboxes.forEach(checkbox => {
+    if (checkbox.checked) {
+      selectedYears.push(parseInt(checkbox.value));
+    }
+  });
+  
+  if (selectedYears.length === 0) {
+    elements.yearCheckboxes.forEach(checkbox => {
+      checkbox.checked = true;
+    });
+    appState.selected.years = [2022, 2023, 2024, 2025];
+  } else {
+    appState.selected.years = selectedYears;
+  }
+}
+
+function debounce(func, delay) {
+  return function() {
+    clearTimeout(appState.debounceTimer);
+    appState.debounceTimer = setTimeout(() => func.apply(this, arguments), delay);
+  };
+}
+
+function clearPreviousSearches(currentType) {
+  Object.keys(elements.inputs).forEach(type => {
+    if (type !== currentType) {
+      elements.inputs[type].value = '';
+      appState.selected[type] = null;
+      hideSuggestions(type);
+    }
+  });
+}
+
+async function handleSearchInput(type) {
+  const input = elements.inputs[type];
+  const value = input.value.trim().toLowerCase();
+  const suggestionBox = elements.suggestionBoxes[type];
+
+  if (value && !appState.selected[type]) {
+    clearPreviousSearches(type);
+  }
+
+  if (!value) {
+    hideSuggestions(type);
+    appState.selected[type] = null;
+    return;
+  }
 
   try {
-    const response = await fetch(`http://127.0.0.1:5000/fetchFournisseurDataByYear?${params}`);
+    const endpoint = API_ENDPOINTS[`list${type.charAt(0).toUpperCase() + type.slice(1)}`];
+    const response = await fetch(endpoint);
     const data = await response.json();
+    
+    const filtered = data.filter(item => 
+      item.toLowerCase().includes(value)
+    ).slice(0, 10);
 
-    for (const year in data) {
-      const tableBody = document.getElementById(`table-body-${year}`);
-      if (tableBody) updateYearTable(tableBody, data[year]);
+    showSuggestions(type, filtered);
+  } catch (error) {
+    console.error(`Error fetching ${type} suggestions:`, error);
+  }
+}
+
+function showSuggestions(type, items) {
+  const box = elements.suggestionBoxes[type];
+  box.innerHTML = '';
+
+  if (items.length === 0) {
+    box.innerHTML = '<div class="autocomplete-suggestion">No results found</div>';
+  } else {
+    items.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'autocomplete-suggestion';
+      div.textContent = item;
+      
+      div.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        selectSuggestion(type, item);
+      });
+      
+      box.appendChild(div);
+    });
+  }
+
+  box.classList.remove('hidden');
+}
+
+function hideSuggestions(type) {
+  elements.suggestionBoxes[type].classList.add('hidden');
+}
+
+function hideAllSuggestions() {
+  Object.values(elements.suggestionBoxes).forEach(box => {
+    box.classList.add('hidden');
+  });
+}
+
+function selectSuggestion(type, value) {
+  elements.inputs[type].value = value;
+  appState.selected[type] = value;
+  hideSuggestions(type);
+  elements.inputs[type].focus();
+}
+
+function resetFilters() {
+  Object.values(elements.inputs).forEach(input => {
+    input.value = '';
+  });
+  
+  elements.yearCheckboxes.forEach(checkbox => {
+    checkbox.checked = true;
+  });
+
+  appState.selected = {
+    fournisseur: null,
+    product: null,
+    years: [2022, 2023, 2024, 2025]
+  };
+
+  hideAllSuggestions();
+  appState.cache.clear();
+  fetchAndDisplayData();
+}
+
+async function fetchAndDisplayData() {
+  if (appState.isLoading) return;
+
+  appState.isLoading = true;
+  document.querySelectorAll('.table-container').forEach(container => {
+    container.style.display = 'none';
+  });
+  showLoadingOverlay();
+
+  try {
+    const cacheKey = JSON.stringify(appState.selected);
+
+    if (appState.cache.has(cacheKey)) {
+      updateUI(appState.cache.get(cacheKey));
+      return;
     }
 
-    createChartsFromTables();
+    const params = new URLSearchParams();
+    if (appState.selected.fournisseur) params.append('fournisseur', appState.selected.fournisseur);
+    if (appState.selected.product) params.append('product', appState.selected.product);
+    appState.selected.years.forEach(year => params.append('years', year));
+
+    const response = await fetch(`${API_ENDPOINTS.fetchData}?${params}`);
+    const data = await response.json();
+
+    appState.cache.set(cacheKey, data);
+    updateUI(data);
   } catch (error) {
     console.error("Error fetching data:", error);
     showAllErrors();
+  } finally {
+    appState.isLoading = false;
+    hideLoadingOverlay();
   }
 }
-// Initialize charts on first load
-document.addEventListener('DOMContentLoaded', () => {
-  fetchAndDisplayFournisseurData();
-});
 
+function updateUI(data) {
+  document.querySelectorAll('.table-container').forEach(container => {
+    container.style.display = 'none';
+  });
 
-// Track selected suggestions
-let selectedSuggestions = {
-    fournisseur: null,
-    client: null,
-    zone: null
-};
-
-// Improved fetchAndFilter function with selection handling
-async function fetchAndFilter(endpoint, inputElement, suggestionBoxId, type) {
-    const value = inputElement.value.toLowerCase();
-    const box = document.getElementById(suggestionBoxId);
+  Object.keys(data).forEach(year => {
+    const tableBody = document.getElementById(`table-body-${year}`);
+    const tableContainer = document.querySelector(`.table-container[data-year="${year}"]`);
     
-    // Clear if empty
-    if (value.length === 0) {
-        box.innerHTML = '';
-        selectedSuggestions[type] = null;
-        await fetchAndDisplayFournisseurData();
-        return;
+    if (tableBody && tableContainer) {
+      tableContainer.style.display = 'block';
+      updateYearTable(tableBody, data[year]);
     }
+  });
 
-    try {
-        const res = await fetch(endpoint);
-        const data = await res.json();
-        const filtered = data.filter(item => item.toLowerCase().includes(value));
-
-        box.innerHTML = '';
-        if (filtered.length === 0) {
-            const noResults = document.createElement('div');
-            noResults.classList.add('autocomplete-suggestion');
-            noResults.textContent = 'No results found';
-            box.appendChild(noResults);
-            return;
-        }
-
-        filtered.slice(0, 10).forEach(item => {
-            const div = document.createElement('div');
-            div.classList.add('autocomplete-suggestion');
-            div.textContent = item;
-            div.onclick = async () => {
-                inputElement.value = item;
-                selectedSuggestions[type] = item;
-                box.innerHTML = '';
-                await fetchAndDisplayFournisseurData();
-            };
-            box.appendChild(div);
-        });
-    } catch (error) {
-        console.error(`Error fetching ${endpoint}:`, error);
-    }
+  createChartsFromTables();
 }
-
-// Update event listeners with proper types
-document.getElementById("recap_fournisseur").addEventListener("input", function() {
-    fetchAndFilter("http://192.168.1.94:5000/listfournisseur", this, "fournisseur_suggestions", "fournisseur");
-});
-
-document.getElementById("recap_client").addEventListener("input", function() {
-    fetchAndFilter("http://192.168.1.94:5000/listclient", this, "client_suggestions", "client");
-});
-
-document.getElementById("recap_zone").addEventListener("input", function() {
-    fetchAndFilter("http://192.168.1.94:5000/listregion", this, "zone_suggestions", "zone");
-});
-
-// Clear suggestions when clicking outside
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('.autocomplete-suggestions') && !e.target.matches('input[type="text"]')) {
-        document.querySelectorAll('.autocomplete-suggestions').forEach(box => {
-            box.innerHTML = '';
-        });
-    }
-});
-
-// Handle input clearing
-document.getElementById("recap_fournisseur").addEventListener("change", function() {
-    if (this.value === "") {
-        selectedSuggestions.fournisseur = null;
-        fetchAndDisplayFournisseurData();
-    }
-});
-
-document.getElementById("recap_client").addEventListener("change", function() {
-    if (this.value === "") {
-        selectedSuggestions.client = null;
-        fetchAndDisplayFournisseurData();
-    }
-});
-
-document.getElementById("recap_zone").addEventListener("change", function() {
-    if (this.value === "") {
-        selectedSuggestions.zone = null;
-        fetchAndDisplayFournisseurData();
-    }
-});
-
-
-
-function showAllLoaders() {
-    for (let year = 2022; year <= 2025; year++) {
-        const tableBody = document.getElementById(`table-body-${year}`);
-        if (tableBody) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="3" class="text-center py-4">
-                        <div class="loader animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-                    </td>
-                </tr>
-            `;
-        }
-    }
-}
-
-function showAllErrors() {
-    for (let year = 2022; year <= 2025; year++) {
-        const tableBody = document.getElementById(`table-body-${year}`);
-        if (tableBody) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="3" class="text-center py-4 text-red-500">
-                        Error loading data. Please try again.
-                    </td>
-                </tr>
-            `;
-        }
-    }
-}
-
-const monthNames = {
-    '01': 'Janvier',
-    '02': 'Février',
-    '03': 'Mars',
-    '04': 'Avril',
-    '05': 'Mai',
-    '06': 'Juin',
-    '07': 'Juillet',
-    '08': 'Août',
-    '09': 'Septembre',
-    '10': 'Octobre',
-    '11': 'Novembre',
-    '12': 'Décembre'
-};
 
 function updateYearTable(tableBody, yearData) {
     tableBody.innerHTML = '';
+    const showQty = appState.selected.product !== null;
 
     if (!yearData || yearData.length === 0) {
         tableBody.innerHTML = `
             <tr>
-                <td colspan="3" class="text-center py-4 text-gray-500">
+                <td colspan="${showQty ? 3 : 2}" class="text-center py-4 text-gray-500">
                     No data available
                 </td>
             </tr>
@@ -1516,35 +1628,64 @@ function updateYearTable(tableBody, yearData) {
         return;
     }
 
-    // Add TOTAL ANNUEL row at the top
+    // Create a map of month data for easy lookup
+    const monthDataMap = {};
+    yearData.forEach(item => {
+        if (item.MONTH) {
+            monthDataMap[item.MONTH] = {
+                TOTAL: item.CHIFFRE || 0,
+                QTY: item.QTY || 0
+            };
+        }
+    });
+
+    // Add TOTAL ANNUEL row at the top (always first)
     const totalRow = yearData.find(item => item.MONTH === null);
     if (totalRow) {
         const row = document.createElement('tr');
         row.className = 'border-b dark:border-gray-700';
 
         row.innerHTML = `
-            <td colspan="3" class="text-center font-bold bg-gray-100 dark:bg-gray-700 py-2">
-                TOTAL ANNUEL: ${formatNumber(totalRow.TOTAL)} (${totalRow.MARGE.toFixed(2)}%)
+            <td colspan="${showQty ? 3 : 2}" class="text-center font-bold bg-gray-100 dark:bg-gray-700 py-2">
+                TOTAL ANNUEL: ${formatNumber(totalRow.CHIFFRE)}
+                ${showQty ? ` | QTY: ${formatNumber(totalRow.QTY)}` : ''}
             </td>
         `;
         row.classList.add('annual-total-row');
         tableBody.appendChild(row);
     }
 
-    // Add the rest of the rows
-    yearData.filter(item => item.MONTH !== null).forEach(item => {
+    // Add all months in chronological order (01 to 12)
+    const sortedMonthNumbers = Object.keys(monthNames)
+        .sort((a, b) => parseInt(a) - parseInt(b));
+    
+    sortedMonthNumbers.forEach(monthNum => {
+        const monthName = monthNames[monthNum];
         const row = document.createElement('tr');
         row.className = 'border-b dark:border-gray-700';
 
-        const monthName = monthNames[item.MONTH] || item.MONTH;
+        const monthData = monthDataMap[monthNum] || { TOTAL: 0, QTY: 0 };
 
         row.innerHTML = `
             <td class="border px-4 py-2">${monthName}</td>
-            <td class="border px-4 py-2">${formatNumber(item.TOTAL)}</td>
-            <td class="border px-4 py-2">${item.MARGE.toFixed(2)}%</td>
+            <td class="border px-4 py-2">${monthData.TOTAL ? formatNumber(monthData.TOTAL) : '0.00'}</td>
+            ${showQty ? `<td class="border px-4 py-2">${monthData.QTY ? formatNumber(monthData.QTY) : '0.00'}</td>` : ''}
         `;
         tableBody.appendChild(row);
     });
+
+    // Update table headers to match column count
+    const table = tableBody.closest('table');
+    if (table) {
+        const headerRow = table.querySelector('thead tr');
+        if (headerRow) {
+            headerRow.innerHTML = `
+                <th class="px-4 py-2 cursor-pointer" onclick="sort${tableBody.id.split('-')[2]}Table('MONTH')">Mois</th>
+                <th class="px-4 py-2 cursor-pointer" onclick="sort${tableBody.id.split('-')[2]}Table('TOTAL')">Total</th>
+                ${showQty ? '<th class="px-4 py-2">Quantité</th>' : ''}
+            `;
+        }
+    }
 }
 
 function formatNumber(num) {
@@ -1558,10 +1699,16 @@ function createSortFunction(year) {
     return function(column) {
         const tableBody = document.getElementById(`table-body-${year}`);
         const rows = Array.from(tableBody.querySelectorAll('tr:not(.annual-total-row)'));
+        const showQty = appState.selected.product !== null;
         
         rows.sort((a, b) => {
-            const aValue = a.cells[column === 'MONTH' ? 0 : column === 'TOTAL' ? 1 : 2].textContent;
-            const bValue = b.cells[column === 'MONTH' ? 0 : column === 'TOTAL' ? 1 : 2].textContent;
+            let columnIndex;
+            if (column === 'MONTH') columnIndex = 0;
+            else if (column === 'TOTAL') columnIndex = 1;
+            else if (column === 'QTY' && showQty) columnIndex = 2;
+            
+            const aValue = a.cells[columnIndex].textContent;
+            const bValue = b.cells[columnIndex].textContent;
             
             if (column === 'MONTH') {
                 const monthNumbers = Object.entries(monthNames).reduce((acc, [num, name]) => {
@@ -1589,40 +1736,25 @@ const sort2024Table = createSortFunction('2024');
 const sort2025Table = createSortFunction('2025');
 
 // Initial load
-document.addEventListener('DOMContentLoaded', () => {
-    fetchAndDisplayFournisseurData();
-});
+function showLoadingOverlay() {
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+}
+
+function hideLoadingOverlay() {
+  document.getElementById('loadingOverlay').classList.add('hidden');
+}
+
+// Initialize the app
+document.addEventListener('DOMContentLoaded', init);
 
 
-
-//CHART PART
-document.addEventListener("DOMContentLoaded", () => {
-  const inputs = {
-    recap_fournisseur: document.getElementById("recap_fournisseur"),
-    recap_client: document.getElementById("recap_client"),
-    recap_zone: document.getElementById("recap_zone"),
-  };
-
-  Object.values(inputs).forEach((input) => {
-    input.addEventListener("focus", () => {
-      // Clear other inputs
-      for (const key in inputs) {
-        if (inputs[key] !== input) {
-          inputs[key].value = "";
-        }
-      }
-
-      // Clear current input and trigger 'input' event
-      input.value = "";
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-    });
-  });
-});
+// CHART PART
 let totalChart = null;
-let margeChart = null;
+let qtyChart = null;
 
 function createChartsFromTables() {
   const chartType = document.getElementById('chart-type').value;
+  const showQty = appState.selected.product !== null;
 
   const allData = [];
   for (let year = 2022; year <= 2025; year++) {
@@ -1631,20 +1763,38 @@ function createChartsFromTables() {
       const rows = tableBody.querySelectorAll('tr:not(.annual-total-row)');
       rows.forEach(row => {
         const cells = row.querySelectorAll('td');
-        if (cells.length === 3) {
-          allData.push({
+        // Handle both cases (2 or 3 columns - without marge)
+        if (cells.length >= 2) {
+          const monthIndex = 0;
+          const totalIndex = 1;
+          const qtyIndex = 2;
+          
+          const dataItem = {
             year: year.toString(),
-            month: cells[0].textContent.trim(),
-            total: parseFloat(cells[1].textContent.replace(/[^\d,.-]/g, '').replace(',', '.')),
-            marge: parseFloat(cells[2].textContent.replace('%', ''))
-          });
+            month: cells[monthIndex].textContent.trim(),
+            total: parseFloat(cells[totalIndex].textContent.replace(/[^\d,.-]/g, '').replace(',', '.'))
+          };
+          
+          if (showQty && cells.length > 2) {
+            dataItem.qty = parseFloat(cells[qtyIndex].textContent.replace(/[^\d,.-]/g, '').replace(',', '.'));
+          }
+          
+          allData.push(dataItem);
         }
       });
     }
   }
 
   updateTotalChart(allData, chartType);
-  updateMargeChart(allData, chartType);
+  
+  // Only show QTY chart if product is selected
+  if (showQty) {
+    updateQtyChart(allData, chartType);
+    document.getElementById('qtyChartContainer').classList.remove('hidden');
+  } else {
+    if (qtyChart) qtyChart.destroy();
+    document.getElementById('qtyChartContainer').classList.add('hidden');
+  }
 }
 
 function updateTotalChart(data, chartType) {
@@ -1699,28 +1849,28 @@ function updateTotalChart(data, chartType) {
   });
 }
 
-function updateMargeChart(data, chartType) {
-  const ctx = document.getElementById('margeChart');
-  if (margeChart) margeChart.destroy();
+function updateQtyChart(data, chartType) {
+  const ctx = document.getElementById('qtyChart');
+  if (qtyChart) qtyChart.destroy();
 
   const labels = data.map(item => `${item.month} ${item.year}`);
-  const marges = data.map(item => item.marge);
+  const quantities = data.map(item => item.qty);
   const backgroundColors = data.map(item => getChartColor(item.year, 0.7));
   const borderColors = data.map(item => getChartColor(item.year, 1));
 
   const dataset = {
-    label: 'Margin %',
-    data: marges,
+    label: 'Quantity',
+    data: quantities,
     backgroundColor: backgroundColors,
     borderColor: borderColors,
     borderWidth: 1
   };
 
-  margeChart = new Chart(ctx, {
+  qtyChart = new Chart(ctx, {
     type: chartType,
     data: {
       labels: labels,
-      datasets: chartType === 'pie' || chartType === 'doughnut' ? [dataset] : [dataset]
+      datasets: [dataset]
     },
     options: {
       responsive: true,
@@ -1730,19 +1880,17 @@ function updateMargeChart(data, chartType) {
         tooltip: {
           callbacks: {
             label: function(context) {
-              let label = context.dataset.label || '';
-              if (label) label += ': ';
-              return label + context.raw.toFixed(2) + '%';
+              return `Quantity: ${formatNumber(context.raw)}`;
             }
           }
         }
       },
-      scales: chartType === 'pie' || chartType === 'doughnut' ? {} : {
+      scales: {
         y: {
           beginAtZero: true,
           ticks: {
             callback: function(value) {
-              return value + '%';
+              return formatNumber(value);
             }
           }
         }
@@ -1761,13 +1909,16 @@ function getChartColor(year, opacity) {
   return colors[year] || `rgba(201, 203, 207, ${opacity})`;
 }
 
-
-
 // Event listener for chart type change
 document.getElementById('chart-type').addEventListener('change', createChartsFromTables);
+
 function formatNumber(value) {
+  if (typeof value === 'string') {
+    value = parseFloat(value.replace(/[^\d,.-]/g, '').replace(',', '.'));
+  }
   return value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
+
 // Dark Mode Toggle
 const themeToggle = document.getElementById('themeToggle');
 const htmlElement = document.documentElement;
@@ -1782,7 +1933,11 @@ themeToggle.addEventListener('change', () => {
     htmlElement.classList.toggle('dark');
     const isDarkMode = htmlElement.classList.contains('dark');
     localStorage.setItem('darkMode', isDarkMode);
+    
+    // Refresh charts to update their theme
+    createChartsFromTables();
 });
+
 </script>
 
 </body>

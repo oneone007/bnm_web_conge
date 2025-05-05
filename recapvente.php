@@ -39,7 +39,9 @@ if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser']))
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BNM Web</title>
+    <title>
+Reacap Vente
+</title>
     <script src="main.js" defer></script>
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
                 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
@@ -882,7 +884,7 @@ fetch("side")
 
     // After DOM injection, dynamically load sidebar script
     const script = document.createElement('script');
-    script.src = 'sidebar.js'; // Move all logic into sidebar.js
+    script.src = 'sid.js'; // Move all logic into sid.js
     document.body.appendChild(script);
   })
   .catch(error => console.error("Error loading sidebar:", error));
@@ -2986,7 +2988,7 @@ const itemsPerBccbPage = 10; // Adjust this to the number of items per page
                 const zone = document.getElementById("recap_zone").value.trim();
 
     if (!startDate || !endDate) return;
-
+   
     const url = new URL("http://192.168.1.94:5000/fetchBCCBRecap"); 
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
@@ -3247,7 +3249,27 @@ setInterval(updateCountdown, 1000);
 // Run immediately at first load
 refreshAllRecaps();
 
+// List all the input IDs you want to apply this to
+const recapInputs = [
+    'recap_fournisseur',
+    'recap_product',
+    'recap_zone',
+    'recap_client',
+    'recap_operateur',
+    'recap_bccbclient'
+];
 
+// Add event listener for each one
+recapInputs.forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+        input.addEventListener('focus', function() {
+            this.value = ''; // Clear
+            const event = new Event('input', { bubbles: true }); // Trigger 'input' event
+            this.dispatchEvent(event);
+        });
+    }
+});
             // Dark Mode Toggle Functionality
             const themeToggle = document.getElementById('themeToggle');
             const htmlElement = document.documentElement;

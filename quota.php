@@ -12,7 +12,7 @@ if (!isset($_SESSION['user_id'])) {
 
 // Check if last activity is set
 if (isset($_SESSION['last_activity'])) {
-    // Calculate session lifetime
+    // Calculate session lifetime 
     $session_lifetime = time() - $_SESSION['last_activity'];
 
     if ($session_lifetime > $inactive_time) {
@@ -25,7 +25,7 @@ if (isset($_SESSION['last_activity'])) {
 
 // Update last activity timestamp
 $_SESSION['last_activity'] = time();
-if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser','vente','achat'])) {
+if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser'])) {
     header("Location: Acess_Denied");
     exit();
 }
@@ -36,7 +36,7 @@ if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser','v
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BNM Web</title>
+    <title>Quota</title>
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
@@ -115,7 +115,7 @@ fetch("side")
 
     // After DOM injection, dynamically load sidebar script
     const script = document.createElement('script');
-    script.src = 'sidebar.js'; // Move all logic into sidebar.js
+    script.src = 'sid.js'; // Move all logic into sid.js
     document.body.appendChild(script);
   })
   .catch(error => console.error("Error loading sidebar:", error));
@@ -663,7 +663,14 @@ function changeChartType() {
 // });
 
 
+document.getElementById('search-product').addEventListener('focus', function() {
+    // Clear the value
+    this.value = '';
 
+    // Trigger the 'input' event to re-run the search
+    const event = new Event('input', { bubbles: true });
+    this.dispatchEvent(event);
+});
 
 // Search and Dropdown Functions
 function filterDropdown(type) {

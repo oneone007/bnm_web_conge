@@ -37,7 +37,7 @@ if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser']))
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BNM Web</title>
+    <title>Products</title>
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
@@ -113,7 +113,7 @@ fetch("side")
 
     // After DOM injection, dynamically load sidebar script
     const script = document.createElement('script');
-    script.src = 'sidebar.js'; // Move all logic into sidebar.js
+    script.src = 'sid.js'; // Move all logic into sid.js
     document.body.appendChild(script);
   })
   .catch(error => console.error("Error loading sidebar:", error));
@@ -270,6 +270,114 @@ th {
 tr:nth-child(even) {
     background-color: #f9f9f9;
 }
+/* new update */
+
+
+
+
+
+
+
+
+/* Specific styles for the table with many columns */
+.table-container {
+    overflow-x: auto;
+    margin: 20px 0;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;  /* Makes the table layout more predictable */
+}
+
+th, td {
+    padding: 8px 12px;  /* Reduces the padding for better fitting */
+    text-align: left;
+    word-wrap: break-word;
+}
+
+/* Smaller header font and making column headers more compact */
+th {
+    font-size: 0.875rem;  /* Smaller font for headers */
+    font-weight: 600;
+    text-align: center;  /* Center align header text */
+}
+
+/* Resizing numeric columns for better alignment */
+th[data-column="MARGE"],
+th[data-column="QTY"],
+th[data-column="P_ACHAT"],
+th[data-column="REM_ACHAT"],
+th[data-column="BON_ACHAT"],
+th[data-column="P_REVIENT"],
+th[data-column="P_VENTE"],
+th[data-column="REM_VENTE"],
+th[data-column="BON_VENTE"],
+th[data-column="REMISE_AUTO"],
+th[data-column="BONUS_AUTO"] {
+    width: 80px;  /* Fixed width for number-heavy columns */
+    white-space: nowrap;  /* Prevents text wrapping */
+}
+
+th[data-column="LOCATION"],
+th[data-column="LOT"],
+th[data-column="GUARANTEEDATE"] {
+    width: 120px;  /* Slightly larger width for these columns */
+}
+
+/* Table rows */
+td {
+    font-size: 0.875rem;  /* Smaller font for table data */
+    text-align: center;  /* Center align numeric data */
+}
+
+/* Alternate row colors for better readability */
+
+
+/* Resizer divs for resizable columns */
+.resizer {
+    cursor: ew-resize;
+}
+
+/* Sticky header for long tables */
+thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    table {
+        width: 100%;
+        font-size: 0.75rem;  /* Smaller font on smaller screens */
+    }
+
+    th, td {
+        padding: 6px 8px;  /* Smaller padding */
+    }
+
+    th[data-column="MARGE"],
+    th[data-column="QTY"],
+    th[data-column="P_ACHAT"],
+    th[data-column="REM_ACHAT"],
+    th[data-column="BON_ACHAT"],
+    th[data-column="P_REVIENT"],
+    th[data-column="P_VENTE"],
+    th[data-column="REM_VENTE"],
+    th[data-column="BON_VENTE"],
+    th[data-column="REMISE_AUTO"],
+    th[data-column="BONUS_AUTO"] {
+        width: 60px;  /* Smaller width on mobile for numeric columns */
+    }
+
+    th[data-column="LOCATION"],
+    th[data-column="LOT"],
+    th[data-column="GUARANTEEDATE"] {
+        width: 100px;  /* Adjusted column widths for mobile */
+    }
+}
 
 </style>
 
@@ -278,68 +386,64 @@ tr:nth-child(even) {
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">MARGE Table</h2>
 
         <table class="min-w-full border-collapse text-sm text-left dark:text-white">
-            <thead>
-                <tr class="table-header dark:bg-gray-700">
-                    <th data-column="FOURNISSEUR" onclick="sortTable('FOURNISSEUR')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                        Fournisseur <div class="resizer"></div>
-                    </th>
-                    <th data-column="PRODUCT" onclick="sortTable('PRODUCT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                        Produit <div class="resizer"></div>
-                    </th>
-                    <th data-column="MARGE" onclick="sortTable('MARGE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                        MARGE <div class="resizer"></div>
-                    </th>
-                    <th data-column="QTY" onclick="sortTable('QTY')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                        QTY <div class="resizer"></div>
-                    </th>
-                    <th data-column="P_ACHAT" onclick="sortTable('P_ACHAT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                        P_Achat <div class="resizer"></div>
-                    </th>
-                    <th data-column="REM_ACHAT" onclick="sortTable('REM_ACHAT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                        REM_ACHAT <div class="resizer"></div>
-                    </th>
-                    <th data-column="BON_ACHAT" onclick="sortTable('BON_ACHAT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                        BON_ACHAT <div class="resizer"></div>
-                    </th>
-                    <th data-column="P_REVIENT" onclick="sortTable('P_REVIENT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                        P_REVIENT <div class="resizer"></div>
-                    </th>
-                    <th data-column="P_VENTE" onclick="sortTable('P_VENTE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                        P_Vente <div class="resizer"></div>
-                    </th>
+    <thead>
+        <tr class="table-header dark:bg-gray-700">
+            <th data-column="FOURNISSEUR" onclick="sortTable('FOURNISSEUR')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                Fournisseur <div class="resizer"></div>
+            </th>
+            <th data-column="PRODUCT" onclick="sortTable('PRODUCT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                Produit <div class="resizer"></div>
+            </th>
+            <th data-column="MARGE" onclick="sortTable('MARGE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                MARGE <div class="resizer"></div>
+            </th>
+            <th data-column="QTY" onclick="sortTable('QTY')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                QTY <div class="resizer"></div>
+            </th>
+            <th data-column="P_ACHAT" onclick="sortTable('P_ACHAT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                P_Achat <div class="resizer"></div>
+            </th>
+            <th data-column="REM_ACHAT" onclick="sortTable('REM_ACHAT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                REM_ACHAT <div class="resizer"></div>
+            </th>
+            <th data-column="BON_ACHAT" onclick="sortTable('BON_ACHAT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                BON_ACHAT <div class="resizer"></div>
+            </th>
+            <th data-column="P_REVIENT" onclick="sortTable('P_REVIENT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                P_REVIENT <div class="resizer"></div>
+            </th>
+            <th data-column="P_VENTE" onclick="sortTable('P_VENTE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                P_Vente <div class="resizer"></div>
+            </th>
+            <th data-column="REM_VENTE" onclick="sortTable('REM_VENTE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                REM_VENTE <div class="resizer"></div>
+            </th>
+            <th data-column="BON_VENTE" onclick="sortTable('BON_VENTE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                BON_VENTE <div class="resizer"></div>
+            </th>
+            <th data-column="REMISE_AUTO" onclick="sortTable('REMISE_AUTO')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                REMISE_AUTO <div class="resizer"></div>
+            </th>
+            <th data-column="BONUS_AUTO" onclick="sortTable('BONUS_AUTO')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                BONUS_AUTO <div class="resizer"></div>
+            </th>
+            <th data-column="LOCATION" onclick="sortTable('LOCATION')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                LOCATION <div class="resizer"></div>
+            </th>
+            <th data-column="LOT" onclick="sortTable('LOT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                LOT <div class="resizer"></div>
+            </th>
+            <!-- New Guaranteedate Column -->
+            <th data-column="GUARANTEEDATE" onclick="sortTable('GUARANTEEDATE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                Date EXP <div class="resizer"></div>
+            </th>
+        </tr>
+    </thead>
+    <tbody id="data-table" class="dark:bg-gray-800">
+        <!-- Dynamic Rows -->
+    </tbody>
+</table>
 
-                    <th data-column="REM_VENTE" onclick="sortTable('REM_VENTE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                        REM_VENTE <div class="resizer"></div>
-                    </th>
-
-                    <th data-column="BON_VENTE" onclick="sortTable('BON_VENTE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                        BON_VENTE <div class="resizer"></div>
-                    </th>
-                    <th data-column="REMISE_AUTO" onclick="sortTable('REMISE_AUTO')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                        REMISE_AUTO <div class="resizer"></div>
-                    </th>
-                    <th data-column="BONUS_AUTO" onclick="sortTable('BONUS_AUTO')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                        BONUS_AUTO <div class="resizer"></div>
-                    </th>
-
-                
-                    <!-- <th data-column="LABO" onclick="sortTable('LABO')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                        LABO <div class="resizer"></div>
-                    </th> -->
-                    	
-                    <th data-column="LOCATION" onclick="sortTable('LOCATION')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                    LOCATION <div class="resizer"></div>
-                    </th>
-                    <th data-column="LOT" onclick="sortTable('LOT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                        LOT <div class="resizer"></div>
-                    </th>
-
-                </tr>
-            </thead>
-            <tbody id="data-table" class="dark:bg-gray-800">
-                <!-- Dynamic Rows -->
-            </tbody>
-        </table>
     </div>
 </div>
 <div class="mt-4 flex justify-center space-x-2" id="pagination"></div>
@@ -698,36 +802,7 @@ document.getElementById("refresh-btn").addEventListener("click", function() {
             filterDropdown('supplier');
         }, 100);
     });
-document.getElementById("downloadExcel").addEventListener("click", function () {
-    let table = document.getElementById("data-table");
-    let wb = XLSX.utils.book_new(); // Create a new workbook
 
-    // Convert the HTML table to a worksheet
-    let ws = XLSX.utils.table_to_sheet(table);
-
-    // Rename and set headers (simulating a pivot table header)
-    ws["A1"].v = "Supplier (Fournisseur)";
-    ws["B1"].v = "Product";
-    ws["C1"].v = "Purchase Price (P_ACHAT)";
-    ws["D1"].v = "Selling Price (P_VENTE)";
-    ws["E1"].v = "Discount Purchase (REM_ACHAT)";
-    ws["F1"].v = "Discount Sale (REM_VENTE)";
-    ws["G1"].v = "Purchase Bonus (BON_ACHAT)";
-    ws["H1"].v = "Sale Bonus (BON_VENTE)";
-    ws["I1"].v = "Auto Discount (REMISE_AUTO)";
-    ws["J1"].v = "Auto Bonus (BONUS_AUTO)";
-    ws["K1"].v = "Cost Price (P_REVIENT)";
-    ws["L1"].v = "Margin (MARGE)";
-    ws["M1"].v = "Laboratory (LABO)";
-    ws["N1"].v = "Batch (LOT)";
-    ws["O1"].v = "Quantity (QTY)";
-
-    // Add the worksheet to the workbook
-    XLSX.utils.book_append_sheet(wb, ws, "Filtered Data");
-
-    // Save the file
-    XLSX.writeFile(wb, "Filtered_Data.xlsx");
-});
 
 
 document.getElementById("downloadExcel").addEventListener("click", function () {
@@ -973,28 +1048,34 @@ function filterData(data) {
 }
 
 function sortTable(column) {
-if (sortColumn === column) {
-sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-} else {
-sortColumn = column;
-sortDirection = 'asc';
+    if (sortColumn === column) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortColumn = column;
+        sortDirection = 'asc';
+    }
+
+    // Remove arrows from all headers
+    document.querySelectorAll('th').forEach(th => {
+        const textNode = th.querySelector('span');
+        if (textNode) {
+            textNode.textContent = textNode.textContent.replace(/ ↑| ↓/g, '');
+        }
+    });
+
+    // Add arrow to current sorted column
+    const currentHeader = document.querySelector(`th[data-column="${column}"]`);
+    if (currentHeader) {
+        let textNode = currentHeader.querySelector('span');
+        if (textNode) {
+            const arrow = sortDirection === 'asc' ? ' ↑' : ' ↓';
+            textNode.textContent += arrow;
+        }
+    }
+
+    updateTableAndPagination();
 }
 
-// Remove arrows from all headers
-document.querySelectorAll('th').forEach(th => {
-const content = th.innerText.replace(/ ↑| ↓/g, '');
-th.innerText = content;
-});
-
-// Add arrow to current sorted column
-const currentHeader = document.querySelector(`th[data-column="${column}"]`);
-if (currentHeader) {
-const arrow = sortDirection === 'asc' ? ' ↑' : ' ↓';
-currentHeader.innerText += arrow;
-}
-
-updateTableAndPagination();
-}
 
 function updateTableAndPagination() {
     renderTablePage(currentPage);
@@ -1012,6 +1093,38 @@ document.getElementById('margeConditionBtn').addEventListener('click', () => {
 });
 
 // Update the table rendering logic
+document.getElementById("downloadExcel").addEventListener("click", function () {
+    let table = document.getElementById("data-table");
+    let wb = XLSX.utils.book_new(); // Create a new workbook
+
+    // Convert the HTML table to a worksheet
+    let ws = XLSX.utils.table_to_sheet(table);
+
+    // Rename and set headers (simulating a pivot table header)
+    ws["A1"].v = "Supplier (Fournisseur)";
+    ws["B1"].v = "Product";
+    ws["C1"].v = "Purchase Price (P_ACHAT)";
+    ws["D1"].v = "Selling Price (P_VENTE)";
+    ws["E1"].v = "Discount Purchase (REM_ACHAT)";
+    ws["F1"].v = "Discount Sale (REM_VENTE)";
+    ws["G1"].v = "Purchase Bonus (BON_ACHAT)";
+    ws["H1"].v = "Sale Bonus (BON_VENTE)";
+    ws["I1"].v = "Auto Discount (REMISE_AUTO)";
+    ws["J1"].v = "Auto Bonus (BONUS_AUTO)";
+    ws["K1"].v = "Cost Price (P_REVIENT)";
+    ws["L1"].v = "Margin (MARGE)";
+    ws["M2"].v = "Laboratory (LABO)";
+    ws["N1"].v = "Batch (LOT)";
+    ws["O1"].v = "Quantity (QTY)";
+    ws["P1"].v = "Guaranteed Date (GUARANTEEDATE)";  // New column header
+
+    // Add the worksheet to the workbook
+    XLSX.utils.book_append_sheet(wb, ws, "Filtered Data");
+
+    // Save the file
+    XLSX.writeFile(wb, "Filtered_Data.xlsx");
+});
+
 function renderTablePage(page) {
     let filteredData = filterData(allData);
 
@@ -1041,6 +1154,10 @@ function renderTablePage(page) {
             tr.style.backgroundColor = margeColor;  // Apply the color to the entire row
         }
 
+        // Format the GUARANTEEDATE value to DD/MM/YYYY
+        let guaranteedDate = row.GUARANTEEDATE ? new Date(row.GUARANTEEDATE) : null;
+        let formattedDate = guaranteedDate ? guaranteedDate.toLocaleDateString('en-GB') : '';  // Format as DD/MM/YYYY
+
         tr.innerHTML = `
 <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || ''}</td>
 <td class="border px-4 py-2 dark:border-gray-600">${row.PRODUCT || ''}</td>
@@ -1056,14 +1173,14 @@ function renderTablePage(page) {
 <td class="border px-4 py-2 dark:border-gray-600">${row.REMISE_AUTO || ''}</td>
 <td class="border px-4 py-2 dark:border-gray-600">${row.BONUS_AUTO || ''}</td>
 <td class="border px-4 py-2 dark:border-gray-600">${row.LOCATION || ''}</td>
-
-
 <td class="border px-4 py-2 dark:border-gray-600">${row.LOT || ''}</td>
-
+<td class="border px-4 py-2 dark:border-gray-600">${formattedDate || ''}</td> <!-- New column data formatted -->
         `;
         tableBody.appendChild(tr);
     });
 }
+
+
 
 
 function createPageButton(text, pageNumber) {

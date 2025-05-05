@@ -1,17 +1,23 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const toggle = document.getElementById('products-toggle');
-    const submenu = document.getElementById('products-submenu');
-    toggle.addEventListener('click', () => {
-        submenu.classList.toggle('hidden');
-    });
 
-    const recapsToggle = document.getElementById('recaps-toggle');
-    const recapsSubmenu = document.getElementById('recaps-submenu');
-    recapsToggle.addEventListener('click', () => {
-        recapsSubmenu.classList.toggle('hidden');
-    });
-});
 
+// document.addEventListener('DOMContentLoaded', () => {
+//     const toggle = document.getElementById('products-toggle');
+//     const submenu = document.getElementById('products-submenu');
+//     toggle.addEventListener('click', () => {
+//         submenu.classList.toggle('hidden');
+//     });
+
+//     const recapsToggle = document.getElementById('recaps-toggle');
+//     const recapsSubmenu = document.getElementById('recaps-submenu');
+//     recapsToggle.addEventListener('click', () => {
+//         recapsSubmenu.classList.toggle('hidden');
+//     });
+// });
+
+function toggleSubmenu(id) {
+  const submenu = document.getElementById(id);
+  submenu.classList.toggle('show');
+}
 
 document.querySelectorAll('.stars').forEach(star => {
     star.addEventListener('click', function() {
@@ -194,18 +200,7 @@ document.querySelectorAll('.logoutButton').forEach(button => {
 
   
 
-  document.getElementById("products-toggle").addEventListener("click", function() {
-    document.getElementById("products-submenu").classList.toggle("hidden");
-});
-
-
-document.getElementById("fond-toggle").addEventListener("click", function() {
-  document.getElementById("fond-submenu").classList.toggle("hidden");
-});
-
-document.getElementById("recaps-toggle").addEventListener("click", function() {
-    document.getElementById("recaps-submenu").classList.toggle("hidden");
-});
+    
 
 
 
@@ -215,49 +210,68 @@ document.getElementById("recaps-toggle").addEventListener("click", function() {
 function navigateToPage(page) {
     window.location.href = page;
 }
-          // Ensure the script runs after the DOM is fully loaded
-          document.addEventListener("DOMContentLoaded", function () {
-                // Toggle Products submenu visibility
-                document.getElementById("products-toggle").addEventListener("click", function () {
-                    let submenu = document.getElementById("products-submenu");
-                    console.log("Toggling PRODUCTS submenu"); // Debug log
-                    submenu.classList.toggle("hidden");
-                });
-        
-                // Toggle Recaps submenu visibility
-                document.getElementById("recaps-toggle").addEventListener("click", function () {
-                    let submenu = document.getElementById("recaps-submenu");
-                    console.log("Toggling RECAPS submenu"); // Debug log
-                    submenu.classList.toggle("hidden");
-                });
-            });
 
 
 const sidebarToggle = document.getElementById('sidebarToggle');
 const sidebar = document.getElementById('sidebar');
 const content = document.querySelector('.content');
+const modeRadios = document.querySelectorAll('input[name="mode"]');
 
-// Detect when the cursor is near the left edge
-document.addEventListener('mousemove', (event) => {
-if (event.clientX < 50) {  // When mouse is near the left edge (50px)
-    sidebar.classList.remove('sidebar-hidden');
-    content.classList.remove('content-full');
-}
+// Load mode from localStorage or default to 'auto'
+let currentMode = localStorage.getItem('sidebarMode') || 'auto';
+
+// Set radio button based on saved mode
+modeRadios.forEach(radio => {
+    radio.checked = (radio.value === currentMode);
 });
 
-// Hide sidebar when the mouse leaves the sidebar area
-sidebar.addEventListener('mouseleave', () => {
-sidebar.classList.add('sidebar-hidden');
-content.classList.add('content-full');
-
-
-
-// Change button position when sidebar is hidden
-if (sidebar.classList.contains('sidebar-hidden')) {
-    sidebarToggle.style.left = '10px';  // Keep button visible
-} else {
-    sidebarToggle.style.left = '260px'; // Adjust when sidebar is open
-}
+// Update mode when user changes selection
+modeRadios.forEach(radio => {
+    radio.addEventListener('change', () => {
+        currentMode = radio.value;
+        localStorage.setItem('sidebarMode', currentMode);  // Save to localStorage
+        updateSidebarBehavior();
+    });
 });
+
+// Apply behavior on page load
+updateSidebarBehavior();
+
+function updateSidebarBehavior() {
+    if (currentMode === 'auto') {
+        sidebarToggle.style.display = 'none';
+        document.addEventListener('mousemove', handleMouseMove);
+        sidebar.addEventListener('mouseleave', handleMouseLeave);
+    } else {
+        sidebarToggle.style.display = 'block';
+        document.removeEventListener('mousemove', handleMouseMove);
+        sidebar.removeEventListener('mouseleave', handleMouseLeave);
+    }
+}
+
+// Auto mode handlers
+function handleMouseMove(event) {
+    if (event.clientX < 50) {
+        sidebar.classList.remove('sidebar-hidden');
+        content.classList.remove('content-full');
+        sidebarToggle.style.left = '260px';
+    }
+}
+
+function handleMouseLeave() {
+    sidebar.classList.add('sidebar-hidden');
+    content.classList.add('content-full');
+    sidebarToggle.style.left = '10px';
+}
+
+// Manual toggle button
+sidebarToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('sidebar-hidden');
+    content.classList.toggle('content-full');
+
+    sidebarToggle.style.left = sidebar.classList.contains('sidebar-hidden') ? '10px' : '260px';
+});
+// Initialize based on default (auto)
+updateSidebarBehavior();
 
 

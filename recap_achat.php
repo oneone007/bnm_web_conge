@@ -38,7 +38,9 @@ if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser']))
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BNM Web</title>
+    <title>
+Reacap Achat
+</title>
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
@@ -877,7 +879,7 @@ fetch("side")
 
     // After DOM injection, dynamically load sidebar script
     const script = document.createElement('script');
-    script.src = 'sidebar.js'; // Move all logic into sidebar.js
+    script.src = 'sid.js'; // Move all logic into sid.js
     document.body.appendChild(script);
   })
   .catch(error => console.error("Error loading sidebar:", error));
@@ -1852,6 +1854,20 @@ document.getElementById("download-recap-fournisseur-achat-excel").addEventListen
                 const isDarkMode = htmlElement.classList.contains('dark');
                 localStorage.setItem('darkMode', isDarkMode);
             });
+
+
+
+            document.querySelectorAll('.search-container input').forEach(input => {
+    input.addEventListener('focus', function() {
+        // Clear value
+        this.value = '';
+
+        // Trigger an 'input' event to simulate typing/deleting
+        const event = new Event('input', { bubbles: true });
+        this.dispatchEvent(event);
+    });
+});
+
 
         </script>
 

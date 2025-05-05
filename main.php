@@ -265,83 +265,6 @@ html.dark .moon {
     z-index: 50;
 }
 
-
-
-        </style>
-    </head>
-    <body class="flex h-screen bg-gray-100 dark:bg-gray-900">
-    
-
-  <!-- Dark Mode Toggle (Top Right) -->
-
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
-<script>
-    lottie.loadAnimation({
-        container: document.getElementById("lottieContainer"),
-        renderer: "svg",
-        loop: true,
-        autoplay: true,
-        path: "json_files/r.json" // Replace with actual path to your .rjson file
-    });
-</script>
-
-<!-- Sidebar -->
-
-<!-- Sidebar -->
-
-
-<div id="sidebar-container"></div>
-
-<script>
-fetch("side")
-  .then(response => response.text())
-  .then(html => {
-    const container = document.getElementById("sidebar-container");
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = html;
-    container.innerHTML = tempDiv.innerHTML;
-
-    // After DOM injection, dynamically load sidebar script
-    const script = document.createElement('script');
-    script.src = 'sidebar.js'; // Move all logic into sidebar.js
-    document.body.appendChild(script);
-  })
-  .catch(error => console.error("Error loading sidebar:", error));
-
-
-</script>
-
-<style>
-  .chart-controls {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-#dataChart {
-    background-color: white;
-    border-radius: 0.5rem;
-    padding: 1rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.dark #dataChart {
-    background-color: #374151;
-}
-</style>
-<div class="canvas-container">
-
-
-<!-- <div class="card">
-  <img
-    class="image"
-    alt=""
-    src="https://uiverse.io/astronaut.png"
-  />
-  <div class="heading">For more information Contact Service INFO</div>
-
-</div> -->
-<style>
-  /* From Uiverse.io by joe-herbert */ 
 .card {
   border-radius: 10px;
   width: 150px;
@@ -474,7 +397,82 @@ fetch("side")
   opacity: 1;
 }
 
+
+
+        </style>
+    </head>
+    <body class="flex h-screen bg-gray-100 dark:bg-gray-900">
+    
+
+  <!-- Dark Mode Toggle (Top Right) -->
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
+<script>
+    lottie.loadAnimation({
+        container: document.getElementById("lottieContainer"),
+        renderer: "svg",
+        loop: true,
+        autoplay: true,
+        path: "json_files/r.json" // Replace with actual path to your .rjson file
+    });
+</script>
+
+<!-- Sidebar -->
+
+<!-- Sidebar -->
+
+
+<div id="sidebar-container"></div>
+
+<script>
+fetch("side")
+  .then(response => response.text())
+  .then(html => {
+    const container = document.getElementById("sidebar-container");
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = html;
+    container.innerHTML = tempDiv.innerHTML;
+
+    // After DOM injection, dynamically load sidebar script
+    const script = document.createElement('script');
+    script.src = 'sid.js'; // Move all logic into sid.js
+    document.body.appendChild(script);
+  })
+  .catch(error => console.error("Error loading sidebar:", error));
+
+
+</script>
+
+<style>
+  .chart-controls {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#dataChart {
+    background-color: white;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dark #dataChart {
+    background-color: #374151;
+}
 </style>
+<div class="canvas-container">
+
+
+<!-- <div class="card">
+  <img
+    class="image"
+    alt=""
+    src="https://uiverse.io/astronaut.png"
+  />
+  <div class="heading">For more information Contact Service INFO</div>
+
+</div> -->
+
     <!-- <div class="container arrow" onclick="location.href='c';">Arrow</div>
     <div class="container rabbit" onclick="location.href='b';">Rabbit</div> -->
 </div>

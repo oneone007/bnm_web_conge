@@ -2106,6 +2106,7 @@ def generate_excel_product(data, filename):
 
     return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
+from datetime import datetime
 
 @app.route('/download-zone-excel', methods=['GET'])
 def download_zone_excel():
@@ -5801,52 +5802,41 @@ def paiment():
 
 
 
-from datetime import datetime
+import datetime
 from flask import request, jsonify
 
-@app.route('/fetchFournisseurDataByYear', methods=['GET'])
-def fetch_fournisseur_by_year():
-
-    fournisseur = request.args.get('fournisseur')
-    product = request.args.get('product')
-    client = request.args.get('client')
-    operateur = request.args.get('operateur')
-    bccb = request.args.get('bccb')
-    zone = request.args.get('zone')
-    years = request.args.getlist('years')  # Get all years parameters
-    month = request.args.get('month')
-
-    try:
-        years = [int(y) for y in years] if years else None
-        month = int(month) if month else None
-    except ValueError:
-        return jsonify({"error": "Invalid year or month format"}), 400
-
-    if not years:
-        # If no years specified, get current year
-        current_year = datetime.now().year
-        years = [current_year]
-
-    full_data = {}
-    for year in years:
-        yearly_data = fetch_fournisseur_data_by_year(
-            fournisseur=fournisseur,
-            product=product,
-            client=client,
-            operateur=operateur,
-            bccb=bccb,
-            zone=zone,
-            year=year,
-            month=month
-        )
-        full_data[str(year)] = yearly_data
-
-    return jsonify(full_data)
 
 
+# @app.route('/fetchFournisseurDataByYear', methods=['GET'])
+# def fetch_fournisseur_by_year():
+#     fournisseur = request.args.get('fournisseur')
+#     product = request.args.get('product')
+#     client = request.args.get('client')
+#     operateur = request.args.get('operateur')
+#     bccb = request.args.get('bccb')
+#     zone = request.args.get('zone')
+#     year = request.args.get('year')
+#     month = request.args.get('month')
 
-def fetch_fournisseur_data_by_year(fournisseur=None, product=None, client=None, operateur=None,
-                                   bccb=None, zone=None, year=None, month=None):
+#     try:
+#         year = int(year) if year else None
+#         month = int(month) if month else None
+#     except ValueError:
+#         return jsonify({"error": "Invalid year or month format"}), 400
+
+#     data = fetch_fournisseur_data_by_year(
+#         fournisseur=fournisseur,
+#         product=product,
+#         client=client,
+#         operateur=operateur,
+#         bccb=bccb,
+#         zone=zone,
+#         year=year,
+#         month=month
+#     )
+#     return jsonify(data)
+
+def fetch_fournisseur_data_by_year(fournisseur=None, product=None, client=None, operateur=None, bccb=None, zone=None, year=None, month=None):
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
@@ -5856,13 +5846,13 @@ def fetch_fournisseur_data_by_year(fournisseur=None, product=None, client=None, 
                 start_date = f"{year}-{month:02d}-01"
                 last_day = 31 if month in [1, 3, 5, 7, 8, 10, 12] else 30
                 if month == 2:
-                    last_day = 29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28
+                    last_day = 29 if int(year) % 4 == 0 and (int(year) % 100 != 0 or int(year) % 400 == 0) else 28
                 end_date = f"{year}-{month:02d}-{last_day}"
             elif year:
                 start_date = f"{year}-01-01"
                 end_date = f"{year}-12-31"
             else:
-                current_year = datetime.now().year
+                current_year = datetime.datetime.now().year
                 start_date = f"{current_year}-01-01"
                 end_date = f"{current_year}-12-31"
                 year = current_year
@@ -5872,7 +5862,6 @@ def fetch_fournisseur_data_by_year(fournisseur=None, product=None, client=None, 
                     TO_CHAR(xf.MOVEMENTDATE, 'YYYY') AS year,
                     TO_CHAR(xf.MOVEMENTDATE, 'MM') AS month,
                     SUM(xf.TOTALLINE) AS total,
-                    SUM(xf.qtyentered) AS QTY,
                     ROUND(
                         CASE 
                             WHEN SUM(xf.CONSOMATION) = 0 THEN 0
@@ -5916,199 +5905,60 @@ def fetch_fournisseur_data_by_year(fournisseur=None, product=None, client=None, 
             cursor.execute(query, params)
             rows = cursor.fetchall()
             columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in rows]
+            data = [dict(zip(columns, row)) for row in rows]
+            return data
 
     except Exception as e:
         logger.error(f"Error fetching total fournisseur data: {e}")
         return {"error": "An error occurred while fetching total data."}
 
-@app.route('/listproduct')
-def listproduct():
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-select name from M_PRODUCT
-WHERE AD_Client_ID = 1000000
-AND AD_Org_ID = 1000000
-  AND ISACTIVE = 'Y'
-ORDER BY name
-
-
-            """
-            cursor.execute(query)
-            result = [row[0] for row in cursor.fetchall()]
-            return jsonify(result)
-    except Exception as e:
-        logger.error(f"Error fetching products: {e}")
-        return jsonify({"error": "Could not fetch products list"}), 500
-    
-
-
-
-
-
-
-@app.route('/listfournisseur')
-def list_fournisseur():
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT cb.name
-                FROM C_BPartner cb
-                WHERE cb.AD_Client_ID = 1000000
-                  AND cb.ISVENDOR = 'Y'
-                  AND cb.ISACTIVE = 'Y'
-                ORDER BY cb.name
-            """
-            cursor.execute(query)
-            result = [row[0] for row in cursor.fetchall()]
-            return jsonify(result)
-    except Exception as e:
-        logger.error(f"Error fetching fournisseurs: {e}")
-        return jsonify({"error": "Could not fetch fournisseur list"}), 500
-
-
-@app.route('/listregion')
-def list_region():
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT name
-                FROM C_SalesRegion
-                WHERE ISACTIVE = 'Y'
-                  AND AD_Client_ID = 1000000
-            """
-            cursor.execute(query)
-            result = [row[0] for row in cursor.fetchall()]
-            return jsonify(result)
-    except Exception as e:
-        logger.error(f"Error fetching regions: {e}")
-        return jsonify({"error": "Could not fetch region list"}), 500
-
-
-@app.route('/listclient')
-def list_client():
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT name
-                FROM C_BPartner
-                WHERE iscustomer = 'Y'
-                  AND AD_Client_ID = 1000000
-                  AND AD_Org_ID = 1000000
-                ORDER BY name
-            """
-            cursor.execute(query)
-            result = [row[0] for row in cursor.fetchall()]
-            return jsonify(result)
-    except Exception as e:
-        logger.error(f"Error fetching clients: {e}")
-        return jsonify({"error": "Could not fetch client list"}), 500
-
-
-
-@app.route('/fetchFournisseurRecapAchatByYear', methods=['GET'])
-def fetch_fournisseur_recap_achat_by_year():
+@app.route('/fetchFournisseurDataByYear', methods=['GET'])
+def fetch_fournisseur_by_year():
     fournisseur = request.args.get('fournisseur')
     product = request.args.get('product')
-    years = request.args.getlist('years')  # Get all years parameters
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    year_param = request.args.get('year')
     month = request.args.get('month')
 
     try:
-        years = [int(y) for y in years] if years else None
+        year_param = int(year_param) if year_param else None
         month = int(month) if month else None
     except ValueError:
         return jsonify({"error": "Invalid year or month format"}), 400
 
-    if not years:
-        # If no years specified, get current year
-        current_year = datetime.now().year
-        years = [current_year]
-
-    full_data = {}
-    for year in years:
-        yearly_data = fetch_fournisseur_recap_achat_data_by_year(
+    if year_param:
+        data = fetch_fournisseur_data_by_year(
             fournisseur=fournisseur,
             product=product,
-            year=year,
+            client=client,
+            operateur=operateur,
+            bccb=bccb,
+            zone=zone,
+            year=year_param,
             month=month
         )
-        full_data[str(year)] = yearly_data
+        return jsonify({str(year_param): data})
+    else:
+        current_year = datetime.datetime.now().year
+        full_data = {}
+        for y in range(2022, current_year + 1):
+            yearly_data = fetch_fournisseur_data_by_year(
+                fournisseur=fournisseur,
+                product=product,
+                client=client,
+                operateur=operateur,
+                bccb=bccb,
+                zone=zone,
+                year=y,
+                month=None
+            )
+            full_data[str(y)] = yearly_data
+        return jsonify(full_data)
 
-    return jsonify(full_data)
 
-def fetch_fournisseur_recap_achat_data_by_year(fournisseur=None, product=None, year=None, month=None):
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-
-            if year and month:
-                start_date = f"{year}-{month:02d}-01"
-                last_day = 31 if month in [1, 3, 5, 7, 8, 10, 12] else 30
-                if month == 2:
-                    last_day = 29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28
-                end_date = f"{year}-{month:02d}-{last_day}"
-            elif year:
-                start_date = f"{year}-01-01"
-                end_date = f"{year}-12-31"
-            else:
-                current_year = datetime.now().year
-                start_date = f"{current_year}-01-01"
-                end_date = f"{current_year}-12-31"
-                year = current_year
-
-            query = """
-                SELECT 
-                    TO_CHAR(xf.MOVEMENTDATE, 'YYYY') AS year,
-                    TO_CHAR(xf.MOVEMENTDATE, 'MM') AS month,
-                    SUM(CASE 
-                        WHEN xf.C_DocType_ID = 1000646 THEN -1 * TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED) 
-                        ELSE TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED) 
-                    END) AS chiffre,
-                    SUM(CASE 
-                        WHEN xf.C_DocType_ID = 1000646 THEN -1 * TO_NUMBER(mi.QTYENTERED)
-                        ELSE TO_NUMBER(mi.QTYENTERED)
-                    END) AS qty
-                FROM 
-                    M_InOut  xf
-                JOIN M_INOUTLINE mi ON mi.M_INOUT_ID=xf.M_INOUT_ID
-                JOIN C_BPartner cb ON cb.C_BPARTNER_ID=xf.C_BPARTNER_ID
-                LEFT JOIN C_InvoiceLine ci ON ci.M_INOUTLINE_ID=mi.M_INOUTLINE_ID
-                JOIN M_ATTRIBUTEINSTANCE ma ON ma.M_ATTRIBUTESETINSTANCE_ID=mi.M_ATTRIBUTESETINSTANCE_ID
-                JOIN M_PRODUCT m ON m.M_PRODUCT_id=mi.M_PRODUCT_id
-                WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                    AND ma.M_Attribute_ID=1000504
-                    AND xf.AD_Org_ID = 1000000
-                    AND xf.C_DocType_ID IN (1000013, 1000646)
-                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
-                    AND (:fournisseur IS NULL OR UPPER(cb.name) LIKE UPPER(:fournisseur) || '%')
-                    AND (:product IS NULL OR UPPER(m.name) LIKE UPPER(:product) || '%')
-                GROUP BY ROLLUP(TO_CHAR(xf.MOVEMENTDATE, 'YYYY'), TO_CHAR(xf.MOVEMENTDATE, 'MM'))
-                HAVING TO_CHAR(xf.MOVEMENTDATE, 'YYYY') = :year_str OR TO_CHAR(xf.MOVEMENTDATE, 'YYYY') IS NULL
-                ORDER BY year NULLS LAST, month NULLS LAST
-            """
-
-            params = {
-                'start_date': start_date,
-                'end_date': end_date,
-                'fournisseur': fournisseur or None,
-                'product': product or None,
-                'year_str': str(year)
-            }
-
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in rows]
-
-    except Exception as e:
-        logger.error(f"Error fetching fournisseur recap achat data by year: {e}")
-        return {"error": "An error occurred while fetching recap achat data by year."}
 
 
 

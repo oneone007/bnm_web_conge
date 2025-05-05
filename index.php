@@ -9,21 +9,23 @@
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
-
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> 
         <style>
             
-        /* General Styles */
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Arial', sans-serif;
-            background: #f5f5f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
+            body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Poppins', 'Arial', sans-serif;
+    background: linear-gradient(135deg, #e0eafc, #cfdef3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-size: cover;
+    overflow: hidden;
+}
+
 
         .subheading {
             color: #666;
@@ -250,8 +252,8 @@ var animation = lottie.loadAnimation({
   </div>
   <br>
 
-  <button type="submit" class="login-btn">Let's go →</button>
-</form>
+  <button type="submit" class="login-btn">Log In&nbsp;🚀</button>
+  </form>
 <!-- From Uiverse.io by LuisEgan --> 
 <!-- <button type="submit" class="login-btn" >
   <svg id="rocket" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" viewBox="0 0 416.449 416.449" xml:space="preserve">
@@ -641,10 +643,20 @@ button:focus #smoke > span {
     letter-spacing: 1px;
 }
 
-
+input:focus {
+    border-color: #4CAF50;
+    box-shadow: 0 0 5px #4CAF50;
+}
+body { font-family: 'Poppins', sans-serif; }
 .login-btn {
-    background-color: var(--bg-color);
-    box-shadow: 4px 4px var(--main-color);
+  background: linear-gradient(to right, #4CAF50, #81C784);
+    border: none;
+    padding: 12px 20px;
+    border-radius: 25px;
+    font-size: 16px;
+    color: white;
+    cursor: pointer;
+    transition: background 0.3s ease;    box-shadow: 4px 4px var(--main-color);
 
     color: var(--font-color);
     border: 2px solid var(--main-color);
@@ -656,8 +668,7 @@ button:focus #smoke > span {
 }
 
 .login-btn:hover {
-    background-color: #0056b3; /* Darker blue on hover */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(to right, #388E3C, #66BB6A);    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .login-btn:active {
@@ -706,24 +717,26 @@ button:focus #smoke > span {
             font-size: 14px;
         }
 
-    .form {
-        width: 350px;
+        .form {
+  width: 350px;
   --input-focus: #2d8cf0;
   --font-color: #323232;
   --font-color-sub: #666;
   --bg-color: #fff;
   --main-color: #323232;
   padding: 20px;
-  background: lightgrey;
+  background: linear-gradient(145deg, #f7f7f7, #e1e1e1); /* Subtle light gradient for depth */
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
   gap: 20px;
-  border-radius: 5px;
+  border-radius: 10px; /* Slightly more rounded corners */
   border: 2px solid var(--main-color);
-  box-shadow: 4px 4px var(--main-color);
-  height:590px;
+  box-shadow: 4px 4px 20px rgba(0, 0, 0, 0.1); /* Softer shadow with more depth */
+  height: 590px;
+  max-width: 100%;
+  backdrop-filter: blur(10px); /* Subtle blur effect for depth */
 }
 
 .title {
