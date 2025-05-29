@@ -93,6 +93,23 @@ tbody tr {
     color: #ececec;
 }
 
+/* Dark mode text styles */
+.dark .button,
+.dark .button span,
+.dark .text {
+    color: #111827 !important;
+}
+
+.dark input::placeholder {
+    color: #111827 !important;
+    opacity: 0.8;
+}
+
+.dark h2,
+.dark th {
+    color: #ffffff !important;
+}
+
 
 
 
@@ -152,27 +169,6 @@ gap: 730px; /* Adds spacing between tables */
 
 
 
-.sidebar {
-    min-width: 200px;
-    max-width: 250px;
-    background-color: #f9fafb;
-    border-right: 1px solid #e5e7eb;
-    transition: transform 0.3s ease-in-out;
-    position: fixed;
-    height: 100vh;
-    z-index: 40;
-}
-
-.sidebar-hidden {
-    transform: translateX(-100%);
-}
-
-.content {
-    margin-left: 250px; /* Adjust this value based on the sidebar width */
-    transition: margin-left 0.3s ease-in-out;
-    width: calc(100% - 250px); /* Adjust this value based on the sidebar width */
-}
-
 .content-full {
     margin-left: 0;
     width: 100%;
@@ -193,11 +189,6 @@ gap: 730px; /* Adds spacing between tables */
     background-color: #f9fafb;
 }
 
-/* Dark mode styles */
-.dark .sidebar {
-    background-color: #1f2937;
-    border-right-color: #374151;
-}
 
 
 
@@ -207,11 +198,6 @@ gap: 730px; /* Adds spacing between tables */
 }
 
 
-/* Dark Mode */
-html.dark .sidebar {
-background-color: #1f2937;
-border-right-color: #374151;
-}
 
 html.dark body {
 background-color: #111827;
@@ -372,20 +358,6 @@ z-index: 50;
 }
 
 
-/* Sidebar Hidden by Default */
-.sidebar-hidden {
-    transform: translateX(-100%);
-}
-
-/* Sidebar Appears Smoothly */
-.sidebar {
-    transition: transform 0.3s ease-in-out;
-}
-
-/* Sidebar Stays Open Until Mouse Leaves */
-.sidebar:hover {
-    transform: translateX(0);
-}
 
 
 

@@ -1,0 +1,20 @@
+[
+    {
+        "timestamp": "2025-05-15 16:33:15",
+        "user_id": 33,
+        "username": "admin",
+        "type": "suggestion",
+        "content": "ff",
+        "rating": null,
+        "page": "bank"
+    },
+    {
+        "timestamp": "2025-05-18 11:27:53",
+        "user_id": 33,
+        "username": "admin",
+        "type": "bug",
+        "content": "this is a test",
+        "rating": null,
+        "page": "Recap_Vente_Facturation"
+    }
+]

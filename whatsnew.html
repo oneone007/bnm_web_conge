@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What's New</title>
+</head>
+<body>
+    <style>
+        .whatsnew-container {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .whatsnew-container .container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .whatsnew-container h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .whatsnew-container ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        .whatsnew-container li {
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .whatsnew-container li:hover {
+            background-color: #e9f7fe;
+            transform: translateX(5px);
+        }
+        
+        .whatsnew-container .feature {
+            font-weight: bold;
+            color: #2980b9;
+        }
+        
+        .whatsnew-container .button {
+            display: inline-block;
+            background-color: #3498db;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            margin: 5px 0;
+            cursor: pointer;
+            border: none;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        .whatsnew-container .button:hover {
+            background-color: #2980b9;
+        }
+        
+        .whatsnew-container .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+        }
+        
+        .whatsnew-container .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 80%;
+            max-height: 80%;
+            overflow: auto;
+            text-align: center;
+        }
+        
+        .whatsnew-container .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .whatsnew-container .close:hover {
+            color: black;
+        }
+        
+        .whatsnew-container .highlight {
+            background-color: #fffde7;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-weight: 500;
+        }
+        
+        .whatsnew-container .video-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .whatsnew-container .video-container video {
+            width: 100%;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+    </style>
+    <div class="whatsnew-container">
+        <h2>🆕 What's New?</h2>
+        <ul>
+            <li>
+                <span class="feature">Dark mode toggle</span> - Switch between light and dark themes easily. 
+                <strong>Note:</strong> Toggle the switch before opening multiple tabs for consistent theme use, or close and reopen tabs to apply the new theme.
+              </li>            <li><span class="feature">New tabs system</span> - Discover new tabs added inside the main interface</li>
+            <li><span class="feature">Improved navigation</span> - Smoother and more intuitive user experience</li>
+            <li><span class="feature">Auto sidebar</span> - To activate, move your mouse to the <span class="highlight">top-left corner</span> of the screen 
+                <button class="button" id="showSidebarDemo">Show Me</button>
+            </li>
+            <li><span class="feature">Feedback system</span> - Report bugs, suggest features, or rate us through BNM Bot
+                <button class="button" id="showBotDemo">Show Me</button>
+            </li>
+        </ul>
+
+        <!-- Sidebar Demo Modal -->
+        <div id="sidebarModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h3>Auto Sidebar Activation</h3>
+                <div class="video-container">
+                    <video controls autoplay loop muted width="100%">
+                        <source src="assets/navbar.mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+                <p>Move your mouse to the top-left corner to activate the auto sidebar.</p>
+            </div>
+        </div>
+
+        <!-- BNM Bot Demo Modal -->
+        <div id="botModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h3>BNM Bot Interface</h3>
+                <img src="assets/learnmore.jpg" alt="BNM Bot Interface" style="max-width: 100%; height: auto; border-radius: 5px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+               
+                <p>Use BNM Bot to report issues, suggest features, or rate our service.</p>
+            </div>
+        </div>
+
+        <script>
+            // Get modal elements
+            const sidebarModal = document.getElementById('sidebarModal');
+            const botModal = document.getElementById('botModal');
+            
+            // Get buttons
+            const sidebarBtn = document.getElementById('showSidebarDemo');
+            const botBtn = document.getElementById('showBotDemo');
+            
+            // Get close buttons
+            const closeButtons = document.getElementsByClassName('close');
+            
+            // Open sidebar modal
+            sidebarBtn.onclick = function() {
+                sidebarModal.style.display = "block";
+                // Restart video when modal opens
+                const video = sidebarModal.querySelector('video');
+                video.currentTime = 0;
+                video.play();
+            }
+            
+            // Open bot modal
+            botBtn.onclick = function() {
+                botModal.style.display = "block";
+            }
+            
+            // Close modals when clicking X
+            for (let i = 0; i < closeButtons.length; i++) {
+                closeButtons[i].onclick = function() {
+                    sidebarModal.style.display = "none";
+                    botModal.style.display = "none";
+                    // Pause video when modal closes
+                    const video = sidebarModal.querySelector('video');
+                    video.pause();
+                }
+            }
+            
+            // Close modals when clicking outside
+            window.onclick = function(event) {
+                if (event.target == sidebarModal) {
+                    sidebarModal.style.display = "none";
+                    const video = sidebarModal.querySelector('video');
+                    video.pause();
+                }
+                if (event.target == botModal) {
+                    botModal.style.display = "none";
+                }
+            }
+        </script>
+    </div>
+</body>
+</html>

@@ -1,8 +1,6 @@
 <?php
 session_start();
 
-// Set session timeout to 1 hour (3600 seconds)
-$inactive_time = 3600;
 
 // Check if the user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -10,31 +8,18 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Check if last activity is set
-if (isset($_SESSION['last_activity'])) {
-    // Calculate session lifetime
-    $session_lifetime = time() - $_SESSION['last_activity'];
 
-    if ($session_lifetime > $inactive_time) {
-        session_unset(); // Unset session variables
-        session_destroy(); // Destroy the session
-        header("Location: BNM?session_expired=1"); // Redirect to login page with message
-        exit();
-    }
-}
-
-// Update last activity timestamp
-$_SESSION['last_activity'] = time();
 // Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser'])) {
-  header("Location: Acess_Denied");
-  exit();
+if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
+    header("Location: Acess_Denied");    exit();
 }
+
+
+
 ?>
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
 <head>
-    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Products</title>
@@ -44,42 +29,22 @@ if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser']))
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="product.css">
     <link rel="stylesheet" href="prdct.css">
+    <script>
+        // Check and apply theme on page load
+        const isDarkMode = localStorage.getItem('theme') === 'dark';
+        if (isDarkMode) {
+            document.documentElement.classList.add('dark');
+        }
 
+        // Listen for theme changes from sidebar
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'theme') {
+                document.documentElement.classList.toggle('dark', e.newValue === 'dark');
+            }
+        });
+    </script>
 
- 
-</head>
-<body class="flex h-screen bg-gray-100 dark:bg-gray-900">
     <!-- Sidebar Toggle Button -->
-
-
-    <!-- Dark/Light Mode Toggle Button -->
-
-  <!-- Dark Mode Toggle (Top Right) -->
-<!-- From Uiverse.io by Galahhad --> 
-<div class="theme-switch-wrapper">
-  <label class="theme-switch">
-    <input type="checkbox" class="theme-switch__checkbox" id="themeToggle">
-    <div class="theme-switch__container">
-      <div class="theme-switch__clouds"></div>
-      <div class="theme-switch__stars-container">
-        <!-- Stars SVG -->
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 55" fill="none">
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M135.831 3.00688C135.055 3.85027 134.111 4.29946 133 4.35447C134.111 4.40947 135.055 4.85867 135.831 5.71123C136.607 6.55462 136.996 7.56303 136.996 8.72727C136.996 7.95722 137.172 7.25134 137.525 6.59129C137.886 5.93124 138.372 5.39954 138.98 5.00535C139.598 4.60199 140.268 4.39114 141 4.35447C139.88 4.2903 138.936 3.85027 138.16 3.00688C137.384 2.16348 136.996 1.16425 136.996 0C136.996 1.16425 136.607 2.16348 135.831 3.00688ZM31 23.3545C32.1114 23.2995 33.0551 22.8503 33.8313 22.0069C34.6075 21.1635 34.9956 20.1642 34.9956 19C34.9956 20.1642 35.3837 21.1635 36.1599 22.0069C36.9361 22.8503 37.8798 23.2903 39 23.3545C38.2679 23.3911 37.5976 23.602 36.9802 24.0053C36.3716 24.3995 35.8864 24.9312 35.5248 25.5913C35.172 26.2513 34.9956 26.9572 34.9956 27.7273C34.9956 26.563 34.6075 25.5546 33.8313 24.7112C33.0551 23.8587 32.1114 23.4095 31 23.3545Z" fill="currentColor"></path>
-        </svg>
-      </div>
-      <div class="theme-switch__circle-container">
-        <div class="theme-switch__sun-moon-container">
-          <div class="theme-switch__moon">
-            <div class="theme-switch__spot"></div>
-            <div class="theme-switch__spot"></div>
-            <div class="theme-switch__spot"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </label>
-</div>
-
 
 
 
@@ -100,26 +65,7 @@ if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser']))
 <!-- Sidebar -->
 
 
-<div id="sidebar-container"></div>
 
-<script>
-fetch("side")
-  .then(response => response.text())
-  .then(html => {
-    const container = document.getElementById("sidebar-container");
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = html;
-    container.innerHTML = tempDiv.innerHTML;
-
-    // After DOM injection, dynamically load sidebar script
-    const script = document.createElement('script');
-    script.src = 'sid.js'; // Move all logic into sid.js
-    document.body.appendChild(script);
-  })
-  .catch(error => console.error("Error loading sidebar:", error));
-
-
-</script>
 
 
     <!-- Main Content -->
@@ -138,7 +84,7 @@ fetch("side")
         <div class="input-wrapper">
         <!-- <input type="text" id="search-product" placeholder="Search Produit..." class="border px-3 py-2 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white" oninput="filterDropdown('product')"> -->
 
-  <input type="text"  id="search-product" placeholder="Search Produit..." name="text" class="input"  oninput="filterDropdown('product')" >
+  <input type="text" id="search-product" placeholder="Search Produit..." name="text" class="input dark:bg-gray-800 dark:text-white dark:placeholder-gray-900" oninput="filterDropdown('product')" >
 
 </div>
 <div class="input-wrapper">
@@ -169,49 +115,15 @@ fetch("side")
     Refresh
 </button>
 <br>
-        <!-- <button id="downloadExcel" class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
-            <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
-            <span>Download Marge Table</span>
-        </button> -->
-        <!-- <div class="container">
-
-        <button id="downloadExcel" class="buttonn">
-        <img src="assets/excel.png" alt="Excel Icon" class="icon" style="width: 24px; height: 24px;" />
-
-  <p>Download</p>
-  <div class="liquid">
-    <span style="--i:0"><span></span></span>
-    <span style="--i:1"><span></span></span>
-    <span style="--i:2"><span></span></span>
-    <span style="--i:3"><span></span></span>
-    <span style="--i:4"><span></span></span>
-    <span style="--i:5"><span></span></span>
-    <span style="--i:6"><span></span></span>
-    <span class="bg"><span></span></span>
-  </div>
-  <svg>
-    <filter id="gooey">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="10"></feGaussianBlur>
-      <feColorMatrix
-        values="1 0 0 0 0
-          0 1 0 0 0 
-          0 0 1 0 0
-          0 0 0 20 -10"
-      ></feColorMatrix>
-    </filter>
-  </svg>
-</button>
-
-</div> -->
 
 
 
         <div class="container">
-  <button id="downloadExcel" class="button">
+  <button id="downloadExcel" class="button dark:text-gray-900">
     <img src="assets/excel.png" alt="Excel Icon" class="icon" style="width: 24px; height: 24px;" />
-    <p class="text">
-      <span style="transition-duration: 100ms">D</span>
-      <span style="transition-duration: 150ms">o</span>
+    <p class="text dark:text-gray-900">
+      <span style="transition-duration: 100ms" class="dark:text-gray-900">D</span>
+      <span style="transition-duration: 150ms" class="dark:text-gray-900">o</span>
       <span style="transition-duration: 200ms">w</span>
       <span style="transition-duration: 250ms">n</span>
       <span style="transition-duration: 350ms">l</span>
@@ -383,7 +295,7 @@ thead {
 
         <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
     <div class="overflow-x-auto">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">MARGE Table</h2>
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center font-bold">MARGE Table</h2>
 
         <table class="min-w-full border-collapse text-sm text-left dark:text-white">
     <thead>
@@ -475,50 +387,7 @@ thead {
 
 
 <!-- second table remise aauto  -->
-<br>
-<div class="chart-controls mb-4 p-4 bg-gray-100 rounded-lg dark:bg-gray-700">
-    <h2 class="text-lg font-semibold mb-4 dark:text-white">Chart Visualization</h2>
-    
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        <!-- Filter Selection -->
-        <div>
-            <label class="block text-sm font-medium mb-1 dark:text-gray-300">Filter By:</label>
-            <div class="relative">
-                <select id="chartFilterType" class="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white">
-                    <option value="FOURNISSEUR">Fournisseur</option>
-                    <option value="LABO">Labo</option>
-                    <option value="PRODUCT">Product</option>
-                </select>
-            </div>
-        </div>
-        
-        <!-- Value Selection with Search - Improved Dropdown -->
-        <div>
-            <label class="block text-sm font-medium mb-1 dark:text-gray-300">Select Value:</label>
-            <div class="relative">
-                <input type="text" id="filterValueSearch" placeholder="Search..." 
-                       class="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-                       autocomplete="off">
-                <div id="filterValueDropdown" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg dark:bg-gray-800 dark:border-gray-600 hidden max-h-60 overflow-y-auto">
-                    <!-- Options will be populated dynamically -->
-                </div>
-            </div>
-        </div>
-        
-        <!-- Metric Toggle -->
-        <div>
-            <label class="block text-sm font-medium mb-1 dark:text-gray-300">Toggle Metrics:</label>
-          
-            <div id="metricToggles" class="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1">
-                <!-- Metric toggles will be added here dynamically -->
-            </div>
-        </div>
-    </div>
-    
-    <div class="mt-4">
-        <canvas id="dataChart" class="w-full h-96"></canvas>
-    </div>
-</div>
+
 
         <!-- Pagination -->
         <!--       
@@ -758,7 +627,50 @@ var loadingAnimation = lottie.loadAnimation({
 <div class="mt-4 flex justify-center space-x-2" id="pagination-reserved"></div>
 
 
-
+<br>
+<div class="chart-controls mb-4 p-4 bg-gray-100 rounded-lg dark:bg-gray-700">
+    <h2 class="text-lg font-semibold mb-4 dark:text-white">Chart Visualization</h2>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <!-- Filter Selection -->
+        <div>
+            <label class="block text-sm font-medium mb-1 dark:text-gray-300">Filter By:</label>
+            <div class="relative">
+                <select id="chartFilterType" class="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white">
+                    <option value="FOURNISSEUR">Fournisseur</option>
+                    <option value="LABO">Labo</option>
+                    <option value="PRODUCT">Product</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Value Selection with Search - Improved Dropdown -->
+        <div>
+            <label class="block text-sm font-medium mb-1 dark:text-gray-300">Select Value:</label>
+            <div class="relative">
+                <input type="text" id="filterValueSearch" placeholder="Search..." 
+                       class="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                       autocomplete="off">
+                <div id="filterValueDropdown" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg dark:bg-gray-800 dark:border-gray-600 hidden max-h-60 overflow-y-auto">
+                    <!-- Options will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Metric Toggle -->
+        <div>
+            <label class="block text-sm font-medium mb-1 dark:text-gray-300">Toggle Metrics:</label>
+          
+            <div id="metricToggles" class="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1">
+                <!-- Metric toggles will be added here dynamically -->
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-4">
+        <canvas id="dataChart" class="w-full h-96"></canvas>
+    </div>
+</div>
 <script >
 
 let currentPage = 1;
@@ -1225,25 +1137,6 @@ function renderPagination() {
 
 
 
-
-// Dark/Light Mode Toggle Functionality
-const themeToggle = document.getElementById('themeToggle');
-const htmlElement = document.documentElement;
-
-themeToggle.addEventListener('click', () => {
-    htmlElement.classList.toggle('dark');
-    // Save the theme preference in localStorage
-    const isDarkMode = htmlElement.classList.contains('dark');
-    localStorage.setItem('darkMode', isDarkMode);
-});
-
-// Check for saved theme preference
-const savedDarkMode = localStorage.getItem('darkMode');
-if (savedDarkMode === 'true') {
-    htmlElement.classList.add('dark');
-} else {
-    htmlElement.classList.remove('dark');
-}
 
 let currentPageRemise = 1;
 const rowsPerPageRemise = 10;

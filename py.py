@@ -6110,8 +6110,351 @@ def fetch_fournisseur_recap_achat_data_by_year(fournisseur=None, product=None, y
         logger.error(f"Error fetching fournisseur recap achat data by year: {e}")
         return {"error": "An error occurred while fetching recap achat data by year."}
 
+@app.route('/download-fournisseur-recap-excel', methods=['GET'])
+def download_fournisseur_recap_excel():
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    years = request.args.getlist('years')
+    month = request.args.get('month')
+
+    try:
+        years = [int(y) for y in years] if years else []
+        month = int(month) if month else None
+    except ValueError:
+        return {"error": "Invalid year or month format"}, 400
+
+    if not years:
+        years = [datetime.now().year]
+
+    all_data = []
+    for year in years:
+        data = fetch_fournisseur_recap_achat_data_by_year(
+            fournisseur=fournisseur,
+            product=product,
+            year=year,
+            month=month
+        )
+        for row in data:
+            row['YEAR'] = year  # Add year for clarity if not in row
+        all_data.extend(data)
+
+    return generate_excel_fournisseur_recap(all_data, fournisseur, product, years, month)
+
+
+def generate_excel_fournisseur_recap(data, fournisseur, product, years, month):
+    if not data:
+        return {"error": "No data available"}, 400
+
+    df = pd.DataFrame(data)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Fournisseur Recap"
+
+    # Style header
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+    ws.append(df.columns.tolist())
+    
+    for cell in ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Append data rows with alternating colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Filename generation
+    today = datetime.now().strftime("%d-%m-%Y")
+    filters = []
+    if fournisseur:
+        filters.append(f"fournisseur-{fournisseur}")
+    if product:
+        filters.append(f"product-{product}")
+    if years:
+        filters.append(f"years-{'-'.join(map(str, years))}")
+    if month:
+        filters.append(f"month-{month}")
+    
+    filter_text = "_".join(filters)
+    filename = f"FournisseurRecap_{filter_text}_{today}.xlsx" if filters else f"FournisseurRecap_{today}.xlsx"
+
+    # Return file
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+FEEDBACK_FILE = 'json_files/feedback.json'
+
+@app.route('/submit_feedback', methods=['POST'])
+def submit_feedback():
+    data = request.get_json()
+    data['timestamp'] = datetime.now().isoformat()
+
+    # Load existing feedback
+    if os.path.exists(FEEDBACK_FILE):
+        with open(FEEDBACK_FILE, 'r') as f:
+            feedback_list = json.load(f)
+    else:
+        feedback_list = []
+
+    feedback_list.append(data)
+
+    # Save back to JSON
+    with open(FEEDBACK_FILE, 'w') as f:
+        json.dump(feedback_list, f, indent=2)
+
+    return jsonify({'status': 'success'}), 200
+
+
+import calendar
+
+
+# Add this at the top of your Flask app
+CURRENT_GOAL = 481114494.36  # Static default value
+
+@app.route('/recouvrement', methods=['GET'])
+def recouvrement():
+    global CURRENT_GOAL
+    
+    # Update goal if new value provided
+    new_goal = request.args.get('objectif', type=float)
+    if new_goal is not None:
+        CURRENT_GOAL = new_goal
+    
+    try:
+        # Rest of your existing query code remains the same
+        today = datetime.now()
+        year = today.year
+        month = today.month
+        start_date = f"{year}-{month:02d}-01"
+        last_day = calendar.monthrange(year, month)[1]
+        end_date = f"{year}-{month:02d}-{last_day}"
+
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+                SELECT 
+                    ROUND(:objectif, 2) AS "OBJECTIF_MENSUEL", 
+                    ROUND(SUM(p.payamt), 2) AS "TOTAL_RECOUVREMENT",
+                    ROUND(SUM(p.payamt)/:objectif, 4) AS "POURCENTAGE"
+                FROM 
+                    C_Payment p
+                    JOIN C_BPartner b ON b.C_BPartner_id = p.C_BPartner_id
+                WHERE 
+                    b.iscustomer = 'Y'
+                    AND b.C_PaymentTerm_ID != 1000000
+                    AND p.AD_Client_ID = 1000000
+                    AND p.docstatus in ('CO','CL')
+                    AND p.ZSubPaymentRule_ID in (1000007,1000016)
+                    AND p.datetrx >= TO_DATE(:start_date, 'YYYY-MM-DD')
+                    AND p.datetrx <= TO_DATE(:end_date, 'YYYY-MM-DD')
+            """
+
+            cursor.execute(query, {
+                'objectif': CURRENT_GOAL,
+                'start_date': start_date,
+                'end_date': end_date
+            })
+
+            row = cursor.fetchone()
+            if not row:
+                return jsonify({
+                    "OBJECTIF_MENSUEL": CURRENT_GOAL,
+                    "TOTAL_RECOUVREMENT": 0,
+                    "POURCENTAGE": 0
+                })
+                
+            columns = [col[0] for col in cursor.description]
+            result = dict(zip(columns, row))
+            
+            # Ensure we handle null values
+            if result["TOTAL_RECOUVREMENT"] is None:
+                result["TOTAL_RECOUVREMENT"] = 0
+            if result["POURCENTAGE"] is None:
+                result["POURCENTAGE"] = 0
+                
+            return jsonify(result)
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({
+            "error": "Erreur serveur",
+            "OBJECTIF_MENSUEL": CURRENT_GOAL,
+            "TOTAL_RECOUVREMENT": 0,
+            "POURCENTAGE": 0
+        }), 500
 
 
 
+
+
+@app.route('/pending_documents', methods=['GET'])
+def pending_documents():
+    try:
+        # Get sales_region parameter from request, default to None (fetch all)
+        sales_region = request.args.get('sales_region')
+        
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT 
+                    IO.DOCUMENTNO, 
+                    IO.CREATED, 
+                    IO.DESCRIPTION, 
+                    IO.M_InOut_ID, 
+                    BP.NAME,
+                    SR.NAME AS SALES_REGION
+                FROM 
+                    M_InOut IO
+                    JOIN C_BPartner BP ON IO.C_BPartner_ID = BP.C_BPartner_ID
+                    JOIN C_BPartner_Location BPL ON IO.C_BPartner_ID = BPL.C_BPartner_ID
+                    JOIN C_SalesRegion SR ON BPL.C_SalesRegion_ID = SR.C_SalesRegion_ID
+                WHERE 
+                    IO.ISACTIVE = 'Y'
+                    AND IO.DOCACTION = 'CO'
+                    AND IO.DOCSTATUS = 'IP'
+                    AND IO.PROCESSED = 'N'
+                    AND IO.ISAPPROVED = 'N'
+                    AND IO.XX_CONTROLEUR_ID IS NULL
+                    AND IO.XX_PREPARATEUR_ID IS NULL
+                    AND IO.XX_CONTROLEUR_CH_ID IS NULL
+                    AND IO.XX_PREPARATEUR_CH_ID IS NULL
+                    AND IO.XX_EMBALEUR_CH_ID IS NULL
+                    AND IO.XX_EMBALEUR_ID IS NULL
+                    AND IO.C_DocType_ID='1002733'
+            """
+            
+            # Add sales region filter if provided
+            params = []
+            if sales_region:
+                query += " AND SR.NAME = :1"
+                params.append(sales_region)
+            
+            cursor.execute(query, params)
+            results = cursor.fetchall()
+            
+            documents = []
+            for row in results:
+                doc_no, created, description, inoutid, bp_name, sales_region = row
+                # Format date as "26 May 2025 09:58"
+                formatted_date = created.strftime('%d %b %Y %H:%M')
+                documents.append({
+                    'documentNo': doc_no,
+                    'createdDate': formatted_date,
+                    'description': description if description else '-',
+                    'inoutid': inoutid,
+                    'businessPartner': bp_name,
+                    'salesRegion': sales_region,
+                    'status': 'Created'
+                })
+            
+            return jsonify({
+                "count": len(documents),
+                "documents": documents,
+                "lastUpdated": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                "salesRegionFilter": sales_region if sales_region else "All"
+            })
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({
+            "error": "Server error",
+            "message": str(e),
+            "count": 0,
+            "documents": []
+        }), 500
+
+
+
+@app.route('/regions', methods=['GET'])
+def select_regions():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+
+SELECT C_SALESREGION_ID, NAME 
+                FROM C_SalesRegion
+                     where ISACTIVE= 'Y'
+                     and AD_Client_ID = 1000000
+                ORDER BY NAME
+           
+            """
+            cursor.execute(query)
+            results = cursor.fetchall()
+            
+            regions = []
+            for row in results:
+                region_id, name = row
+                regions.append({
+                    'id': region_id,
+                    'name': name
+                })
+            
+            return jsonify({
+                "count": len(regions),
+                "regions": regions
+            })
+
+    except Exception as e:
+        print(f"Error fetching regions: {e}")
+        return jsonify({
+            "error": "Server error",
+            "message": str(e),
+            "count": 0,
+            "regions": []
+        }), 500
+
+
+@app.route('/inout_lines', methods=['GET'])
+def get_inout_lines():
+    try:
+        m_inout_id = request.args.get('m_inout_id')
+        
+        if not m_inout_id:
+            return jsonify({
+                "error": "Missing parameter",
+                "message": "m_inout_id parameter is required"
+            }), 400
+
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT P.NAME, ML.MOVEMENTQTY 
+                FROM M_InOutline ML
+                JOIN M_Product P ON ML.M_Product_ID = P.M_Product_ID
+                WHERE ML.M_InOut_ID = :m_inout_id
+            """
+            cursor.execute(query, {'m_inout_id': m_inout_id})
+            results = cursor.fetchall()
+            
+            lines = []
+            for name, movement_qty in results:
+                lines.append({
+                    'product_name': name,
+                    'quantity': float(movement_qty) if movement_qty else 0.0
+                })
+            
+            return jsonify({
+                "m_inout_id": m_inout_id,
+                "count": len(lines),
+                "lines": lines
+            })
+
+    except Exception as e:
+        print(f"Error fetching inout lines: {e}")
+        return jsonify({
+            "error": "Server error",
+            "message": str(e),
+            "count": 0,
+            "lines": []
+        }), 500
+
+        
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)

@@ -1,24 +1,7 @@
-
-
 <?php
 session_start();
 
-// Set session timeout to 1 hour (3600 seconds)
-$inactive_time = 3600;
 
-// Function to check session timeout
-function check_session_timeout($inactive_time) {
-    if (isset($_SESSION['last_activity'])) {
-        $session_lifetime = time() - $_SESSION['last_activity'];
-        if ($session_lifetime > $inactive_time) {
-            session_unset(); // Unset session variables
-            session_destroy(); // Destroy the session
-            header("Location: BNM?session_expired=1");
-            exit();
-        }
-    }
-    $_SESSION['last_activity'] = time();
-}
 
 // Check if the user is logged in and session is valid
 if (!isset($_SESSION['user_id'])) {
@@ -27,93 +10,33 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Call the function to check session timeout
-check_session_timeout($inactive_time);
+
+
+
 // Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser'])) {
-    header("Location: Acess_Denied");
-    exit();
+if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
+    header("Location: Acess_Denied");    exit();
 }
 ?>
 
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
 <head>
-    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Etat Stock</title>
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="etatstck.css">
-
+    <script src="theme.js" defer></script>
 </head>
 <body class="flex h-screen bg-gray-100 dark:bg-gray-900">
-    <!-- Sidebar Toggle Button -->
-
-
-    <!-- Dark/Light Mode Toggle Button -->
-
-  <!-- Dark Mode Toggle (Top Right) -->
-<!-- From Uiverse.io by Galahhad --> 
-
-  <!-- Dark Mode Toggle (Top Right) -->
-<!-- From Uiverse.io by Galahhad --> 
-<div class="theme-switch-wrapper">
-  <label class="theme-switch">
-    <input type="checkbox" class="theme-switch__checkbox" id="themeToggle">
-    <div class="theme-switch__container">
-      <div class="theme-switch__clouds"></div>
-      <div class="theme-switch__stars-container">
-        <!-- Stars SVG -->
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 55" fill="none">
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M135.831 3.00688C135.055 3.85027 134.111 4.29946 133 4.35447C134.111 4.40947 135.055 4.85867 135.831 5.71123C136.607 6.55462 136.996 7.56303 136.996 8.72727C136.996 7.95722 137.172 7.25134 137.525 6.59129C137.886 5.93124 138.372 5.39954 138.98 5.00535C139.598 4.60199 140.268 4.39114 141 4.35447C139.88 4.2903 138.936 3.85027 138.16 3.00688C137.384 2.16348 136.996 1.16425 136.996 0C136.996 1.16425 136.607 2.16348 135.831 3.00688ZM31 23.3545C32.1114 23.2995 33.0551 22.8503 33.8313 22.0069C34.6075 21.1635 34.9956 20.1642 34.9956 19C34.9956 20.1642 35.3837 21.1635 36.1599 22.0069C36.9361 22.8503 37.8798 23.2903 39 23.3545C38.2679 23.3911 37.5976 23.602 36.9802 24.0053C36.3716 24.3995 35.8864 24.9312 35.5248 25.5913C35.172 26.2513 34.9956 26.9572 34.9956 27.7273C34.9956 26.563 34.6075 25.5546 33.8313 24.7112C33.0551 23.8587 32.1114 23.4095 31 23.3545Z" fill="currentColor"></path>
-        </svg>
-      </div>
-      <div class="theme-switch__circle-container">
-        <div class="theme-switch__sun-moon-container">
-          <div class="theme-switch__moon">
-            <div class="theme-switch__spot"></div>
-            <div class="theme-switch__spot"></div>
-            <div class="theme-switch__spot"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </label>
-</div>
-
-<!-- CSS to position top-right -->
 
 
 
-
-
-
-
+ 
     
 
-<!-- Sidebar -->
-<!-- Sidebar -->
-<div id="sidebar-container"></div>
-<script>
-fetch("side")
-  .then(response => response.text())
-  .then(html => {
-    const container = document.getElementById("sidebar-container");
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = html;
-    container.innerHTML = tempDiv.innerHTML;
-
-    // After DOM injection, dynamically load sidebar script
-    const script = document.createElement('script');
-    script.src = 'sid.js'; // Move all logic into sid.js
-    document.body.appendChild(script);
-  })
-  .catch(error => console.error("Error loading sidebar:", error));
-
-
-</script>
-    
     
 
     <!-- Main Content -->
@@ -160,17 +83,17 @@ fetch("side")
 
         <div class="tables-wrapper flex space-x-4">
     <!-- Magasins Dropdown -->
-    <div class="dropdown-container flex-1">
-        <label for="magasinDropdown" class="block text-sm font-semibold">Magasin</label>
-        <select id="magasinDropdown" class="w-full p-2 border rounded-md dark:bg-gray-800 dark:text-white">
+    <div class="dropdown-container flex-1 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
+        <label for="magasinDropdown" class="block text-sm font-semibold text-gray-900 dark:text-white mb-2">Magasin</label>
+        <select id="magasinDropdown" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
             <option value="">Loading magasins...</option>
         </select>
     </div>
 
     <!-- Emplacements Dropdown -->
-    <div class="dropdown-container flex-1">
-        <label for="emplacementDropdown" class="block text-sm font-semibold">Emplacement</label>
-        <select id="emplacementDropdown" class="w-full p-2 border rounded-md dark:bg-gray-800 dark:text-white" disabled>
+    <div class="dropdown-container flex-1 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
+        <label for="emplacementDropdown" class="block text-sm font-semibold text-gray-900 dark:text-white mb-2">Emplacement</label>
+        <select id="emplacementDropdown" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white" disabled>
             <option value="">Select magasin first</option>
         </select>
     </div>
@@ -272,7 +195,6 @@ fetch("side")
     });
 </script>
 
-<!-- <script src="etatstock.js"></script> -->
 
 
 
@@ -541,17 +463,6 @@ function showFournisseurDropdown(searchValue) {
     });
 }
 
-// Theme toggle functionality
-function setupThemeToggle() {
-    document.getElementById('themeToggle').addEventListener('click', () => {
-        document.documentElement.classList.toggle('dark');
-        localStorage.setItem('darkMode', document.documentElement.classList.contains('dark'));
-    });
-
-    if (localStorage.getItem('darkMode') === 'true') {
-        document.documentElement.classList.add('dark');
-    }
-}
 
 // Keep your existing renderTable and createTableRow functions exactly as they were
 
@@ -692,11 +603,44 @@ document.addEventListener("DOMContentLoaded", () => {
     setupThemeToggle();
 });
 
-  
- </script>
+  // Dark/Light Mode Toggle Functionality
+const themeToggle = document.getElementById('themeToggle');
+const htmlElement = document.documentElement;
 
-<br><br><br> <br>
+themeToggle.addEventListener('click', () => {
+    htmlElement.classList.toggle('dark');
+    // Save the theme preference in localStorage
+    const isDarkMode = htmlElement.classList.contains('dark');
+    localStorage.setItem('darkMode', isDarkMode);
+});
 
+// Check for saved theme preference
+const savedDarkMode = localStorage.getItem('darkMode');
+if (savedDarkMode === 'true') {
+    htmlElement.classList.add('dark');
+} else {
+    htmlElement.classList.remove('dark');
+}
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Apply initial theme
+            const isDark = localStorage.getItem('theme') === 'dark';
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+            }
 
+            // Listen for theme changes
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'theme') {
+                    if (e.newValue === 'dark') {
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                    }
+                }
+            });
+        });
+    </script>
 </body>
 </html>

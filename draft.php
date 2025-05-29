@@ -4,172 +4,120 @@ session_start();
 // Set session timeout to 1 hour (3600 seconds)
 $inactive_time = 3600;
 
-// Check if the user is logged in
+// Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    header("Location: BNM"); // Redirect to login if not logged in
-    exit();
+  header("Location: BNM"); // Redirect to login page
+  exit();
+}
+ 
+// Define JSON file path
+define('FEEDBACK_JSON_FILE', __DIR__ . '/feedback.json');
+
+// Handle AJAX request
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+  $data = json_decode(file_get_contents('php://input'), true);
+
+  $type = $data['type'] ?? null;
+  $content = $data['content'] ?? '';
+  $rating = $data['rating'] ?? null;
+  $page = $data['page'] ?? null;
+  $user_id = $_SESSION['user_id'];
+  $username = $_SESSION['username'] ?? 'Unknown';
+
+  if (!$type || !in_array($type, ['bug', 'suggestion', 'rating'])) {
+      echo json_encode(['success' => false, 'message' => 'Invalid feedback type']);
+      exit;
+  }
+
+  try {
+      // Prepare feedback data
+      $feedbackData = [
+          'timestamp' => date('Y-m-d H:i:s'),
+          'user_id' => $user_id,
+          'username' => $username,
+          'type' => $type,
+          'content' => $content,
+          'rating' => $rating,
+          'page' => $page
+      ];
+      
+      // Load existing feedback or create new array
+      $feedbackArray = [];
+      if (file_exists(FEEDBACK_JSON_FILE)) {
+          $jsonContent = file_get_contents(FEEDBACK_JSON_FILE);
+          if (!empty($jsonContent)) {
+              $feedbackArray = json_decode($jsonContent, true);
+          }
+          if (!is_array($feedbackArray)) {
+              $feedbackArray = []; // Reset if file is corrupted
+          }
+      }
+      
+      // Add new feedback
+      $feedbackArray[] = $feedbackData;
+      
+      // Save to JSON file
+      file_put_contents(FEEDBACK_JSON_FILE, json_encode($feedbackArray, JSON_PRETTY_PRINT));
+      
+      echo json_encode(['success' => true]);
+  } catch (Exception $e) {
+      error_log('Error saving feedback: ' . $e->getMessage());
+      echo json_encode(['success' => false, 'message' => 'Error saving feedback']);
+  }
+  exit;
 }
 
-// Check if last activity is set
-if (isset($_SESSION['last_activity'])) {
-    // Calculate session lifetime
-    $session_lifetime = time() - $_SESSION['last_activity'];
+// ... [rest of your existing session management code] ...
 
+
+// Get session details
+$user_id = $_SESSION['user_id'];
+$username = isset($_SESSION['username']) ? $_SESSION['username'] : 'Unknown';
+$login_time = isset($_SESSION['login_time']) ? date("Y-m-d H:i:s", $_SESSION['login_time']) : 'Unknown';
+$ip_address = $_SERVER['REMOTE_ADDR'];
+$current_time = date("Y-m-d H:i:s");
+
+// Check session timeout
+if (isset($_SESSION['last_activity'])) {
+    $session_lifetime = time() - $_SESSION['last_activity'];
     if ($session_lifetime > $inactive_time) {
-        session_unset(); // Unset session variables
-        session_destroy(); // Destroy the session
-        header("Location: BNM?session_expired=1"); // Redirect to login page with message
+        session_unset();
+        session_destroy();
+        $log_entry = "$current_time - User ID: $user_id - Username: $username - IP: $ip_address - Session Expired\n";
+        file_put_contents(__DIR__ . "/login_logs.txt", $log_entry, FILE_APPEND);
+        header("Location: BNM?session_expired=1");
         exit();
     }
 }
 
-// Update last activity timestamp
+// Update last activity
 $_SESSION['last_activity'] = time();
-// Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser'])) {
-  header("Location: Acess_Denied");
-  exit();
-}
+
+// Log session activity
+$log_entry = "$current_time - User ID: $user_id - Username: $username - Login Time: $login_time - IP: $ip_address - Active Session\n";
+file_put_contents(__DIR__ . "/login_logs.txt", $log_entry, FILE_APPEND);
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>
-    Annual Recap
-</title>
-    <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
-    <!-- <link rel="stylesheet" href="recap_achat.css"> -->
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>BNM Web</title>
+        <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
+        <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+        <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+            <script src="https://kit.fontawesome.com/YOUR_KIT_CODE.js" crossorigin="anonymous"></script>
 
-<style>
-
-body {
+        
+        <style>
+ body {
     font-family: 'Inter', sans-serif;
 }
 
-  /* Resizable Columns */
-  th.resizable {
-    position: relative;
-  }
-  
-  th.resizable .resizer {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 5px;
-    cursor: col-resize;
-    user-select: none;
-    height: 100%;
-  }
-  .resizer:hover {
-    background-color: rgba(0, 0, 0, 0.1);
-}
 
-.table-container {
-    overflow-y: auto;
-    overflow-x: auto;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .table-container table {
-    width: 100%;
-    table-layout: auto;
-    border-collapse: collapse;
-  }
-  
-  thead {
-    position: sticky;
-    top: 0;
-    background-color: #f3f4f6;
-    z-index: 10;
-  }
-  
-  th,
-  td {
-    text-align: left;
-    padding: 10px;
-    border: 1px solid #ddd;
-    white-space: normal; /* ALLOW MULTILINE */
-    word-break: break-word; /* Wrap long words */
-    line-height: 1.4;
-  }
-  
-  tbody tr {
-    height: auto; /* Allow row height to adjust */
-  }
-  
-  .table-container.placement-table {
-    flex: 0.5;
-    width: 10px;
-  }
-.dark .table-container {
-    border-color: #374151;
-}
-
-.dark .table-header {
-    background-color: #374151;
-    color: #f9fafb;
-    /* White text in dark mode */
-}
-
-
-.dark .table-row:nth-child(odd) {
-    background-color: #1f2937;
-    color: #f9fafb;
-    /* White text on dark background */
-}
-
-.dark .table-row:nth-child(even) {
-    background-color: #474d53;
-    color: #ececec;
-}
-
-
-.table-wrapper {
-    display: flex;
-    justify-content: space-between;
-    /* Ensures tables are spaced apart */
-    gap: 20px;
-    /* Adds spacing between tables */
-}
-
-.paginatio-wrapper {
-    display: flex;
-    justify-content: center;
-    /* Ensures tables are spaced apart */
-    gap: 250px;
-    /* Adds spacing between tables */
-}
-
-/* .download-wrapper {
-    display: flex;
-
-    gap: 550px;
-} */
-
-.title-wrapper {
-    display: flex;
-
-    /* Ensures tables are spaced apart */
-    gap: 730px;
-    /* Adds spacing between tables */
-}
-
-
-
-
-
-
+/* Sidebar Styling */
 .sidebar {
     min-width: 200px;
     max-width: 250px;
@@ -179,18 +127,19 @@ body {
     position: fixed;
     height: 100vh;
     z-index: 40;
+    padding-top: 60px;
 }
 
 .sidebar-hidden {
     transform: translateX(-100%);
 }
 
+/* Content */
 .content {
     margin-left: 250px;
-    /* Adjust this value based on the sidebar width */
     transition: margin-left 0.3s ease-in-out;
     width: calc(100% - 250px);
-    /* Adjust this value based on the sidebar width */
+    padding: 20px;
 }
 
 .content-full {
@@ -198,43 +147,13 @@ body {
     width: 100%;
 }
 
-.table-header {
-    background-color: #f3f4f6;
-    text-align: left;
-    color: #000;
-    /* Default text color */
-    position: sticky;
-    top: 0;
-}
-
-.table-row {
-    color: #000;
-    /* Default black text */
-}
-
-.table-row:nth-child(odd) {
-    background-color: #f9fafb;
-}
-
-/* Dark mode styles */
-.dark .sidebar {
-    background-color: #1f2937;
-    border-right-color: #374151;
-}
-
-
-
-.dark body {
-    background-color: #111827;
-    color: #010911;
-}
-
-
 /* Dark Mode */
 html.dark .sidebar {
     background-color: #1f2937;
     border-right-color: #374151;
 }
+
+
 
 html.dark body {
     background-color: #111827;
@@ -242,399 +161,661 @@ html.dark body {
 }
 
 /* Dark Mode Toggle - Styled Checkbox */
-/* Hide Default Checkbox */
-/* Hide Default Checkbox */
-
-/* Sidebar Hidden by Default */
-.sidebar-hidden {
-    transform: translateX(-100%);
-}
-
-/* Sidebar Appears Smoothly */
-.sidebar {
-    transition: transform 0.3s ease-in-out;
-}
-
-/* Sidebar Stays Open Until Mouse Leaves */
-.sidebar:hover {
-    transform: translateX(0);
-}
-
-
-.dark td {
-    color: #000000 !important;
-    /* Force black text in dark mode */
-    background-color: #d1d5db;
-    /* Light gray background for contrast */
-}
-
-.dark h2 {
-    color: #000000 !important;
-    /* Force black text in dark mode */
-    background-color: #d1d5db;
-    /* Light gray background for contrast */
-}
-
-
-.dark label {
-    color: white !important;
-}
-
-/* Positioning the Dark Mode Toggle on Top Right */
-#themeSwitcher {
-    position: sticky;
-    top: 0;
-    right: 0;
-    padding: 10px;
-    z-index: 50;
-}
-.download-container {
-display: flex;
-justify-content: flex-end;
-padding: 0 16px 12px 16px;
-}
-.download-wrapper {
-display: flex;
-flex-wrap: wrap;
-justify-content: center;
-gap: 50px; /* Reduced for responsiveness */
-margin-top: 20px;
-padding: 10px;
-}
-
-.download-wrapper button {
-display: flex;
-align-items: center;
-gap: 10px;
-background-color: white;
-border: 1px solid #d1d5db;
-color: #374151;
-padding: 12px 24px;
-border-radius: 8px;
-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-transition: all 0.3s ease-in-out;
-}
-
-.download-wrapper button:hover {
-background-color: #f3f4f6;
-transform: scale(1.05);
-}
-
-.download-wrapper button img {
-width: 24px;
-height: 24px;
-}
-
-/* Responsive Styles */
-@media (max-width: 768px) {
-.download-wrapper {
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-}
-
-.download-wrapper button {
-  width: 90%; /* Full width for smaller screens */
-  justify-content: center;
-}
-}
-
-.search-container {
-display: grid;
-grid-template-columns: repeat(2, minmax(250px, 1fr)); /* 3 columns per row */
-gap: 16px;
-padding: 20px;
-background: #f9fafb;
-border-radius: 12px;
-box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.search-container label {
-display: block;
-font-weight: 600;
-color: #374151;
-margin-bottom: 6px;
-}
-
-.search-container input {
-width: 100%;
-padding: 12px;
-border: 1px solid #d1d5db;
-border-radius: 8px;
-font-size: 16px;
-transition: all 0.3s ease-in-out;
-background-color: white;
-color: #111827;
-box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.search-container input:focus {
-outline: none;
-border-color: #2563eb;
-box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
-}
-
-/* Dark Mode */
-.dark .search-container {
-background: #1f2937;
-box-shadow: none;
-}
-
-.dark .search-container label {
-color: #e5e7eb;
-}
-
-.dark .search-container input {
-background-color: #374151;
-color: white;
-border: 1px solid #4b5563;
-box-shadow: none;
-}
-
-.dark .search-container input:focus {
-border-color: #3b82f6;
-box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
-}
-
-/* Responsive Design */
-@media (max-width: 1024px) {
-.search-container {
-  grid-template-columns: repeat(2, minmax(250px, 1fr)); /* 2 per row on tablets */
-}
-}
-
-@media (max-width: 768px) {
-.search-container {
-  grid-template-columns: 1fr; /* 1 per row on mobile */
-}
-}
-
-.date-container {
-display: flex;
-flex-wrap: wrap;
-gap: 16px;
-align-items: center;
-padding: 16px;
-background: #f9fafb;
-border-radius: 12px;
-box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-max-width: 600px; /* Adjust width as needed */
-width: 100%; /* Ensures it doesn't exceed max-width */
-margin: 0 auto; /* Centers the container */
-}
-
-@media (max-width: 768px) {
-.date-container {
-flex-direction: column;
-gap: 12px;
-align-items: flex-start;
-max-width: 90%; /* Allows slight expansion on smaller screens */
-}
-}
-
-.date-container label {
-font-weight: 600;
-color: #374151;
-}
-
-.date-container input {
-padding: 10px 14px;
-border: 1px solid #d1d5db;
-border-radius: 8px;
-font-size: 16px;
-transition: all 0.3s ease-in-out;
-background-color: white;
-color: #111827;
-box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.date-container input:focus {
-outline: none;
-border-color: #2563eb;
-box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
-}
-
-/* Dark Mode */
-.dark .date-container {
-background: #1f2937;
-box-shadow: none;
-}
-
-.dark .date-container label {
-color: #e5e7eb;
-}
-
-.dark .date-container input {
-background-color: #374151;
-color: white;
-border: 1px solid #4b5563;
-}
-
-.dark .date-container input:focus {
-border-color: #3b82f6;
-box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-.date-container {
-flex-direction: column;
-gap: 12px;
-align-items: flex-start;
-}
-}
-/* Hide Default Checkbox */
 .checkbox {
-display: none;
+    display: none;
 }
 
 /* Toggle Background */
 .checkbox-label {
-width: 60px;
-height: 30px;
-background: #f97316; /* Light Mode Orange */
-display: flex;
-align-items: center;
-border-radius: 50px;
-position: relative;
-cursor: pointer;
-padding: 5px;
-transition: background 0.3s ease-in-out;
+    width: 60px;
+    height: 30px;
+    background: #ddd;
+    display: flex;
+    border-radius: 50px;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+    padding: 5px;
+    transition: background 0.3s ease-in-out;
+}
+
+/* Ball as Sun (Default) */
+.ball {
+    width: 22px;
+    height: 22px;
+    background: #facc15; /* Sun color (yellow) */
+    position: absolute;
+    border-radius: 50%;
+    transition: transform 0.3s ease-in-out, background 0.3s ease-in-out;
+    left: 5px;
+    box-shadow: 0 0 5px 2px #facc15; /* Sun glow effect */
+}
+
+/* Add Sun Rays */
+.ball::before {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: inherit;
+    border-radius: 50%;
+    transform: scale(1.4);
+    opacity: 0.5;
+}
+
+/* Moon Shape */
+html.dark .ball {
+    transform: translateX(30px);
+    background: #1e40af; /* Moon color (blue) */
+    box-shadow: none; /* Remove glow */
+}
+
+/* Crescent Moon Effect */
+html.dark .ball::before {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: white;
+    border-radius: 50%;
+    left: 5px; /* Shift left to create crescent effect */
+}
+
+/* Dark Mode Background */
+html.dark .checkbox-label {
+    background: #333;
+}
+
+/* Positioning the Dark Mode Toggle on Top Right */
+#themeSwitcher {
+    position: fixed;
+    top: 10px;
+    right: 20px;
+    z-index: 50;
+}
+#ram-animation {
+    position: relative;  /* Keep it inside the sidebar */
+    width: 100%;  /* Fit inside sidebar */
+    height: 100px; /* Adjust height as needed */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none; /* Prevent interaction */
+    background: transparent;
+}
+/* Hide Default Checkbox */
+.checkbox {
+    display: none;
+}
+
+/* Toggle Background */
+.checkbox-label {
+    width: 60px;
+    height: 30px;
+    background: #f97316; /* Light Mode Orange */
+    display: flex;
+    align-items: center;
+    border-radius: 50px;
+    position: relative;
+    cursor: pointer;
+    padding: 5px;
+    transition: background 0.3s ease-in-out;
 }
 
 /* Ball */
 .ball {
-width: 24px;
-height: 24px;
-background: white;
-position: absolute;
-border-radius: 50%;
-transition: transform 0.3s ease-in-out;
-left: 5px;
+    width: 24px;
+    height: 24px;
+    background: white;
+    position: absolute;
+    border-radius: 50%;
+    transition: transform 0.3s ease-in-out;
+    left: 5px;
 }
 
 /* Icons */
 .icon {
-font-size: 16px;
-position: absolute;
-top: 50%;
-transform: translateY(-50%);
-transition: opacity 0.3s ease-in-out;
+    font-size: 16px;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: opacity 0.3s ease-in-out;
 }
 
 /* Sun (Left) */
 .sun {
-left: 10px;
-color: white;
+    left: 10px;
+    color: white;
 }
 
 /* Moon (Right) */
 .moon {
-right: 10px;
-color: white;
-opacity: 0; /* Hidden in Light Mode */
+    right: 10px;
+    color: white;
+    opacity: 0; /* Hidden in Light Mode */
 }
 
 /* Dark Mode */
 html.dark .checkbox-label {
-background: #1f2937; /* Dark Mode Gray */
+    background: #1f2937; /* Dark Mode Gray */
 }
 
 html.dark .ball {
-transform: translateX(30px);
+    transform: translateX(30px);
 }
 
 html.dark .sun {
-opacity: 0; /* Hide Sun */
+    opacity: 0; /* Hide Sun */
 }
 
 html.dark .moon {
-opacity: 1; /* Show Moon */
+    opacity: 1; /* Show Moon */
 }
 
 /* Theme Switcher Position */
 #themeSwitcher {
-position: sticky;
-top: 10px;
-right: 10px;
-padding: 10px;
-z-index: 50;
+    position: sticky;
+    top: 10px;
+    right: 10px;
+    padding: 10px;
+    z-index: 50;
 }
-  /* Resizable Columns */
-  th.resizable {
+
+.card {
+  border-radius: 10px;
+  width: 150px;
+  height: 200px;
+  transition: all 0.3s;
+  position: absolute;
+  transition-delay: 0.3s;
+}
+
+.card:hover {
+  width: 500px;
+  height: 250px;
+  transition-delay: 0s;
+}
+
+.card::after {
+  /* content: "\2193  Hover me \2193"; */
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  position: absolute;
+  top: -30px;
+  left: 0;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.3s, visibility 0.3s;
+  transition-delay: 0.3s;
+}
+
+.card:hover::after {
+  opacity: 0;
+  visibility: hidden;
+  transition-delay: 0s;
+}
+
+.image {
+  width: 100%;
+  float: left;
+  transition: all 0.3s;
+  margin: 0%;
+  transition-delay: 0.3s;
+}
+
+.card:hover .image {
+  transition-delay: 0s;
+  width: 50%;
+  margin: 0 15px 0 0;
+  filter: drop-shadow(-5px 5px 4px #000000aa);
+}
+
+.heading,
+.icons {
+  opacity: 0;
+  visibility: hidden;
+  overflow: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+  transition-delay: 0s;
+}
+
+.heading {
+  display: block;
+  font-size: 30px;
+  font-weight: bold;
+  font-family: Montserrat, sans-serif;
+  margin: 25px 20px;
+  text-align: right;
+  position: relative;
+  z-index: 1;
+  color: white;
+  text-shadow: 1px 1px 3px #0004;
+  user-select: none;
+  background: linear-gradient(
+    130deg,
+    pink 20%,
+    rgb(196, 91, 196) 50%,
+    rgb(85, 183, 228) 100%
+  );
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.card:hover .heading {
+  transition-delay: 0.3s;
+  opacity: 1;
+  visibility: visible;
+}
+
+.heading::after {
+  content: "!";
+}
+
+.card:hover .icons {
+  transition-delay: 0.3s;
+  opacity: 1;
+  visibility: visible;
+}
+
+.icons {
+  text-align: center;
+  transform: translateX(-10px);
+}
+
+.icons a {
+  text-decoration: none;
+}
+
+.icons svg {
+  width: 50px;
+  height: 50px;
+  margin: 10px;
+  transition: transform 0.3s;
+}
+
+.icons svg:hover {
+  transform: translateY(-5px);
+  transform-origin: center -10px;
+}
+
+.icons svg:active {
+  transform: scale(0.9);
+}
+
+.icons svg path {
+  stroke: black;
+  opacity: 0.6;
+  transition: opacity 0.6s;
+}
+
+.icons svg:hover path {
+  opacity: 1;
+}
+
+/* Drag-and-Drop Styles */
+.tab-button {
     position: relative;
-  }
-  
-  th.resizable .resizer {
+}
+
+.tab-button.drag-before::before,
+.tab-button.drag-after::after {
+    content: '';
     position: absolute;
     top: 0;
-    right: 0;
-    width: 5px;
-    cursor: col-resize;
-    user-select: none;
-    height: 100%;
-  }
-  
+    bottom: 0;
+    width: 2px;
+    background-color: #007bff;
+}
+
+.tab-button.drag-before::before {
+    left: -1px;
+}
+
+.tab-button.drag-after::after {
+    right: -1px;
+}
+
+.tab-button[draggable="true"]:hover {
+    cursor: grab;
+}
+
+.tab-button[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+        </style>
+    </head>
+    <body class="flex h-screen bg-gray-100 dark:bg-gray-900">
+    
+
+  <!-- Dark Mode Toggle (Top Right) -->
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
+<script>
+    lottie.loadAnimation({
+        container: document.getElementById("lottieContainer"),
+        renderer: "svg",
+        loop: true,
+        autoplay: true,
+        path: "json_files/r.json" // Replace with actual path to your .rjson file
+    });
+</script>
+
+<!-- Sidebar -->
+
+<!-- Sidebar -->
+
+
+
+<style>
+  .chart-controls {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#dataChart {
+    background-color: white;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dark #dataChart {
+    background-color: #374151;
+}
+body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+    }
+
+
+
+    /* Main content area */
+    .main {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Tab bar */
+    #tabs {
+      display: flex;
+      background-color: #eee;
+      border-bottom: 1px solid #ccc;
+    }
+
+    .tab-button {
+      padding: 8px 12px;
+      margin-right: 2px;
+      border: none;
+      background-color: #ccc;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .tab-button.active {
+      background-color: #ffffff;
+      border-bottom: 2px solid green;
+      font-weight: bold;
+    }
+
+    .tab-button span {
+      margin-left: 5px;
+      cursor: pointer;
+      color: red;
+    }
+
+    /* Tab content area */
+    #tab-contents {
+      flex-grow: 1;
+      overflow: auto;
+    }
+
+    .tab-pane {
+      display: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    .tab-pane iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .main {
+  color: black;
+}
+
+
+  </style>
+
+<style>
+.tabs-wrapper {
+  overflow-x: auto;
+  white-space: nowrap;
+  border-bottom: 1px solid #ccc;
+  padding: 4px;
+}
+
+.tabs-scroll {
+  display: inline-flex;
+  min-width: 100%;
+}
+
+.tab-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  margin-right: 4px;
+  border: none;
+  background-color: #f0f0f0;
+  cursor: pointer;
+  position: relative;
+  border-radius: 5px;
+}
+
+.tab-button.active {
+  background-color: #007bff;
+  color: white;
+}
+
+.tab-button span {
+  margin-left: 8px;
+  color: red;
+  font-weight: bold;
+  cursor: pointer;
+}
 </style>
-</head>
 
-<body class="flex h-screen bg-gray-100 dark:bg-gray-900">
-    <!-- Sidebar Toggle Button -->
- 
+    <div id="sidebar-container"></div>
 
-    <!-- Dark/Light Mode Toggle Button -->
+    <script>
+    fetch("side")
+      .then(response => response.text())
+      .then(html => {
+        const container = document.getElementById("sidebar-container");
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = html;
+        container.innerHTML = tempDiv.innerHTML;
+    
+        // After DOM injection, dynamically load sidebar script
+        const script = document.createElement('script');
+        script.src = 'sid.js'; // Move all logic into sid.js
+        document.body.appendChild(script);
+      })
+      .catch(error => console.error("Error loading sidebar:", error));
+    
+    
+    </script>
+
+<div class="main">
+  <div class="tabs-wrapper">
+    <div id="tabs" class="tabs-scroll">
+      <button id="tab-whatsnew" class="tab-button" onclick="navigateTo('whatsnew')">🆕 What's New?</button>
+    </div>
+  </div>
+  <div id="tab-contents"></div>
+</div>
+
+
+  <script>
+    // Initialize with What's New tab on page load
+document.addEventListener('DOMContentLoaded', function() {
+  navigateTo('whatsnew');
+});
+
+function navigateTo(pageId) {
+  const tabId = `tab-${pageId}`;
+  const contentId = `content-${pageId}`;
+
+  if (!document.getElementById(tabId) && pageId !== 'whatsnew') {
+    const tab = document.createElement('button');
+    tab.id = tabId;
+    tab.className = 'tab-button';
+    tab.textContent = pageId.replace('.html', '');
+    tab.onclick = () => showTab(pageId);
+
+    const closeBtn = document.createElement('span');
+    closeBtn.textContent = '×';
+    closeBtn.onclick = (e) => {
+      e.stopPropagation();
+      document.getElementById(tabId).remove();
+      document.getElementById(contentId).remove();
+    };
+    tab.appendChild(closeBtn);
+    document.getElementById('tabs').appendChild(tab);
+  }
+
+  if (!document.getElementById(contentId)) {
+    const content = document.createElement('div');
+    content.id = contentId;
+    content.className = 'tab-pane';
+    content.style.display = 'none';
+    document.getElementById('tab-contents').appendChild(content);
+
+    fetch(pageId)
+      .then(res => res.text())
+      .then(html => {
+        // Inject HTML
+        content.innerHTML = html;
+
+        // Apply dark mode if needed
+        if (document.body.classList.contains('dark-mode')) {
+          content.classList.add('dark-mode');
+        }
+
+        // Extract and execute <script> tags manually
+        const scripts = Array.from(content.querySelectorAll('script'));
+        scripts.forEach(script => {
+          const newScript = document.createElement('script');
+          newScript.text = script.textContent;
+          script.parentNode.replaceChild(newScript, script);
+        });
+
+        showTab(pageId);
+      });
+  } else {
+    showTab(pageId);
+  }
+}
+
+  function showTab(pageId) {
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(div => div.style.display = 'none');
+
+    document.getElementById(`tab-${pageId}`).classList.add('active');
+    document.getElementById(`content-${pageId}`).style.display = 'block';
+  }
+
+  const toggle = document.getElementById('themeToggle');
+
+  // Apply saved theme on load
+  if (localStorage.getItem('theme') === 'dark') {
+    document.body.classList.add('dark-mode');
+    toggle.checked = true;
+  }
+
+  toggle.addEventListener('change', () => {
+    const isDark = toggle.checked;
+    document.body.classList.toggle('dark-mode', isDark);
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+
+    // Apply to all open tab contents
+    document.querySelectorAll('.tab-pane').forEach(tab => {
+      tab.classList.toggle('dark-mode', isDark);
+    });
+  });
+
+  
+</script>
+
+<style>
+   .canvas-container {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    width: 100%;
+    height: 100vh; /* Full-page height */
+}
+
+.container {
+    padding: 10px 20px; /* Reduced padding for smaller buttons */
+    color: white;
+    width: 150px;
+    font-size: 18px; /* Smaller font size */
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 2px solid white;
+    border-radius: 8px; /* Slightly reduced border radius */
+    background: #555; /* Gray color */
+    transition: transform 0.3s ease, background 0.3s ease;
+}
+
+
+
+    .container:hover {
+        transform: scale(1.1); /* Hover effect */
+    }
+
+    .arrow {
+        background: #ff5733; /* Arrow container color */
+    }
+
+    .rabbit {
+        background: #33c3ff; /* Rabbit container color */
+    }
+</style>
+
+
+
 
   <!-- Dark Mode Toggle (Top Right) -->
 <!-- From Uiverse.io by Galahhad --> 
+<label class="theme-switch" >
+<input type="checkbox" class="theme-switch__checkbox" id="themeToggle">
 
-  <!-- Dark Mode Toggle (Top Right) -->
-<!-- From Uiverse.io by Galahhad --> 
-<div class="theme-switch-wrapper">
-  <label class="theme-switch">
-    <input type="checkbox" class="theme-switch__checkbox" id="themeToggle">
-    <div class="theme-switch__container">
-      <div class="theme-switch__clouds"></div>
-      <div class="theme-switch__stars-container">
-        <!-- Stars SVG -->
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 55" fill="none">
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M135.831 3.00688C135.055 3.85027 134.111 4.29946 133 4.35447C134.111 4.40947 135.055 4.85867 135.831 5.71123C136.607 6.55462 136.996 7.56303 136.996 8.72727C136.996 7.95722 137.172 7.25134 137.525 6.59129C137.886 5.93124 138.372 5.39954 138.98 5.00535C139.598 4.60199 140.268 4.39114 141 4.35447C139.88 4.2903 138.936 3.85027 138.16 3.00688C137.384 2.16348 136.996 1.16425 136.996 0C136.996 1.16425 136.607 2.16348 135.831 3.00688ZM31 23.3545C32.1114 23.2995 33.0551 22.8503 33.8313 22.0069C34.6075 21.1635 34.9956 20.1642 34.9956 19C34.9956 20.1642 35.3837 21.1635 36.1599 22.0069C36.9361 22.8503 37.8798 23.2903 39 23.3545C38.2679 23.3911 37.5976 23.602 36.9802 24.0053C36.3716 24.3995 35.8864 24.9312 35.5248 25.5913C35.172 26.2513 34.9956 26.9572 34.9956 27.7273C34.9956 26.563 34.6075 25.5546 33.8313 24.7112C33.0551 23.8587 32.1114 23.4095 31 23.3545Z" fill="currentColor"></path>
-        </svg>
-      </div>
-      <div class="theme-switch__circle-container">
-        <div class="theme-switch__sun-moon-container">
-          <div class="theme-switch__moon">
-            <div class="theme-switch__spot"></div>
-            <div class="theme-switch__spot"></div>
-            <div class="theme-switch__spot"></div>
-          </div>
+  <div class="theme-switch__container">
+    <div class="theme-switch__clouds"></div>
+    <div class="theme-switch__stars-container">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 55" fill="none">
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M135.831 3.00688C135.055 3.85027 134.111 4.29946 133 4.35447C134.111 4.40947 135.055 4.85867 135.831 5.71123C136.607 6.55462 136.996 7.56303 136.996 8.72727C136.996 7.95722 137.172 7.25134 137.525 6.59129C137.886 5.93124 138.372 5.39954 138.98 5.00535C139.598 4.60199 140.268 4.39114 141 4.35447C139.88 4.2903 138.936 3.85027 138.16 3.00688C137.384 2.16348 136.996 1.16425 136.996 0C136.996 1.16425 136.607 2.16348 135.831 3.00688ZM31 23.3545C32.1114 23.2995 33.0551 22.8503 33.8313 22.0069C34.6075 21.1635 34.9956 20.1642 34.9956 19C34.9956 20.1642 35.3837 21.1635 36.1599 22.0069C36.9361 22.8503 37.8798 23.2903 39 23.3545C38.2679 23.3911 37.5976 23.602 36.9802 24.0053C36.3716 24.3995 35.8864 24.9312 35.5248 25.5913C35.172 26.2513 34.9956 26.9572 34.9956 27.7273C34.9956 26.563 34.6075 25.5546 33.8313 24.7112C33.0551 23.8587 32.1114 23.4095 31 23.3545ZM0 36.3545C1.11136 36.2995 2.05513 35.8503 2.83131 35.0069C3.6075 34.1635 3.99559 33.1642 3.99559 32C3.99559 33.1642 4.38368 34.1635 5.15987 35.0069C5.93605 35.8503 6.87982 36.2903 8 36.3545C7.26792 36.3911 6.59757 36.602 5.98015 37.0053C5.37155 37.3995 4.88644 37.9312 4.52481 38.5913C4.172 39.2513 3.99559 39.9572 3.99559 40.7273C3.99559 39.563 3.6075 38.5546 2.83131 37.7112C2.05513 36.8587 1.11136 36.4095 0 36.3545ZM56.8313 24.0069C56.0551 24.8503 55.1114 25.2995 54 25.3545C55.1114 25.4095 56.0551 25.8587 56.8313 26.7112C57.6075 27.5546 57.9956 28.563 57.9956 29.7273C57.9956 28.9572 58.172 28.2513 58.5248 27.5913C58.8864 26.9312 59.3716 26.3995 59.9802 26.0053C60.5976 25.602 61.2679 25.3911 62 25.3545C60.8798 25.2903 59.9361 24.8503 59.1599 24.0069C58.3837 23.1635 57.9956 22.1642 57.9956 21C57.9956 22.1642 57.6075 23.1635 56.8313 24.0069ZM81 25.3545C82.1114 25.2995 83.0551 24.8503 83.8313 24.0069C84.6075 23.1635 84.9956 22.1642 84.9956 21C84.9956 22.1642 85.3837 23.1635 86.1599 24.0069C86.9361 24.8503 87.8798 25.2903 89 25.3545C88.2679 25.3911 87.5976 25.602 86.9802 26.0053C86.3716 26.3995 85.8864 26.9312 85.5248 27.5913C85.172 28.2513 84.9956 28.9572 84.9956 29.7273C84.9956 28.563 84.6075 27.5546 83.8313 26.7112C83.0551 25.8587 82.1114 25.4095 81 25.3545ZM136 36.3545C137.111 36.2995 138.055 35.8503 138.831 35.0069C139.607 34.1635 139.996 33.1642 139.996 32C139.996 33.1642 140.384 34.1635 141.16 35.0069C141.936 35.8503 142.88 36.2903 144 36.3545C143.268 36.3911 142.598 36.602 141.98 37.0053C141.372 37.3995 140.886 37.9312 140.525 38.5913C140.172 39.2513 139.996 39.9572 139.996 40.7273C139.996 39.563 139.607 38.5546 138.831 37.7112C138.055 36.8587 137.111 36.4095 136 36.3545ZM101.831 49.0069C101.055 49.8503 100.111 50.2995 99 50.3545C100.111 50.4095 101.055 50.8587 101.831 51.7112C102.607 52.5546 102.996 53.563 102.996 54.7273C102.996 53.9572 103.172 53.2513 103.525 52.5913C103.886 51.9312 104.372 51.3995 104.98 51.0053C105.598 50.602 106.268 50.3911 107 50.3545C105.88 50.2903 104.936 49.8503 104.16 49.0069C103.384 48.1635 102.996 47.1642 102.996 46C102.996 47.1642 102.607 48.1635 101.831 49.0069Z" fill="currentColor"></path>
+      </svg>
+    </div>
+    <div class="theme-switch__circle-container">
+      <div class="theme-switch__sun-moon-container">
+        <div class="theme-switch__moon">
+          <div class="theme-switch__spot"></div>
+          <div class="theme-switch__spot"></div>
+          <div class="theme-switch__spot"></div>
         </div>
       </div>
     </div>
-  </label>
-</div>
-
-<!-- CSS to position top-right -->
-<style>
-.theme-switch-wrapper {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 9999;
-}
-
-/* Optional: Add cursor pointer */
-.theme-switch {
-  cursor: pointer;
-}
-
-
-.table-container {
-  height: auto !important;
-  max-height: none !important;
-}
-
-</style>
-
+  </div>
+</label>
 
 
 <style>
@@ -644,7 +825,7 @@ z-index: 50;
 .theme-switch {
     position: sticky;
     top: 10px;
-    left: 10px;
+    right: 10px;
     padding: 10px;
     z-index: 50;
   --toggle-size: 20px; /* Reduced from 30px */
@@ -856,935 +1037,366 @@ z-index: 50;
 
 
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
-    <script>
-        lottie.loadAnimation({
-            container: document.getElementById("lottieContainer"),
-            renderer: "svg",
-            loop: true,
-            autoplay: true,
-            path: "json_files/r.json" // Replace with actual path to your .rjson file
-        });
-    </script>
+
+  <style>
+    /* Chatbot styles from your original code go here */
+    .chatbot-container {
+      position: fixed; bottom: 20px; right: 20px; z-index: 1000;
+    }
+    .chatbot-button {
+      background-color: #4CAF50; color: white; border: none; padding: 10px 15px;
+      border-radius: 25px; cursor: pointer; font-size: 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .chatbot-button:hover { background-color: #45a049; }
+    .chatbot-window {
+      display: flex; flex-direction: column; width: 300px; height: 700px; max-height: 90vh;
+      background-color: white; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); overflow: hidden;
+    }
+    .chatbot-header {
+      background-color: #4CAF50; color: white; padding: 10px 15px;
+      display: flex; justify-content: space-between; align-items: center; font-weight: bold;
+    }
+    .close-btn {
+      background: none; border: none; color: white; font-size: 20px; cursor: pointer;
+    }
+    .chatbot-messages {
+      flex: 1; overflow-y: auto; padding: 10px; background-color: #f9f9f9; display: flex; flex-direction: column;
+    }
+    .chatbot-input {
+      padding: 10px; border-top: 1px solid #ddd; background-color: white; display: flex; flex-direction: column; gap: 5px;
+    }
+    .quick-options {
+      display: flex; flex-wrap: wrap; gap: 5px;
+    }
+    .quick-option {
+      background-color: #e7f3fe; border: 1px solid #b8daff; border-radius: 15px;
+      padding: 5px 10px; font-size: 12px; cursor: pointer;
+    }
+    .quick-option:hover {
+      background-color: #d0e7ff;
+    }
+    .message {
+      margin-bottom: 10px; padding: 8px 12px; border-radius: 18px; max-width: 80%; word-wrap: break-word;
+    }
+    .bot-message {
+      background-color: #e5e5ea; align-self: flex-start; margin-right: auto;
+    }
+    .user-message {
+      background-color: #4CAF50; color: white; align-self: flex-end; margin-left: auto;
+    }
+    #userInput {
+      width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;
+      resize: none; font-family: inherit; font-size: 14px; height: 60px;
+    }
+    #sendButton {
+      width: 100%; padding: 10px; background-color: #4CAF50; color: white; border: none;
+      border-radius: 4px; cursor: pointer; font-size: 14px;
+    }
+    #sendButton:hover {
+      background-color: #45a049;
+    }
+    .rating-container {
+      display: flex; justify-content: center; margin-top: 10px;
+    }
+    .rating-star {
+      font-size: 24px; color: #ddd; cursor: pointer; margin: 0 2px;
+    }
+    .rating-star:hover,
+    .rating-star.active {
+      color: #ffcc00;
+    }
+    #userInput:disabled {
+      background-color: #eee; color: #888;
+    }
+    #sendButton:disabled {
+      background-color: #a5d6a7; cursor: not-allowed;
+    }
+  </style>
 
 
-<!-- Sidebar -->
-<div id="sidebar-container"></div>
-
-
-
+<div class="chatbot-container">
+  <button class="chatbot-button" onclick="toggleChatbot()">💬 Need Help?</button>
+  <div class="chatbot-window" id="chatbotWindow" style="display: none;">
+    <div class="chatbot-header">
+      <span>BNM Parapharm Bot</span>
+      <button class="close-btn" onclick="toggleChatbot()">×</button>
+    </div>
+    <div class="chatbot-messages" id="chatbotMessages"></div>
+    <div class="chatbot-input">
+      <div class="quick-options" id="quickOptions"></div>
+      <textarea id="userInput" placeholder="Type your message here..." rows="2" disabled></textarea>
+      <button id="sendButton" onclick="sendMessage()" disabled>Send</button>
+    </div>
+  </div>
+</div>
 
 <script>
-fetch("side")
-  .then(response => response.text())
-  .then(html => {
-    const container = document.getElementById("sidebar-container");
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = html;
-    container.innerHTML = tempDiv.innerHTML;
+let currentState = 'initial';
+let selectedPage = '';
 
-    // After DOM injection, dynamically load sidebar script
-    const script = document.createElement('script');
-    script.src = 'sid.js'; // Move all logic into sid.js
-    document.body.appendChild(script);
-  })
-  .catch(error => console.error("Error loading sidebar:", error));
+function toggleChatbot() {
+  const chatbotWindow = document.getElementById('chatbotWindow');
+  if (chatbotWindow.style.display === 'block') {
+    chatbotWindow.style.display = 'none';
+  } else {
+    chatbotWindow.style.display = 'block';
+    if (currentState === 'initial') showInitialMessage();
+  }
+}
 
+function showInitialMessage() {
+  const messagesDiv = document.getElementById('chatbotMessages');
+  messagesDiv.innerHTML = '';
+  addBotMessage("Hi! I'm BNM Parapharm Bot. How can I assist you today?");
+  const quickOptions = document.getElementById('quickOptions');
+  quickOptions.innerHTML = `
+    <div class="quick-option" onclick="selectOption('report_bug')">Report a Bug</div>
+    <div class="quick-option" onclick="selectOption('make_suggestion')">Make a Suggestion</div>
+    <div class="quick-option" onclick="selectOption('give_opinion')">Give Opinion</div>
+  `;
+}
 
-</script>
+function selectOption(option) {
+  const quickOptions = document.getElementById('quickOptions');
+  quickOptions.innerHTML = '';
+  // Keep inputs disabled until typing is complete
+  document.getElementById('userInput').disabled = true;
+  document.getElementById('sendButton').disabled = true;
 
+  if (option === 'report_bug') {
+    currentState = 'select_page';
+    addBotMessage("Please select the page where you encountered the bug:");
+    // Show page options after message is fully typed (estimate 1.5 seconds for this message)
+    setTimeout(() => {
+      quickOptions.innerHTML = `
+        <div class="quick-option" onclick="selectPage('Main')">🏠 Accueil</div>
+        <div class="quick-option" onclick="selectPage('mony')">📈 FONDS Analysis</div>
+        <div class="quick-option" onclick="selectPage('bank')">🏦 Banks</div>
+        <div class="quick-option" onclick="selectPage('ETAT_Fourniseeur')">🤝 CREANCES/DETTES</div>
+        <div class="quick-option" onclick="selectPage('Etatstock')">📦 ÉTAT DE STOCK</div>
+        <div class="quick-option" onclick="selectPage('Product')">🛍️ PRODUCTS</div>
+        <div class="quick-option" onclick="selectPage('Rotation')">🔄 ROTATION</div>
+        <div class="quick-option" onclick="selectPage('Quota')">🎯 PRODUIT QUOTA</div>
+        <div class="quick-option" onclick="selectPage('Recap_Achat')">🛒 Recap Achat</div>
+        <div class="quick-option" onclick="selectPage('recap_achat_facturation')">🧾 Recap Achat F</div>
+        <div class="quick-option" onclick="selectPage('Annual_Recap_A')">📆 Annual Recap</div>
+        <div class="quick-option" onclick="selectPage('Recap_Vente')">💰 Recap Vente</div>
+        <div class="quick-option" onclick="selectPage('Recap_Vente_Facturation')">🧾 Recap Vente F</div>
+        <div class="quick-option" onclick="selectPage('Annual_Recap_V')">📆 Annual Recap</div>
+        <div class="quick-option" onclick="selectPage('Journal_Vente')">📝 Journal de Vente</div>
+        <div class="quick-option" onclick="selectPage('CONFIRMED_ORDERS')">✅ Confirm Order</div>
+      `;
+      document.getElementById('userInput').disabled = false;
+      document.getElementById('sendButton').disabled = false;
+    }, 1500); // Adjust timing based on message length
 
+  } else if (option === 'make_suggestion') {
+    currentState = 'suggestion';
+    addBotMessage("Please type your suggestion below:");
+    // Enable input after message is fully typed (estimate 1.5 seconds for this message)
+    setTimeout(() => {
+      document.getElementById('userInput').disabled = false;
+      document.getElementById('sendButton').disabled = false;
+    }, 1500);
 
-    <!-- Main Content -->
-    <div id="content" class="content flex-grow p-4">
-
-        <div class="flex justify-center items-center mb-6">
-        <h1 class="text-5xl font-bold dark:text-white text-center  ">
-        Annual Recap 
-            </h1>
+  } else if (option === 'give_opinion') {
+    currentState = 'opinion';
+    addBotMessage("Please rate your experience (1-5 stars):");
+    // Show rating stars after message is fully typed (estimate 1.5 seconds for this message)
+    setTimeout(() => {
+      quickOptions.innerHTML = `
+        <div class="rating-container">
+          <span class="rating-star" onclick="rateExperience(1)">★</span>
+          <span class="rating-star" onclick="rateExperience(2)">★</span>
+          <span class="rating-star" onclick="rateExperience(3)">★</span>
+          <span class="rating-star" onclick="rateExperience(4)">★</span>
+          <span class="rating-star" onclick="rateExperience(5)">★</span>
         </div>
-        <!-- Filters -->
-   
-        
-
-        <br>
-
-
-
-        <!-- Search Fields -->
-<!-- Search Fields -->
-<!-- Search Fields -->
-
-
-        <br>
-
-
-
-
-        <br>
-
-        <!-- <button id="downloadExcel_totalrecap"
-            class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
-            <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
-            <span>Total Recap Download</span>
-        </button> -->
-
-
-
-<style>
-.container {
-  padding: 0;
-  box-sizing: border-box;
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  margin: 0 auto;
+      `;
+      document.getElementById('userInput').disabled = false;
+      document.getElementById('sendButton').disabled = false;
+    }, 1500);
+  }
 }
-.dark .button .text {
-  color: #000;  /* Black text */
+function selectPage(page) {
+  selectedPage = page;
+  currentState = 'describe_bug';
+  addBotMessage(`You selected: ${page}. Please describe the bug:`);
+  const quickOptions = document.getElementById('quickOptions');
+  quickOptions.innerHTML = '';
 }
 
-.dark .button .text span {
-  color: #000;  /* Ensures each span is also black */
+function sendMessage() {
+  const userInput = document.getElementById('userInput');
+  const message = userInput.value.trim();
+  if (!message) return;
+
+  addUserMessage(message);
+
+  let feedbackData = {
+    content: message,
+    type: '',
+    page: selectedPage
+  };
+
+  if (currentState === 'describe_bug') {
+    feedbackData.type = 'bug';
+    sendFeedback(feedbackData, "Thank you for reporting this bug. We'll work on it!");
+  } else if (currentState === 'suggestion') {
+    feedbackData.type = 'suggestion';
+    sendFeedback(feedbackData, "Thank you for your suggestion! We appreciate it.");
+  }
+}
+
+function sendFeedback(data, successMessage) {
+  fetch('', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: JSON.stringify(data)
+  })
+  .then(response => response.json())
+  .then(result => {
+    addBotMessage(successMessage);
+    setTimeout(() => {
+      currentState = 'initial';
+      showInitialMessage();
+      document.getElementById('userInput').disabled = true;
+      document.getElementById('sendButton').disabled = true;
+    }, 1500);
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    addBotMessage("There was an issue submitting your data. Please try again.");
+  });
+}
+
+function rateExperience(rating) {
+  const stars = document.querySelectorAll('.rating-star');
+  stars.forEach((star, index) => {
+    star.classList.toggle('active', index < rating);
+  });
+
+  let feedback = '';
+  switch (rating) {
+    case 1:
+      feedback = "We're very sorry to hear that. Is there anything we can improve?";
+      break;
+    case 2:
+      feedback = "Thanks for your feedback. We’ll try to do better!";
+      break;
+    case 3:
+      feedback = "Thanks for your average rating! We appreciate your honesty.";
+      break;
+    case 4:
+      feedback = "Thank you for your good rating! We’re glad you liked us.";
+      break;
+    case 5:
+      feedback = "Wow! Thank you for the perfect score. You made our day!";
+      break;
+  }
+
+  addBotMessage(feedback);
+
+  fetch('', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: JSON.stringify({ type: 'rating', content: feedback, rating: rating })
+  })
+  .then(response => response.json())
+  .then(() => {
+    setTimeout(() => {
+      currentState = 'initial';
+      showInitialMessage();
+    }, 2000);
+  });
 }
 
 
-.container * {
-  border: none;
-  outline: none;
-}
-
-.button {
-  display: flex;
-  align-items: center;
-  position: relative;
-  justify-content: end;
-  cursor: pointer;
-  width: 200px;
-  height: 65px;
-  border-radius: 13px;
-  font-size: 18px;
-  font-weight: 500;
-  background-color: #f9fbf9;
-  border: 3px solid #b7b8b7;
-  -webkit-box-shadow: 0px 10px 24px 0px rgba(214, 215, 214, 1);
-  -moz-box-shadow: 0px 10px 24px 0px rgba(214, 215, 214, 1);
-  box-shadow: 0px 10px 24px 0px rgba(214, 215, 214, 1);
-  overflow: hidden;
-  padding: 0px 13px;
-  border-top-color: #d3d3d3;
-  border-bottom-color: #7e7f7e;
-  transition: all 0.3s ease;
-}
-
-.button .icon {
-  aspect-ratio: 1/1;
-  width: 25px;
-  z-index: 10;
-  transition: 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  left: 30px;
-}
-
-.button .text {
-  z-index: 10;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-}
-.button .text .tab {
-  margin: 0px 2px;
-}
-.button .text span {
-  transition: 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-}
-
-.button::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 190px;
-  height: 52px;
-  background-color: #fff;
-  border-radius: 50px;
-  -webkit-box-shadow: inset 0px 10px 50px -40px rgba(66, 68, 90, 1);
-  -moz-box-shadow: inset 0px 10px 50px -40px rgba(66, 68, 90, 1);
-  box-shadow: inset 0px 10px 50px -40px rgba(66, 68, 90, 1);
-  transition: all 0.3s ease;
-}
-
-.button:hover::before {
-  width: 200px;
-  height: 64px;
-  border-radius: 13px;
-  -webkit-box-shadow: inset 0px -10px 50px -40px rgba(66, 68, 90, 1);
-  -moz-box-shadow: inset 0px -10px 50px -40px rgba(66, 68, 90, 1);
-  box-shadow: inset 0px -10px 50px -40px rgba(66, 68, 90, 1);
-}
-
-.button:hover .text span {
-  transform: translateY(80px);
-  opacity: 0;
-}
-
-.button:hover .icon {
-  width: 35px;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) rotate(45deg);
-}
-
-.button:active {
-  transform: translateY(5px);
-}
-.download-wrapper {
-    display: flex;
-  justify-content: center;
-  gap: 50px; /* Adjust the gap between the two sections */
-  margin-bottom: 20px; /* Adds space between buttons and tables */
-
-}
-
-</style>
-        <br>
-
-
-
-
-
-     
-
-        <!-- second table remise aauto  -->
-
-
-      
-        <style>
-    .autocomplete-suggestions {
-        position: absolute;
-        border: 1px solid #ccc;
-        background-color: white;
-        z-index: 999;
-        max-height: 150px;
-        overflow-y: auto;
-        width: 100%;
-        border-radius: 4px;
+function addBotMessage(text) {
+  const messagesDiv = document.getElementById('chatbotMessages');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = 'message bot-message';
+  messagesDiv.appendChild(messageDiv);
+  
+  // Disable input while typing
+  document.getElementById('userInput').disabled = true;
+  document.getElementById('sendButton').disabled = true;
+  
+  let i = 0;
+  const typingSpeed = 20;
+  
+  function typeWriter() {
+    if (i < text.length) {
+      messageDiv.textContent += text.charAt(i);
+      i++;
+      setTimeout(typeWriter, typingSpeed);
+      scrollToBottom();
+    } else {
+      // Re-enable input after typing is complete
+      document.getElementById('userInput').disabled = false;
+      document.getElementById('sendButton').disabled = false;
     }
-
-    .autocomplete-suggestion {
-        padding: 8px;
-        cursor: pointer;
-    }
-
-    .autocomplete-suggestion:hover {
-        background-color: #f0f0f0;
-    }
-
-    .search-container {
-        display: flex;
-        gap: 20px;
-        flex-wrap: wrap;
-        margin-bottom: 20px;
-        position: relative;
-    }
-
-    .search-container > div {
-        position: relative;
-        flex: 1;
-        min-width: 200px;
-    }
-
-    input[type="text"] {
-        width: 100%;
-        padding: 8px;
-        box-sizing: border-box;
-    }
-
-    .chart-wrapper {
-  position: relative;
-  width: 100%;
-  min-height: 256px;
-}
-
-.chart-controls {
-  margin-bottom: 1.5rem;
-}
-
-.dark .chartjs-render-monitor {
-  filter: brightness(0.8) contrast(1.2);
-}
-
-/* Responsive adjustments */
-@media (max-width: 1024px) {
-  .grid-cols-2 {
-    grid-template-columns: 1fr;
   }
   
-  .chart-wrapper {
-    min-height: 300px;
-  }
+  typeWriter();
 }
 
-
-
-
-.loader {
-  border-top-color: #3b82f6;
-  border-bottom-color: #3b82f6;
-  animation: spin 1s linear infinite;
+function addUserMessage(text) {
+  const messagesDiv = document.getElementById('chatbotMessages');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = 'message user-message';
+  messageDiv.textContent = text;
+  messagesDiv.appendChild(messageDiv);
+  scrollToBottom();
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+function scrollToBottom() {
+  const messagesDiv = document.getElementById('chatbotMessages');
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-.autocomplete-suggestions {
-  position: absolute;
-  z-index: 1000;
-  background: white;
-  border: 1px solid #ddd;
-  max-height: 200px;
-  overflow-y: auto;
-  width: auto;
-  min-width: 200px;
-}
-
-.autocomplete-suggestion {
-  padding: 8px 12px;
-  cursor: pointer;
-}
-
-.autocomplete-suggestion:hover {
-  background-color: #f0f0f0;
-}
-
-.dark .autocomplete-suggestions {
-  background: #374151;
-  border-color: #4b5563;
-}
-
-.dark .autocomplete-suggestion {
-  color: white;
-}
-
-.dark .autocomplete-suggestion:hover {
-  background-color: #4b5563;
-}
-</style>
-<div class="search-container">
-    <div>
-        <label for="recap_fournisseur">Search Fournisseur:</label>
-        <input type="text" id="recap_fournisseur" placeholder="Search...">
-        <div id="fournisseur_suggestions" class="autocomplete-suggestions"></div>
-    </div>
-
-    <div>
-        <label for="recap_client">Search Client:</label>
-        <input type="text" id="recap_client" placeholder="Search...">
-        <div id="client_suggestions" class="autocomplete-suggestions"></div>
-    </div>
-
-    <div>
-        <label for="recap_zone">Search Zone:</label>
-        <input type="text" id="recap_zone" placeholder="Search...">
-        <div id="zone_suggestions" class="autocomplete-suggestions"></div>
-    </div>
-</div>
-
-<br>
-
-<div class="table-wrapper mt-6">
-  <!-- Year 2022 -->
-  <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 mb-6">
-    <h2 class="text-lg font-semibold p-4 dark:text-white text-center">Year 2022</h2>
-
-    <div class="overflow-x-auto">
-      <table class="min-w-full border-collapse text-sm text-left dark:text-white">
-        <thead>
-          <tr class="table-header dark:bg-gray-700">
-            <th onclick="sort2022Table('MONTH')" class="border px-4 py-2">Month</th>
-            <th onclick="sort2022Table('TOTAL')" class="border px-4 py-2">Total</th>
-            <th onclick="sort2022Table('MARGE')" class="border px-4 py-2">Marge (%)</th>
-          </tr>
-        </thead>
-        <tbody id="table-body-2022" class="dark:bg-gray-800">
-          <tr>
-            <td colspan="3" class="text-center py-4">
-              <div class="loader animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Year 2023 -->
-  <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 mb-6">
-    <h2 class="text-lg font-semibold p-4 dark:text-white text-center">Year 2023</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full border-collapse text-sm text-left dark:text-white">
-        <thead>
-          <tr class="table-header dark:bg-gray-700">
-            <th onclick="sort2023Table('MONTH')" class="border px-4 py-2">Month</th>
-            <th onclick="sort2023Table('TOTAL')" class="border px-4 py-2">Total</th>
-            <th onclick="sort2023Table('MARGE')" class="border px-4 py-2">Marge (%)</th>
-          </tr>
-        </thead>
-        <tbody id="table-body-2023" class="dark:bg-gray-800">
-          <tr>
-            <td colspan="3" class="text-center py-4">
-              <div class="loader animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Year 2024 -->
-  <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 mb-6">
-    <h2 class="text-lg font-semibold p-4 dark:text-white text-center">Year 2024</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full border-collapse text-sm text-left dark:text-white">
-        <thead>
-          <tr class="table-header dark:bg-gray-700">
-            <th onclick="sort2024Table('MONTH')" class="border px-4 py-2">Month</th>
-            <th onclick="sort2024Table('TOTAL')" class="border px-4 py-2">Total</th>
-            <th onclick="sort2024Table('MARGE')" class="border px-4 py-2">Marge (%)</th>
-          </tr>
-        </thead>
-        <tbody id="table-body-2024" class="dark:bg-gray-800">
-          <tr>
-            <td colspan="3" class="text-center py-4">
-              <div class="loader animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Year 2025 -->
-  <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 mb-6">
-    <h2 class="text-lg font-semibold p-4 dark:text-white text-center">Year 2025</h2>
-    <div class="overflow-x-auto">
-      <table class="min-w-full border-collapse text-sm text-left dark:text-white">
-        <thead>
-          <tr class="table-header dark:bg-gray-700">
-            <th onclick="sort2025Table('MONTH')" class="border px-4 py-2">Month</th>
-            <th onclick="sort2025Table('TOTAL')" class="border px-4 py-2">Total</th>
-            <th onclick="sort2025Table('MARGE')" class="border px-4 py-2">Marge (%)</th>
-          </tr>
-        </thead>
-        <tbody id="table-body-2025" class="dark:bg-gray-800">
-          <tr>
-            <td colspan="3" class="text-center py-4">
-              <div class="loader animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-<!-- Add this after your tables section -->
-<!-- Add this after your tables section -->
-<div class="chart-container mt-8">
-  <div class="chart-controls bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md mb-6">
-    <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
-      <div>
-        <label for="chart-type" class="block text-sm font-medium dark:text-white">Chart Type</label>
-        <select id="chart-type" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-          <option value="bar">Bar Chart</option>
-          <option value="line">Line Chart</option>
-          <option value="pie">Pie Chart</option>
-          <option value="doughnut">Doughnut Chart</option>
-          <option value="radar">Radar Chart</option>
-        </select>
-      </div>
-    </div>
-  </div>
-
-  <div class="grid grid-cols-1 gap-6">
-    <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md h-full">
-      <h3 class="text-lg font-semibold mb-4 dark:text-white">Total Revenue</h3>
-      <div class="chart-wrapper relative h-64 w-full">
-        <canvas id="totalChart"></canvas>
-      </div>
-    </div>
-    <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md h-full">
-      <h3 class="text-lg font-semibold mb-4 dark:text-white">Margin Percentage</h3>
-      <div class="chart-wrapper relative h-64 w-full">
-        <canvas id="margeChart"></canvas>
-      </div>
-    </div>
-  </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<script>
-
-
-
-async function fetchAndDisplayFournisseurData() {
-  showAllLoaders();
-
-  const params = new URLSearchParams();
-  if (selectedSuggestions.fournisseur) params.append('fournisseur', selectedSuggestions.fournisseur);
-  if (selectedSuggestions.client) params.append('client', selectedSuggestions.client);
-  if (selectedSuggestions.zone) params.append('zone', selectedSuggestions.zone);
-
-  try {
-    const response = await fetch(`http://127.0.0.1:5000/fetchFournisseurDataByYear?${params}`);
-    const data = await response.json();
-
-    for (const year in data) {
-      const tableBody = document.getElementById(`table-body-${year}`);
-      if (tableBody) updateYearTable(tableBody, data[year]);
-    }
-
-    createChartsFromTables();
-  } catch (error) {
-    console.error("Error fetching data:", error);
-    showAllErrors();
-  }
-}
-// Initialize charts on first load
 document.addEventListener('DOMContentLoaded', () => {
-  fetchAndDisplayFournisseurData();
-});
+  const chatbotWindow = document.getElementById('chatbotWindow');
+  chatbotWindow.style.display = 'none';
 
-
-// Track selected suggestions
-let selectedSuggestions = {
-    fournisseur: null,
-    client: null,
-    zone: null
-};
-
-// Improved fetchAndFilter function with selection handling
-async function fetchAndFilter(endpoint, inputElement, suggestionBoxId, type) {
-    const value = inputElement.value.toLowerCase();
-    const box = document.getElementById(suggestionBoxId);
-    
-    // Clear if empty
-    if (value.length === 0) {
-        box.innerHTML = '';
-        selectedSuggestions[type] = null;
-        await fetchAndDisplayFournisseurData();
-        return;
-    }
-
-    try {
-        const res = await fetch(endpoint);
-        const data = await res.json();
-        const filtered = data.filter(item => item.toLowerCase().includes(value));
-
-        box.innerHTML = '';
-        if (filtered.length === 0) {
-            const noResults = document.createElement('div');
-            noResults.classList.add('autocomplete-suggestion');
-            noResults.textContent = 'No results found';
-            box.appendChild(noResults);
-            return;
-        }
-
-        filtered.slice(0, 10).forEach(item => {
-            const div = document.createElement('div');
-            div.classList.add('autocomplete-suggestion');
-            div.textContent = item;
-            div.onclick = async () => {
-                inputElement.value = item;
-                selectedSuggestions[type] = item;
-                box.innerHTML = '';
-                await fetchAndDisplayFournisseurData();
-            };
-            box.appendChild(div);
-        });
-    } catch (error) {
-        console.error(`Error fetching ${endpoint}:`, error);
-    }
-}
-
-// Update event listeners with proper types
-document.getElementById("recap_fournisseur").addEventListener("input", function() {
-    fetchAndFilter("http://192.168.1.94:5000/listfournisseur", this, "fournisseur_suggestions", "fournisseur");
-});
-
-document.getElementById("recap_client").addEventListener("input", function() {
-    fetchAndFilter("http://192.168.1.94:5000/listclient", this, "client_suggestions", "client");
-});
-
-document.getElementById("recap_zone").addEventListener("input", function() {
-    fetchAndFilter("http://192.168.1.94:5000/listregion", this, "zone_suggestions", "zone");
-});
-
-// Clear suggestions when clicking outside
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('.autocomplete-suggestions') && !e.target.matches('input[type="text"]')) {
-        document.querySelectorAll('.autocomplete-suggestions').forEach(box => {
-            box.innerHTML = '';
-        });
-    }
-});
-
-// Handle input clearing
-document.getElementById("recap_fournisseur").addEventListener("change", function() {
-    if (this.value === "") {
-        selectedSuggestions.fournisseur = null;
-        fetchAndDisplayFournisseurData();
-    }
-});
-
-document.getElementById("recap_client").addEventListener("change", function() {
-    if (this.value === "") {
-        selectedSuggestions.client = null;
-        fetchAndDisplayFournisseurData();
-    }
-});
-
-document.getElementById("recap_zone").addEventListener("change", function() {
-    if (this.value === "") {
-        selectedSuggestions.zone = null;
-        fetchAndDisplayFournisseurData();
-    }
-});
-
-
-
-function showAllLoaders() {
-    for (let year = 2022; year <= 2025; year++) {
-        const tableBody = document.getElementById(`table-body-${year}`);
-        if (tableBody) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="3" class="text-center py-4">
-                        <div class="loader animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-                    </td>
-                </tr>
-            `;
-        }
-    }
-}
-
-function showAllErrors() {
-    for (let year = 2022; year <= 2025; year++) {
-        const tableBody = document.getElementById(`table-body-${year}`);
-        if (tableBody) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="3" class="text-center py-4 text-red-500">
-                        Error loading data. Please try again.
-                    </td>
-                </tr>
-            `;
-        }
-    }
-}
-
-const monthNames = {
-    '01': 'Janvier',
-    '02': 'Février',
-    '03': 'Mars',
-    '04': 'Avril',
-    '05': 'Mai',
-    '06': 'Juin',
-    '07': 'Juillet',
-    '08': 'Août',
-    '09': 'Septembre',
-    '10': 'Octobre',
-    '11': 'Novembre',
-    '12': 'Décembre'
-};
-
-function updateYearTable(tableBody, yearData) {
-    tableBody.innerHTML = '';
-
-    if (!yearData || yearData.length === 0) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="3" class="text-center py-4 text-gray-500">
-                    No data available
-                </td>
-            </tr>
-        `;
-        return;
-    }
-
-    // Add TOTAL ANNUEL row at the top
-    const totalRow = yearData.find(item => item.MONTH === null);
-    if (totalRow) {
-        const row = document.createElement('tr');
-        row.className = 'border-b dark:border-gray-700';
-
-        row.innerHTML = `
-            <td colspan="3" class="text-center font-bold bg-gray-100 dark:bg-gray-700 py-2">
-                TOTAL ANNUEL: ${formatNumber(totalRow.TOTAL)} (${totalRow.MARGE.toFixed(2)}%)
-            </td>
-        `;
-        row.classList.add('annual-total-row');
-        tableBody.appendChild(row);
-    }
-
-    // Add the rest of the rows
-    yearData.filter(item => item.MONTH !== null).forEach(item => {
-        const row = document.createElement('tr');
-        row.className = 'border-b dark:border-gray-700';
-
-        const monthName = monthNames[item.MONTH] || item.MONTH;
-
-        row.innerHTML = `
-            <td class="border px-4 py-2">${monthName}</td>
-            <td class="border px-4 py-2">${formatNumber(item.TOTAL)}</td>
-            <td class="border px-4 py-2">${item.MARGE.toFixed(2)}%</td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
-
-function formatNumber(num) {
-    return new Intl.NumberFormat('fr-FR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    }).format(num);
-}
-
-function createSortFunction(year) {
-    return function(column) {
-        const tableBody = document.getElementById(`table-body-${year}`);
-        const rows = Array.from(tableBody.querySelectorAll('tr:not(.annual-total-row)'));
-        
-        rows.sort((a, b) => {
-            const aValue = a.cells[column === 'MONTH' ? 0 : column === 'TOTAL' ? 1 : 2].textContent;
-            const bValue = b.cells[column === 'MONTH' ? 0 : column === 'TOTAL' ? 1 : 2].textContent;
-            
-            if (column === 'MONTH') {
-                const monthNumbers = Object.entries(monthNames).reduce((acc, [num, name]) => {
-                    acc[name] = num;
-                    return acc;
-                }, {});
-                return parseInt(monthNumbers[aValue]) - parseInt(monthNumbers[bValue]);
-            } else {
-                const aNum = parseFloat(aValue.replace(/[^\d,-]/g, '').replace(',', '.'));
-                const bNum = parseFloat(bValue.replace(/[^\d,-]/g, '').replace(',', '.'));
-                return aNum - bNum;
-            }
-        });
-        
-        const annualTotalRow = tableBody.querySelector('.annual-total-row');
-        tableBody.innerHTML = '';
-        rows.forEach(row => tableBody.appendChild(row));
-        if (annualTotalRow) tableBody.appendChild(annualTotalRow);
-    };
-}
-
-const sort2022Table = createSortFunction('2022');
-const sort2023Table = createSortFunction('2023');
-const sort2024Table = createSortFunction('2024');
-const sort2025Table = createSortFunction('2025');
-
-// Initial load
-document.addEventListener('DOMContentLoaded', () => {
-    fetchAndDisplayFournisseurData();
-});
-
-
-
-//CHART PART
-document.addEventListener("DOMContentLoaded", () => {
-  const inputs = {
-    recap_fournisseur: document.getElementById("recap_fournisseur"),
-    recap_client: document.getElementById("recap_client"),
-    recap_zone: document.getElementById("recap_zone"),
-  };
-
-  Object.values(inputs).forEach((input) => {
-    input.addEventListener("focus", () => {
-      // Clear other inputs
-      for (const key in inputs) {
-        if (inputs[key] !== input) {
-          inputs[key].value = "";
-        }
-      }
-
-      // Clear current input and trigger 'input' event
-      input.value = "";
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-    });
-  });
-});
-let totalChart = null;
-let margeChart = null;
-
-function createChartsFromTables() {
-  const chartType = document.getElementById('chart-type').value;
-
-  const allData = [];
-  for (let year = 2022; year <= 2025; year++) {
-    const tableBody = document.getElementById(`table-body-${year}`);
-    if (tableBody) {
-      const rows = tableBody.querySelectorAll('tr:not(.annual-total-row)');
-      rows.forEach(row => {
-        const cells = row.querySelectorAll('td');
-        if (cells.length === 3) {
-          allData.push({
-            year: year.toString(),
-            month: cells[0].textContent.trim(),
-            total: parseFloat(cells[1].textContent.replace(/[^\d,.-]/g, '').replace(',', '.')),
-            marge: parseFloat(cells[2].textContent.replace('%', ''))
-          });
-        }
-      });
-    }
-  }
-
-  updateTotalChart(allData, chartType);
-  updateMargeChart(allData, chartType);
-}
-
-function updateTotalChart(data, chartType) {
-  const ctx = document.getElementById('totalChart');
-  if (totalChart) totalChart.destroy();
-
-  const labels = data.map(item => `${item.month} ${item.year}`);
-  const totals = data.map(item => item.total);
-  const backgroundColors = data.map(item => getChartColor(item.year, 0.7));
-  const borderColors = data.map(item => getChartColor(item.year, 1));
-
-  const dataset = {
-    label: 'Total Revenue',
-    data: totals,
-    backgroundColor: backgroundColors,
-    borderColor: borderColors,
-    borderWidth: 1
-  };
-
-  totalChart = new Chart(ctx, {
-    type: chartType,
-    data: {
-      labels: labels,
-      datasets: chartType === 'pie' || chartType === 'doughnut' ? [dataset] : [dataset]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'top' },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              let label = context.dataset.label || '';
-              if (label) label += ': ';
-              return label + formatNumber(context.raw);
-            }
-          }
-        }
-      },
-      scales: chartType === 'pie' || chartType === 'doughnut' ? {} : {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            callback: function(value) {
-              return formatNumber(value);
-            }
-          }
-        }
-      }
+  document.getElementById('userInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
     }
   });
-}
-
-function updateMargeChart(data, chartType) {
-  const ctx = document.getElementById('margeChart');
-  if (margeChart) margeChart.destroy();
-
-  const labels = data.map(item => `${item.month} ${item.year}`);
-  const marges = data.map(item => item.marge);
-  const backgroundColors = data.map(item => getChartColor(item.year, 0.7));
-  const borderColors = data.map(item => getChartColor(item.year, 1));
-
-  const dataset = {
-    label: 'Margin %',
-    data: marges,
-    backgroundColor: backgroundColors,
-    borderColor: borderColors,
-    borderWidth: 1
-  };
-
-  margeChart = new Chart(ctx, {
-    type: chartType,
-    data: {
-      labels: labels,
-      datasets: chartType === 'pie' || chartType === 'doughnut' ? [dataset] : [dataset]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'top' },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              let label = context.dataset.label || '';
-              if (label) label += ': ';
-              return label + context.raw.toFixed(2) + '%';
-            }
-          }
-        }
-      },
-      scales: chartType === 'pie' || chartType === 'doughnut' ? {} : {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            callback: function(value) {
-              return value + '%';
-            }
-          }
-        }
-      }
-    }
-  });
-}
-
-function getChartColor(year, opacity) {
-  const colors = {
-    '2022': `rgba(54, 162, 235, ${opacity})`,
-    '2023': `rgba(255, 99, 132, ${opacity})`,
-    '2024': `rgba(75, 192, 192, ${opacity})`,
-    '2025': `rgba(153, 102, 255, ${opacity})`
-  };
-  return colors[year] || `rgba(201, 203, 207, ${opacity})`;
-}
-
-
-
-// Event listener for chart type change
-document.getElementById('chart-type').addEventListener('change', createChartsFromTables);
-function formatNumber(value) {
-  return value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-// Dark Mode Toggle
-const themeToggle = document.getElementById('themeToggle');
-const htmlElement = document.documentElement;
-
-const savedDarkMode = localStorage.getItem('darkMode');
-if (savedDarkMode === 'true') {
-    htmlElement.classList.add('dark');
-    themeToggle.checked = true;
-}
-
-themeToggle.addEventListener('change', () => {
-    htmlElement.classList.toggle('dark');
-    const isDarkMode = htmlElement.classList.contains('dark');
-    localStorage.setItem('darkMode', isDarkMode);
 });
 </script>
 
-</body>
 
-</html>
+
+<SCRipt>
+             // Dark Mode Toggle Functionality
+             const themeToggle = document.getElementById('themeToggle');
+            const htmlElement = document.documentElement;
+
+            // Load Dark Mode Preference from Local Storage
+            const savedDarkMode = localStorage.getItem('darkMode');
+            if (savedDarkMode === 'true') {
+                htmlElement.classList.add('dark');
+                themeToggle.checked = true;
+            }
+
+            // Toggle Dark Mode on Click
+            themeToggle.addEventListener('change', () => {
+                htmlElement.classList.toggle('dark');
+                const isDarkMode = htmlElement.classList.contains('dark');
+                localStorage.setItem('darkMode', isDarkMode);
+            });
+
+
+</SCRipt>
+    
+    </body>
+    </html>

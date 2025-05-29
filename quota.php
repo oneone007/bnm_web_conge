@@ -1,8 +1,7 @@
 <?php
 session_start();
 
-// Set session timeout to 1 hour (3600 seconds)
-$inactive_time = 3600;
+
 
 // Check if the user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -10,25 +9,11 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Check if last activity is set
-if (isset($_SESSION['last_activity'])) {
-    // Calculate session lifetime 
-    $session_lifetime = time() - $_SESSION['last_activity'];
-
-    if ($session_lifetime > $inactive_time) {
-        session_unset(); // Unset session variables
-        session_destroy(); // Destroy the session
-        header("Location: BNM?session_expired=1"); // Redirect to login page with message
-        exit();
-    }
+// Restrict access for 'vente' and 'achat'
+if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable','Sup Achat'])) {
+    header("Location: Acess_Denied");    exit();
 }
 
-// Update last activity timestamp
-$_SESSION['last_activity'] = time();
-if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser'])) {
-    header("Location: Acess_Denied");
-    exit();
-}
 ?>
 <!DOCTYPE html>
 <html lang="en" >
@@ -44,6 +29,7 @@ if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser']))
     
     <link rel="stylesheet" href="product.css">
     <link rel="stylesheet" href="prdct.css">
+    <script src="theme.js"></script>
 
 
  
@@ -54,35 +40,25 @@ if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser']))
 
     <!-- Dark/Light Mode Toggle Button -->
 
-  <!-- Dark Mode Toggle (Top Right) -->
-<!-- From Uiverse.io by Galahhad --> 
-<div class="theme-switch-wrapper">
-  <label class="theme-switch">
-    <input type="checkbox" class="theme-switch__checkbox" id="themeToggle">
-    <div class="theme-switch__container">
-      <div class="theme-switch__clouds"></div>
-      <div class="theme-switch__stars-container">
-        <!-- Stars SVG -->
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 55" fill="none">
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M135.831 3.00688C135.055 3.85027 134.111 4.29946 133 4.35447C134.111 4.40947 135.055 4.85867 135.831 5.71123C136.607 6.55462 136.996 7.56303 136.996 8.72727C136.996 7.95722 137.172 7.25134 137.525 6.59129C137.886 5.93124 138.372 5.39954 138.98 5.00535C139.598 4.60199 140.268 4.39114 141 4.35447C139.88 4.2903 138.936 3.85027 138.16 3.00688C137.384 2.16348 136.996 1.16425 136.996 0C136.996 1.16425 136.607 2.16348 135.831 3.00688ZM31 23.3545C32.1114 23.2995 33.0551 22.8503 33.8313 22.0069C34.6075 21.1635 34.9956 20.1642 34.9956 19C34.9956 20.1642 35.3837 21.1635 36.1599 22.0069C36.9361 22.8503 37.8798 23.2903 39 23.3545C38.2679 23.3911 37.5976 23.602 36.9802 24.0053C36.3716 24.3995 35.8864 24.9312 35.5248 25.5913C35.172 26.2513 34.9956 26.9572 34.9956 27.7273C34.9956 26.563 34.6075 25.5546 33.8313 24.7112C33.0551 23.8587 32.1114 23.4095 31 23.3545Z" fill="currentColor"></path>
-        </svg>
-      </div>
-      <div class="theme-switch__circle-container">
-        <div class="theme-switch__sun-moon-container">
-          <div class="theme-switch__moon">
-            <div class="theme-switch__spot"></div>
-            <div class="theme-switch__spot"></div>
-            <div class="theme-switch__spot"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </label>
-</div>
 
 
-
-
+    <style>
+    
+    // In your CSS (add this to prevent layout shifts)
+    .content {
+      margin-left: 0 !important; /* Force no margin for sidebar */
+      transition: none !important; /* Disable animations */
+    }
+    
+    .sidebar {
+      display: none !important; /* Completely hide sidebar */
+    }
+    
+    .sidebar-hidden {
+      display: none !important;
+    }
+    </style>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <script>
         // Second animation
@@ -98,30 +74,6 @@ if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser']))
 
     <!-- Sidebar -->
 <!-- Sidebar -->
-
-
-<div id="sidebar-container"></div>
-
-
-
-<script>
-fetch("side")
-  .then(response => response.text())
-  .then(html => {
-    const container = document.getElementById("sidebar-container");
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = html;
-    container.innerHTML = tempDiv.innerHTML;
-
-    // After DOM injection, dynamically load sidebar script
-    const script = document.createElement('script');
-    script.src = 'sid.js'; // Move all logic into sid.js
-    document.body.appendChild(script);
-  })
-  .catch(error => console.error("Error loading sidebar:", error));
-
-
-</script>
 
     <!-- Main Content -->
     <div id="content" class="content flex-grow p-4">
@@ -259,7 +211,18 @@ tr:nth-child(even) {
 
 
     .selected-row {
-    background-color: #cce5ff;
+    background-color: #3b82f6 !important; /* Blue background */
+    color: white !important;
+}
+
+    .selected-row:hover {
+    background-color: #2563eb !important; /* Darker blue on hover */
+}
+
+    /* Dark mode support for selected row */
+    .dark .selected-row {
+    background-color: #1d4ed8 !important;
+    color: white !important;
 }
 .input {
     padding: 0.5rem;
@@ -273,6 +236,16 @@ tr:nth-child(even) {
     overflow-y: auto;
     width: 100%;
     border-radius: 6px;
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    z-index: 1000;
+    box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin-bottom: 4px;
+    left: 0;
+    z-index: 1000; /* High z-index to ensure it's above other elements */
+    box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin-bottom: 4px; /* Add some space between input and dropdown */
 }
 
 
@@ -350,8 +323,8 @@ tr:nth-child(even) {
     <!-- Canvas Container (Right Side) -->
     <div class="mt-4 md:mt-0 md:ml-4 w-full md:w-1/2">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">Product Quota Chart</h2>
-        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
-            <canvas id="productQuotaChart"></canvas>
+        <div class=" ">
+        <canvas id="productQuotaChart"></canvas>
         </div>
         <div class="flex justify-center mt-4">
             <button class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded transition-colors" onclick="changeChartType()">
@@ -372,11 +345,12 @@ let currentSort = { column: null, direction: 'asc' };
 let currentSortOp = { column: null, direction: 'asc' };
 let chartInstance = null;
 let currentChartType = 'bar'; // Default chart type
+let selectedProductName = null; // Track selected product
 
 // Load product quota data
 async function loadQuotaProducts() {
     try {
-        const response = await fetch('http://127.0.0.1:5000/quota-product');
+        const response = await fetch('http://192.168.1.94:5000/quota-product');
         const data = await response.json();
         if (Array.isArray(data)) {
             originalData = data;
@@ -408,12 +382,34 @@ function renderProductQuotaTable(data) {
 
         const row = document.createElement("tr");
         row.classList.add("cursor-pointer", "hover:bg-gray-100", "dark:hover:bg-gray-700");
+        
+        // Apply selected styling if this is the selected product
+        if (selectedProductName === item.NAME) {
+            row.classList.add('selected-row');
+        }
+        
         row.innerHTML = `
             <td class="border border-gray-300 px-4 py-2 dark:border-gray-600">${item.NAME}</td>
             <td class="border border-gray-300 px-4 py-2 dark:border-gray-600">${formatNumberWithSpaces(item.PRIX)}</td>
             <td class="border border-gray-300 px-4 py-2 dark:border-gray-600">${item.QTY}</td>
         `;
         row.addEventListener("click", () => {
+            // Remove selected class from all rows
+            const allRows = tbody.querySelectorAll('tr');
+            allRows.forEach(r => r.classList.remove('selected-row'));
+            
+            // Add selected class to clicked row
+            row.classList.add('selected-row');
+            
+            // Update selected product name
+            selectedProductName = item.NAME;
+            
+            // Update search input with product name
+            document.getElementById('search-product').value = item.NAME;
+            
+            // Hide dropdown if it's open
+            document.getElementById('product-dropdown').classList.add('hidden');
+            
             loadOperatorQuotaData(item.NAME);
         });
         tbody.appendChild(row);
@@ -453,7 +449,7 @@ function sortTable(column) {
 // Load Operator Quota Data
 async function loadOperatorQuotaData(productName) {
     try {
-        const response = await fetch(`http://127.0.0.1:5000/quota-operator?produit=${encodeURIComponent(productName)}`);
+        const response = await fetch(`http://192.168.1.94:5000/quota-operator?produit=${encodeURIComponent(productName)}`);
         const data = await response.json();
         if (Array.isArray(data)) {
             operatorData = data;
@@ -563,6 +559,7 @@ borderColor: [
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            backgroundColor: '#f3f4f6',  // <-- add this
             plugins: {
                 legend: {
                     position: 'top',
@@ -577,7 +574,7 @@ borderColor: [
                                 `Percentage: ${percentage}`
                             ];
                         }
-                    }
+                    }   
                 },
                 // For pie/doughnut charts only
                 datalabels: {
@@ -652,6 +649,40 @@ function changeChartType() {
     }
 }
 
+
+// Load data when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    loadQuotaProducts();
+    
+    // Make sure the chart canvas has a defined height
+    const canvas = document.getElementById('productQuotaChart');
+    canvas.style.height = '300px';
+    canvas.style.width = '100%';
+    canvas.style.backgroundColor = '#f3f4f6';
+    
+    // Add event listener to search input for Enter key
+    const searchInput = document.getElementById("search-product");
+    searchInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            const query = searchInput.value.trim();
+            if (query) {
+                const matchingItem = originalData.find(item => 
+                    item.NAME.toLowerCase() === query.toLowerCase()
+                );
+                if (matchingItem) {
+                    // Update selected product name
+                    selectedProductName = matchingItem.NAME;
+                    
+                    // Re-render table to show selection
+                    renderProductQuotaTable(originalData.filter(i => i.NAME === matchingItem.NAME));
+                    
+                    loadOperatorQuotaData(matchingItem.NAME);
+                }
+            }
+        }
+    });
+});
+
 // Initialize the page
 // document.addEventListener('DOMContentLoaded', () => {
 //     loadQuotaProducts();
@@ -666,11 +697,27 @@ function changeChartType() {
 document.getElementById('search-product').addEventListener('focus', function() {
     // Clear the value
     this.value = '';
+    
+    // Clear the selection
+    selectedProductName = null;
 
     // Trigger the 'input' event to re-run the search
     const event = new Event('input', { bubbles: true });
     this.dispatchEvent(event);
 });
+
+
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById("product-dropdown");
+    const searchInput = document.getElementById("search-product");
+    
+    if (!searchInput.contains(event.target) && !dropdown.contains(event.target)) {
+        dropdown.classList.add("hidden");
+    }
+});
+
 
 // Search and Dropdown Functions
 function filterDropdown(type) {
@@ -693,10 +740,14 @@ function filterDropdown(type) {
         filteredData.slice(0, 5).forEach(item => { // Limit to 5 results
             const option = document.createElement("div");
             option.textContent = item.NAME;
-            option.className = "px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer";
+            option.className = "px-4 py-2 hover:bg-gray-100 hover:text-black dark:hover:bg-white dark:text-white dark:hover:text-black cursor-pointer";
             option.addEventListener("click", () => {
                 input.value = item.NAME;
                 dropdown.classList.add("hidden");
+                
+                // Update selected product name
+                selectedProductName = item.NAME;
+                
                 // Filter the table to show only the selected product
                 renderProductQuotaTable(originalData.filter(i => i.NAME === item.NAME));
                 // Load the operator quota data for this product
@@ -712,43 +763,24 @@ function filterDropdown(type) {
     // Also filter the main table as you type
     renderProductQuotaTable(filteredData);
 }
+// Dark/Light Mode Toggle Functionality
+const themeToggle = document.getElementById('themeToggle');
+const htmlElement = document.documentElement;
 
-// Close dropdown when clicking outside
-document.addEventListener('click', function(event) {
-    const dropdown = document.getElementById("product-dropdown");
-    const searchInput = document.getElementById("search-product");
-    
-    if (!searchInput.contains(event.target) && !dropdown.contains(event.target)) {
-        dropdown.classList.add("hidden");
-    }
+themeToggle.addEventListener('click', () => {
+    htmlElement.classList.toggle('dark');
+    // Save the theme preference in localStorage
+    const isDarkMode = htmlElement.classList.contains('dark');
+    localStorage.setItem('darkMode', isDarkMode);
 });
 
-// Load data when page loads
-document.addEventListener('DOMContentLoaded', () => {
-    loadQuotaProducts();
-    
-    // Make sure the chart canvas has a defined height
-    const canvas = document.getElementById('productQuotaChart');
-    canvas.style.height = '300px';
-    canvas.style.width = '100%';
-    
-    // Add event listener to search input for Enter key
-    const searchInput = document.getElementById("search-product");
-    searchInput.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-            const query = searchInput.value.trim();
-            if (query) {
-                const matchingItem = originalData.find(item => 
-                    item.NAME.toLowerCase() === query.toLowerCase()
-                );
-                if (matchingItem) {
-                    loadOperatorQuotaData(matchingItem.NAME);
-                }
-            }
-        }
-    });
-});
-
+// Check for saved theme preference
+const savedDarkMode = localStorage.getItem('darkMode');
+if (savedDarkMode === 'true') {
+    htmlElement.classList.add('dark');
+} else {
+    htmlElement.classList.remove('dark');
+}
 </script>
 
 

@@ -3,46 +3,49 @@ body {
     font-family: 'Inter', sans-serif;
 }
 
+
 .table-container {
     max-height: 400px;
     overflow-y: auto;
-    /* Enables vertical scrolling if needed */
     overflow-x: auto;
-    /* Enables horizontal scrolling if needed */
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     width: 100%;
     display: flex;
     flex-direction: column;
-}
-
-.table-container table {
+  }
+  
+  .table-container table {
     width: 100%;
     table-layout: auto;
-    /* Allows columns to resize dynamically */
-    min-width: 100%;
-    /* Ensures the table doesn't shrink too much */
-    max-width: 100%;
-    /* Prevents overflow beyond the container */
     border-collapse: collapse;
-}
-
-thead {
+  }
+  
+  thead {
     position: sticky;
     top: 0;
     background-color: #f3f4f6;
     z-index: 10;
-}
-
-th,
-td {
-    white-space: nowrap;
-    /* Prevents text wrapping */
+  }
+  
+  th,
+  td {
     text-align: left;
     padding: 10px;
     border: 1px solid #ddd;
-}
-
+    white-space: normal; /* ALLOW MULTILINE */
+    word-break: break-word; /* Wrap long words */
+    line-height: 1.4;
+  }
+  
+  tbody tr {
+    height: auto; /* Allow row height to adjust */
+  }
+  
+  .table-container.placement-table {
+    flex: 0.5;
+    width: 10px;
+  }
 .dark .table-container {
     border-color: #374151;
 }
@@ -98,32 +101,6 @@ td {
 
 
 
-
-
-
-.sidebar {
-    min-width: 200px;
-    max-width: 250px;
-    background-color: #f9fafb;
-    border-right: 1px solid #e5e7eb;
-    transition: transform 0.3s ease-in-out;
-    position: fixed;
-    height: 100vh;
-    z-index: 40;
-}
-
-.sidebar-hidden {
-    transform: translateX(-100%);
-}
-
-.content {
-    margin-left: 250px;
-    /* Adjust this value based on the sidebar width */
-    transition: margin-left 0.3s ease-in-out;
-    width: calc(100% - 250px);
-    /* Adjust this value based on the sidebar width */
-}
-
 .content-full {
     margin-left: 0;
     width: 100%;
@@ -147,12 +124,6 @@ td {
     background-color: #f9fafb;
 }
 
-/* Dark mode styles */
-.dark .sidebar {
-    background-color: #1f2937;
-    border-right-color: #374151;
-}
-
 
 
 .dark body {
@@ -161,11 +132,6 @@ td {
 }
 
 
-/* Dark Mode */
-html.dark .sidebar {
-    background-color: #1f2937;
-    border-right-color: #374151;
-}
 
 html.dark body {
     background-color: #111827;
@@ -485,18 +451,164 @@ z-index: 50;
 background-color: #d1d5db !important; /* Light gray */
 font-weight: bold;
 }
-
-/* Sidebar Hidden by Default */
-.sidebar-hidden {
-    transform: translateX(-100%);
+/* Resizable Columns */
+th.resizable {
+  position: relative;
 }
 
-/* Sidebar Appears Smoothly */
-.sidebar {
-    transition: transform 0.3s ease-in-out;
+th.resizable .resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 5px;
+  cursor: col-resize;
+  user-select: none;
+  height: 100%;
 }
-
-/* Sidebar Stays Open Until Mouse Leaves */
-.sidebar:hover {
-    transform: translateX(0);
-}  
+.resizer:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+.content {
+    margin-left: 0 !important; /* Force no margin for sidebar */
+    transition: none !important; /* Disable animations */
+  }
+  
+  .sidebar {
+    display: none !important; /* Completely hide sidebar */
+  }
+  
+  .sidebar-hidden {
+    display: none !important;
+  }
+  .container {
+    padding: 0;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin: 0 auto;
+  }
+  .dark .button .text {
+    color: #000;  /* Black text */
+  }
+  
+  .dark .button .text span {
+    color: #000;  /* Ensures each span is also black */
+  }
+  
+  
+  .container * {
+    border: none;
+    outline: none;
+  }
+  
+  .button {
+    display: flex;
+    align-items: center;
+    position: relative;
+    justify-content: end;
+    cursor: pointer;
+    width: 200px;
+    height: 65px;
+    border-radius: 13px;
+    font-size: 18px;
+    font-weight: 500;
+    background-color: #f9fbf9;
+    border: 3px solid #b7b8b7;
+    -webkit-box-shadow: 0px 10px 24px 0px rgba(214, 215, 214, 1);
+    -moz-box-shadow: 0px 10px 24px 0px rgba(214, 215, 214, 1);
+    box-shadow: 0px 10px 24px 0px rgba(214, 215, 214, 1);
+    overflow: hidden;
+    padding: 0px 13px;
+    border-top-color: #d3d3d3;
+    border-bottom-color: #7e7f7e;
+    transition: all 0.3s ease;
+  }
+  
+  .button .icon {
+    aspect-ratio: 1/1;
+    width: 25px;
+    z-index: 10;
+    transition: 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    left: 30px;
+  }
+  
+  .button .text {
+    z-index: 10;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+  }
+  .button .text .tab {
+    margin: 0px 2px;
+  }
+  .button .text span {
+    transition: 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+  
+  .button::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 190px;
+    height: 52px;
+    background-color: #fff;
+    border-radius: 50px;
+    -webkit-box-shadow: inset 0px 10px 50px -40px rgba(66, 68, 90, 1);
+    -moz-box-shadow: inset 0px 10px 50px -40px rgba(66, 68, 90, 1);
+    box-shadow: inset 0px 10px 50px -40px rgba(66, 68, 90, 1);
+    transition: all 0.3s ease;
+  }
+  
+  .button:hover::before {
+    width: 200px;
+    height: 64px;
+    border-radius: 13px;
+    -webkit-box-shadow: inset 0px -10px 50px -40px rgba(66, 68, 90, 1);
+    -moz-box-shadow: inset 0px -10px 50px -40px rgba(66, 68, 90, 1);
+    box-shadow: inset 0px -10px 50px -40px rgba(66, 68, 90, 1);
+  }
+  
+  .button:hover .text span {
+    transform: translateY(80px);
+    opacity: 0;
+  }
+  
+  .button:hover .icon {
+    width: 35px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+  
+  .button:active {
+    transform: translateY(5px);
+  }
+  .download-wrapper {
+      display: flex;
+    justify-content: center;
+    gap: 50px; /* Adjust the gap between the two sections */
+    margin-bottom: 20px; /* Adds space between buttons and tables */
+  
+  }
+  
+  th {
+      position: relative;
+  }
+  
+  .resizer {
+      background: transparent;
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 5px;
+      height: 100%;
+      cursor: col-resize;
+      z-index: 1;
+  }
+  

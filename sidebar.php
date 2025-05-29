@@ -1,8 +1,7 @@
 <?php
 session_start();
 
-// Set session timeout to 1 hour (3600 seconds)
-$inactive_time = 3600;
+
 
 // Check if the user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -14,21 +13,35 @@ if (!isset($_SESSION['user_id'])) {
 $username = $_SESSION['username'] ?? 'Guest';
 $Role = $_SESSION['Role'] ?? 'Uknown'; // Default role as 'user'
 
-// Check if last activity is set
-if (isset($_SESSION['last_activity'])) {
-    // Calculate session lifetime
-    $session_lifetime = time() - $_SESSION['last_activity'];
+// Define allowed pages for specific roles (add more as needed)
+$role_allowed_pages = [
+    'Admin' => 'all', // admin can access all
+    'Developer' => 'all',   // dev can access all
+    'DRH' => 'all',   // drh can access all
+    'Sup Achat' => [
+         'Etatstock', 'Product', 'Rotation', 'Recap_Achat', 'ETAT_Fourniseeur',
+        'Annual_Recap_A', 'Recap_Vente', 'Annual_Recap_V'
+    ],
+    'Sup Vente' => [
+     'Etatstock', 'Product', 'Rotation', 'Quota', 
+        'Recap_Achat', 'Annual_Recap_A', 'Recap_Vente', 'Annual_Recap_V','CONFIRMED_ORDERS'
+    ],
+    'Comptable' => [
+        'mony', 'bank', 'ETAT_Fourniseeur',
+        'recap_achat_facturation', 'Recap_Vente_Facturation'
+        , 'Journal_Vente'
+    ],
+];
 
-    if ($session_lifetime > $inactive_time) {
-        session_unset(); // Unset session variables
-        session_destroy(); // Destroy the session
-        header("Location: BNM?session_expired=1"); // Redirect to login page with message
-        exit();
+
+function is_page_allowed($page, $role, $role_allowed_pages) {
+    if (($role_allowed_pages[$role] ?? null) === 'all') {
+        return true;
     }
+    $allowed = $role_allowed_pages[$role] ?? [];
+    return in_array($page, $allowed);
 }
 
-// Update last activity timestamp
-$_SESSION['last_activity'] = time();
 
 // Role-based access control (example)
 if ($Role !== 'admin' && basename($_SERVER['PHP_SELF']) === 'AdminDashboard.php') {
@@ -73,535 +86,615 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dynamic Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-bg: #ffffff;
+            --sidebar-text: #1f2937;
+            --sidebar-hover: #f3f4f6;
+            --sidebar-active: #e5e7eb;
+            --sidebar-border: #e5e7eb;
+            --sidebar-icon: #4b5563;
+        }
 
-        <script src="https://kit.fontawesome.com/YOUR_KIT_CODE.js" crossorigin="anonymous"></script>
-        <link rel="stylesheet" href="sidebarr.css">
-    </head>
-    <script src="sid.js"></script> <!-- Your sid.js script -->
-<style>
+        .dark {
+            --sidebar-bg: #1f2937;
+            --sidebar-text: #f3f4f6;
+            --sidebar-hover: #374151;
+            --sidebar-active: #4b5563;
+            --sidebar-border: #374151;
+            --sidebar-icon: #9ca3af;
+        }
 
-.logoutButton {
---figure-duration: 100ms;
---transform-figure: none;
---walking-duration: 100ms;
---transform-arm1: none;
---transform-wrist1: none;
---transform-arm2: none;
---transform-wrist2: none;
---transform-leg1: none;
---transform-calf1: none;
---transform-leg2: none;
---transform-calf2: none;
-background: none;
-border: 0;
-color: grey;
-cursor: pointer;
-display: block;
-font-family: 'Quicksand', sans-serif;
-font-size: 14px;
-font-weight: 500;
-height: 60px;
-outline: none;
-padding: 0 0 0 20px;
-perspective: 100px;
-position: relative;
-width: 140px;
--webkit-tap-highlight-color: transparent; }
+        .sidebar {
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            transition: all 0.3s ease;
+        }
 
-.logoutButton::before {
-background-color: white;
-border-radius: 5px;
-content: '';
-display: block;
-height: 100%;
-left: 0;
-position: absolute;
-top: 0;
-transform: none;
-transition: transform 50ms ease;
-width: 100%;
-z-index: 2; }
-.logoutButton:hover .door {
-transform: rotateY(20deg); }
-.logoutButton:active::before {
-transform: scale(0.96); }
-.logoutButton:active .door {
-transform: rotateY(28deg); }
-.logoutButton.clicked::before {
-transform: none; }
-.logoutButton.clicked .door {
-transform: rotateY(35deg); }
-.logoutButton.door-slammed .door {
-transform: none;
-transition: transform 100ms ease-in 250ms; }
-.logoutButton.falling {
-animation: shake 200ms linear; }
-.logoutButton.falling .bang {
-animation: flash 300ms linear; }
-.logoutButton.falling .figure {
-animation: spin 1000ms infinite linear;
-bottom: -450px;
-opacity: 0;
-right: 1px;
-transition: transform calc(var(--figure-duration) * 1ms) linear, bottom calc(var(--figure-duration) * 1ms) cubic-bezier(0.7, 0.1, 1, 1) 100ms, opacity calc(var(--figure-duration) * 0.25ms) linear calc(var(--figure-duration) * 0.75ms);
-z-index: 1; }
-.logoutButton--light::before {
-background-color: grey; }
-.logoutButton--light .button-text {
-color: white; }
-.logoutButton--light .door,
-.logoutButton--light .doorway {
-fill: white; }
+        .sidebar-nav button {
+            color: var(--sidebar-text);
+        }
 
-.button-text {
-color: rgb(10, 0, 0);
-font-weight: 900;
-font-size:25px;
-position: relative;
-z-index: 10; }
+        .sidebar-nav button:hover {
+            background-color: var(--sidebar-hover);
+        }
 
-.logoutButton svg {
-display: block;
-position: absolute; }
+        .sidebar-nav button.active {
+            background-color: var(--sidebar-active);
+        }
 
-.figure {
-bottom: 5px;
-fill: black;
-right: 18px;
-transform: var(--transform-figure);
-transition: transform calc(var(--figure-duration) * 1ms) cubic-bezier(0.2, 0.1, 0.8, 0.9);
-width: 30px;
-z-index: 4; }
+        .sidebar-nav .icon {
+            color: var(--sidebar-icon);
+        }
 
-.door,
-.doorway {
-bottom: 4px;
-fill: grey;
-right: 12px;
-width: 32px; }
+        .sidebar hr {
+            border-color: var(--sidebar-border);
+        }
 
-.door {
-transform: rotateY(20deg);
-transform-origin: 100% 50%;
-transform-style: preserve-3d;
-transition: transform 200ms ease;
-z-index: 5; }
-.door path {
-fill: black;
-stroke: black;
-stroke-width: 4; }
+        /* Submenu animation */
+        .submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
 
-.doorway {
-z-index: 3; }
+        .submenu.show {
+            max-height: 500px;
+            transition: max-height 0.5s ease-in;
+        }
 
-.bang {
-opacity: 0; }
+        .submenu li {
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: all 0.3s ease;
+        }
 
-.arm1, .wrist1, .arm2, .wrist2, .leg1, .calf1, .leg2, .calf2 {
-transition: transform calc(var(--walking-duration) * 1ms) ease-in-out; }
+        .submenu.show li {
+            opacity: 1;
+            transform: translateX(0);
+        }
 
-.arm1 {
-transform: var(--transform-arm1);
-transform-origin: 52% 45%; }
+        .submenu.show li:nth-child(1) { transition-delay: 0.1s; }
+        .submenu.show li:nth-child(2) { transition-delay: 0.2s; }
+        .submenu.show li:nth-child(3) { transition-delay: 0.3s; }
+        .submenu.show li:nth-child(4) { transition-delay: 0.4s; }
 
-.wrist1 {
-transform: var(--transform-wrist1);
-transform-origin: 59% 55%; }
+        /* Chevron rotation */
+        .chevron {
+            transition: transform 0.3s ease;
+        }
 
-.arm2 {
-transform: var(--transform-arm2);
-transform-origin: 47% 43%; }
+        .chevron.rotate {
+            transform: rotate(90deg);
+        }
 
-.wrist2 {
-transform: var(--transform-wrist2);
-transform-origin: 35% 47%; }
+        /* Mode switch */
+        .mode-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
 
-.leg1 {
-transform: var(--transform-leg1);
-transform-origin: 47% 64.5%; }
+        .mode-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
 
-.calf1 {
-transform: var(--transform-calf1);
-transform-origin: 55.5% 71.5%; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 30px;
+        }
 
-.leg2 {
-transform: var(--transform-leg2);
-transform-origin: 43% 63%; }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
 
-.calf2 {
-transform: var(--transform-calf2);
-transform-origin: 41.5% 73%; }
+        input:checked + .slider {
+            background-color: #4b5563;
+        }
 
-@keyframes spin {
-from {
-transform: rotate(0deg) scale(0.94); }
-to {
-transform: rotate(359deg) scale(0.94); } }
-@keyframes shake {
-0% {
-transform: rotate(-1deg); }
-50% {
-transform: rotate(2deg); }
-100% {
-transform: rotate(-1deg); } }
-@keyframes flash {
-0% {
-opacity: 0.4; }
-100% {
-opacity: 0; } }
+        input:checked + .slider:before {
+            transform: translateX(30px);
+        }
 
+        /* Notification styling */
+        .notification {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-left: 4px solid rgb(59, 130, 246);
+            padding: 12px;
+            margin-bottom: 20px;
+            border-radius: 0 8px 8px 0;
+        }
 
+        .notification-text {
+            font-weight: 500;
+        }
 
-.logoutButton svg {
-    width: 50px;
-    height: 50px;
-    /* Optional: add some margin if needed */
-    margin: 0 5px;
-  }
+        .highlight {
+            color: rgb(59, 130, 246);
+            font-weight: 600;
+        }
 
-/**** Wrapper styles ****************/
+        /* Logout button */
+        .logout-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+            width: 100%;
+            text-align: left;
+            background-color: var(--sidebar-hover);
+        }
 
+        .logout-btn:hover {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
 
-/*# sourceMappingURL=c.css.map */   
-</style>
-    <!-- <button id="sidebarToggle"
-class="fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700">
-☰
-</button> -->
+        .logout-btn:hover .icon {
+            color: #ef4444;
+        }
 
-    <!-- <div id="ram-animation"></div> -->
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
+        /* Sidebar toggle button */
+        #sidebarToggle {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            border: 1px solid var(--sidebar-border);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        #sidebarToggle:hover {
+            background-color: var(--sidebar-hover);
+        }
+
+        /* Disabled button styling */
+        .sidebar-nav button.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+            cursor: not-allowed;
+        }
+
+        /* Auto-hide sidebar */
+        .sidebar-auto-hide {
+            transition: transform 0.3s;
+        }
+        @media (max-width: 768px) {
+            .sidebar-auto-hide {
+                transform: none !important;
+            }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                z-index: 999;
+                width: 280px;
+                box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            #sidebarToggle.open {
+                left: 300px;
+            }
+        }
+
+        .dark .text-xs{
+            color:black;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+    <!-- Sidebar Toggle Button -->
+    <button id="sidebarToggle" class="dark:bg-gray-800 dark:text-white dark:border-gray-600">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Sidebar -->
+    <div id="sidebar" class="sidebar w-64 h-screen fixed overflow-y-auto p-4 shadow-lg">
+        <!-- Logo and User Info -->
+        <div class="flex flex-col items-center mb-6">
+            <img src="assets/log.png" alt="Logo" class="w-40 h-auto mb-4">
+            
+            <div class="notification w-full">
+                <div class="notification-info">
+                    <p class="notification-text">
+                        <span>Welcome:</span>
+                        <span><?php echo htmlspecialchars($username); ?></span>
+                        <span class="highlight">(<?php echo htmlspecialchars($Role); ?>)</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dark/Light Mode Toggle -->
+        <div class="mode-toggle mb-6 flex items-center justify-between px-2 py-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <i class="fas fa-moon mr-2"></i>Theme
+            </span>
+            <label class="mode-switch">
+                <input type="checkbox" id="themeToggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <!-- Sidebar Mode Toggle -->
+        <div class="mode-toggle mb-6 flex items-center justify-between px-2 py-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <i class="fas fa-compass mr-2"></i> Mode
+            </span>
+            <div class="flex gap-2">
+                <input type="radio" id="sidebarModeManual" name="sidebarMode" value="manual" checked>
+                <label for="sidebarModeManual" class="text-xs">Manual</label>
+                <input type="radio" id="sidebarModeAuto" name="sidebarMode" value="auto">
+                <label for="sidebarModeAuto" class="text-xs">Auto</label>
+            </div>
+        </div>
+
+        <!-- Navigation Menu -->
+        <nav class="sidebar-nav">
+            <ul class="space-y-1">
+                <!-- Admin Section -->
+                <li>
+                    <?php $page = 'admin'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                    <button <?php if (!$disabled) {?>onclick="navigateTo('admin')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                        <i class="fas fa-tools icon"></i>
+                        <span>Admin</span>
+                    </button>
+                </li>
+
+                <hr class="my-2 border-gray-200 dark:border-gray-600">
+
+                <!-- FONDS PROPRE Section -->
+                <li>
+                    <button onclick="toggleSubmenu('fond-submenu')" class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-coins icon"></i>
+                            <span>FONDS PROPRE</span>
+                        </div>
+                        <i class="fas fa-chevron-right chevron text-xs"></i>
+                    </button>
+                    <ul id="fond-submenu" class="submenu pl-4">
+                        <li>
+                            <?php $page = 'mony'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('mony')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-chart-line icon text-sm"></i>
+                                <span class="text-sm">Analysis</span>
+                            </button>
+                        </li>
+                        <li>
+                            <?php $page = 'bank'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('bank')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-university icon text-sm"></i>
+                                <span class="text-sm">Banks</span>
+                            </button>
+                        </li>
+                        <li>
+                            <?php $page = 'recouverement'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('recouverement')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-money-bill-wave icon text-sm"></i>
+                                <span class="text-sm">Recouvrement</span>
+                            </button>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- DETTES Section -->
+                <li>
+                    <?php $page = 'ETAT_Fourniseeur'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                    <button <?php if (!$disabled) {?>onclick="navigateTo('ETAT_Fourniseeur')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                        <i class="fas fa-handshake icon"></i>
+                        <span>DETTES</span>
+                    </button>
+                </li>
+
+                <hr class="my-2 border-gray-200 dark:border-gray-600">
+
+                <!-- PRODUCTS Section -->
+                <li>
+                    <button onclick="toggleSubmenu('products-submenu')" class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-shopping-bag icon"></i>
+                            <span>PRODUCTS</span>
+                        </div>
+                        <i class="fas fa-chevron-right chevron text-xs"></i>
+                    </button>
+                    <ul id="products-submenu" class="submenu pl-4">
+                        <li>
+                            <?php $page = 'Etatstock'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('Etatstock')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-boxes icon text-sm"></i>
+                                <span class="text-sm">État de Stock</span>
+                            </button>
+                        </li>
+                        <li>
+                            <?php $page = 'Product'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('Product')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-percentage icon text-sm"></i>
+                                <span class="text-sm">Marge</span>
+                            </button>
+                        </li>
+                        <li>
+                            <?php $page = 'Rotation'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('Rotation')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-sync-alt icon text-sm"></i>
+                                <span class="text-sm">Rotation</span>
+                            </button>
+                        </li>
+                        <li>
+                            <?php $page = 'Quota'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('Quota')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-bullseye icon text-sm"></i>
+                                <span class="text-sm">Quota Produit</span>
+                            </button>
+                        </li>
+                    </ul>
+                </li>
+
+                <hr class="my-2 border-gray-200 dark:border-gray-600">
+
+                <!-- RECAPS ACHAT Section -->
+                <li>
+                    <button onclick="toggleSubmenu('recapsa-submenu')" class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-cart-plus icon"></i>
+                            <span>RECAPS ACHAT</span>
+                        </div>
+                        <i class="fas fa-chevron-right chevron text-xs"></i>
+                    </button>
+                    <ul id="recapsa-submenu" class="submenu pl-4">
+                        <li>
+                            <?php $page = 'Recap_Achat'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('Recap_Achat')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-shopping-cart icon text-sm"></i>
+                                <span class="text-sm">Recap Achat</span>
+                            </button>
+                        </li>
+                        <li>
+                            <?php $page = 'recap_achat_facturation'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('recap_achat_facturation')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-file-invoice icon text-sm"></i>
+                                <span class="text-sm">Recap Achat F</span>
+                            </button>
+                        </li>
+                        <li>
+                            <?php $page = 'Annual_Recap_A'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('Annual_Recap_A')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-calendar-alt icon text-sm"></i>
+                                <span class="text-sm">Annual Recap</span>
+                            </button>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- RECAPS VENTE Section -->
+                <li>
+                    <button onclick="toggleSubmenu('recapsv-submenu')" class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-cash-register icon"></i>
+                            <span>RECAPS VENTE</span>
+                        </div>
+                        <i class="fas fa-chevron-right chevron text-xs"></i>
+                    </button>
+                    <ul id="recapsv-submenu" class="submenu pl-4">
+                        <li>
+                            <?php $page = 'Recap_Vente'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('Recap_Vente')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-money-bill-wave icon text-sm"></i>
+                                <span class="text-sm">Recap Vente</span>
+                            </button>
+                        </li>
+                        <li>
+                            <?php $page = 'Recap_Vente_Facturation'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('Recap_Vente_Facturation')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-file-invoice-dollar icon text-sm"></i>
+                                <span class="text-sm">Recap Vente F</span>
+                            </button>
+                        </li>
+                        <li>
+                            <?php $page = 'Annual_Recap_V'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('Annual_Recap_V')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-calendar-check icon text-sm"></i>
+                                <span class="text-sm">Annual Recap</span>
+                            </button>
+                        </li>
+                        <li>
+                            <?php $page = 'CONFIRMED_ORDERS'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('CONFIRMED_ORDERS')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-check-circle icon text-sm"></i>
+                                <span class="text-sm">Confirm Order</span>
+                            </button>
+                        </li>
+                    </ul>
+                </li>
+
+                <hr class="my-2 border-gray-200 dark:border-gray-600">
+
+                <!-- Journal de Vente Section -->
+                <li>
+                    <?php $page = 'Journal_Vente'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                    <button <?php if (!$disabled) {?>onclick="navigateTo('Journal_Vente')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                        <i class="fas fa-book icon"></i>
+                        <span>Journal de Vente</span>
+                    </button>
+                </li>
+
+                <hr class="my-2 border-gray-200 dark:border-gray-600">
+
+                <!-- Affectation Section -->
+                <li>
+                    <?php $page = 'AFFECTATION'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                    <button <?php if (!$disabled) {?>onclick="navigateTo('AFFECTATION')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                        <i class="fas fa-tasks icon"></i>
+                        <span>Affectation</span>
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Logout Button -->
+            <button onclick="logout()" class="logout-btn mt-8">
+                <i class="fas fa-sign-out-alt icon"></i>
+                <span>Logout</span>
+            </button>
+        </nav>
+    </div>
 
     <script>
-        var animation = lottie.loadAnimation({
-            container: document.getElementById('ram-animation'),
-            renderer: 'svg',
-            loop: true,
-            autoplay: true,
-            path: 'json_files/ram.json',
-            rendererSettings: {
-                clearCanvas: true,
-                preserveAspectRatio: 'xMidYMid meet',
-                progressiveLoad: true,
-                hideOnTransparent: true
+    
+  
+        // Navigation function
+        function navigateTo(page) {
+            window.location.href = page;
+        }
+
+        // Logout function
+        function logout() {
+            window.location.href = 'db/logout.php';
+        }
+
+      
+
+        // Mobile sidebar toggle
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        
+        sidebarToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('open');
+            sidebarToggle.classList.toggle('open');
+            
+            if (sidebar.classList.contains('open')) {
+                sidebarToggle.innerHTML = '<i class="fas fa-times"></i>';
+            } else {
+                sidebarToggle.innerHTML = '<i class="fas fa-bars"></i>';
             }
         });
-    </script> -->
 
-<!--  
-<div id="space"></div> -->
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(event) {
+            if (window.innerWidth <= 768 && 
+                !sidebar.contains(event.target) && 
+                !sidebarToggle.contains(event.target) && 
+                sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+                sidebarToggle.classList.remove('open');
+                sidebarToggle.innerHTML = '<i class="fas fa-bars"></i>';
+            }
+        });
 
-  
-<!-- Sidebar Part --> 
-<!-- <div class="sidebar-logo">
-  <div class="scene">
-    <div class="logo">
-      <img src="assets/log.png" alt="Rotating Logo" class="rotating-img">
-    </div>
-  </div>
-</div> -->
-
-    <!-- <div>
-    <span style="margin-left: 10px; font-weight: bold;">
-        </span>
-    </div> -->
-<!-- Place this outside of <nav> and not inside any container -->
-<button id="sidebarToggle" style="
-    position: fixed;
-    top: 20px;
-    left: 260px;
-    z-index: 1000;
-    transition: left 0.3s ease;
-">
-    ☰
-</button>
-
-
-<div id="sidebar" class="sidebar p-4">
-
-
-
-    <img src="assets/log.png" alt="Logo" class="logo">
-
-
-    <!-- From Uiverse.io by alexruix --> 
-
-  <div class="notification">    
-    <div class="notification-info">
-    <p class="notification-text">
-  <!-- <span >Welcome:</span>  -->
-  <span >
-    <?php echo htmlspecialchars($username); ?>
-</span>
-<span class="highlight">
-    (<?php echo htmlspecialchars($Role); ?>)
-</span>
-</p>
-      <!-- <b>Admin!</b>  -->
-    </p>
-    </div>
-  </div>
-    <!-- <h1 class="text-xl font-bold mb-6">📂 Collections</h1> -->
-    <style>
-    nav {
-        padding: 1rem;
-    }
-    nav ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-    nav li {
-        margin-bottom: 0.5rem;
-    }
-    nav button {
-        width: 100%;
-        text-align: left;
-        padding: 0.5rem;
-        border: none;
-        background: none;
-        display: flex; /* already good */
-        align-items: center; /* makes icon and text centered vertically */
-        gap: 0.5rem; /* adds space between icon and text */
-        border-radius: 0.5rem;
-        transition: background-color 0.3s;
-        cursor: pointer;
-        font-size: 1rem; /* ensure consistent size */
-    }
-    nav button:hover {
-        background-color: #f3f4f6; /* light gray hover */
-    }
-    nav hr {
-        margin: 1rem 0;
-        border: 0;
-        height: 1px;
-        background-color: #e5e7eb;
-    }
-
-    .submenu button {
-        padding-left: 1rem;
-        font-size: 0.95rem;
-        gap: 0.5rem; /* same gap between icon and text inside submenu */
-    }
-    .submenu.show {
-        display: block;
-    }
-
-    /* Initially hide the submenus */
-.submenu {
-    display: none;
-    list-style-type: none;
-    padding-left: 20px; /* Indentation for submenu items */
-}
-
-.sidebar-mode-toggle {
-  margin: 10px 0;
-  text-align: center;
-}
-
-.mode-label {
-  display: block;
-  font-weight: bold;
-  color: #222;
-  margin-bottom: 8px;
-  font-size: 14px;
-}
-
-.mode-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-}
-
-.mode-buttons input[type="radio"] {
-  display: none;
-}
-
-.mode-btn {
-  padding: 6px 14px;
-  background-color: #f3f3f3;
-  border: 2px solid #ccc;
-  border-radius: 20px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-weight: bold;
-  font-size: 13px;
-  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
-}
-
-.mode-btn:hover {
-  background-color: #e0e0e0;
-  box-shadow: 0 0 6px rgba(0, 123, 255, 0.3);
-}
-
-.mode-buttons input[type="radio"]:checked + .mode-btn {
-  background: linear-gradient(135deg, #007BFF, #00A6FF);
-  color: white;
-  border-color: #007BFF;
-  box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
-  transform: scale(1.03);
-}
-
-
-</style>
-
-
-
-<nav>
-
-<li class="sidebar-mode-toggle">
-  <label class="mode-label">🧭 Sidebar Mode:</label>
-  <div class="mode-buttons">
-    <input type="radio" id="autoMode" name="mode" value="auto">
-    <label for="autoMode" class="mode-btn">🤖 Auto</label>
-
-    <input type="radio" id="manualMode" name="mode" value="manual">
-    <label for="manualMode" class="mode-btn">🖐️ Manual</label>
-  </div>
-</li>
-
-
-    <ul>
-
-        <li>
-            <button onclick="location.href='Main'">🏠 Accueil</button>
-        </li>
-
-        <!-- <li>
-            <button onclick="location.href='Coming'">📊 Nos analyses</button>
-        </li> -->
-
-        <hr>
-
-
-
-        <li>
-            <button onclick="toggleSubmenu('fond-submenu')">🪙 FONDS PROPRE</button>
-            <ul id="fond-submenu" class="submenu">
-                <li><button onclick="location.href='mony'">📈 Analysis</button></li>
-                <li><button onclick="location.href='bank'">🏦 Banks</button></li>
-            </ul>
-        </li>
-
-
-        <li>
-            <button onclick="location.href='ETAT_Fourniseeur'">🤝 CREANCES/DETTES</button>
-        </li>
-
-        <hr>
-
-
-
-        <li>
-        <button onclick="toggleSubmenu('products-submenu')">🛍️ PRODUCTS</button>
-        <ul id="products-submenu" class="submenu">
-                <li><button onclick="location.href='Etatstock'">📦 ÉTAT DE STOCK</button></li>
-                <li><button onclick="location.href='Product'">🛍️ PRODUCTS</button></li>
-                <li><button onclick="location.href='Rotation'">🔄 ROTATION</button></li>
-                <li><button onclick="location.href='Quota'">🎯 PRODUIT QUOTA</button></li>
-            </ul>
-        </li>
-        <hr>
-
-        <li>
-            <button onclick="toggleSubmenu('recapsa-submenu')">🛒 RECAPS ACHAT</button>
-            <ul id="recapsa-submenu" class="submenu">
-
+        // Make current page active in sidebar
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPage = window.location.pathname.split('/').pop().split('.')[0];
+            const buttons = document.querySelectorAll('nav button');
             
-                <li><button onclick="location.href='Recap_Achat'">🛒 Recap Achat</button></li>
-                <li><button onclick="location.href='recap_achat_facturation'">🧾 Recap Achat F</button></li>
-                <li><button onclick="location.href='Annual_Recap_A'">📆 Annual Recap</button></li>
+            buttons.forEach(button => {
+                if (button.getAttribute('onclick')?.includes(currentPage)) {
+                    button.classList.add('active');
+                    
+                    // Open parent submenu if this is a submenu item
+                    const submenuItem = button.closest('.submenu');
+                    if (submenuItem) {
+                        const parentButton = submenuItem.previousElementSibling;
+                        submenuItem.classList.add('show');
+                        parentButton.querySelector('.chevron').classList.add('rotate');
+                    }
+                }
+            });
+        });
 
-            </ul>
-        </li>
+        // Sidebar Mode Toggle Logic
+        const sidebarModeManual = document.getElementById('sidebarModeManual');
+        const sidebarModeAuto = document.getElementById('sidebarModeAuto');
 
+        function setSidebarMode(mode) {
+            if (mode === 'auto') {
+                sidebar.classList.add('sidebar-auto-hide');
+                sidebarToggle.style.display = 'none';
+                sidebar.classList.remove('open');
+                sidebar.style.transform = 'translateX(-100%)';
+                document.addEventListener('mousemove', handleSidebarReveal);
+                // Add mouseleave event to sidebar to hide it when mouse leaves
+                sidebar.addEventListener('mouseleave', handleSidebarAutoHide);
+            } else {
+                sidebar.classList.remove('sidebar-auto-hide');
+                sidebarToggle.style.display = '';
+                sidebar.style.transform = '';
+                document.removeEventListener('mousemove', handleSidebarReveal);
+                sidebar.removeEventListener('mouseleave', handleSidebarAutoHide);
+            }
+        }
 
-        <li>
-            <button onclick="toggleSubmenu('recapsv-submenu')">💰 RECAPS VENTE</button>
-            <ul id="recapsv-submenu" class="submenu">
+        function handleSidebarReveal(e) {
+            if (e.clientX < 30) {
+                sidebar.style.transform = 'translateX(0)';
+            }
+        }
 
-            
-                <li><button onclick="location.href='Recap_Vente'">💰 Recap Vente</button></li>
-                <li><button onclick="location.href='Recap_Vente_Facturation'">🧾 Recap Vente F</button></li>
-                <li><button onclick="location.href='Annual_Recap_V'">📆 Annual Recap</button></li>
+        function handleSidebarAutoHide(e) {
+            // Only hide if in auto mode and mouse is not over sidebar
+            if (sidebar.classList.contains('sidebar-auto-hide')) {
+                sidebar.style.transform = 'translateX(-100%)';
+            }
+        }
 
-            </ul>
-        </li>
-        <hr>
+        sidebarModeManual.addEventListener('change', function() {
+            if (this.checked) setSidebarMode('manual');
+        });
+        sidebarModeAuto.addEventListener('change', function() {
+            if (this.checked) setSidebarMode('auto');
+        });
 
-        <li>
-            <button onclick="location.href='Journal_Vente'">📝 Journal de Vente</button>
-        </li>
-        <hr>
-        <li>
-            <button onclick="location.href='CONFIRMED_ORDERS'">✅ Confirm Order</button>
-        </li>
-
-    </ul>
-    <br><br>
-    <button  class="logoutButton logoutButton--dark">
-          <svg class="doorway" viewBox="0 0 100 100">
-            <path d="M93.4 86.3H58.6c-1.9 0-3.4-1.5-3.4-3.4V17.1c0-1.9 1.5-3.4 3.4-3.4h34.8c1.9 0 3.4 1.5 3.4 3.4v65.8c0 1.9-1.5 3.4-3.4 3.4z" />
-            <path class="bang" d="M40.5 43.7L26.6 31.4l-2.5 6.7zM41.9 50.4l-19.5-4-1.4 6.3zM40 57.4l-17.7 3.9 3.9 5.7z" />
-          </svg>
-          <svg class="figure" viewBox="0 0 100 100">
-            <circle cx="52.1" cy="32.4" r="6.4" />
-            <path d="M50.7 62.8c-1.2 2.5-3.6 5-7.2 4-3.2-.9-4.9-3.5-4-7.8.7-3.4 3.1-13.8 4.1-15.8 1.7-3.4 1.6-4.6 7-3.7 4.3.7 4.6 2.5 4.3 5.4-.4 3.7-2.8 15.1-4.2 17.9z" />
-            <g class="arm1">
-              <path d="M55.5 56.5l-6-9.5c-1-1.5-.6-3.5.9-4.4 1.5-1 3.7-1.1 4.6.4l6.1 10c1 1.5.3 3.5-1.1 4.4-1.5.9-3.5.5-4.5-.9z" />
-              <path class="wrist1" d="M69.4 59.9L58.1 58c-1.7-.3-2.9-1.9-2.6-3.7.3-1.7 1.9-2.9 3.7-2.6l11.4 1.9c1.7.3 2.9 1.9 2.6 3.7-.4 1.7-2 2.9-3.8 2.6z" />
-            </g>
-            <g class="arm2">
-              <path d="M34.2 43.6L45 40.3c1.7-.6 3.5.3 4 2 .6 1.7-.3 4-2 4.5l-10.8 2.8c-1.7.6-3.5-.3-4-2-.6-1.6.3-3.4 2-4z" />
-              <path class="wrist2" d="M27.1 56.2L32 45.7c.7-1.6 2.6-2.3 4.2-1.6 1.6.7 2.3 2.6 1.6 4.2L33 58.8c-.7 1.6-2.6 2.3-4.2 1.6-1.7-.7-2.4-2.6-1.7-4.2z" />
-            </g>
-            <g class="leg1">
-              <path d="M52.1 73.2s-7-5.7-7.9-6.5c-.9-.9-1.2-3.5-.1-4.9 1.1-1.4 3.8-1.9 5.2-.9l7.9 7c1.4 1.1 1.7 3.5.7 4.9-1.1 1.4-4.4 1.5-5.8.4z" />
-              <path class="calf1" d="M52.6 84.4l-1-12.8c-.1-1.9 1.5-3.6 3.5-3.7 2-.1 3.7 1.4 3.8 3.4l1 12.8c.1 1.9-1.5 3.6-3.5 3.7-2 0-3.7-1.5-3.8-3.4z" />
-            </g>
-            <g class="leg2">
-              <path d="M37.8 72.7s1.3-10.2 1.6-11.4 2.4-2.8 4.1-2.6c1.7.2 3.6 2.3 3.4 4l-1.8 11.1c-.2 1.7-1.7 3.3-3.4 3.1-1.8-.2-4.1-2.4-3.9-4.2z" />
-              <path class="calf2" d="M29.5 82.3l9.6-10.9c1.3-1.4 3.6-1.5 5.1-.1 1.5 1.4.4 4.9-.9 6.3l-8.5 9.6c-1.3 1.4-3.6 1.5-5.1.1-1.4-1.3-1.5-3.5-.2-5z" />
-            </g>
-          </svg>
-          <svg class="door" viewBox="0 0 100 100">
-            <path d="M93.4 86.3H58.6c-1.9 0-3.4-1.5-3.4-3.4V17.1c0-1.9 1.5-3.4 3.4-3.4h34.8c1.9 0 3.4 1.5 3.4 3.4v65.8c0 1.9-1.5 3.4-3.4 3.4z" />
-            <circle cx="66" cy="50" r="3.7" />
-          </svg>
-          <span class="button-text">Exit</span>
-    </button>
-</nav>
-
-
-
-
-  
-</div>
-
-
-    <!-- Logout Button -->
-    <!-- <div class="mt-auto">
-        <button onclick="location.href='db/logout.php'" 
-            class="block text-center py-3 mt-4 w-full rounded-lg shadow-lg 
-            hover:bg-gray-300 transition-all duration-300 transform hover:scale-105">
-            Logout
-        </button>
-    </div>
-     -->
-  
-</div>
-
-<script>
-    
-</script>
+        // Set initial mode
+        if (sidebarModeAuto.checked) {
+            setSidebarMode('auto');
+        } else {
+            setSidebarMode('manual');
+        }
+    </script>
+</body>
 </html>

@@ -1,236 +1,42 @@
 .sidebar {
-    min-width: 200px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    min-width: 250px;
     max-width: 250px;
+    height: 100vh;
     background-color: #f9fafb;
     border-right: 1px solid #e5e7eb;
-    transition: transform 0.3s ease-in-out, width 0.3s ease-in-out;
-    position: fixed;
-    height: 100vh;
+    transition: transform 0.3s ease-in-out;
     z-index: 40;
-    padding-top: 10px;
-    padding-bottom: 20px;
-    left: 0;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto; /* Enable scrolling */
+    padding-top: 60px;
 }
 
-/* Adjust sidebar width for smaller screens */
-/* Responsive Shrink */
-
-@media (max-width: 768px) {
-    .sidebar {
-        width: 180px;
-        min-width: 180px;
-    }
-    .content {
-        padding: 10px;
-    }
-}
-
-/* Push logout button to bottom */
-.sidebar .mt-auto {
-    margin-top: auto;
-    width: 100%;
-}
-
-/* Center align sidebar links */
-.sidebar a {
-    text-align: center;
-}
-
-/* When Sidebar is Hidden */
 .sidebar-hidden {
-    transform: translateX(-100%);
+    transform: translateX(-250px);
 }
 
-/* Content Adjustment */
-.content {
-    margin-left: 250px;
-    transition: margin-left 0.3s ease-in-out;
-    width: calc(100% - 250px);
-    padding: 20px;
-}
-
-/* When Sidebar is Hidden, Expand Content */
-.content-full {
-    margin-left: 0;
-    width: 100%;
-}
-
-/* Adjust content margin for smaller screens */
-@media (max-width: 768px) {
-    .content {
-        margin-left: 200px;
-        width: calc(100% - 200px);
-    }
-}
-
-@media (max-width: 480px) {
-    .content {
-        margin-left: 180px;
-        width: calc(100% - 180px);
-    }
-}
-/* Make sidebar scrollable when content overflows */
-.sidebar:hover {
-    overflow-y: auto;
-}
-
-/* Ensure smooth scrolling */
-.sidebar::-webkit-scrollbar {
-    width: 8px;
-}
-
-.sidebar::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 10px;
-}
-
-.sidebar::-webkit-scrollbar-track {
-    background: #f1f1f1;
-}
-
-/* Adjust sidebar width for smaller screens */
-@media (max-width: 768px) {
-    .sidebar {
-        width: 180px;
-    }
-
-    .sidebar a {
-        font-size: 14px; /* Reduce text size */
-    }
-
-    #ram-animation {
-        height: 80px; /* Adjust RAM animation */
-    }
-
-    .content {
-        margin-left: 180px;
-        width: calc(100% - 180px);
-    }
-}
-
-@media (max-width: 480px) {
-    .sidebar {
-        width: 160px;
-    }
-
-    .sidebar a {
-        font-size: 12px; /* Make text smaller */
-    }
-
-    #ram-animation {
-        height: 70px; /* Further reduce RAM animation */
-    }
-
-    .content {
-        margin-left: 160px;
-        width: calc(100% - 160px);
-    }
-}
-
-/* Responsive Sidebar Behavior */
-@media (max-width: 768px) {
-    .sidebar {
-        transform: translateX(-100%);
-    }
-    
-    .sidebar-active {
-        transform: translateX(0);
-    }
-    
-    .content {
-        margin-left: 0;
-        width: 100%;
-    }
-}
-
-/* Content Adjustment */
-.content {
-    margin-left: 250px;
-    transition: margin-left 0.3s ease-in-out;
-    width: calc(100% - 250px);
-    padding: 20px;
-}
-
-/* When Sidebar is Hidden */
-.sidebar-hidden {
-    transform: translateX(-100%);
-}
-
-/* Responsive Content */
-@media (max-width: 768px) {
-    .content {
-        margin-left: 180px;
-        width: calc(100% - 180px);
-    }
-}
-
-@media (max-width: 480px) {
-    .content {
-        margin-left: 160px;
-        width: calc(100% - 160px);
-    }
-}
-
-/* Sidebar Toggle Button */
+/* Toggle Button */
 #sidebarToggle {
     position: fixed;
-    top: 10px;
-    left: 10px;
-    z-index: 50;
+    top: 20px;
+    left: 260px;
+    z-index: 999;
     background: #2563eb;
     color: white;
-    padding: 10px 15px;
+    padding: 8px 12px;
     border-radius: 8px;
-    font-size: 18px;
     cursor: pointer;
-    transition: background 0.3s;
+    border: none;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 #sidebarToggle:hover {
     background: #1d4ed8;
 }
 
-/* When Sidebar is Hidden, Keep Toggle Button Visible */
-.sidebar-hidden + #sidebarToggle {
-    left: 10px;
-}
-
-/* Responsive Sidebar Behavior */
-@media (max-width: 768px) {
-    .sidebar {
-        transform: translateX(-100%);
-    }
-    
-    .sidebar-active {
-        transform: translateX(0);
-    }
-    
-    .content {
-        margin-left: 0;
-        width: 100%;
-    }
-}
-
-/* Hide sidebar by default */
-.sidebar-hidden {
-    transform: translateX(-100%);
-}
-
-/* Ensure the sidebar remains visible on hover */
-.sidebar {
-    transition: transform 0.3s ease-in-out;
-}
-
-/* When sidebar is hovered, make it visible */
-.sidebar:hover {
-    transform: translateX(0);
-}
-
-
-/* Content */
+/* Content area */
 .content {
     margin-left: 250px;
     transition: margin-left 0.3s ease-in-out;
@@ -243,12 +49,11 @@
     width: 100%;
 }
 
-/* Dark Mode */
+/* Dark mode adjustments */
 html.dark .sidebar {
     background-color: #1f2937;
     border-right-color: #374151;
 }
-
 html.dark body {
     background-color: #111827;
     color: white;

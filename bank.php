@@ -1,9 +1,7 @@
-
 <?php
 session_start();
 
-// Set session timeout to 1 hour (3600 seconds)
-$inactive_time = 3600;
+
 
 // Check if the user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -11,27 +9,11 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Check if last activity is set
-if (isset($_SESSION['last_activity'])) {
-    // Calculate session lifetime
-    $session_lifetime = time() - $_SESSION['last_activity'];
 
-    if ($session_lifetime > $inactive_time) {
-        session_unset(); // Unset session variables
-        session_destroy(); // Destroy the session
-        header("Location: BNM?session_expired=1"); // Redirect to login page with message
-        exit();
-    }
+if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup Vente'])) {
+    header("Location: Acess_Denied");    exit();
 }
 
-// Update last activity timestamp
-$_SESSION['last_activity'] = time();
-
-// Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['vente', 'achat'])) {
-    header("Location: Acess_Denied");
-    exit();
-}
 
 // Initialize default form values
 $default_values = [
@@ -44,7 +26,7 @@ $default_values = [
 ];
 
 // Try to get last submitted values from bank.json
-$json_file = 'bank.json';
+$json_file = 'json_files/bank.json';
 if (file_exists($json_file)) {
     $json_data = file_get_contents($json_file);
     $existing_data = json_decode($json_data, true);
@@ -146,9 +128,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
+    <script src="theme.js"></script>
 
-
-  <style>
+    <style>
     body {
       font-family: 'Segoe UI', sans-serif;
       background-color: #f8f9fa;
@@ -267,18 +249,58 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 }
 
 /* Dark mode styles */
-.dark .sidebar {
-    background-color: #1f2937;
-    border-right-color: #374151;
-}
+body.dark-mode {
+        background-color: #1f2937;
+        color: #f3f4f6;
+    }
 
+    .dark-mode .bank-card {
+        background-color: #374151;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
 
+    .dark-mode .bank-title {
+        color: #f3f4f6;
+        border-bottom-color: #4b5563;
+    }
 
-.dark body {
-    background-color: #111827;
-    color: #010911;
-}
+    .dark-mode .input-group label {
+        color: #9ca3af;
+    }
 
+    .dark-mode .input-group input {
+        background-color: #1f2937;
+        border-color: #4b5563;
+        color: #f3f4f6;
+    }
+
+    .dark-mode .input-group input:focus {
+        border-color: #3b82f6;
+    }
+
+    .dark-mode .submit-btn {
+        background-color: #3b82f6;
+    }
+
+    .dark-mode .submit-btn:hover {
+        background-color: #2563eb;
+    }
+
+    .dark-mode .history-link {
+        color: #60a5fa;
+    }
+
+    .dark-mode .success-message {
+        background-color: #065f46;
+        color: #d1fae5;
+        border-color: #047857;
+    }
+
+    .dark-mode .error-message {
+        background-color: #991b1b;
+        color: #fee2e2;
+        border-color: #dc2626;
+    }
 
 /* Dark Mode */
 html.dark .sidebar {
@@ -365,24 +387,7 @@ html.dark body {
   </style>
 </head>
 <body>
-<script>
-fetch("side")
-  .then(response => response.text())
-  .then(html => {
-    const container = document.getElementById("sidebar-container");
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = html;
-    container.innerHTML = tempDiv.innerHTML;
 
-    // After DOM injection, dynamically load sidebar script
-    const script = document.createElement('script');
-    script.src = 'sidebar.js'; // Move all logic into sidebar.js
-    document.body.appendChild(script);
-  })
-  .catch(error => console.error("Error loading sidebar:", error));
-</script>
-
-<div id="sidebar-container"></div>
 
 <div class="content">
   <div class="container">

@@ -1,0 +1,20 @@
+[
+    {
+        "date": "2025-05-18 11:52:04",
+        "bna_sold": 100,
+        "bna_remise": 100,
+        "bna_check": 1000,
+        "baraka_sold": 1000,
+        "baraka_remise": 1000,
+        "baraka_check": 1000
+    },
+    {
+        "date": "2025-05-19 11:13:37",
+        "bna_sold": 100,
+        "bna_remise": 100,
+        "bna_check": 1000,
+        "baraka_sold": 1000,
+        "baraka_remise": 1000,
+        "baraka_check": 1000
+    }
+]

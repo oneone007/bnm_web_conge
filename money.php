@@ -1,39 +1,17 @@
-
- 
-
 <?php
 session_start();
 
 // Set session timeout to 1 hour (3600 seconds)
-$inactive_time = 3600;
 
-// Check if the user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header("Location: BNM"); // Redirect to login if not logged in
-    exit();
-}
 
-// Check if last activity is set
-if (isset($_SESSION['last_activity'])) {
-    // Calculate session lifetime
-    $session_lifetime = time() - $_SESSION['last_activity'];
-
-    if ($session_lifetime > $inactive_time) {
-        session_unset(); // Unset session variables
-        session_destroy(); // Destroy the session
-        header("Location: BNM?session_expired=1"); // Redirect to login page with message
-        exit();
-    }
-}
 
 // Update last activity timestamp
-$_SESSION['last_activity'] = time();
 
 // Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['vente', 'achat'])) {
-    header("Location: Acess_Denied");
-    exit();
+if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup Vente'])) {
+    header("Location: Acess_Denied");    exit();
 }
+
 
 // ------------------------------------------------------------------------
 
@@ -50,7 +28,7 @@ $banque_total = $bna_sold + $bna_remise + $baraka_sold + $baraka_remise;
 
 
 $grand_total = 0;
-$json_file = 'bank.json';
+$json_file = 'json_files/bank.json';
 
 // Check if the JSON file exists
 
@@ -67,680 +45,27 @@ $json_file = 'bank.json';
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
-
-
-    <style>
-:root {
-  --primary-color:rgb(38, 99, 52);
-
-  --primary-light: #e6e9ff;
-  --secondary-color: #3f37c9;
-  --success-color: #4cc9f0;
-  --warning-color: #f8961e;
-  --danger-color: #f72585;
-  --dark-color: #212529;
-  --light-color: #f8f9fa;
-  --gray-color: #6c757d;
-  --border-radius: 12px;
-  --box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  --transition: all 0.3s ease;
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  background-color: #f5f7fa;
-  color: var(--dark-color);
-  line-height: 1.6;
-}
-
-.dashboard-container {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 2rem;
-}
-
-.dashboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-}
-
-.dashboard-header h1 {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: var(--dark-color);
-}
-
-.last-updated {
-  font-size: 0.9rem;
-  color: var(--gray-color);
-}
-
-.dashboard-wrapper {
-  display: flex;
-  transition: margin-left 0.3s ease;
-  margin-left: 250px; /* width of your sidebar when it's open */
-}
-
-.sidebar.collapsed + .dashboard-wrapper {
-  margin-left: 80px; /* adjust based on your collapsed sidebar width */
-}
-
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
-  padding: 2rem;
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.kpi-card {
-  background: white;
-  border-radius: var(--border-radius);
-  padding: 1rem;
-  box-shadow: var(--box-shadow);
-  transition: var(--transition);
-  position: relative;
-  overflow: hidden;
-}
-
-.kpi-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-}
-
-.kpi-card.primary {
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-  color: white;
-}
-
-.kpi-card.primary .kpi-header h2,
-.kpi-card.primary .kpi-value,
-.kpi-card.primary .currency {
-  color: white;
-}
-
-.kpi-card.wide {
-  grid-column: span 2;
-}
-
-.kpi-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.kpi-header h2 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--dark-color);
-}
-
-.kpi-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: var(--primary-light);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--primary-color);
-}
-
-.kpi-card.primary .kpi-icon {
-  background-color: rgba(85, 26, 26, 0.2);
-  color: white;
-}
-
-.kpi-value {
-  font-size: 1.8rem;
-  font-weight: 700;
-  margin: 1rem 0;
-  color: var(--dark-color);
-}
-
-.currency {
-  font-size: 1rem;
-  color: var(--gray-color);
-  margin-left: 0.3rem;
-}
-
-.kpi-trend {
-  font-size: 0.9rem;
-  color: black; /* Changed to black */
-}
-
-
-.trend-indicator {
-  font-weight: 600;
-}
-
-.trend-indicator.positive {
-  color: #2ecc71;
-}
-
-.trend-indicator.negative {
-  color: var(--danger-color);
-}
-
-.kpi-loader {
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.spinner {
-  border: 4px solid rgba(0, 0, 0, 0.1);
-  border-radius: 50%;
-  border-top-color: var(--primary-color);
-  width: 30px;
-  height: 30px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.kpi-details-toggle {
-  margin-top: 1rem;
-}
-
-.details-btn {
-  background: none;
-  border: none;
-  color: var(--primary-color);
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  padding: 0.3rem 0;
-  transition: var(--transition);
-}
-
-.details-btn:hover {
-  opacity: 0.8;
-}
-
-.details-btn svg {
-  transition: var(--transition);
-}
-
-.details-btn .rotate {
-  transform: rotate(180deg);
-}
-
-.kpi-details {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #eee;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.detail-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.detail-label {
-  color: var(--gray-color);
-  margin-right: 0.5rem;
-  flex-shrink: 0;
-}
-
-.detail-value {
-  font-weight: 600;
-  color: var(--dark-color);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-
-/* Treasury section */
-.treasury-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  margin: 1.5rem 0;
-}
-
-.treasury-item {
-  background: var(--light-color);
-  border-radius: 10px;
-  padding: 1.2rem;
-}
-
-.treasury-item h3 {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--gray-color);
-  margin-bottom: 0.5rem;
-}
-
-.treasury-value {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--dark-color);
-}
-
-.bank-details-btn {
-  background: none;
-  border: none;
-  color: var(--primary-color);
-  font-size: 0.85rem;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  cursor: pointer;
-  margin-top: 0.5rem;
-  padding: 0;
-}
-
-.bank-details-btn svg {
-  transition: var(--transition);
-}
-
-.bank-details-btn .rotate {
-  transform: rotate(180deg);
-}
-
-.bank-details {
-  margin-top: 1.5rem;
-}
-
-.bank-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.bank-table th, .bank-table td {
-  padding: 0.8rem;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.bank-table th {
-  font-weight: 600;
-  color: var(--gray-color);
-  font-size: 0.85rem;
-  text-transform: uppercase;
-}
-
-.bank-update-time {
-  font-size: 0.8rem;
-  color: var(--gray-color);
-  margin-top: 0.5rem;
-  text-align: right;
-}
-
-.treasury-total {
-  font-size: 1.2rem;
-  font-weight: 600;
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #eee;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.total-amount {
-  color: var(--primary-color);
-  font-size: 1.4rem;
-}
-
-.hidden {
-  display: none;
-}
-
-/* Responsive adjustments */
-@media (max-width: 1200px) {
-  .dashboard-grid {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  }
-}
-
-@media (max-width: 768px) {
-  .dashboard-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-  
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .kpi-card.wide {
-    grid-column: span 1;
-  }
-  
-  .treasury-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 480px) {
-  .dashboard-container {
-    padding: 1rem;
-  }
-  
-  .kpi-value {
-    font-size: 1.5rem;
-  }
-}
-
-.trend-indicator {
-  font-weight: bold;
-}
-
-.chart-container {
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-  padding: 20px;
-  margin: 20px auto; /* Changed from '20px 0' to '20px auto' for horizontal centering */
-  position: relative;
-  width: 80%;
-  max-width: 1200px; /* Optional: prevents the container from getting too wide on large screens */
-}
-
-.chart-container canvas {
-  height: 400px !important;
-  width: 100% !important;
-}
-
-.date-range-controls {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.date-input-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.date-input-group label {
-  font-weight: 500;
-  color: #5a5c69;
-}
-
-.date-range-controls input[type="datetime-local"] {
-  padding: 8px 12px;
-  border: 1px solid #d1d3e2;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.filter-btn {
-  background-color: #4e73df;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.filter-btn:hover {
-  background-color: #3a5bc7;
-}
-
-@media (max-width: 768px) {
-  .date-range-controls {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .date-input-group {
-    width: 100%;
-  }
-  
-  .date-input-group input {
-    width: 100%;
-  }
-  
-  .filter-btn {
-    width: 100%;
-  }
-}
-
-/* Add to your existing CSS */
-.kpi-trend {
-  font-size: 0.9rem;
-  color: #6c757d;
-  margin-top: 0.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.trend-indicator {
-  font-weight: 600;
-  padding: 0.2rem 0.4rem;
-  border-radius: 4px;
-}
-
-.trend-indicator.positive {
-  background-color: rgba(40, 167, 69, 0.1);
-  color: #28a745;
-}
-
-.trend-indicator.negative {
-  background-color: rgba(220, 53, 69, 0.1);
-  color: #dc3545;
-}
-
-.trend-indicator.neutral {
-  background-color: rgba(108, 117, 125, 0.1);
-  color: #6c757d;
-}
-
-
-  /* Add to your existing CSS */
-  .chart-container.combined {
-  min-height: 450px;
-}
-
-/* Legend styling */
-.chartjs-legend {
-  padding: 10px 0;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.chartjs-legend-item {
-  display: flex;
-  align-items: center;
-  margin-right: 15px;
-  margin-bottom: 5px;
-}
-
-.chartjs-legend-marker {
-  width: 12px;
-  height: 12px;
-  margin-right: 5px;
-  display: inline-block;
-}
-.dashboard-container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-.chart-row {
-  display: flex;
-  gap: 20px;
-  width: 100%;
-  flex-wrap: wrap;
-}
-
-.chart-container {
-  flex: 1;
-  min-width: 300px; /* Minimum width before wrapping */
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  padding: 15px;
-  position: relative;
-  height: 400px; /* Increased height */
-  min-height: 400px;
-  max-width: calc(50% - 10px); /* For 2 charts per row */
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-/* For single chart in a row */
-.chart-row:last-child .chart-container {
-  max-width: 100%;
-}
-
-.chart-container canvas {
-  width: 100% !important;
-  height: 100% !important;
-  min-height: 300px;
-}
-
-/* Rest of your existing CSS remains the same */
-
-
-
-
-
-canvas {
-  width: 100% !important;
-  height: auto !important;
-}
-
-.chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.chart-header h3 {
-  margin: 0;
-  font-size: 16px;
-  color: #4e73df;
-}
-
-.date-filter {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.date-input-group {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.date-input-group label {
-  font-size: 12px;
-}
-
-.date-input-group input {
-  padding: 3px 5px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 12px;
-}
-
-.filter-btn {
-  padding: 3px 10px;
-  background-color: #4e73df;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.filter-btn:hover {
-  background-color: #2e59d9;
-}
-
-@media (max-width: 768px) {
-  .chart-row {
-    flex-direction: column;
-  }
-}
-
-.refresh-button {
-  margin-left: 10px;
-  padding: 2px 8px;
-  background: #f8f9fa;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  cursor: pointer;
-}
-.refresh-button:hover {
-  background: #e9ecef;
-}
-.refresh-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-
-</style>
+<link rel="stylesheet" href="money.css">
+<script src="theme.js"></script>
 </head>
-<body>
+<body class="bg-gray-100"> <!-- Add this class to match sidebar theme -->
   
 
-<script>
-fetch("side")
-  .then(response => response.text())
-  .then(html => {
-    const container = document.getElementById("sidebar-container");
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = html;
-    container.innerHTML = tempDiv.innerHTML;
+<style>
+    
+.content {
+  margin-left: 0 !important; /* Force no margin for sidebar */
+  transition: none !important; /* Disable animations */
+}
 
-    // After DOM injection, dynamically load sidebar script
-    const script = document.createElement('script');
-    script.src = 'sid.js'; // Move all logic into sid.js
-    document.body.appendChild(script);
-  })
-  .catch(error => console.error("Error loading sidebar:", error));
+.sidebar {
+  display: none !important; /* Completely hide sidebar */
+}
 
-
-</script>
-
-
-<div id="sidebar-container"></div>
-
+.sidebar-hidden {
+  display: none !important;
+}
+</style>
 
 
 <div class="dashboard-container">
@@ -807,7 +132,7 @@ $baraka_check = 0;
 $fetched_dette = 0; // Default; JS will update this
 $check_record = null;
 
-$json_file = 'bank.json';
+$json_file = 'json_files/bank.json';
 if (file_exists($json_file)) {
     $json_data = file_get_contents($json_file);
     $bank_records = json_decode($json_data, true);
@@ -955,7 +280,7 @@ if (file_exists($json_file)) {
 </div>
 
     <!-- TRÉSORERIE -->
-    <div class="kpi-card wide">
+    <div style=" width: 150%;" class="kpi-card wide"> 
       <div class="kpi-header">
         <h2>TRÉSORERIE</h2>
         <div class="kpi-icon">
@@ -979,7 +304,7 @@ if (file_exists($json_file)) {
       <span id="la-caisse-trend" class="trend-indicator neutral">N/A</span>
     </div>
   </div>
-  <div id="la-caisse-details" style="margin-top: 5px; font-size: 13px; color: #555;"></div>
+  <div id="la-caisse-details" style="margin-top: 5px; font-size: 13px; "></div>
 
 
 </div>
@@ -990,7 +315,7 @@ if (file_exists($json_file)) {
           <div id="banque-value" class="treasury-value" data-banktotal="0">
           <?php
         $grand_total = 0;
-        $json_file = 'bank.json';
+        $json_file = 'json_files/bank.json';
         if (file_exists($json_file)) {
             $json_data = file_get_contents($json_file);
             $bank_records = json_decode($json_data, true);

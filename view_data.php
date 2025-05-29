@@ -1,6 +1,22 @@
 <?php
+
+session_start();
+
+// Check if the user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: BNM"); // Redirect to login if not logged in
+    exit();
+}
+
+
+// Restrict access for 'vente' and 'achat'
+if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup Vente'])) {
+    header("Location: Acess_Denied");    exit();
+}
+
+
 // Specify the path to the JSON file
-$json_file = 'bank.json';
+$json_file = 'json_files/bank.json';
 
 // Check if the JSON file exists
 if (file_exists($json_file)) {
@@ -31,6 +47,7 @@ usort($bank_records, function($a, $b) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
+    <script src="theme.js"></script>
     <link rel="stylesheet" href="journal.css">
 
     <style>
@@ -129,30 +146,93 @@ usort($bank_records, function($a, $b) {
       overflow-x: auto;
     }
   }
+
+  /* Dark mode styles */
+  body.dark-mode {
+      background-color: #1f2937;
+      color: #f3f4f6;
+  }
+
+  .dark-mode h1 {
+      color: #f3f4f6;
+  }
+
+  .dark-mode .back-link {
+      color: #60a5fa;
+  }
+
+  .dark-mode .data-table {
+      background-color: #374151;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .dark-mode .data-table th,
+  .dark-mode .data-table td {
+      border-bottom-color: #4b5563;
+      color: #f3f4f6;
+  }
+
+  .dark-mode .data-table .bna-header {
+      background-color: #3b8237;
+      border-color: #3b8237;
+  }
+
+  .dark-mode .data-table .baraka-header {
+      background-color: #cc4e06;
+      border-color: #cc4e06;
+  }
+
+  .dark-mode .data-table tr:nth-child(even) {
+      background-color: #2d3748;
+  }
+
+  .dark-mode .data-table tr:hover {
+      background-color: #4b5563;
+  }
+
+  .dark-mode .total-row {
+      background-color: #2d3748 !important;
+  }
+
+  .dark-mode .no-data {
+      color: #9ca3af;
+  }
+
+  .dark-mode .bank-header {
+      background-color: #2d3748;
+  }
+
+  /* Ensure text remains visible in dark mode */
+  .dark-mode .data-table td,
+  .dark-mode .data-table th {
+      color: #f3f4f6;
+  }
+
+  .dark-mode .bna-total,
+  .dark-mode .baraka-total,
+  .dark-mode .total-row {
+      color: #f3f4f6;
+  }
 </style>
 
 </head>
 <body>
-<div id="sidebar-container"></div>
 
-<script>
-fetch("side")
-  .then(response => response.text())
-  .then(html => {
-    const container = document.getElementById("sidebar-container");
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = html;
-    container.innerHTML = tempDiv.innerHTML;
-
-    // After DOM injection, dynamically load sidebar script
-    const script = document.createElement('script');
-    script.src = 'sid.js'; // Move all logic into sid.js
-    document.body.appendChild(script);
-  })
-  .catch(error => console.error("Error loading sidebar:", error));
-
-
-</script>
+<style>
+    
+    .content {
+      margin-left: 0 !important; /* Force no margin for sidebar */
+      transition: none !important; /* Disable animations */
+    }
+    
+    .sidebar {
+      display: none !important; /* Completely hide sidebar */
+    }
+    
+    .sidebar-hidden {
+      display: none !important;
+    }
+    </style>
 <div class="container">
   <a href="bank" class="back-link">← Back to Form</a>
   <h1>Bank Data History</h1>
@@ -163,11 +243,11 @@ fetch("side")
     <table class="data-table">
       <thead>
         <tr>
-          <th>Date & Time</th>
+          <th style="color :black">Date & Time</th>
           <th colspan="3" class="bna-header">BNA</th>
           <th colspan="3" class="baraka-header">EL BARAKA</th>
-          <th>Total</th>
-          <th>Total Chèques</th>
+          <th style="color :black">Total</th>
+          <th style="color :black">Total Chèques</th>
         </tr>
         <tr>
           <th></th>

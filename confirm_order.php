@@ -2,7 +2,6 @@
 session_start();
 
 // Set session timeout to 1 hour (3600 seconds)
-$inactive_time = 3600;
 
 // Check if the user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -10,30 +9,14 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Check if last activity is set
-if (isset($_SESSION['last_activity'])) {
-    // Calculate session lifetime
-    $session_lifetime = time() - $_SESSION['last_activity'];
-
-    if ($session_lifetime > $inactive_time) {
-        session_unset(); // Unset session variables
-        session_destroy(); // Destroy the session
-        header("Location: BNM?session_expired=1"); // Redirect to login page with message
-        exit();
-    }
-}
-
-// Update last activity timestamp
-$_SESSION['last_activity'] = time();
-
-
 
 
 // Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['username']) && in_array($_SESSION['username'], [ 'achat', 'yasser'])) {
-    header("Location: Acess_Denied");
-    exit();
+if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Comptable'])) {
+    header("Location: Acess_Denied");    exit();
 }
+
+
 ?>
 
 <!DOCTYPE html>
@@ -51,6 +34,7 @@ Order a Confirmer
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <link rel="stylesheet" href="confirm_order.css">
 
+    <script src="theme.js"></script>
 
 </head>
 
@@ -62,331 +46,10 @@ Order a Confirmer
 
 
   <!-- Dark Mode Toggle (Top Right) -->
-
-  <!-- Dark Mode Toggle (Top Right) -->
-<!-- From Uiverse.io by Galahhad --> 
-<div class="theme-switch-wrapper">
-  <label class="theme-switch">
-    <input type="checkbox" class="theme-switch__checkbox" id="themeToggle">
-    <div class="theme-switch__container">
-      <div class="theme-switch__clouds"></div>
-      <div class="theme-switch__stars-container">
-        <!-- Stars SVG -->
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 55" fill="none">
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M135.831 3.00688C135.055 3.85027 134.111 4.29946 133 4.35447C134.111 4.40947 135.055 4.85867 135.831 5.71123C136.607 6.55462 136.996 7.56303 136.996 8.72727C136.996 7.95722 137.172 7.25134 137.525 6.59129C137.886 5.93124 138.372 5.39954 138.98 5.00535C139.598 4.60199 140.268 4.39114 141 4.35447C139.88 4.2903 138.936 3.85027 138.16 3.00688C137.384 2.16348 136.996 1.16425 136.996 0C136.996 1.16425 136.607 2.16348 135.831 3.00688ZM31 23.3545C32.1114 23.2995 33.0551 22.8503 33.8313 22.0069C34.6075 21.1635 34.9956 20.1642 34.9956 19C34.9956 20.1642 35.3837 21.1635 36.1599 22.0069C36.9361 22.8503 37.8798 23.2903 39 23.3545C38.2679 23.3911 37.5976 23.602 36.9802 24.0053C36.3716 24.3995 35.8864 24.9312 35.5248 25.5913C35.172 26.2513 34.9956 26.9572 34.9956 27.7273C34.9956 26.563 34.6075 25.5546 33.8313 24.7112C33.0551 23.8587 32.1114 23.4095 31 23.3545Z" fill="currentColor"></path>
-        </svg>
-      </div>
-      <div class="theme-switch__circle-container">
-        <div class="theme-switch__sun-moon-container">
-          <div class="theme-switch__moon">
-            <div class="theme-switch__spot"></div>
-            <div class="theme-switch__spot"></div>
-            <div class="theme-switch__spot"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </label>
-</div>
-
-<!-- CSS to position top-right -->
-<style>
-.theme-switch-wrapper {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 9999;
-}
-
-/* Optional: Add cursor pointer */
-.theme-switch {
-  cursor: pointer;
-}
-</style>
-
-
 <style>
 
 
 
-.theme-switch {
-    position: sticky;
-    top: 10px;
-    left: 10px;
-    padding: 10px;
-    z-index: 50;
-  --toggle-size: 20px; /* Reduced from 30px */
-  
-  --container-width: 3.75em;   /* Reduced from 5.625em */
-  --container-height: 1.7em;   /* Reduced from 2.5em */
-  --container-radius: 4em;     /* Scaled down proportionally */
-  
-  --container-light-bg: #3D7EAE;
-  --container-night-bg: #1D1F2C;
-  
-  --circle-container-diameter: 2.3em;  /* Reduced from 3.375em */
-  --sun-moon-diameter: 1.5em;          /* Reduced from 2.125em */
-  
-  --sun-bg: #ECCA2F;
-  --moon-bg: #C4C9D1;
-  --spot-color: #959DB1;
-  
-  --circle-container-offset: calc((var(--circle-container-diameter) - var(--container-height)) / 2 * -1);
-  
-  --stars-color: #fff;
-  --clouds-color: #F3FDFF;
-  --back-clouds-color: #AACADF;
-  
-  --transition: .5s cubic-bezier(0, -0.02, 0.4, 1.25);
-  --circle-transition: .3s cubic-bezier(0, -0.02, 0.35, 1.17);
-  
-}
-
-.theme-switch, .theme-switch *, .theme-switch *::before, .theme-switch *::after {
-  -webkit-box-sizing: border-box;
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  font-size: var(--toggle-size);
-}
-
-.theme-switch__container {
-  width: var(--container-width);
-  height: var(--container-height);
-  background-color: var(--container-light-bg);
-  border-radius: var(--container-radius);
-  overflow: hidden;
-  cursor: pointer;
-  -webkit-box-shadow: 0em -0.062em 0.062em rgba(0, 0, 0, 0.25), 0em 0.062em 0.125em rgba(255, 255, 255, 0.94);
-  box-shadow: 0em -0.062em 0.062em rgba(0, 0, 0, 0.25), 0em 0.062em 0.125em rgba(255, 255, 255, 0.94);
-  -webkit-transition: var(--transition);
-  -o-transition: var(--transition);
-  transition: var(--transition);
-  position: relative;
-}
-
-.theme-switch__container::before {
-  content: "";
-  position: absolute;
-  z-index: 1;
-  inset: 0;
-  -webkit-box-shadow: 0em 0.05em 0.187em rgba(0, 0, 0, 0.25) inset, 0em 0.05em 0.187em rgba(0, 0, 0, 0.25) inset;
-  box-shadow: 0em 0.05em 0.187em rgba(0, 0, 0, 0.25) inset, 0em 0.05em 0.187em rgba(0, 0, 0, 0.25) inset;
-  border-radius: var(--container-radius)
-}
-
-.theme-switch__checkbox {
-  display: none;
-}
-
-.theme-switch__circle-container {
-  width: var(--circle-container-diameter);
-  height: var(--circle-container-diameter);
-  background-color: rgba(255, 255, 255, 0.1);
-  position: absolute;
-  left: var(--circle-container-offset);
-  top: var(--circle-container-offset);
-  border-radius: var(--container-radius);
-  -webkit-box-shadow: inset 0 0 0 3.375em rgba(255, 255, 255, 0.1), inset 0 0 0 3.375em rgba(255, 255, 255, 0.1), 0 0 0 0.625em rgba(255, 255, 255, 0.1), 0 0 0 1.25em rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 0 0 3.375em rgba(255, 255, 255, 0.1), inset 0 0 0 3.375em rgba(255, 255, 255, 0.1), 0 0 0 0.625em rgba(255, 255, 255, 0.1), 0 0 0 1.25em rgba(255, 255, 255, 0.1);
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-transition: var(--circle-transition);
-  -o-transition: var(--circle-transition);
-  transition: var(--circle-transition);
-  pointer-events: none;
-}
-
-.theme-switch__sun-moon-container {
-  pointer-events: auto;
-  position: relative;
-  z-index: 2;
-  width: var(--sun-moon-diameter);
-  height: var(--sun-moon-diameter);
-  margin: auto;
-  border-radius: var(--container-radius);
-  background-color: var(--sun-bg);
-  -webkit-box-shadow: 0.062em 0.062em 0.062em 0em rgba(254, 255, 239, 0.61) inset, 0em -0.062em 0.062em 0em #a1872a inset;
-  box-shadow: 0.062em 0.062em 0.062em 0em rgba(254, 255, 239, 0.61) inset, 0em -0.062em 0.062em 0em #a1872a inset;
-  -webkit-filter: drop-shadow(0.062em 0.125em 0.125em rgba(0, 0, 0, 0.25)) drop-shadow(0em 0.062em 0.125em rgba(0, 0, 0, 0.25));
-  filter: drop-shadow(0.062em 0.125em 0.125em rgba(0, 0, 0, 0.25)) drop-shadow(0em 0.062em 0.125em rgba(0, 0, 0, 0.25));
-  overflow: hidden;
-  -webkit-transition: var(--transition);
-  -o-transition: var(--transition);
-  transition: var(--transition);
-}
-
-.theme-switch__moon {
-  -webkit-transform: translateX(100%);
-  -ms-transform: translateX(100%);
-  transform: translateX(100%);
-  width: 100%;
-  height: 100%;
-  background-color: var(--moon-bg);
-  border-radius: inherit;
-  -webkit-box-shadow: 0.062em 0.062em 0.062em 0em rgba(254, 255, 239, 0.61) inset, 0em -0.062em 0.062em 0em #969696 inset;
-  box-shadow: 0.062em 0.062em 0.062em 0em rgba(254, 255, 239, 0.61) inset, 0em -0.062em 0.062em 0em #969696 inset;
-  -webkit-transition: var(--transition);
-  -o-transition: var(--transition);
-  transition: var(--transition);
-  position: relative;
-}
-
-.theme-switch__spot {
-  position: absolute;
-  top: 0.75em;
-  left: 0.312em;
-  width: 0.75em;
-  height: 0.75em;
-  border-radius: var(--container-radius);
-  background-color: var(--spot-color);
-  -webkit-box-shadow: 0em 0.0312em 0.062em rgba(0, 0, 0, 0.25) inset;
-  box-shadow: 0em 0.0312em 0.062em rgba(0, 0, 0, 0.25) inset;
-}
-
-.theme-switch__spot:nth-of-type(2) {
-  width: 0.375em;
-  height: 0.375em;
-  top: 0.937em;
-  left: 1.375em;
-}
-
-.theme-switch__spot:nth-last-of-type(3) {
-  width: 0.25em;
-  height: 0.25em;
-  top: 0.312em;
-  left: 0.812em;
-}
-
-.theme-switch__clouds {
-  width: 1.25em;
-  height: 1.25em;
-  background-color: var(--clouds-color);
-  border-radius: var(--container-radius);
-  position: absolute;
-  bottom: -0.625em;
-  left: 0.312em;
-  -webkit-box-shadow: 0.937em 0.312em var(--clouds-color), -0.312em -0.312em var(--back-clouds-color), 1.437em 0.375em var(--clouds-color), 0.5em -0.125em var(--back-clouds-color), 2.187em 0 var(--clouds-color), 1.25em -0.062em var(--back-clouds-color), 2.937em 0.312em var(--clouds-color), 2em -0.312em var(--back-clouds-color), 3.625em -0.062em var(--clouds-color), 2.625em 0em var(--back-clouds-color), 4.5em -0.312em var(--clouds-color), 3.375em -0.437em var(--back-clouds-color), 4.625em -1.75em 0 0.437em var(--clouds-color), 4em -0.625em var(--back-clouds-color), 4.125em -2.125em 0 0.437em var(--back-clouds-color);
-  box-shadow: 0.937em 0.312em var(--clouds-color), -0.312em -0.312em var(--back-clouds-color), 1.437em 0.375em var(--clouds-color), 0.5em -0.125em var(--back-clouds-color), 2.187em 0 var(--clouds-color), 1.25em -0.062em var(--back-clouds-color), 2.937em 0.312em var(--clouds-color), 2em -0.312em var(--back-clouds-color), 3.625em -0.062em var(--clouds-color), 2.625em 0em var(--back-clouds-color), 4.5em -0.312em var(--clouds-color), 3.375em -0.437em var(--back-clouds-color), 4.625em -1.75em 0 0.437em var(--clouds-color), 4em -0.625em var(--back-clouds-color), 4.125em -2.125em 0 0.437em var(--back-clouds-color);
-  -webkit-transition: 0.5s cubic-bezier(0, -0.02, 0.4, 1.25);
-  -o-transition: 0.5s cubic-bezier(0, -0.02, 0.4, 1.25);
-  transition: 0.5s cubic-bezier(0, -0.02, 0.4, 1.25);
-}
-
-.theme-switch__stars-container {
-  position: absolute;
-  color: var(--stars-color);
-  top: -100%;
-  left: 0.312em;
-  width: 2.75em;
-  height: auto;
-  -webkit-transition: var(--transition);
-  -o-transition: var(--transition);
-  transition: var(--transition);
-}
-
-/* actions */
-
-.theme-switch__checkbox:checked + .theme-switch__container {
-  background-color: var(--container-night-bg);
-}
-
-.theme-switch__checkbox:checked + .theme-switch__container .theme-switch__circle-container {
-  left: calc(100% - var(--circle-container-offset) - var(--circle-container-diameter));
-}
-
-.theme-switch__checkbox:checked + .theme-switch__container .theme-switch__circle-container:hover {
-  left: calc(100% - var(--circle-container-offset) - var(--circle-container-diameter) - 0.187em)
-}
-
-.theme-switch__circle-container:hover {
-  left: calc(var(--circle-container-offset) + 0.187em);
-}
-
-.theme-switch__checkbox:checked + .theme-switch__container .theme-switch__moon {
-  -webkit-transform: translate(0);
-  -ms-transform: translate(0);
-  transform: translate(0);
-}
-
-.theme-switch__checkbox:checked + .theme-switch__container .theme-switch__clouds {
-  bottom: -4.062em;
-}
-
-.theme-switch__checkbox:checked + .theme-switch__container .theme-switch__stars-container {
-  top: 50%;
-  -webkit-transform: translateY(-50%);
-  -ms-transform: translateY(-50%);
-  transform: translateY(-50%);
-}
-</style>
-
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
-    <script>
-        lottie.loadAnimation({
-            container: document.getElementById("lottieContainer"),
-            renderer: "svg",
-            loop: true,
-            autoplay: true,
-            path: "json_files/r.json" // Replace with actual path to your .rjson file
-        });
-    </script>
-
-
-<!-- Sidebar -->
-<div id="sidebar-container"></div>
-
-<script>
-fetch("side")
-  .then(response => response.text())
-  .then(html => {
-    const container = document.getElementById("sidebar-container");
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = html;
-    container.innerHTML = tempDiv.innerHTML;
-
-    // After DOM injection, dynamically load sidebar script
-    const script = document.createElement('script');
-    script.src = 'sid.js'; // Move all logic into sid.js
-    document.body.appendChild(script);
-  })
-  .catch(error => console.error("Error loading sidebar:", error));
-
-
-</script>
-
-
-
-    <!-- Main Content -->
-    <div id="content" class="content flex-grow p-4">
-
-
-    <div class="flex justify-center items-center mb-6">
-        <h1 class="text-5xl font-bold dark:text-white text-center  ">
-        Order a Confirmer 
-            </h1>
-        </div>
-        <!-- Filters -->
-   
-        
-
-        <br>
-
-
-
-        <!-- Search Fields -->
-<!-- Search Fields -->
-<!-- Search Fields -->
-
-
-        <br>
-
-
-<br>
-
-<style>
 .input__container--variant {
   background: linear-gradient(to bottom, #F3FFF9, #F3FFF9);
   border-radius: 30px;
@@ -445,7 +108,68 @@ fetch("side")
   width: 1.5em;
   height: 1.5em;
 }
+
+
+
+// In your CSS (add this to prevent layout shifts)
+.content {
+  margin-left: 0 !important; /* Force no margin for sidebar */
+  transition: none !important; /* Disable animations */
+}
+
+.sidebar {
+  display: none !important; /* Completely hide sidebar */
+}
+
+.sidebar-hidden {
+  display: none !important;
+}
 </style>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
+    <script>
+        lottie.loadAnimation({
+            container: document.getElementById("lottieContainer"),
+            renderer: "svg",
+            loop: true,
+            autoplay: true,
+            path: "json_files/r.json" // Replace with actual path to your .rjson file
+        });
+    </script>
+
+
+<!-- Sidebar -->
+
+
+
+
+    <!-- Main Content -->
+    <div id="content" class="content flex-grow p-4">
+
+
+    <div class="flex justify-center items-center mb-6">
+        <h1 class="text-5xl font-bold dark:text-white text-center  ">
+        Order a Confirmer 
+            </h1>
+        </div>
+        <!-- Filters -->
+   
+        
+
+        <br>
+
+
+
+        <!-- Search Fields -->
+<!-- Search Fields -->
+<!-- Search Fields -->
+
+
+        <br>
+
+
+<br>
 
 <!-- 💻 Your new search bar styled like the example -->
 <div class="input__container--variant">
@@ -460,7 +184,7 @@ fetch("side")
 </div>
 
 <div class="flex justify-center w-full">
-    <button id="refresh-btn" class="p-3 bg-white text-blue-500 rounded-full shadow-lg hover:shadow-xl border border-blue-500 transition duration-200 flex items-center justify-center">
+    <button id="refresh-btn" class="p-3 bg-white dark:bg-gray-700 text-blue-500 dark:text-blue-400 rounded-full shadow-lg hover:shadow-xl border border-blue-500 dark:border-blue-400 transition duration-200 flex items-center justify-center">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75a7.5 7.5 0 0 0 12.755 4.652M4.5 15.75H9m-4.5 0v4.5m15-7.5a7.5 7.5 0 0 0-12.755-4.652M19.5 8.25H15m4.5 0V3.75" />
         </svg>
@@ -468,33 +192,6 @@ fetch("side")
 </div>
 
 
-
-<!-- <div class="search-container">
-    
-         <div>
-  
-                <label for="BCCB_confirm">Search BCCB:</label>
-                <input type="text" id="bccb_confirm" placeholder="Search for BCCB ...">
-             
-            </div> 
-
-            <div class="flex justify-center items-center h-full">
-
-</div>
-
-        
-        </div> -->
-
-
-
-
-        <br>
-
-        <!-- <button id="downloadExcel_journal"
-            class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
-            <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
-            <span>Journal de vente Download</span>
-        </button> -->
 
 
 
@@ -511,21 +208,21 @@ fetch("side")
     <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Ordre a confirmer</h2>
 
     <!-- Row count fixed header -->
-    <div id="row-count" class="font-semibold mb-4 text-center">
+    <div id="row-count" class="font-semibold mb-4 text-center text-gray-900 dark:text-white">
         Total Rows: 0
     </div>
 
     <div class="overflow-x-auto">
         <table class="min-w-full border-collapse text-sm text-left dark:text-white">
             <thead>
-                <tr class="table-header dark:bg-gray-700">
-                    <th data-column="NDOCUMENT" onclick="sortorderconfirmedTable('NDOCUMENT')" class="border px-4 py-2">NDocument</th>
-                    <th data-column="TIER" onclick="sortorderconfirmedTable('TIER')" class="border px-4 py-2">Tiers</th>
-                    <th data-column="DATECOMMANDE" onclick="sortorderconfirmedTable('DATECOMMANDE')" class="border px-4 py-2">Date Commande</th>
-                    <th data-column="VENDEUR" onclick="sortorderconfirmedTable('VENDEUR')" class="border px-4 py-2">Vendeur</th>
-                    <th data-column="MARGE" onclick="sortorderconfirmedTable('MARGE')" class="border px-4 py-2">Marge</th>
-                    <th data-column="MONTANT" onclick="sortorderconfirmedTable('MONTANT')" class="border px-4 py-2">Montant</th>
-                    <th data-column="ORGANISATION" onclick="sortorderconfirmedTable('ORGANISATION')" class="border px-4 py-2">Organization</th>
+                <tr class="table-header bg-gray-100 dark:bg-gray-700">
+                    <th data-column="NDOCUMENT" onclick="sortorderconfirmedTable('NDOCUMENT')" class="border px-4 py-2 text-gray-900 dark:text-white">NDocument</th>
+                    <th data-column="TIER" onclick="sortorderconfirmedTable('TIER')" class="border px-4 py-2 text-gray-900 dark:text-white">Tiers</th>
+                    <th data-column="DATECOMMANDE" onclick="sortorderconfirmedTable('DATECOMMANDE')" class="border px-4 py-2 text-gray-900 dark:text-white">Date Commande</th>
+                    <th data-column="VENDEUR" onclick="sortorderconfirmedTable('VENDEUR')" class="border px-4 py-2 text-gray-900 dark:text-white">Vendeur</th>
+                    <th data-column="MARGE" onclick="sortorderconfirmedTable('MARGE')" class="border px-4 py-2 text-gray-900 dark:text-white">Marge</th>
+                    <th data-column="MONTANT" onclick="sortorderconfirmedTable('MONTANT')" class="border px-4 py-2 text-gray-900 dark:text-white">Montant</th>
+                    <th data-column="ORGANISATION" onclick="sortorderconfirmedTable('ORGANISATION')" class="border px-4 py-2 text-gray-900 dark:text-white">Organization</th>
                 </tr>
             </thead>
             <tbody id="order-confirmer-table" class="dark:bg-gray-800">
@@ -544,11 +241,11 @@ fetch("side")
 
         <table class="min-w-full border-collapse text-sm text-left dark:text-white">
             <thead>
-                <tr class="table-header dark:bg-gray-700">
-                    <th class="border border-gray-300 px-4 py-2 dark:border-gray-600">PRODUCT</th>
-                    <th class="border border-gray-300 px-4 py-2 dark:border-gray-600">QTY</th>
-                    <th class="border border-gray-300 px-4 py-2 dark:border-gray-600">REMISE</th>
-                    <th class="border border-gray-300 px-4 py-2 dark:border-gray-600">MARGE</th>
+                <tr class="table-header bg-gray-100 dark:bg-gray-700">
+                    <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 text-gray-900 dark:text-white">PRODUCT</th>
+                    <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 text-gray-900 dark:text-white">QTY</th>
+                    <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 text-gray-900 dark:text-white">REMISE</th>
+                    <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 text-gray-900 dark:text-white">MARGE</th>
                 </tr>
             </thead>
             <tbody id="confirmed-bccb-product-table" class="dark:bg-gray-800">
@@ -591,11 +288,6 @@ fetch("side")
 
 
 
-
-// Fetch data when filters are applied for journal vente
-
-
-// Show loader animation
 
 
 // Hide loader after fetching data
@@ -816,133 +508,9 @@ refreshOrderConfirmed();
 
 
 
-            // Dark Mode Toggle Functionality
-            const themeToggle = document.getElementById('themeToggle');
-            const htmlElement = document.documentElement;
-
-            // Load Dark Mode Preference from Local Storage
-            const savedDarkMode = localStorage.getItem('darkMode');
-            if (savedDarkMode === 'true') {
-                htmlElement.classList.add('dark');
-                themeToggle.checked = true;
-            }
-
-            // Toggle Dark Mode on Click
-            themeToggle.addEventListener('change', () => {
-                htmlElement.classList.toggle('dark');
-                const isDarkMode = htmlElement.classList.contains('dark');
-                localStorage.setItem('darkMode', isDarkMode);
-            });
-
         </script>
 
-</body>
+</body> 
 
 </html>
 
-<!-- 
-<div class="wrapper">
-    <div class="circle"></div>
-    <div class="circle"></div>
-    <div class="circle"></div>
-    <div class="shadow"></div>
-    <div class="shadow"></div>
-    <div class="shadow"></div>
-</div>
-<style>
-    .wrapper {
-  width: 200px;
-  height: 60px;
-  position: relative;
-  z-index: 1;
-
-}
-
-.circle {
-  width: 20px;
-  height: 20px;
-  position: absolute;
-  border-radius: 50%;
-  background-color: #fff;
-  left: 15%;
-  transform-origin: 50%;
-  animation: circle7124 .5s alternate infinite ease;
-}
-
-@keyframes circle7124 {
-  0% {
-    top: 60px;
-    height: 5px;
-    border-radius: 50px 50px 25px 25px;
-    transform: scaleX(1.7);
-  }
-
-  40% {
-    height: 20px;
-    border-radius: 50%;
-    transform: scaleX(1);
-  }
-
-  100% {
-    top: 0%;
-  }
-}
-
-.circle:nth-child(2) {
-  left: 45%;
-  animation-delay: .2s;
-}
-
-.circle:nth-child(3) {
-  left: auto;
-  right: 15%;
-  animation-delay: .3s;
-}
-
-.shadow {
-  width: 20px;
-  height: 4px;
-  border-radius: 50%;
-  background-color: rgba(0,0,0,0.9);
-  position: absolute;
-  top: 62px;
-  transform-origin: 50%;
-  z-index: -1;
-  left: 15%;
-  filter: blur(1px);
-  animation: shadow046 .5s alternate infinite ease;
-}
-
-@keyframes shadow046 {
-  0% {
-    transform: scaleX(1.5);
-  }
-
-  40% {
-    transform: scaleX(1);
-    opacity: .7;
-  }
-
-  100% {
-    transform: scaleX(.2);
-    opacity: .4;
-  }
-}
-
-.shadow:nth-child(4) {
-  left: 45%;
-  animation-delay: .2s
-}
-
-.shadow:nth-child(5) {
-  left: auto;
-  right: 15%;
-  animation-delay: .3s;
-}
-
-</style> -->
-
-        <!-- second table remise aauto  -->
-
-
-        <!-- Pagination -->

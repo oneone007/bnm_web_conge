@@ -691,3 +691,6 @@ SELECT C_SalesRegion_id from C_SalesRegion;
 
 
 
+SELECT s.sid, s.serial#, s.username
+FROM v$session s
+WHERE s.blocking_session IS NOT NULL;

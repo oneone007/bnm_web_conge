@@ -2,10 +2,12 @@
 $pages = [
     "BNM" => "index.php",
     "Main" => "main.php",
+    "whatsnew" => "whatsnew.html",
+
     "Etatstock" => "etatstock.php",
     "remise" => "remise.html",
 
-    "Coming" => "no.html",
+    "Coming" => "comingsoon.html",
     "Product" => "product.php",
     "Recap_Achat" => "recap_achat.php",
     "Recap_Vente" => "recapvente.php",
@@ -21,8 +23,13 @@ $pages = [
     "Rotation" => "rotation.php",
     
     "Journal_Vente" => "journal.php",
+    "admin" => "admin_feedback.php",
+
+    "draft" => "draft.php",
+
     
-    "bat" => "batman.html",
+    "AFFECTATION" => "affectation.php",
+    "recouverement" => "rcvrmnt.php",
     "l" => "l.php",
 
     "signup" => "signup.html",
@@ -37,10 +44,7 @@ $pages = [
 
 
     "login" => "login.php",
-    "bar" => "bar.html",
-    "a" => "a.html",
-    "b" => "b.html",
-    "c" => "c.html",
+    "c" => "arrowgame.html",
     "working" => "constract.html",
     "t" => "tes.php",
 

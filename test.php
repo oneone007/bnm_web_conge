@@ -1,8 +1,7 @@
 <?php
 session_start();
 
-// Set session timeout to 1 hour (3600 seconds)
-$inactive_time = 3600;
+
 
 // Check if the user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -10,21 +9,7 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Check if last activity is set
-if (isset($_SESSION['last_activity'])) {
-    // Calculate session lifetime
-    $session_lifetime = time() - $_SESSION['last_activity'];
 
-    if ($session_lifetime > $inactive_time) {
-        session_unset(); // Unset session variables
-        session_destroy(); // Destroy the session
-        header("Location: BNM?session_expired=1"); // Redirect to login page with message
-        exit();
-    }
-}
-
-// Update last activity timestamp
-$_SESSION['last_activity'] = time();
 // Restrict access for 'vente' and 'achat'
 if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser'])) {
     header("Location: Acess_Denied");

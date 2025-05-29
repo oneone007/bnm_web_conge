@@ -1,8 +1,6 @@
 <?php
 session_start();
 
-// Set session timeout to 1 hour (3600 seconds)
-$inactive_time = 3600;
 
 // Check if the user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -10,26 +8,12 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Check if last activity is set
-if (isset($_SESSION['last_activity'])) {
-    // Calculate session lifetime
-    $session_lifetime = time() - $_SESSION['last_activity'];
 
-    if ($session_lifetime > $inactive_time) {
-        session_unset(); // Unset session variables
-        session_destroy(); // Destroy the session
-        header("Location: BNM?session_expired=1"); // Redirect to login page with message
-        exit();
-    }
-}
-
-// Update last activity timestamp
-$_SESSION['last_activity'] = time();
 // Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser'])) {
-    header("Location: Acess_Denied");
-    exit();
+if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
+    header("Location: Acess_Denied");    exit();
 }
+
 ?>
 
 
@@ -45,47 +29,14 @@ if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser']))
                 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
                 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="theme.js"></script>
 
     <link rel="stylesheet" href="rotation.css">
     <style>
-        /* Responsive Chart Container */
-@media (max-width: 1024px) {
-    #chartContainer {
-        height: 400px; /* Reduce height on medium screens */
-    }
-}
-
-@media (max-width: 768px) {
-    #chartContainer {
-        height: 300px; /* Smaller height for tablets */
-    }
-}
-
-@media (max-width: 480px) {
-    #chartContainer {
-        height: 250px; /* Compact height for mobile screens */
-    }
-}
 
 
 
-
-/* Sidebar Hidden by Default */
-.sidebar-hidden {
-    transform: translateX(-100%);
-}
-
-/* Sidebar Appears Smoothly */
-.sidebar {
-    transition: transform 0.3s ease-in-out;
-}
-
-/* Sidebar Stays Open Until Mouse Leaves */
-.sidebar:hover {
-    transform: translateX(0);
-}
 
     </style>
 
@@ -93,472 +44,7 @@ if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser']))
 </head>
 
 <body class="flex h-screen bg-gray-100 dark:bg-gray-900">
-    <!-- Sidebar Toggle Button -->
- 
 
-    <!-- Dark/Light Mode Toggle Button -->
-<!-- Dark/Light Mode Toggle Button -->
- <!-- Dark/Light Mode Toggle Button -->
-
-  <!-- Dark Mode Toggle (Top Right) -->
-<!-- From Uiverse.io by Galahhad --> 
-
-  <!-- Dark Mode Toggle (Top Right) -->
-<!-- From Uiverse.io by Galahhad --> 
-<div class="theme-switch-wrapper">
-  <label class="theme-switch">
-    <input type="checkbox" class="theme-switch__checkbox" id="themeToggle">
-    <div class="theme-switch__container">
-      <div class="theme-switch__clouds"></div>
-      <div class="theme-switch__stars-container">
-        <!-- Stars SVG -->
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 55" fill="none">
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M135.831 3.00688C135.055 3.85027 134.111 4.29946 133 4.35447C134.111 4.40947 135.055 4.85867 135.831 5.71123C136.607 6.55462 136.996 7.56303 136.996 8.72727C136.996 7.95722 137.172 7.25134 137.525 6.59129C137.886 5.93124 138.372 5.39954 138.98 5.00535C139.598 4.60199 140.268 4.39114 141 4.35447C139.88 4.2903 138.936 3.85027 138.16 3.00688C137.384 2.16348 136.996 1.16425 136.996 0C136.996 1.16425 136.607 2.16348 135.831 3.00688ZM31 23.3545C32.1114 23.2995 33.0551 22.8503 33.8313 22.0069C34.6075 21.1635 34.9956 20.1642 34.9956 19C34.9956 20.1642 35.3837 21.1635 36.1599 22.0069C36.9361 22.8503 37.8798 23.2903 39 23.3545C38.2679 23.3911 37.5976 23.602 36.9802 24.0053C36.3716 24.3995 35.8864 24.9312 35.5248 25.5913C35.172 26.2513 34.9956 26.9572 34.9956 27.7273C34.9956 26.563 34.6075 25.5546 33.8313 24.7112C33.0551 23.8587 32.1114 23.4095 31 23.3545Z" fill="currentColor"></path>
-        </svg>
-      </div>
-      <div class="theme-switch__circle-container">
-        <div class="theme-switch__sun-moon-container">
-          <div class="theme-switch__moon">
-            <div class="theme-switch__spot"></div>
-            <div class="theme-switch__spot"></div>
-            <div class="theme-switch__spot"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </label>
-</div>
-
-<!-- CSS to position top-right -->
-<style>
-.theme-switch-wrapper {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 9999;
-}
-
-/* Optional: Add cursor pointer */
-.theme-switch {
-  cursor: pointer;
-}
-</style>
-
-
-
-<style>
-
-
-
-.theme-switch {
-    position: sticky;
-    top: 10px;
-    left: 10px;
-    padding: 10px;
-    z-index: 50;
-  --toggle-size: 20px; /* Reduced from 30px */
-  
-  --container-width: 3.75em;   /* Reduced from 5.625em */
-  --container-height: 1.7em;   /* Reduced from 2.5em */
-  --container-radius: 4em;     /* Scaled down proportionally */
-  
-  --container-light-bg: #3D7EAE;
-  --container-night-bg: #1D1F2C;
-  
-  --circle-container-diameter: 2.3em;  /* Reduced from 3.375em */
-  --sun-moon-diameter: 1.5em;          /* Reduced from 2.125em */
-  
-  --sun-bg: #ECCA2F;
-  --moon-bg: #C4C9D1;
-  --spot-color: #959DB1;
-  
-  --circle-container-offset: calc((var(--circle-container-diameter) - var(--container-height)) / 2 * -1);
-  
-  --stars-color: #fff;
-  --clouds-color: #F3FDFF;
-  --back-clouds-color: #AACADF;
-  
-  --transition: .5s cubic-bezier(0, -0.02, 0.4, 1.25);
-  --circle-transition: .3s cubic-bezier(0, -0.02, 0.35, 1.17);
-  
-}
-
-.theme-switch, .theme-switch *, .theme-switch *::before, .theme-switch *::after {
-  -webkit-box-sizing: border-box;
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  font-size: var(--toggle-size);
-}
-
-.theme-switch__container {
-  width: var(--container-width);
-  height: var(--container-height);
-  background-color: var(--container-light-bg);
-  border-radius: var(--container-radius);
-  overflow: hidden;
-  cursor: pointer;
-  -webkit-box-shadow: 0em -0.062em 0.062em rgba(0, 0, 0, 0.25), 0em 0.062em 0.125em rgba(255, 255, 255, 0.94);
-  box-shadow: 0em -0.062em 0.062em rgba(0, 0, 0, 0.25), 0em 0.062em 0.125em rgba(255, 255, 255, 0.94);
-  -webkit-transition: var(--transition);
-  -o-transition: var(--transition);
-  transition: var(--transition);
-  position: relative;
-}
-
-.theme-switch__container::before {
-  content: "";
-  position: absolute;
-  z-index: 1;
-  inset: 0;
-  -webkit-box-shadow: 0em 0.05em 0.187em rgba(0, 0, 0, 0.25) inset, 0em 0.05em 0.187em rgba(0, 0, 0, 0.25) inset;
-  box-shadow: 0em 0.05em 0.187em rgba(0, 0, 0, 0.25) inset, 0em 0.05em 0.187em rgba(0, 0, 0, 0.25) inset;
-  border-radius: var(--container-radius)
-}
-
-.theme-switch__checkbox {
-  display: none;
-}
-
-.theme-switch__circle-container {
-  width: var(--circle-container-diameter);
-  height: var(--circle-container-diameter);
-  background-color: rgba(255, 255, 255, 0.1);
-  position: absolute;
-  left: var(--circle-container-offset);
-  top: var(--circle-container-offset);
-  border-radius: var(--container-radius);
-  -webkit-box-shadow: inset 0 0 0 3.375em rgba(255, 255, 255, 0.1), inset 0 0 0 3.375em rgba(255, 255, 255, 0.1), 0 0 0 0.625em rgba(255, 255, 255, 0.1), 0 0 0 1.25em rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 0 0 3.375em rgba(255, 255, 255, 0.1), inset 0 0 0 3.375em rgba(255, 255, 255, 0.1), 0 0 0 0.625em rgba(255, 255, 255, 0.1), 0 0 0 1.25em rgba(255, 255, 255, 0.1);
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-transition: var(--circle-transition);
-  -o-transition: var(--circle-transition);
-  transition: var(--circle-transition);
-  pointer-events: none;
-}
-
-.theme-switch__sun-moon-container {
-  pointer-events: auto;
-  position: relative;
-  z-index: 2;
-  width: var(--sun-moon-diameter);
-  height: var(--sun-moon-diameter);
-  margin: auto;
-  border-radius: var(--container-radius);
-  background-color: var(--sun-bg);
-  -webkit-box-shadow: 0.062em 0.062em 0.062em 0em rgba(254, 255, 239, 0.61) inset, 0em -0.062em 0.062em 0em #a1872a inset;
-  box-shadow: 0.062em 0.062em 0.062em 0em rgba(254, 255, 239, 0.61) inset, 0em -0.062em 0.062em 0em #a1872a inset;
-  -webkit-filter: drop-shadow(0.062em 0.125em 0.125em rgba(0, 0, 0, 0.25)) drop-shadow(0em 0.062em 0.125em rgba(0, 0, 0, 0.25));
-  filter: drop-shadow(0.062em 0.125em 0.125em rgba(0, 0, 0, 0.25)) drop-shadow(0em 0.062em 0.125em rgba(0, 0, 0, 0.25));
-  overflow: hidden;
-  -webkit-transition: var(--transition);
-  -o-transition: var(--transition);
-  transition: var(--transition);
-}
-
-.theme-switch__moon {
-  -webkit-transform: translateX(100%);
-  -ms-transform: translateX(100%);
-  transform: translateX(100%);
-  width: 100%;
-  height: 100%;
-  background-color: var(--moon-bg);
-  border-radius: inherit;
-  -webkit-box-shadow: 0.062em 0.062em 0.062em 0em rgba(254, 255, 239, 0.61) inset, 0em -0.062em 0.062em 0em #969696 inset;
-  box-shadow: 0.062em 0.062em 0.062em 0em rgba(254, 255, 239, 0.61) inset, 0em -0.062em 0.062em 0em #969696 inset;
-  -webkit-transition: var(--transition);
-  -o-transition: var(--transition);
-  transition: var(--transition);
-  position: relative;
-}
-
-.theme-switch__spot {
-  position: absolute;
-  top: 0.75em;
-  left: 0.312em;
-  width: 0.75em;
-  height: 0.75em;
-  border-radius: var(--container-radius);
-  background-color: var(--spot-color);
-  -webkit-box-shadow: 0em 0.0312em 0.062em rgba(0, 0, 0, 0.25) inset;
-  box-shadow: 0em 0.0312em 0.062em rgba(0, 0, 0, 0.25) inset;
-}
-
-.theme-switch__spot:nth-of-type(2) {
-  width: 0.375em;
-  height: 0.375em;
-  top: 0.937em;
-  left: 1.375em;
-}
-
-.theme-switch__spot:nth-last-of-type(3) {
-  width: 0.25em;
-  height: 0.25em;
-  top: 0.312em;
-  left: 0.812em;
-}
-
-.theme-switch__clouds {
-  width: 1.25em;
-  height: 1.25em;
-  background-color: var(--clouds-color);
-  border-radius: var(--container-radius);
-  position: absolute;
-  bottom: -0.625em;
-  left: 0.312em;
-  -webkit-box-shadow: 0.937em 0.312em var(--clouds-color), -0.312em -0.312em var(--back-clouds-color), 1.437em 0.375em var(--clouds-color), 0.5em -0.125em var(--back-clouds-color), 2.187em 0 var(--clouds-color), 1.25em -0.062em var(--back-clouds-color), 2.937em 0.312em var(--clouds-color), 2em -0.312em var(--back-clouds-color), 3.625em -0.062em var(--clouds-color), 2.625em 0em var(--back-clouds-color), 4.5em -0.312em var(--clouds-color), 3.375em -0.437em var(--back-clouds-color), 4.625em -1.75em 0 0.437em var(--clouds-color), 4em -0.625em var(--back-clouds-color), 4.125em -2.125em 0 0.437em var(--back-clouds-color);
-  box-shadow: 0.937em 0.312em var(--clouds-color), -0.312em -0.312em var(--back-clouds-color), 1.437em 0.375em var(--clouds-color), 0.5em -0.125em var(--back-clouds-color), 2.187em 0 var(--clouds-color), 1.25em -0.062em var(--back-clouds-color), 2.937em 0.312em var(--clouds-color), 2em -0.312em var(--back-clouds-color), 3.625em -0.062em var(--clouds-color), 2.625em 0em var(--back-clouds-color), 4.5em -0.312em var(--clouds-color), 3.375em -0.437em var(--back-clouds-color), 4.625em -1.75em 0 0.437em var(--clouds-color), 4em -0.625em var(--back-clouds-color), 4.125em -2.125em 0 0.437em var(--back-clouds-color);
-  -webkit-transition: 0.5s cubic-bezier(0, -0.02, 0.4, 1.25);
-  -o-transition: 0.5s cubic-bezier(0, -0.02, 0.4, 1.25);
-  transition: 0.5s cubic-bezier(0, -0.02, 0.4, 1.25);
-}
-
-.theme-switch__stars-container {
-  position: absolute;
-  color: var(--stars-color);
-  top: -100%;
-  left: 0.312em;
-  width: 2.75em;
-  height: auto;
-  -webkit-transition: var(--transition);
-  -o-transition: var(--transition);
-  transition: var(--transition);
-}
-
-/* actions */
-
-.theme-switch__checkbox:checked + .theme-switch__container {
-  background-color: var(--container-night-bg);
-}
-
-.theme-switch__checkbox:checked + .theme-switch__container .theme-switch__circle-container {
-  left: calc(100% - var(--circle-container-offset) - var(--circle-container-diameter));
-}
-
-.theme-switch__checkbox:checked + .theme-switch__container .theme-switch__circle-container:hover {
-  left: calc(100% - var(--circle-container-offset) - var(--circle-container-diameter) - 0.187em)
-}
-
-.theme-switch__circle-container:hover {
-  left: calc(var(--circle-container-offset) + 0.187em);
-}
-
-.theme-switch__checkbox:checked + .theme-switch__container .theme-switch__moon {
-  -webkit-transform: translate(0);
-  -ms-transform: translate(0);
-  transform: translate(0);
-}
-
-.theme-switch__checkbox:checked + .theme-switch__container .theme-switch__clouds {
-  bottom: -4.062em;
-}
-
-.theme-switch__checkbox:checked + .theme-switch__container .theme-switch__stars-container {
-  top: 50%;
-  -webkit-transform: translateY(-50%);
-  -ms-transform: translateY(-50%);
-  transform: translateY(-50%);
-}
-
-   /* From Uiverse.io by Spacious74 */ 
-   @keyframes fade-in {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-@keyframes drop {
-  0% {
-    bottom: 0px;
-    opacity: 1;
-  }
-
-  80% {
-    opacity: 1;
-  }
-
-  100% {
-    opacity: 1;
-    bottom: -400px;
-  }
-}
-
-.loader {
-  text-align: center;
-  font-size: 16px;
-  display: flex;
-  justify-content: center;
-  width: -20%;
-  position: relative;
-  border: none;
-  cursor: pointer;
-  margin-left: 20%;
-  background-color: transparent;
-}
-
-.loader-bg {
-  border-radius: 12px;
-  padding: 10px 15px;
-  z-index: 2;
-  width: 140px;
-  color: #ace3f8;
-  font-weight: bold;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  background-color: #18798a;
-  background-image: radial-gradient(circle 80px at 50% 150%, #63d44d, #18798a);
-  margin-bottom: 10px;
-}
-
-.loader-bg:hover {
-  text-shadow: 0px 0px 4px #63d44d;
-}
-.loader-bg:active {
-  background-image: radial-gradient(circle 140px at 50% 150%, #63d44d, #18798a);
-}
-.loader-bg:hover + .drops .drop2,
-.drop3 {
-  animation: drop 1s cubic-bezier(1, 0.19, 0.66, 0.12) 0.2s infinite;
-}
-.loader-bg:active + .drops .drop1,
-.drop2,
-.drop3 {
-  background-color: #63d44d;
-}
-.drops {
-  -webkit-filter: url("#liquid");
-  filter: url("#liquid");
-  position: absolute;
-  top: 35%;
-  left: 0;
-  bottom: 0;
-  right: 0;
-  z-index: 1;
-  opacity: 0;
-  animation: fade-in 0.1s linear 0.4s forwards;
-}
-
-.drop1,
-.drop2,
-.drop3 {
-  width: 20px;
-  height: 28px;
-  border-radius: 50%;
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  margin: auto;
-  background-color: #18798a;
-}
-
-.drop1 {
-  width: 125px;
-  height: 16px;
-  bottom: 2px;
-  border-radius: 0;
-}
-
-.drop3 {
-  background-color: #63d44d;
-}
-
-.drop2,
-.drop3 {
-  animation: drop 2s cubic-bezier(1, 0.19, 0.66, 0.12) 1s infinite;
-}
-
-
-.btn {
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        font-size: 16px;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: background 0.3s ease, transform 0.2s;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    
-    .btn:hover {
-        background-color: #45a049;
-        transform: scale(1.05);
-    }
-
-    .btn i {
-        font-size: 18px;
-    }
-
-
-    .products-table-container {
-    display: none;
-    position: absolute;
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    z-index: 1000;
-    max-height: 400px;
-    overflow-y: auto;
-    width: 50%;
-    margin-top: 5px;
-}
-
-.products-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.products-table th, .products-table td {
-    padding: 8px 12px;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
-}
-
-.products-table tr:hover {
-    background-color: #f5f5f5;
-    cursor: pointer;
-}
-
-.products-table tr.selected {
-    background-color: #e0e0e0;
-}
-
-.table-pagination {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 12px;
-    background-color: #f9f9f9;
-    border-top: 1px solid #ddd;
-}
-
-.table-pagination button {
-    padding: 4px 8px;
-    background-color: #f0f0f0;
-    border: 1px solid #ddd;
-    border-radius: 3px;
-    cursor: pointer;
-}
-
-.table-pagination button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* Initially hide the submenus */
-.submenu {
-    display: none;
-    list-style-type: none;
-    padding-left: 20px; /* Indentation for submenu items */
-}
 
 </style>
 
@@ -579,26 +65,7 @@ if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['yasser']))
     </script>
 
 <!-- Sidebar -->
-<div id="sidebar-container"></div>
 
-<script>
-fetch("side")
-  .then(response => response.text())
-  .then(html => {
-    const container = document.getElementById("sidebar-container");
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = html;
-    container.innerHTML = tempDiv.innerHTML;
-
-    // After DOM injection, dynamically load sidebar script
-    const script = document.createElement('script');
-    script.src = 'sid.js'; // Move all logic into sid.js
-    document.body.appendChild(script);
-  })
-  .catch(error => console.error("Error loading sidebar:", error));
-
-
-</script>
 
     <!-- Main Content -->
     <div id="content" class="content flex-grow p-4">
@@ -704,7 +171,7 @@ fetch("side")
         <!-- First Table: Smaller -->
         <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 mb-4">
             <div class="flex justify-between items-center p-3">
-                <h2 class="text-base font-semibold dark:text-black">HISTORIQUE</h2>
+                <h2 class="text-base font-semibold text-black dark:text-white">HISTORIQUE</h2>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full border-collapse text-sm text-left dark:text-white">
@@ -724,7 +191,7 @@ fetch("side")
         <!-- Second Table: Taller -->
         <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
             <div class="flex justify-between items-center p-3">
-                <h2 class="text-base font-semibold dark:text-black">ROTATION PAR MOIS</h2>
+                <h2 class="text-base font-semibold text-black dark:text-white">ROTATION PAR MOIS</h2>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full border-collapse text-sm text-left dark:text-white">
@@ -747,22 +214,22 @@ fetch("side")
     <div class="flex gap-4">
         <button id="toggleChartBtn" class="btn" onclick="toggleChartType()">
             <i class="fas fa-chart-line"></i> Switch to Graph
-        </button>
+        </button> 
         <button id="fullscreenBtn" class="btn" onclick="toggleFullscreen()">
             <i class="fas fa-expand"></i> Full Screen
         </button>
     </div>
-    <div id="chartContainer" class="canvas-container rounded-lg bg-white shadow-md dark:bg-gray-800 h-[500px] w-full flex justify-center items-center" style="display: none;">
+    <div id="chartContainer" class="canvas-container rounded-lg  shadow-md dark:bg-gray-800 h-[500px] w-full flex justify-center items-center" style="display: none;">
     <canvas id="histogramChart" class="w-full h-full"></canvas>
 </div>
 <br><br>
 
 <!-- Button Styles -->
 
-</div>
+</div> 
 
 <br><br>
-
+  
 <script>
 
 
@@ -925,7 +392,7 @@ function setupDateInputs() {
     const today = new Date().toISOString().split("T")[0];
     endDate.value = today;
     
-    // Enable dates only when product is selected
+    // Enable dates only when product is selected, but do NOT reset their values
     productSearch.addEventListener("input", function() {
         if (this.value.trim()) {
             startDate.disabled = false;
@@ -934,6 +401,13 @@ function setupDateInputs() {
             startDate.disabled = true;
             endDate.disabled = true;
             startDate.value = "";
+            endDate.value = today;
+        }
+    });
+
+    // When start date changes, set end date to today if not already set
+    startDate.addEventListener("change", function() {
+        if (!endDate.value) {
             endDate.value = today;
         }
     });
@@ -1026,21 +500,17 @@ function renderTable() {
             <td>${startIndex + index + 1}</td>
             <td>${product.NAME}</td>
         `;
-        
         row.addEventListener("click", function() {
             document.getElementById("product-search").value = product.NAME;
             document.getElementById("products-table-container").style.display = "none";
-            
-            // Enable date inputs
+            // Enable date inputs, but do NOT reset their values
             document.getElementById("start-date").disabled = false;
             document.getElementById("end-date").disabled = false;
-            
-            // Trigger all necessary functions
+            // Do NOT reset start or end date here
             fetchHistoriqueRotation();
             fetchRotationData();
             fetchHistogramData();
         });
-        
         tableBody.appendChild(row);
     });
     
@@ -1289,28 +759,6 @@ document.getElementById("downloadExcel_rotation").addEventListener("click", asyn
 ["start-date", "end-date", "product-search"].forEach(id => {
     document.getElementById(id).addEventListener("change", fetchRotationData);
 });
-
-
-
-
-            // Dark Mode Toggle Functionality
-            const themeToggle = document.getElementById('themeToggle');
-            const htmlElement = document.documentElement;
-
-            // Load Dark Mode Preference from Local Storage
-            const savedDarkMode = localStorage.getItem('darkMode');
-            if (savedDarkMode === 'true') {
-                htmlElement.classList.add('dark');
-                themeToggle.checked = true;
-            }
-
-            // Toggle Dark Mode on Click
-            themeToggle.addEventListener('change', () => {
-                htmlElement.classList.toggle('dark');
-                const isDarkMode = htmlElement.classList.contains('dark');
-                localStorage.setItem('darkMode', isDarkMode);
-            });
-
 
 </script>
 

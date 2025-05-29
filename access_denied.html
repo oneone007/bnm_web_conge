@@ -73,7 +73,6 @@ h1 {
     transform: translateY(0px); } }
 
 /*# sourceMappingURL=c.css.map */
-<style>
   .back-button {
     display: inline-block;
     margin-top: 20px;
@@ -88,17 +87,28 @@ h1 {
   .back-button:hover {
     background-color: #0056b3;
   }
-</style>
+</style> 
 
     </style>
 </head>
 <body>
-    <div class="lock"></div>
-    <div class="message">
-      <h1>Access to this page is restricted</h1>
-      <p>Please check with the site admin if you believe this is a mistake.</p>
-      <a href="Main" class="back-button">← Back to Home</a>
-    </div>
-    
+  <div class="lock"></div>
+  <div class="message">
+    <h1>Access to this page is restricted</h1>
+    <p>Please check with the site admin if you believe this is a mistake.</p>
+    <button class="back-button" onclick="goBack()">← Go Back</button>
+  </div>
+  
+  <script>
+    function goBack() {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.close(); // Might only work if opened via window.open
+        window.location.href = "Main"; // Fallback to home
+      }
+    }
+  </script>
+  
 </body>
 </html>

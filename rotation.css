@@ -1,6 +1,3 @@
-
-
-
 body {
     font-family: 'Inter', sans-serif;
 }
@@ -36,6 +33,11 @@ thead {
     z-index: 10;
 }
 
+/* Dark Mode for Table Header */
+.dark thead {
+    background-color: #374151;
+}
+
 th,
 td {
     white-space: nowrap;
@@ -45,8 +47,17 @@ td {
     border: 1px solid #ddd;
 }
 
+/* Dark Mode for Table Cells */
+.dark th,
+.dark td {
+    border: 1px solid #4b5563;
+    color: white !important;
+    background-color: #374151;
+}
+
 .dark .table-container {
     border-color: #374151;
+    background-color: #1f2937;
 }
 
 .dark .table-header {
@@ -55,7 +66,6 @@ td {
     /* White text in dark mode */
 }
 
-
 .dark .table-row:nth-child(odd) {
     background-color: #1f2937;
     color: #f9fafb;
@@ -63,7 +73,7 @@ td {
 }
 
 .dark .table-row:nth-child(even) {
-    background-color: #474d53;
+    background-color: #374151;
     color: #ececec;
 }
 
@@ -150,32 +160,284 @@ td {
 
 
 
+        /* Responsive Chart Container */
+        @media (max-width: 1024px) {
+            #chartContainer {
+                height: 400px; /* Reduce height on medium screens */
+            }
+        }
+        
+        @media (max-width: 768px) {
+            #chartContainer {
+                height: 300px; /* Smaller height for tablets */
+            }
+        }
+        
+        @media (max-width: 480px) {
+            #chartContainer {
+                height: 250px; /* Compact height for mobile screens */
+            }
+        }
+        
 
+   /* From Uiverse.io by Spacious74 */ 
+   @keyframes fade-in {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  
+  @keyframes drop {
+    0% {
+      bottom: 0px;
+      opacity: 1;
+    }
+  
+    80% {
+      opacity: 1;
+    }
+  
+    100% {
+      opacity: 1;
+      bottom: -400px;
+    }
+  }
+  
+  .loader {
+    text-align: center;
+    font-size: 16px;
+    display: flex;
+    justify-content: center;
+    width: -20%;
+    position: relative;
+    border: none;
+    cursor: pointer;
+    margin-left: 20%;
+    background-color: transparent;
+  }
+  
+  .loader-bg {
+    border-radius: 12px;
+    padding: 10px 15px;
+    z-index: 2;
+    width: 140px;
+    color: #ace3f8;
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background-color: #18798a;
+    background-image: radial-gradient(circle 80px at 50% 150%, #63d44d, #18798a);
+    margin-bottom: 10px;
+  }
+  
+  .loader-bg:hover {
+    text-shadow: 0px 0px 4px #63d44d;
+  }
+  .loader-bg:active {
+    background-image: radial-gradient(circle 140px at 50% 150%, #63d44d, #18798a);
+  }
+  .loader-bg:hover + .drops .drop2,
+  .drop3 {
+    animation: drop 1s cubic-bezier(1, 0.19, 0.66, 0.12) 0.2s infinite;
+  }
+  .loader-bg:active + .drops .drop1,
+  .drop2,
+  .drop3 {
+    background-color: #63d44d;
+  }
+  .drops {
+    -webkit-filter: url("#liquid");
+    filter: url("#liquid");
+    position: absolute;
+    top: 35%;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    z-index: 1;
+    opacity: 0;
+    animation: fade-in 0.1s linear 0.4s forwards;
+  }
+  
+  .drop1,
+  .drop2,
+  .drop3 {
+    width: 20px;
+    height: 28px;
+    border-radius: 50%;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    margin: auto;
+    background-color: #18798a;
+  }
+  
+  .drop1 {
+    width: 125px;
+    height: 16px;
+    bottom: 2px;
+    border-radius: 0;
+  }
+  
+  .drop3 {
+    background-color: #63d44d;
+  }
+  
+  .drop2,
+  .drop3 {
+    animation: drop 2s cubic-bezier(1, 0.19, 0.66, 0.12) 1s infinite;
+  }
+  
+  
+  .btn {
+          background-color: #4CAF50;
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          font-size: 16px;
+          border-radius: 5px;
+          cursor: pointer;
+          transition: background 0.3s ease, transform 0.2s;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+      }
+      
+      .btn:hover {
+          background-color: #45a049;
+          transform: scale(1.05);
+      }
+  
+      .btn i {
+          font-size: 18px;
+      }
+  
+  
+      .products-table-container {
+      display: none;
+      position: absolute;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      z-index: 1000;
+      max-height: 400px;
+      overflow-y: auto;
+      width: 50%;
+      margin-top: 5px;
+  }
 
+  /* Dark Mode for Products Table Container */
+  .dark .products-table-container {
+      background: #374151;
+      border: 1px solid #4b5563;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  }
+  
+  .products-table {
+      width: 100%;
+      border-collapse: collapse;
+  }
+  
+  .products-table th, .products-table td {
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+      color: #000;
+  }
 
+  /* Dark Mode for Products Table */
+  .dark .products-table th, .dark .products-table td {
+      border-bottom: 1px solid #4b5563;
+      color: white !important;
+      background-color: #374151;
+  }
 
-.sidebar {
-    min-width: 200px;
-    max-width: 250px;
-    background-color: #f9fafb;
-    border-right: 1px solid #e5e7eb;
-    transition: transform 0.3s ease-in-out;
-    position: fixed;
-    height: 100vh;
-    z-index: 40;
-}
+  .dark .products-table th {
+      background-color: #1f2937;
+  }
+  
+  .products-table tr:hover {
+      background-color: #f5f5f5;
+      cursor: pointer;
+  }
 
-.sidebar-hidden {
-    transform: translateX(-100%);
-}
+  /* Dark Mode for Table Row Hover */
+  .dark .products-table tr:hover {
+      background-color: #4b5563;
+  }
+  
+  .products-table tr.selected {
+      background-color: #e0e0e0;
+  }
 
-.content {
-    margin-left: 250px;
-    /* Adjust this value based on the sidebar width */
-    transition: margin-left 0.3s ease-in-out;
-    width: calc(100% - 250px);
-    /* Adjust this value based on the sidebar width */
-}
+  /* Dark Mode for Selected Row */
+  .dark .products-table tr.selected {
+      background-color: #6b7280;
+  }
+  
+  .table-pagination {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background-color: #f9f9f9;
+      border-top: 1px solid #ddd;
+  }
+
+  /* Dark Mode for Table Pagination */
+  .dark .table-pagination {
+      background-color: #1f2937;
+      border-top: 1px solid #4b5563;
+      color: white;
+  }
+  
+  .table-pagination button {
+      padding: 4px 8px;
+      background-color: #f0f0f0;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      cursor: pointer;
+  }
+
+  /* Dark Mode for Pagination Buttons */
+  .dark .table-pagination button {
+      background-color: #4b5563;
+      border: 1px solid #6b7280;
+      color: white;
+  }
+
+  .dark .table-pagination button:hover {
+      background-color: #6b7280;
+  }
+  
+  .table-pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+  }
+  
+  /* Initially hide the submenus */
+  .submenu {
+      display: none;
+      list-style-type: none;
+      padding-left: 20px; /* Indentation for submenu items */
+  }
+
+    
+  .content {
+    margin-left: 0 !important; /* Force no margin for sidebar */
+    transition: none !important; /* Disable animations */
+  }
+  
+  .sidebar {
+    display: none !important; /* Completely hide sidebar */
+  }
+  
+  .sidebar-hidden {
+    display: none !important;
+  }          
 
 .content-full {
     margin-left: 0;
@@ -191,6 +453,12 @@ td {
     top: 0;
 }
 
+/* Dark Mode for Table Header */
+.dark .table-header {
+    background-color: #374151;
+    color: white !important;
+}
+
 .table-row {
     color: #000;
     /* Default black text */
@@ -200,11 +468,6 @@ td {
     background-color: #f9fafb;
 }
 
-/* Dark mode styles */
-.dark .sidebar {
-    background-color: #1f2937;
-    border-right-color: #374151;
-}
 
 
 
@@ -214,11 +477,6 @@ td {
 }
 
 
-/* Dark Mode */
-html.dark .sidebar {
-    background-color: #1f2937;
-    border-right-color: #374151;
-}
 
 html.dark body {
     background-color: #111827;
@@ -234,17 +492,13 @@ html.dark body {
 
         
         .dark td {
-            color: #000000 !important;
-            /* Force black text in dark mode */
-            background-color: #d1d5db;
-            /* Light gray background for contrast */
+            color: white !important;
+            background-color: #374151;
         }
 
         .dark h2 {
-            color: #000000 !important;
-            /* Force black text in dark mode */
-            background-color: #d1d5db;
-            /* Light gray background for contrast */
+            color: white !important;
+            background-color: transparent;
         }
 
 
@@ -362,6 +616,8 @@ html.dark body {
       box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
   }
 
+
+  
   /* Responsive Design */
   @media (max-width: 1024px) {
       .search-container {
@@ -388,6 +644,13 @@ html.dark body {
     max-width: 600px; /* Adjust width as needed */
     width: 100%; /* Ensures it doesn't exceed max-width */
     margin: 0 auto; /* Centers the container */
+    transition: background-color 0.3s ease;
+}
+
+/* Dark Mode for Date Container */
+.dark .date-container {
+    background: #1f2937;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 @media (max-width: 768px) {
@@ -403,6 +666,12 @@ html.dark body {
 .date-container label {
     font-weight: 600;
     color: #374151;
+    transition: color 0.3s ease;
+}
+
+/* Dark Mode for Date Container Labels */
+.dark .date-container label {
+    color: #e5e7eb;
 }
 
 .date-container input {
@@ -422,16 +691,7 @@ html.dark body {
     box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
 }
 
-/* Dark Mode */
-.dark .date-container {
-    background: #1f2937;
-    box-shadow: none;
-}
-
-.dark .date-container label {
-    color: #e5e7eb;
-}
-
+/* Dark Mode for Date Container Inputs */
 .dark .date-container input {
     background-color: #374151;
     color: white;
@@ -536,6 +796,17 @@ html.dark .moon {
     flex-direction: column;
     width: 320px;
     margin-top: 10px;
+    padding: 16px;
+    background: #f9fafb;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease;
+}
+
+/* Dark Mode for Product Container */
+.dark .product-container {
+    background: #1f2937;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* Search Input */
@@ -555,6 +826,22 @@ html.dark .moon {
 
 #product-search:focus {
     border-color: #007bff;
+}
+
+/* Dark Mode for Search Input */
+.dark #product-search {
+    background-color: #374151;
+    color: white;
+    border: 1px solid #4b5563;
+}
+
+.dark #product-search:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+}
+
+.dark #product-search::placeholder {
+    color: #9ca3af;
 }
 
 /* Dropdown */
@@ -577,6 +864,13 @@ html.dark .moon {
     transition: background-color 0.3s, color 0.3s;
 }
 
+/* Dark Mode for Dropdown Select Box */
+.dark .custom-dropdown select {
+    background-color: #374151;
+    color: white;
+    border: 1px solid #4b5563;
+}
+
 /* Dropdown List */
 .custom-dropdown .dropdown-list {
     position: absolute;
@@ -592,6 +886,14 @@ html.dark .moon {
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
     padding: 5px;
     transition: background-color 0.3s, color 0.3s;
+}
+
+/* Dark Mode for Dropdown List */
+.dark .custom-dropdown .dropdown-list {
+    background-color: #374151;
+    color: white;
+    border: 1px solid #4b5563;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* Dropdown Items */
@@ -613,6 +915,16 @@ html.dark .moon {
 /* Hover Effect */
 .custom-dropdown .dropdown-list div:hover {
     background-color: #007bff;
+    color: white;
+}
+
+/* Dark Mode for Dropdown Items */
+.dark .custom-dropdown .dropdown-list div {
+    border-bottom: 1px solid #4b5563;
+}
+
+.dark .custom-dropdown .dropdown-list div:hover {
+    background-color: #3b82f6;
     color: white;
 }
 
@@ -708,4 +1020,98 @@ html.dark .moon {
     
     z-index: -1; /* Push it behind other content */
     pointer-events: none; /* Prevent interaction */
+}
+
+/* ===== COMPREHENSIVE DARK MODE FIXES ===== */
+
+/* Fix body background and text color in dark mode */
+.dark body {
+    background-color: #111827 !important;
+    color: white !important;
+}
+
+html.dark body {
+    background-color: #111827 !important;
+    color: white !important;
+}
+
+/* Ensure all input elements are dark mode compatible */
+.dark input, 
+.dark select, 
+.dark textarea {
+    background-color: #374151 !important;
+    color: white !important;
+    border-color: #4b5563 !important;
+}
+
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.5) !important;
+}
+
+/* Fix placeholder text in dark mode */
+.dark input::placeholder,
+.dark textarea::placeholder {
+    color: #9ca3af !important;
+}
+
+/* Override any white backgrounds in dark mode */
+.dark .bg-white {
+    background-color: #1f2937 !important;
+}
+
+/* Ensure text is white in dark mode */
+.dark .text-black {
+    color: white !important;
+}
+
+/* Fix any span or div text elements */
+.dark span,
+.dark div,
+.dark p {
+    color: inherit;
+}
+
+/* Ensure buttons have proper colors */
+.dark button {
+    background-color: #4b5563;
+    color: white;
+    border-color: #6b7280;
+}
+
+.dark button:hover {
+    background-color: #6b7280;
+}
+
+/* Fix modal in dark mode */
+.dark .modal-content {
+    background-color: #1f2937 !important;
+    color: white !important;
+}
+
+.dark .modal-content .close-btn {
+    color: white !important;
+}
+
+/* Ensure all containers are properly styled */
+.dark .container,
+.dark .flex,
+.dark .grid {
+    color: inherit;
+}
+
+/* Fix any remaining white text issues */
+.dark * {
+    border-color: #4b5563;
+}
+
+/* Specific fixes for common elements */
+.dark .shadow-md {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2) !important;
+}
+
+.dark .rounded-lg {
+    background-color: inherit;
 }

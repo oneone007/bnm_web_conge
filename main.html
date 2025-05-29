@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Internal Tabs Interface</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    nav {
+      width: 250px;
+      background-color: #2f4f4f;
+      color: white;
+      padding: 10px;
+      overflow-y: auto;
+      transition: width 0.3s;
+    }
+
+    nav.hidden {
+      width: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    nav button {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+      border: none;
+      background-color: #3e6464;
+      color: white;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    nav button:hover {
+      background-color: #4e7a7a;
+    }
+
+    /* Main content */
+    .main {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      transition: margin-left 0.3s;
+    }
+
+    #toggleSidebar {
+      background-color: #2f4f4f;
+      color: white;
+      border: none;
+      padding: 10px;
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
+    }
+
+    #tabs {
+      display: flex;
+      background-color: #eee;
+      border-bottom: 1px solid #ccc;
+    }
+
+    .tab-button {
+      padding: 8px 12px;
+      margin-right: 2px;
+      border: none;
+      background-color: #ccc;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .tab-button.active {
+      background-color: #ffffff;
+      border-bottom: 2px solid green;
+      font-weight: bold;
+    }
+
+    .tab-button span {
+      margin-left: 5px;
+      cursor: pointer;
+      color: red;
+    }
+
+    #tab-contents {
+      flex-grow: 1;
+      overflow: auto;
+    }
+
+    .tab-pane {
+      display: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    .tab-pane iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <nav id="sidebar">
+    <button id="toggleSidebar">🔀 Toggle Sidebar</button>
+    <button onclick="navigateTo('admin')">🛠️ Admin</button>
+    <button onclick="navigateTo('Recap_Achat')">🛒 Recap Achat</button>
+    <button onclick="navigateTo('Recap_Vente')">💰 Recap Vente</button>
+    <button onclick="navigateTo('Product')">🛍️ Products</button>
+    <button onclick="navigateTo('Etatstock')">📦 État de Stock</button>
+  </nav>
+
+  <div class="main" id="mainContent">
+    <div id="tabs"></div>
+    <div id="tab-contents"></div>
+  </div>
+
+  <script>
+    const sidebar = document.getElementById('sidebar');
+    const toggleButton = document.getElementById('toggleSidebar');
+
+    toggleButton.onclick = () => {
+      sidebar.classList.toggle('hidden');
+    };
+
+    function navigateTo(pageId) {
+      const tabId = `tab-${pageId}`;
+      const contentId = `content-${pageId}`;
+
+      if (!document.getElementById(tabId)) {
+        const tab = document.createElement('button');
+        tab.id = tabId;
+        tab.className = 'tab-button';
+        tab.textContent = pageId.replace('.html', '');
+        tab.onclick = () => showTab(pageId);
+
+        const closeBtn = document.createElement('span');
+        closeBtn.textContent = '×';
+        closeBtn.onclick = (e) => {
+          e.stopPropagation();
+          document.getElementById(tabId).remove();
+          document.getElementById(contentId).remove();
+
+          // Optional: activate another tab if any remain
+          const remainingTabs = document.querySelectorAll('.tab-button');
+          if (remainingTabs.length > 0) {
+            const nextTab = remainingTabs[0].id.replace('tab-', '');
+            showTab(nextTab);
+          }
+        };
+
+        tab.appendChild(closeBtn);
+        document.getElementById('tabs').appendChild(tab);
+
+        const content = document.createElement('div');
+        content.id = contentId;
+        content.className = 'tab-pane';
+        content.innerHTML = `<iframe src="${pageId}"></iframe>`;
+        document.getElementById('tab-contents').appendChild(content);
+      }
+
+      showTab(pageId);
+    }
+
+    function showTab(pageId) {
+      document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(div => div.style.display = 'none');
+
+      document.getElementById(`tab-${pageId}`).classList.add('active');
+      document.getElementById(`content-${pageId}`).style.display = 'block';
+    }
+  </script>
+
+</body>
+</html>
