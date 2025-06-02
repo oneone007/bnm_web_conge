@@ -115,11 +115,14 @@ SELECT
         AND p.ZSubPaymentRule_ID in (1000007,1000016)
        --- and p.C_DocType_ID=1001615
         --and p.ZSubPaymentRule_ID=1000016)
-        AND p.datetrx >= '01/05/2025'
-        AND p.datetrx <= '31/05/2025'
+        AND p.datetrx >= '01/06/2025'
+        AND p.datetrx <= '30/06/2025'
 ) temp_combined
 ;
 
+SELECT s.sid, s.serial#, s.username
+FROM v$session s
+WHERE s.blocking_session IS NOT NULL;
 
 
 
@@ -365,15 +368,12 @@ SET processed = 'Y'
 WHERE C_BankStatement_id = &BankStatement;
 COMMIT;
 
--------
+--------------------------------------------------------------
 ----------------------- UPDATE  Remise IN (Articles ----> Articles-Tiers) ------------------------
-update C_BPartner_Product set m_discountschema_id = 1000719 -- id de remise
+update C_BPartner_Product set m_discountschema_id = 1000718 -- id de remise
 where m_product_id in (select str.m_product_id from m_storage str
 inner join m_product mp on (str.m_product_id = mp.m_product_id)
 inner join m_attributeinstance att on (str.m_attributesetinstance_id = att.m_attributesetinstance_id)
-where att.m_attribute_id = 1000508 and att.value like '%FYTO+ PHARMA MAKERS%'-- fournisseur
-and mp.name like 'FYTO+ PHARMA MAKERS%' --produit
-) and c_bp_group_id in(1001330)-- id de type client (client para,client potentiel) ;
-
-
-SELECT * FROM m_attributeinstance WHERE m_attribute_id = 1000508;
+where att.m_attribute_id = 1000508 and att.value like '%TOUCHE%'-- fournisseur
+and mp.name like 'TOUCHE%' --produit
+) and c_bp_group_id in(1000003)-- id de type client (client para,client potentiel) ;1000003 PARA 1001330 POT
