@@ -15,26 +15,19 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup V
 }
 
 
-// Specify the path to the JSON file
-$json_file = 'json_files/bank.json';
+// Include database connection
+require_once 'db/db_connect.php';
 
-// Check if the JSON file exists
-if (file_exists($json_file)) {
-    $json_data = file_get_contents($json_file);
-    $bank_records = json_decode($json_data, true);
-    
-    // If file is empty or invalid, initialize as empty array
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        $bank_records = [];
+// Get records from database ordered by creation_time desc
+$sql = "SELECT * FROM bank ORDER BY creation_time DESC";
+$result = $conn->query($sql);
+
+$bank_records = [];
+if ($result && $result->num_rows > 0) {
+    while($row = $result->fetch_assoc()) {
+        $bank_records[] = $row;
     }
-} else {
-    $bank_records = [];
 }
-
-// Sort records by date (newest first)
-usort($bank_records, function($a, $b) {
-    return strtotime($b['date']) - strtotime($a['date']);
-});
 ?>
 
 <!DOCTYPE html>
@@ -262,28 +255,17 @@ usort($bank_records, function($a, $b) {
         </tr>
       </thead>
       <tbody>
-<?php foreach ($bank_records as $record): 
-  $bna_sold = $record['bna_sold'] ?? 0;
-  $bna_remise = $record['bna_remise'] ?? 0;
-  $bna_check = $record['bna_check'] ?? 0;
-
-  $baraka_sold = $record['baraka_sold'] ?? 0;
-  $baraka_remise = $record['baraka_remise'] ?? 0;
-  $baraka_check = $record['baraka_check'] ?? 0;
-
-  $row_total = $bna_sold + $bna_remise + $baraka_sold + $baraka_remise;
-  $check_total = $bna_check + $baraka_check;
-?>
+<?php foreach ($bank_records as $record): ?>
   <tr>
-    <td><?php echo htmlspecialchars($record['date']); ?></td>
-    <td><?php echo number_format($bna_sold, 2); ?></td>
-    <td><?php echo number_format($bna_remise, 2); ?></td>
-    <td><?php echo number_format($bna_check, 2); ?></td>
-    <td><?php echo number_format($baraka_sold, 2); ?></td>
-    <td><?php echo number_format($baraka_remise, 2); ?></td>
-    <td><?php echo number_format($baraka_check, 2); ?></td>
-    <td><strong><?php echo number_format($row_total, 2); ?></strong></td>
-    <td><strong><?php echo number_format($check_total, 2); ?></strong></td>
+    <td><?php echo htmlspecialchars($record['creation_time']); ?></td>
+    <td><?php echo number_format($record['bna_sold'], 2); ?></td>
+    <td><?php echo number_format($record['bna_remise'], 2); ?></td>
+    <td><?php echo number_format($record['bna_check'], 2); ?></td>
+    <td><?php echo number_format($record['baraka_sold'], 2); ?></td>
+    <td><?php echo number_format($record['baraka_remise'], 2); ?></td>
+    <td><?php echo number_format($record['baraka_check'], 2); ?></td>
+    <td><strong><?php echo number_format($record['total_bank'], 2); ?></strong></td>
+    <td><strong><?php echo number_format($record['total_checks'], 2); ?></strong></td>
   </tr>
 <?php endforeach; ?>
 

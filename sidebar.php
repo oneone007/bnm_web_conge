@@ -383,9 +383,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
                 <!-- Admin Section -->
                 <li>
                     <?php $page = 'admin'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
-                    <button <?php if (!$disabled) {?>onclick="navigateTo('admin')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                    <button <?php if (!$disabled) {?>onclick="navigateTo('admin')"<?php } ?> class="w-full flex items-center text-left gap-3 px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
                         <i class="fas fa-tools icon"></i>
-                        <span>Admin</span>
+                        <span class="flex-1">Admin</span>
                     </button>
                 </li>
 
@@ -394,32 +394,33 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
                 <!-- FONDS PROPRE Section -->
                 <li>
                     <button onclick="toggleSubmenu('fond-submenu')" class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center text-left gap-3 flex-1">
                             <i class="fas fa-coins icon"></i>
-                            <span>FONDS PROPRE</span>
+                            <span class="flex-1">FONDS PROPRE</span>
                         </div>
                         <i class="fas fa-chevron-right chevron text-xs"></i>
                     </button>
                     <ul id="fond-submenu" class="submenu pl-4">
                         <li>
                             <?php $page = 'mony'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
-                            <button <?php if (!$disabled) {?>onclick="navigateTo('mony')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('mony2')"<?php } ?> class="w-full flex items-center text-left gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
                                 <i class="fas fa-chart-line icon text-sm"></i>
-                                <span class="text-sm">Analysis</span>
+                                <span class="">Analysis</span>
                             </button>
+
                         </li>
                         <li>
                             <?php $page = 'bank'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
                             <button <?php if (!$disabled) {?>onclick="navigateTo('bank')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
                                 <i class="fas fa-university icon text-sm"></i>
-                                <span class="text-sm">Banks</span>
+                                <span class="">Banks</span>
                             </button>
                         </li>
                         <li>
                             <?php $page = 'recouverement'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
                             <button <?php if (!$disabled) {?>onclick="navigateTo('recouverement')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
                                 <i class="fas fa-money-bill-wave icon text-sm"></i>
-                                <span class="text-sm">Recouvrement</span>
+                                <span class="">Recouvrement</span>
                             </button>
                         </li>
                     </ul>
@@ -441,7 +442,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
                     <button onclick="toggleSubmenu('products-submenu')" class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
                         <div class="flex items-center gap-3">
                             <i class="fas fa-shopping-bag icon"></i>
-                            <span>PRODUCTS</span>
+                            <span class="flex-1">PRODUCTS</span>
                         </div>
                         <i class="fas fa-chevron-right chevron text-xs"></i>
                     </button>
@@ -450,28 +451,35 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
                             <?php $page = 'Etatstock'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
                             <button <?php if (!$disabled) {?>onclick="navigateTo('Etatstock')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
                                 <i class="fas fa-boxes icon text-sm"></i>
-                                <span class="text-sm">État de Stock</span>
+                                <span class=" ">État de Stock</span>
+                            </button>
+                        </li>
+                        <li>
+                            <?php $page = 'Mouvement Stock'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('Mouvement_Stock')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-exchange-alt icon"></i>
+                                <span>Mouvement Stock</span>
                             </button>
                         </li>
                         <li>
                             <?php $page = 'Product'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
                             <button <?php if (!$disabled) {?>onclick="navigateTo('Product')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
                                 <i class="fas fa-percentage icon text-sm"></i>
-                                <span class="text-sm">Marge</span>
+                                <span class="">Marge</span>
                             </button>
                         </li>
                         <li>
                             <?php $page = 'Rotation'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
                             <button <?php if (!$disabled) {?>onclick="navigateTo('Rotation')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
                                 <i class="fas fa-sync-alt icon text-sm"></i>
-                                <span class="text-sm">Rotation</span>
+                                <span class="">Rotation</span>
                             </button>
                         </li>
                         <li>
                             <?php $page = 'Quota'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
                             <button <?php if (!$disabled) {?>onclick="navigateTo('Quota')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
                                 <i class="fas fa-bullseye icon text-sm"></i>
-                                <span class="text-sm">Quota Produit</span>
+                                <span class="">Quota Produit</span>
                             </button>
                         </li>
                     </ul>
@@ -484,7 +492,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
                     <button onclick="toggleSubmenu('recapsa-submenu')" class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
                         <div class="flex items-center gap-3">
                             <i class="fas fa-cart-plus icon"></i>
-                            <span>RECAPS ACHAT</span>
+                            <span class="flex-1">RECAPS ACHAT</span>
                         </div>
                         <i class="fas fa-chevron-right chevron text-xs"></i>
                     </button>
@@ -493,21 +501,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
                             <?php $page = 'Recap_Achat'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
                             <button <?php if (!$disabled) {?>onclick="navigateTo('Recap_Achat')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
                                 <i class="fas fa-shopping-cart icon text-sm"></i>
-                                <span class="text-sm">Recap Achat</span>
+                                <span class="">Recap Achat</span>
                             </button>
                         </li>
                         <li>
                             <?php $page = 'recap_achat_facturation'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
                             <button <?php if (!$disabled) {?>onclick="navigateTo('recap_achat_facturation')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
                                 <i class="fas fa-file-invoice icon text-sm"></i>
-                                <span class="text-sm">Recap Achat F</span>
+                                <span class="">Recap Achat F</span>
                             </button>
                         </li>
                         <li>
                             <?php $page = 'Annual_Recap_A'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
                             <button <?php if (!$disabled) {?>onclick="navigateTo('Annual_Recap_A')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
                                 <i class="fas fa-calendar-alt icon text-sm"></i>
-                                <span class="text-sm">Annual Recap</span>
+                                <span class="">Annual Recap</span>
+                            </button>
+                        </li>
+                        <li>
+                            <?php $page = 'rot_men_achat'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('rot_men_achat')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-calendar-alt icon text-sm"></i>
+                                <span class="">rot_men_achat</span>
                             </button>
                         </li>
                     </ul>
@@ -518,7 +533,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
                     <button onclick="toggleSubmenu('recapsv-submenu')" class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
                         <div class="flex items-center gap-3">
                             <i class="fas fa-cash-register icon"></i>
-                            <span>RECAPS VENTE</span>
+                            <span class="flex-1">RECAPS VENTE</span>
                         </div>
                         <i class="fas fa-chevron-right chevron text-xs"></i>
                     </button>
@@ -527,21 +542,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
                             <?php $page = 'Recap_Vente'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
                             <button <?php if (!$disabled) {?>onclick="navigateTo('Recap_Vente')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
                                 <i class="fas fa-money-bill-wave icon text-sm"></i>
-                                <span class="text-sm">Recap Vente</span>
+                                <span class="">Recap Vente</span>
                             </button>
                         </li>
                         <li>
                             <?php $page = 'Recap_Vente_Facturation'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
                             <button <?php if (!$disabled) {?>onclick="navigateTo('Recap_Vente_Facturation')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
                                 <i class="fas fa-file-invoice-dollar icon text-sm"></i>
-                                <span class="text-sm">Recap Vente F</span>
+                                <span class="">Recap Vente F</span>
                             </button>
                         </li>
                         <li>
                             <?php $page = 'Annual_Recap_V'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
                             <button <?php if (!$disabled) {?>onclick="navigateTo('Annual_Recap_V')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
                                 <i class="fas fa-calendar-check icon text-sm"></i>
-                                <span class="text-sm">Annual Recap</span>
+                                <span class="">Annual Recap</span>
                             </button>
                         </li>
                         <li>
@@ -575,6 +590,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
                         <span>Affectation</span>
                     </button>
                 </li>
+                
             </ul>
 
             <!-- Logout Button -->

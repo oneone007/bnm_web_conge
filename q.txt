@@ -1,11 +1,40 @@
 <?php
-
 session_start();
 
 // Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['vente', 'achat'])) {
+if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup Vente'])) {
     header("Location: Acess_Denied");
     exit();
+}
+
+// Initialize bank variables
+$bna_sold = isset($_POST['bna_sold']) ? floatval($_POST['bna_sold']) : 0;
+$bna_remise = isset($_POST['bna_remise']) ? floatval($_POST['bna_remise']) : 0;
+$baraka_sold = isset($_POST['baraka_sold']) ? floatval($_POST['baraka_sold']) : 0;
+$baraka_remise = isset($_POST['baraka_remise']) ? floatval($_POST['baraka_remise']) : 0;
+$bna_check = isset($_POST['bna_check']) ? floatval($_POST['bna_check']) : 0;
+$baraka_check = isset($_POST['baraka_check']) ? floatval($_POST['baraka_check']) : 0;
+
+$banque_total = $bna_sold + $bna_remise + $baraka_sold + $baraka_remise;
+$grand_total = 0;
+$json_file = 'json_files/bank.json';
+
+// Process bank data
+if (file_exists($json_file)) {
+    $json_data = file_get_contents($json_file);
+    $bank_records = json_decode($json_data, true);
+    
+    if (json_last_error() === JSON_ERROR_NONE && !empty($bank_records)) {
+        $last_record = $bank_records[0];
+        $bna_sold = isset($last_record['bna_sold']) ? (float)$last_record['bna_sold'] : 0;
+        $baraka_sold = isset($last_record['baraka_sold']) ? (float)$last_record['baraka_sold'] : 0;
+        $bna_remise = isset($last_record['bna_remise']) ? (float)$last_record['bna_remise'] : 0;
+        $baraka_remise = isset($last_record['baraka_remise']) ? (float)$last_record['baraka_remise'] : 0;
+        
+        $total_sold = $bna_sold + $baraka_sold;
+        $total_remise = $bna_remise + $baraka_remise;
+        $grand_total = $total_sold + $total_remise;
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -13,429 +42,1057 @@ if (isset($_SESSION['username']) && in_array($_SESSION['username'], ['vente', 'a
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pending Documents Dashboard</title>
+    <title>ComicLab - Advanced Research Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        mono: ['IBM Plex Mono', 'monospace'],
+                    },
+                    colors: {
+                        lab: {
+                            dark: '#121212',
+                            panel: '#1e1e1e',
+                            border: '#333333',
+                            accent: '#00ff88',
+                            highlight: '#0088ff',
+                            warning: '#ff6600',
+                            danger: '#ff0033',
+                            teal: '#00f5d4',
+                            purple: '#9b5de5'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        .fade-in {
-            animation: fadeIn 0.5s ease-in;
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'IBM Plex Mono', monospace;
         }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .data-panel {
+            border: 1px solid #333;
+            background-color: #1e1e1e;
         }
-        
-        .status-badge {
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.375rem;
-            font-size: 0.75rem;
+        .data-header {
+            border-bottom: 1px solid #333;
+            background-color: #1a1a1a;
+        }
+        .data-table {
+            font-size: 0.875rem;
+        }
+        .data-table th {
             font-weight: 600;
             text-transform: uppercase;
+            font-size: 0.75rem;
             letter-spacing: 0.05em;
         }
-        
-        .status-created {
-            background-color: #dbeafe;
-            color: #1d4ed8;
+        .data-table td, .data-table th {
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid #333333;
         }
-        
-        .document-row:hover {
-            background-color: #f8fafc;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        .data-value {
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 600;
         }
-        
-        .empty-state {
-            background-color: #f8fafc;
-            border: 1px dashed #cbd5e1;
+        .positive-trend {
+            color: #00ff88;
+        }
+        .negative-trend {
+            color: #ff0033;
+        }
+        .neutral-trend {
+            color: #0088ff;
+        }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .trend-icon {
+            margin-right: 4px;
+        }
+        .section-divider {
+            border: none;
+            border-top: 1px solid #333;
+            margin: 1.5rem 0;
+        }
+        .metric-card {
+            background-color: #252525;
+            border-left: 4px solid;
+            padding: 0.75rem 1rem;
+        }
+        .metric-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.7;
+        }
+        .metric-value {
+            font-size: 1.5rem;
+            line-height: 1;
+            margin: 0.25rem 0 0.5rem;
+        }
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+        .progress-bar {
+            height: 4px;
+            background-color: #333;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .progress-value {
+            height: 100%;
+        }
+        .grid-point {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .kpi-badge {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+        }
+        .kpi-loader {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100px;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(0, 136, 255, 0.2);
+            border-radius: 50%;
+            border-top-color: #0088ff;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .error-message {
+            color: #ff0033;
+            text-align: center;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .chart-filter {
+            background-color: rgba(51, 51, 51, 0.3);
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            opacity: 0.5;
+        }
+        .chart-filter:hover {
+            background-color: rgba(51, 51, 51, 0.5);
+            opacity: 0.8;
+        }
+        .chart-filter.active {
+            border-color: currentColor;
+            background-color: rgba(51, 51, 51, 0.7);
+            opacity: 1;
         }
     </style>
 </head>
-<body class="bg-gray-50">
-    <div class="min-h-screen">
-        <!-- Header -->
-        <header class="bg-white shadow-sm">
-            <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Document Management System</h1>
-                    <p class="text-sm text-gray-500">Track and manage your pending documents</p>
-                </div>
-
-            </div>
-        </header>
-
-        <!-- Main content -->
-        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-medium text-gray-900">Pending Documents</h2>
+<body class="bg-lab-dark text-gray-300 font-mono">
+    <header class="border-b border-lab-border bg-lab-dark sticky top-0 z-10">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2">
-                    <span class="text-sm text-gray-500">Last updated: <span id="lastUpdated">Just now</span></span>
-                    <button id="refreshBtn" class="p-1 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
+                    <span class="text-lab-accent font-bold text-xl">COMIC</span>
+                    <span class="text-lab-highlight font-bold text-xl">RESEARCH</span>
+                    <span class="text-xs px-2 py-1 bg-lab-panel rounded">v3.1.0</span>
+                </div>
+                <div class="text-xs text-gray-400">
+                    <div class="flex items-center space-x-4">
+                        <span>Update in: <span id="refresh-time" class="text-gray-100">5min 00sec</span></span>
+                        <button id="manual-refresh-btn" class="px-2 py-1 bg-lab-accent text-black rounded hover:bg-opacity-80">⟳ Refresh Now</button>
+                    </div>
                 </div>
             </div>
-
-      <div class="flex justify-between items-start mb-6">
-  <!-- Total Documents Card - Left Side -->
-  <div class="bg-white shadow rounded-lg">
-    <div class="px-4 py-3">
-      <div class="flex items-center">
-        <div class="flex-shrink-0 bg-blue-500 rounded-md p-2">
-          <i class="fas fa-file-alt text-white text-sm"></i>
         </div>
-        <div class="ml-3">
-          <dt class="text-xs font-medium text-gray-500 truncate">Total</dt>
-          <dd class="flex items-baseline">
-            <div class="text-lg font-semibold text-gray-900" id="totalDocuments">0</div>
-          </dd>
-        </div>
-      </div>
-    </div>
-  </div>
+    </header>
 
-  <!-- Region Filter - Right Side -->
-  <div class="relative w-64">
-    <div class="bg-white shadow rounded-lg">
-      <div class="px-4 py-3">
-        <button id="regionFilterBtn" class="flex items-center text-sm font-medium text-gray-700 hover:text-blue-600">
-          <span id="selectedRegionText">All Regions</span>
-          <i class="fas fa-chevron-down ml-2"></i>
-        </button>
-        <div id="regionDropdown" class="hidden absolute right-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg w-96 z-50">
-          <div class="sticky top-0 bg-white border-b border-gray-200 p-2">
-            <input 
-              type="text" 
-              id="regionSearchFilter" 
-              placeholder="Type to filter regions..." 
-              class="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-            >
-          </div>
-          <div id="regionsList" class="max-h-60 overflow-y-auto p-1">
-            <div class="p-2 hover:bg-gray-100 cursor-pointer text-gray-600" data-value="">All Regions</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-
-            <!-- Documents table -->
-            <div class="bg-white shadow overflow-hidden sm:rounded-lg">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document No.</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created Date</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NAME</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">REGION</th>
-
-
-
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200" id="documentsTableBody">
-                            <tr class="document-row transition-all duration-150 ease-in-out">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">BEC26215/2025</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="status-badge status-created">Created</span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Mon, 26 May 2025 09:00:17 GMT</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <div class="flex space-x-2">
-                                        <button class="text-blue-600 hover:text-blue-900">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        <button class="text-green-600 hover:text-green-900">
-                                            <i class="fas fa-check"></i>
-                                        </button>
-                                        <button class="text-red-600 hover:text-red-900">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+    <main class="container mx-auto px-4 py-6">
+        <!-- Executive Analysis -->
+        <section class="mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- Market Growth Chart -->
+                <div class="data-panel rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-semibold">KPI TRENDS</h3>
+                        <span class="text-xs bg-lab-panel px-2 py-1 rounded">real-time data</span>
+                    </div>
+                    <!-- Chart filters -->
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        <button class="chart-filter text-[#ff0033] px-3 py-1 rounded text-xs active" data-series="dette">Dette</button>
+                        <button class="chart-filter text-[#00ff88] px-3 py-1 rounded text-xs active" data-series="stock">Stock</button>
+                        <button class="chart-filter text-[#0088ff] px-3 py-1 rounded text-xs active" data-series="tresorerie">Trésorerie</button>
+                        <button class="chart-filter text-[#9b5de5] px-3 py-1 rounded text-xs active" data-series="creance">Créance</button>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="marketGrowthChart"></canvas>
+                    </div>
                 </div>
                 
-                <!-- Empty state (hidden in this case) -->
-                <div id="emptyState" class="empty-state hidden p-12 text-center rounded-lg">
-                    <i class="fas fa-file-alt text-4xl text-gray-400 mb-4"></i>
-                    <h3 class="text-lg font-medium text-gray-900">No pending documents</h3>
-              
+                <!-- Demographic Breakdown -->
+                <div class="data-panel rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-semibold">READER DEMOGRAPHICS</h3>
+                        <span class="text-xs bg-lab-panel px-2 py-1 rounded">latest survey</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="demographicChart"></canvas>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 mt-2 text-xs text-center">
+                        <div>
+                            <div class="font-bold">Gender</div>
+                            <div>Male: 48%</div>
+                            <div>Female: 49%</div>
+                            <div>Other: 3%</div>
+                        </div>
+                        <div>
+                            <div class="font-bold">Age Groups</div>
+                            <div>13-17: 22%</div>
+                            <div>18-24: 41%</div>
+                            <div>25-34: 28%</div>
+                        </div>
+                        <div>
+                            <div class="font-bold">Engagement</div>
+                            <div>Daily: 34%</div>
+                            <div>Weekly: 52%</div>
+                            <div>Monthly: 14%</div>
+                        </div>
+                    </div>
                 </div>
             </div>
             
-            <!-- Pagination -->
-            <div class="mt-4">
-                <div class="flex items-center justify-between">
-                    <div class="flex-1 flex justify-between sm:hidden">
-                        <a href="#" class="relative inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-blue-600 bg-blue-100 hover:bg-blue-200">
-                            Previous
-                        </a>
-                        <a href="#" class="relative inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-blue-600 bg-blue-100 hover:bg-blue-200">
-                            Next
-                        </a>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <!-- DETTES FOURNISSEUR -->
+                <div class="data-panel rounded-lg p-3">
+                    <div class="text-xs mb-2 uppercase">DETTES FOURNISSEUR</div>
+                    <div id="loading-dette-animation" class="kpi-loader">
+                        <div class="spinner"></div>
                     </div>
-                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                        <div>
-                            <p class="text-sm text-gray-700">
-                                Showing <span class="font-medium">1</span> to <span class="font-medium" id="documentCount">1</span> of <span class="font-medium" id="totalCount">1</span> documents
-                            </p>
+                    <div id="dette-text" class="hidden">
+                        <div class="flex justify-between items-end mb-1">
+                            <span id="dette-value" class="text-xl data-value">Loading...</span>
                         </div>
-                        <div>
-                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                                <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                                    <i class="fas fa-chevron-left"></i>
-                                    <span class="sr-only">Previous</span>
-                                </a>
-                                <!-- Page numbers will be injected here by JavaScript -->
-                                <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                                    <i class="fas fa-chevron-right"></i>
-                                    <span class="sr-only">Next</span>
-                                </a>
-                            </nav>
+                    </div>
+                   
+                </div>
+                
+                <!-- CREANCE CLIENT -->
+                <div class="data-panel rounded-lg p-3">
+                    <div class="text-xs mb-2 uppercase">CREANCE CLIENT</div>
+                    <div id="loading-credit-animation" class="kpi-loader">
+                        <div class="spinner"></div>
+                    </div>
+                    <div id="credit-text" class="hidden">
+                        <div class="flex justify-between items-end mb-1">
+                            <span id="credit-client-value" class="text-xl data-value">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- TOTAL STOCK -->
+                <div class="data-panel rounded-lg p-3">
+                    <div class="text-xs mb-2 uppercase">TOTAL STOCK</div>
+                    <div id="loading-stock-animation" class="kpi-loader">
+                        <div class="spinner"></div>
+                    </div>
+                    <div id="stock-text" class="hidden">
+                        <div class="flex justify-between items-end mb-1">
+                            <span id="stock-value" class="text-xl data-value">Loading...</span>
+                        </div>
+                    </div>
+                    <button id="toggle-details" class="text-xs text-lab-accent mt-2"></button>
+                    <div id="stock-details" class="hidden mt-2 text-xs"></div>
+                </div>
+                
+                <!-- TOTAL TRÉSORERIE -->
+                <div class="data-panel rounded-lg p-3">
+                    <div class="text-xs mb-2 uppercase">TOTAL TRÉSORERIE</div>
+                    <div class="flex justify-between items-end mb-1">
+                        <div id="tresorerie-total" class="text-xl data-value">
+                            <?php
+                            $json_file = 'json_files/bank.json';
+                            $banque_value = 0;
+                            $bna_check = 0;
+                            $baraka_check = 0;
+
+                            if (file_exists($json_file)) {
+                                $json_data = file_get_contents($json_file);
+                                $bank_records = json_decode($json_data, true);
+                                
+                                if (json_last_error() === JSON_ERROR_NONE && !empty($bank_records)) {
+                                    usort($bank_records, function ($a, $b) {
+                                        return strtotime($b['date']) - strtotime($a['date']);
+                                    });
+
+                                    $last_record = $bank_records[0];
+                                    $bna_sold = isset($last_record['bna_sold']) ? (float)$last_record['bna_sold'] : 0;
+                                    $baraka_sold = isset($last_record['baraka_sold']) ? (float)$last_record['baraka_sold'] : 0;
+                                    $bna_remise = isset($last_record['bna_remise']) ? (float)$last_record['bna_remise'] : 0;
+                                    $baraka_remise = isset($last_record['baraka_remise']) ? (float)$last_record['baraka_remise'] : 0;
+                                    $bna_check = isset($last_record['bna_check']) ? (float)$last_record['bna_check'] : 0;
+                                    $baraka_check = isset($last_record['baraka_check']) ? (float)$last_record['baraka_check'] : 0;
+                                    
+                                    // Calculate bank total without checks
+                                    $banque_value = $bna_sold + $baraka_sold + $bna_remise + $baraka_remise;
+                                    echo "<span id='banque-value' data-banktotal='{$banque_value}' data-bna-check='{$bna_check}' data-baraka-check='{$baraka_check}'>Loading...</span>";
+                                }
+                            }
+                            ?>
                         </div>
                     </div>
                 </div>
             </div>
+        </section>
 
- 
-        </main>
-    </div>
+
+    </main>
+
+    <footer class="border-t border-lab-border py-4 mt-8 bg-lab-panel">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center text-xs text-gray-400">
+                <div class="mb-2 md:mb-0">
+                    <span class="mr-4">COMICLAB RESEARCH v3.1.0</span>
+                    <span>ANALYTICS ENGINE v2.0.1</span>
+                </div>
+                <div>
+                    <span class="mr-4">Last scan: 2023-11-16T09:42:18Z</span>
+                    <span>Next model refresh: 2023-11-17T03:00:00Z</span>
+                </div>
+            </div>
+            <div class="mt-2 text-xxs text-gray-500 text-center">
+                Predictive models have 87-92% accuracy on historical data | Confidence intervals at 95%
+            </div>
+        </div>
+    </footer>
 
     <script>
-let allDocuments = [];
-let currentPage = 1;
-const pageSize = 10;
-let selectedRegion = '';
+        // Refresh configuration
+        const REFRESH_INTERVAL = 300; // 5 minutes in seconds
+        let countdown = REFRESH_INTERVAL;
+        let refreshIntervalId = null;
+        let isRefreshing = false;
 
-// Update fetchDocuments to store all data and reset page
-function fetchDocuments(region = '') {
-    let url = 'http://192.168.1.94:5000/pending_documents';
-    if (region) {
-        url += '?sales_region=' + encodeURIComponent(region);
-    }
-    fetch(url)
-        .then(response => response.json())
-        .then(data => {
-            allDocuments = data.documents || [];
-            currentPage = 1;
-            updateUIWithPagination();
-        })
-        .catch(() => {
-            allDocuments = [];
-            currentPage = 1;
-            updateUIWithPagination();
+        // Format time display
+        function formatTime(seconds) {
+            const minutes = Math.floor(Math.abs(seconds) / 60);
+            const secs = Math.abs(seconds) % 60;
+            const sign = seconds < 0 ? '-' : '';
+            return `${sign}${minutes}min ${secs.toString().padStart(2, '0')}sec`;
+        }
+
+        // Update timer display
+        function updateTimerDisplay() {
+            const timerElement = document.getElementById('refresh-time');
+            if (timerElement) {
+                timerElement.textContent = formatTime(countdown);
+                if (countdown < 0) {
+                    timerElement.classList.add('text-lab-danger');
+                } else {
+                    timerElement.classList.remove('text-lab-danger');
+                }
+            }
+        }
+
+        // Main refresh function
+        async function refreshAll() {
+            if (isRefreshing) return;
+            isRefreshing = true;
+            
+            try {
+                await Promise.all([
+                    fetchTotalStock(),
+                    fetchFournisseurDette(),
+                    fetchCreditClient(),
+                    updateTotalTresorerie(),
+                    updateKPITrendsChart()  // Add chart update to the refresh cycle
+                ]);
+            } catch (error) {
+                console.error("Error during refresh:", error);
+            } finally {
+                isRefreshing = false;
+                countdown = REFRESH_INTERVAL;
+                updateTimerDisplay();
+            }
+        }
+
+        // Initialize everything
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initial data load
+            fetchTotalStock();
+            fetchFournisseurDette();
+            fetchCreditClient();
+            updateTotalTresorerie(); // Using new function instead of fetchCaisseAndBanque
+
+            // Initial chart load
+            updateKPITrendsChart();
+
+            // Set up manual refresh button
+            document.getElementById('manual-refresh-btn')?.addEventListener('click', () => {
+                fetchTotalStock();
+                fetchFournisseurDette();
+                fetchCreditClient();
+                updateTotalTresorerie(); // Using new function
+                updateKPITrendsChart();
+            });
+
+            // Set up automatic refresh every 5 minutes
+            setInterval(() => {
+                fetchTotalStock();
+                fetchFournisseurDette();
+                fetchCreditClient();
+                updateTotalTresorerie(); // Using new function
+                updateKPITrendsChart();
+            }, 300000);
+
+            // Add toggle functionality for bank details
+            document.getElementById('show-more-bank')?.addEventListener('click', function() {
+                const details = document.getElementById('bank-details');
+                const icon = this.querySelector('svg');
+                details.classList.toggle('hidden');
+                icon.classList.toggle('rotate-180');
+                const span = this.querySelector('span');
+                span.textContent = details.classList.contains('hidden') ? 'Bank Details' : 'Hide Details';
+            });
         });
-}
 
-// Render only the current page
-function updateUIWithPagination() {
-    const data = {
-        count: allDocuments.length,
-        documents: allDocuments.slice((currentPage - 1) * pageSize, currentPage * pageSize),
-        lastUpdated: new Date().toISOString()
-    };
-    updateUI(data);
-    updatePagination();
-}
+        // Market Growth Chart
+        const marketGrowthCtx = document.getElementById('marketGrowthChart').getContext('2d');
+        let marketGrowthChart = null;
 
-// Update pagination controls
-function updatePagination() {
-    const totalCount = allDocuments.length;
-    const totalPages = Math.ceil(totalCount / pageSize);
-    document.getElementById('documentCount').textContent = Math.min(currentPage * pageSize, totalCount);
-    document.getElementById('totalCount').textContent = totalCount;
+        // Store visibility state for each series
+        const seriesVisibility = {
+            dette: true,
+            stock: true,
+            tresorerie: true,
+            creance: true
+        };
 
-    // Inject page numbers
-    const nav = document.querySelector('nav[aria-label="Pagination"]');
-    if (!nav) return;
-    // Remove old page numbers
-    nav.querySelectorAll('.page-number').forEach(el => el.remove());
-
-    for (let i = 1; i <= totalPages; i++) {
-        const a = document.createElement('a');
-        a.href = '#';
-        a.textContent = i;
-        a.className = 'page-number relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50' + (i === currentPage ? ' font-bold bg-blue-100' : '');
-        a.addEventListener('click', (e) => {
-            e.preventDefault();
-            currentPage = i;
-            updateUIWithPagination();
+        // Set up filter button click handlers
+        document.querySelectorAll('.chart-filter').forEach(button => {
+            button.addEventListener('click', function() {
+                const series = this.dataset.series;
+                this.classList.toggle('active');
+                seriesVisibility[series] = !seriesVisibility[series];
+                updateKPITrendsChart();
+            });
         });
-        nav.insertBefore(a, nav.children[nav.children.length - 1]);
-    }
 
-    // Previous/Next
-    nav.children[0].onclick = (e) => {
-        e.preventDefault();
-        if (currentPage > 1) {
-            currentPage--;
-            updateUIWithPagination();
+        async function updateKPITrendsChart() {
+            try {
+                // Fetch data from unified chart data endpoints
+                const [detteResponse, stockResponse, tresorerieResponse, creditResponse] = await Promise.all([
+                    fetch('http://192.168.1.94:5000/dette-fournisseur-chart-data'),
+                    fetch('kpi_stock.json'),
+                    fetch('http://192.168.1.94:5000/tresorerie-chart-data'),
+                    fetch('http://192.168.1.94:5000/credit-client-chart-data')
+                ]);
+
+                const [detteData, stockData, tresorerieData, creditData] = await Promise.all([
+                    detteResponse.json(),
+                    stockResponse.json(),
+                    tresorerieResponse.json(),
+                    creditResponse.json()
+                ]);
+
+                // Destroy existing chart if it exists
+                if (marketGrowthChart) {
+                    marketGrowthChart.destroy();
+                }
+
+                // Create filtered datasets
+                const datasets = [];
+                
+                if (seriesVisibility.dette) {
+                    datasets.push({
+                        label: 'Dette Fournisseur',
+                        data: detteData.values,
+                        borderColor: '#ff0033',
+                        backgroundColor: 'rgba(255, 0, 51, 0.1)',
+                        tension: 0.3,
+                        borderWidth: 2,
+                        fill: true
+                    });
+                }
+                
+                if (seriesVisibility.stock) {
+                    const stockValues = stockData.total_stock.map(item => ({
+                        x: item.date,
+                        y: item.value
+                    }));
+                    datasets.push({
+                        label: 'Total Stock',
+                        data: stockValues,
+                        borderColor: '#00ff88',
+                        backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                        tension: 0.3,
+                        borderWidth: 2,
+                        fill: true
+                    });
+                }
+                
+                if (seriesVisibility.tresorerie) {
+                    datasets.push({
+                        label: 'Trésorerie',
+                        data: tresorerieData.values,
+                        borderColor: '#0088ff',
+                        backgroundColor: 'rgba(0, 136, 255, 0.1)',
+                        tension: 0.3,
+                        borderWidth: 2,
+                        fill: true
+                    });
+                }
+                
+                if (seriesVisibility.creance) {
+                    datasets.push({
+                        label: 'Créance Client',
+                        data: creditData.values,
+                        borderColor: '#9b5de5',
+                        backgroundColor: 'rgba(155, 93, 229, 0.1)',
+                        tension: 0.3,
+                        borderWidth: 2,
+                        fill: true
+                    });
+                }
+
+                // Create new chart with improved configuration
+                marketGrowthChart = new Chart(marketGrowthCtx, {
+                    type: 'line',
+                    data: {
+                        labels: stockData.total_stock.map(item => item.date),
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.parsed.y;
+                                        return context.dataset.label + ': ' + new Intl.NumberFormat('fr-FR', {
+                                            style: 'currency',
+                                            currency: 'DZD',
+                                            maximumFractionDigits: 2
+                                        }).format(value);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                grid: {
+                                    color: 'rgba(51, 51, 51, 0.5)'
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return new Intl.NumberFormat('fr-FR', {
+                                            style: 'currency',
+                                            currency: 'DZD',
+                                            notation: 'compact',
+                                            maximumFractionDigits: 2
+                                        }).format(value);
+                                    }
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    maxRotation: 45,
+                                    minRotation: 45,
+                                    callback: function(value, index, ticks) {
+                                        const date = new Date(this.getLabelForValue(value));
+                                        return date.toLocaleTimeString('fr-FR', {
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error updating KPI trends chart:', error);
+                // Show error state in chart container
+                const chartContainer = document.getElementById('marketGrowthChart').parentElement;
+                chartContainer.innerHTML = '<div class="error-message">Failed to load chart data</div>';
+            }
         }
-    };
-    nav.children[nav.children.length - 1].onclick = (e) => {
-        e.preventDefault();
-        if (currentPage < totalPages) {
-            currentPage++;
-            updateUIWithPagination();
-        }
-    };
-}
 
-function updateUI(data) {
-    // Update last updated time
-    const updatedTime = new Date(data.lastUpdated || new Date());
-    document.getElementById('lastUpdated').textContent = updatedTime.toLocaleTimeString();
-    
-    // Update counters
-    document.getElementById('totalDocuments').textContent = data.count;
-    document.querySelectorAll('.pending-count').forEach(el => {
-        el.textContent = data.count;
-    });
-    
-    // Get table body and empty state elements
-    const tableBody = document.getElementById('documentsTableBody');
-    const emptyState = document.getElementById('emptyState');
-    
-    // Clear existing rows
-    tableBody.innerHTML = '';
-    
-    // Show empty state if no documents
-    if (data.count === 0) {
-        tableBody.classList.add('hidden');
-        emptyState.classList.remove('hidden');
-        return;
-    }
-    
-    // Add documents to table
-    data.documents.forEach(doc => {
-        const row = document.createElement('tr');
-        row.className = 'document-row transition-all duration-150 ease-in-out';
-        
-        row.innerHTML = `
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${doc.documentNo}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${doc.createdDate}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${doc.description}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${doc.businessPartner}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${doc.salesRegion}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${doc.orderId}</td>
-        `;
-        tableBody.appendChild(row);
-    });
-    
-    // Show table
-    tableBody.classList.remove('hidden');
-    emptyState.classList.add('hidden');
-    
-    // Add animation
-    tableBody.classList.remove('opacity-0');
-    void tableBody.offsetWidth; // Trigger reflow
-    tableBody.classList.add('opacity-0');
-    setTimeout(() => {
-        tableBody.classList.remove('opacity-0');
-    }, 50);
-}
-
-// Initialize the page
-document.addEventListener('DOMContentLoaded', function() {
-    let allRegions = []; // Store all regions for filtering
-    const searchInput = document.getElementById('regionSearchInput');
-    const dropdown = document.getElementById('regionDropdown');
-    const filterInput = document.getElementById('regionSearchFilter');
-    const regionsList = document.getElementById('regionsList');
-
-    // Fetch regions first
-    fetch('http://192.168.1.94:5000/regions')
-        .then(response => response.json())
-        .then(data => {
-            allRegions = data.regions || [];
-            populateRegionsList(allRegions);
-        })
-        .catch(error => console.error('Error fetching regions:', error));
-
-    // Function to populate regions list
-    function populateRegionsList(regions) {
-        const regionsList = document.getElementById('regionsList');
-        regionsList.innerHTML = '<div class="p-2 hover:bg-gray-100 cursor-pointer text-gray-600" data-value="">All Regions</div>';
-        
-        regions.forEach(region => {
-            const div = document.createElement('div');
-            div.className = 'p-2 hover:bg-gray-100 cursor-pointer text-gray-600';
-            div.textContent = region.name;
-            div.dataset.value = region.name;
-            regionsList.appendChild(div);
+        // Demographic Chart
+        const demographicCtx = document.getElementById('demographicChart').getContext('2d');
+        const demographicChart = new Chart(demographicCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Age 13-17', 'Age 18-24', 'Age 25-34', 'Age 35+'],
+                datasets: [{
+                    data: [22, 41, 28, 9],
+                    backgroundColor: [
+                        '#00f5d4',
+                        '#0088ff',
+                        '#9b5de5',
+                        '#ff006e'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
         });
-    }
 
-    // Show/hide dropdown
-    const regionFilterBtn = document.getElementById('regionFilterBtn');
-    const selectedRegionText = document.getElementById('selectedRegionText');
+        // Age by Genre Chart
+        const ageGenreCtx = document.getElementById('ageGenreChart').getContext('2d');
+        const ageGenreChart = new Chart(ageGenreCtx, {
+            type: 'bar',
+            data: {
+                labels: ['13-17', '18-20', '21-24', '25-30', '31-40', '41+'],
+                datasets: [
+                    {
+                        label: 'Action',
+                        data: [18, 25, 32, 15, 7, 3],
+                        backgroundColor: 'rgba(0, 136, 255, 0.7)'
+                    },
+                    {
+                        label: 'Fantasy',
+                        data: [15, 22, 35, 18, 8, 2],
+                        backgroundColor: 'rgba(0, 245, 212, 0.7)'
+                    },
+                    {
+                        label: 'Romance',
+                        data: [12, 18, 25, 30, 12, 3],
+                        backgroundColor: 'rgba(155, 93, 229, 0.7)'
+                    },
+                    {
+                        label: 'Horror',
+                        data: [8, 15, 28, 35, 12, 2],
+                        backgroundColor: 'rgba(255, 102, 0, 0.7)'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: false,
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        stacked: false,
+                        grid: {
+                            color: 'rgba(51, 51, 51, 0.5)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
 
-    regionFilterBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        dropdown.classList.toggle('hidden');
-        if (!dropdown.classList.contains('hidden')) {
-            filterInput.focus();
+        // Gender Preference Chart
+        const genderPreferenceCtx = document.getElementById('genderPreferenceChart').getContext('2d');
+        const genderPreferenceChart = new Chart(genderPreferenceCtx, {
+            type: 'radar',
+            data: {
+                labels: ['Action', 'Fantasy', 'Romance', 'Horror', 'Sci-Fi', 'Sports', 'Comedy', 'Drama'],
+                datasets: [
+                    {
+                        label: 'Male Readers',
+                        data: [72, 14, 5, 8, 12, 15, 18, 6],
+                        backgroundColor: 'rgba(0, 136, 255, 0.2)',
+                        borderColor: '#0088ff',
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Female Readers',
+                        data: [18, 22, 58, 12, 8, 3, 15, 12],
+                        backgroundColor: 'rgba(155, 93, 229, 0.2)',
+                        borderColor: '#9b5de5',
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    r: {
+                        angleLines: {
+                            color: 'rgba(51, 51, 51, 0.5)'
+                        },
+                        grid: {
+                            color: 'rgba(51, 51, 51, 0.5)'
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 80
+                    }
+                }
+            }
+        });
+
+        // Trend Forecast Chart
+        const trendForecastCtx = document.getElementById('trendForecastChart').getContext('2d');
+        const trendForecastChart = new Chart(trendForecastCtx, {
+            type: 'line',
+            data: {
+                labels: ['Current', '+1M', '+2M', '+3M', '+4M', '+5M', '+6M'],
+                datasets: [
+                    {
+                        label: 'Isekai',
+                        data: [100, 108, 116, 124, 131, 139, 147],
+                        borderColor: '#00ff88',
+                        backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                        tension: 0.4,
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Sports',
+                        data: [100, 102, 103, 104, 103, 102, 101],
+                        borderColor: '#0088ff',
+                        backgroundColor: 'rgba(0, 136, 255, 0.1)',
+                        tension: 0.4,
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Traditional Fantasy',
+                        data: [100, 97, 94, 91, 87, 84, 81],
+                        borderColor: '#ff6600',
+                        backgroundColor: 'rgba(255, 102, 0, 0.1)',
+                        tension: 0.4,
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Slice-of-Life',
+                        data: [100, 103, 107, 110, 113, 117, 120],
+                        borderColor: '#9b5de5',
+                        backgroundColor: 'rgba(155, 93, 229, 0.1)',
+                        tension: 0.4,
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + (context.raw - 100) + '% change';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        min: 80,
+                        grid: {
+                            color: 'rgba(51, 51, 51, 0.5)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return (value - 100) + '%';
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+
+        // Revenue Forecast Chart
+        const revenueForecastCtx = document.getElementById('revenueForecastChart').getContext('2d');
+        const revenueForecastChart = new Chart(revenueForecastCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Q4 2023', 'Q1 2024', 'Q2 2024', 'Q3 2024', 'Q4 2024'],
+                datasets: [{
+                    label: 'Revenue',
+                    data: [2200, 2400, 2700, 2900, 3200],
+                    backgroundColor: [
+                        'rgba(0, 136, 255, 0.8)',
+                        'rgba(0, 136, 255, 0.8)',
+                        'rgba(0, 245, 212, 0.8)',
+                        'rgba(0, 245, 212, 0.8)',
+                        'rgba(0, 255, 136, 0.8)'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return '$' + context.raw + 'K';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(51, 51, 51, 0.5)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value + 'K';
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+
+        // Helper function to format numbers
+        function formatNumber(value) {
+            return new Intl.NumberFormat('fr-FR', {
+                maximumFractionDigits: 2
+            }).format(value);
         }
-    });
 
-    // Handle clicking outside
-    document.addEventListener('click', function(e) {
-        if (!dropdown.contains(e.target) && e.target !== regionFilterBtn) {
-            dropdown.classList.add('hidden');
+        // Fetch and calculate Total Stock
+        async function fetchTotalStock() {
+            const loadingElement = document.getElementById("loading-stock-animation");
+            const stockTextElement = document.getElementById("stock-text");
+            const stockValueElement = document.getElementById("stock-value");
+            const toggleBtn = document.getElementById("toggle-details");
+            const stockDetailsElement = document.getElementById("stock-details");
+
+            try {
+                loadingElement.classList.remove("hidden");
+                stockTextElement.classList.add("hidden");
+                toggleBtn.classList.add("hidden");
+                stockDetailsElement.classList.add("hidden");
+
+                const response = await fetch("http://192.168.1.94:5000/stock-summary");
+                if (!response.ok) throw new Error("Network error");
+
+                const data = await response.json();
+                const totalStock = parseFloat(data.total_stock) || 0;
+                
+                stockValueElement.textContent = formatNumber(totalStock) + " DZD";
+                stockDetailsElement.innerHTML = `
+                    <div>Stock Principale: ${formatNumber(data.STOCK_principale || 0)} DZD</div>
+                    <div>Hangar: ${formatNumber(data.hangar || 0)} DZD</div>
+                    <div>Hangar Réserve: ${formatNumber(data.hangarréserve || 0)} DZD</div>
+                    <div>Depot Reserver: ${formatNumber(data.depot_reserver || 0)} DZD</div>
+                `;
+
+                loadingElement.classList.add("hidden");
+                stockTextElement.classList.remove("hidden");
+                toggleBtn.classList.remove("hidden");
+            } catch (error) {
+                console.error("Error fetching total stock:", error);
+                stockValueElement.textContent = "Error";
+                loadingElement.classList.add("hidden");
+                stockTextElement.classList.remove("hidden");
+            }
         }
-    });
 
-    // Filter regions as user types
-    filterInput.addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase();
-        const filteredRegions = allRegions.filter(region => 
-            region.name.toLowerCase().includes(searchTerm)
-        );
-        populateRegionsList(filteredRegions);
-    });
+        // Fetch and calculate Dette Fournisseur
+        async function fetchFournisseurDette() {
+            const loading = document.getElementById("loading-dette-animation");
+            const detteText = document.getElementById("dette-text");
+            const detteValue = document.getElementById("dette-value");
+            const trendElement = document.querySelector(".trend-indicator");
 
-    // Handle region selection
-    regionsList.addEventListener('click', function(e) {
-        const clickedItem = e.target.closest('div[data-value]');
-        if (clickedItem) {
-            selectedRegion = clickedItem.dataset.value;
-            selectedRegionText.textContent = selectedRegion || 'All Regions';
-            dropdown.classList.add('hidden');
-            fetchDocuments(selectedRegion);
+            try {
+                loading.classList.remove("hidden");
+                detteText.classList.add("hidden");
+
+                const response = await fetch("http://192.168.1.94:5000/fourniseurdettfond");
+                const data = await response.json();
+                const fetchedDette = data.value || 0;
+
+                // Get check values from bank data
+                const bankData = await fetch("json_files/bank.json").then(r => r.json());
+                const lastRecord = bankData[0];
+                const bnaCheck = parseFloat(lastRecord?.bna_check || 0);
+                const barakaCheck = parseFloat(lastRecord?.baraka_check || 0);
+                const totalChecks = bnaCheck + barakaCheck;
+
+                const totalDette = fetchedDette + totalChecks;
+                detteValue.textContent = formatNumber(totalDette) + " DZD";
+
+                loading.classList.add("hidden");
+                detteText.classList.remove("hidden");
+
+            } catch (error) {
+                console.error("Error:", error);
+                loading.innerHTML = `<p class="error-message">Erreur de chargement</p>`;
+            }
         }
-    });
 
-    // Initial documents fetch
-    fetchDocuments();
+        // Fetch and calculate Credit Client
+        async function fetchCreditClient() {
+            const loading = document.getElementById("loading-credit-animation");
+            const creditText = document.getElementById("credit-text");
+            const creditValue = document.getElementById("credit-client-value");
 
-    // Set up event listeners
-    document.getElementById('refreshBtn').addEventListener('click', function() {
-        this.classList.add('animate-spin');
-        fetchDocuments(selectedRegion);
-        setTimeout(() => this.classList.remove('animate-spin'), 1000);
-    });
+            try {
+                loading.classList.remove("hidden");
+                creditText.classList.add("hidden");
 
-    document.getElementById('regionSelect').addEventListener('change', function() {
-        selectedRegion = this.value;
-        fetchDocuments(selectedRegion);
-    });
-});
+                const response = await fetch("http://192.168.1.94:5000/credit-client");
+                const data = await response.json();
+                const creditClientValue = data.credit_client || 0;
+
+                creditValue.textContent = formatNumber(creditClientValue) + " DZD";
+
+                loading.classList.add("hidden");
+                creditText.classList.remove("hidden");
+            } catch (error) {
+                console.error("Error:", error);
+                loading.innerHTML = `<p class="error-message">Erreur de chargement</p>`;
+            }
+        }
+
+        // Fetch and calculate Trésorerie
+        async function updateTotalTresorerie() {
+            try {
+                const caisseResponse = await fetch('http://192.168.1.94:5000/caisse');
+                const caisseData = await caisseResponse.json();
+                const caisseValue = caisseData.caisse ?? 0;
+
+                const paiementResponse = await fetch('http://192.168.1.94:5000/paiement-net');
+                const paiementData = await paiementResponse.json();
+                const paiementNet = paiementData.Total_Paiment ?? 0;
+
+                const netValue = caisseValue + paiementNet;
+                
+                const banqueElement = document.getElementById('banque-value');
+                const banqueTotal = parseFloat(banqueElement.getAttribute('data-banktotal')) || 0;
+                const bnaCheck = parseFloat(banqueElement.getAttribute('data-bna-check')) || 0;
+                const barakaCheck = parseFloat(banqueElement.getAttribute('data-baraka-check')) || 0;
+                
+                // Update total display
+                document.getElementById('tresorerie-total').textContent = formatNumber(netValue + banqueTotal) + ' DZD';
+                
+                if (bnaCheck > 0 || barakaCheck > 0) {
+                    const totalChecks = bnaCheck + barakaCheck;
+                    banqueElement.title = `Total en banque: ${formatNumber(banqueTotal)} DZD + Chèques: ${formatNumber(totalChecks)} DZD`;
+                }
+            } catch (error) {
+                console.error('Error updating trésorerie:', error);
+                document.getElementById('tresorerie-total').innerHTML = '<strong>Erreur</strong>';
+            }
+        }
+
+        // Initialize everything when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initial data load
+            fetchTotalStock();
+            fetchFournisseurDette();
+            fetchCreditClient();
+            updateTotalTresorerie(); // Using new function instead of fetchCaisseAndBanque
+
+            // Initial chart load
+            updateKPITrendsChart();
+
+            // Set up manual refresh button
+            document.getElementById('manual-refresh-btn')?.addEventListener('click', () => {
+                fetchTotalStock();
+                fetchFournisseurDette();
+                fetchCreditClient();
+                updateTotalTresorerie(); // Using new function
+                updateKPITrendsChart();
+            });
+
+            // Set up automatic refresh every 5 minutes
+            setInterval(() => {
+                fetchTotalStock();
+                fetchFournisseurDette();
+                fetchCreditClient();
+                updateTotalTresorerie(); // Using new function
+                updateKPITrendsChart();
+            }, 300000);
+
+            // Add toggle functionality for bank details
+            document.getElementById('show-more-bank')?.addEventListener('click', function() {
+                const details = document.getElementById('bank-details');
+                const icon = this.querySelector('svg');
+                details.classList.toggle('hidden');
+                icon.classList.toggle('rotate-180');
+                const span = this.querySelector('span');
+                span.textContent = details.classList.contains('hidden') ? 'Bank Details' : 'Hide Details';
+            });
+        });
     </script>
-
-
-
-
-
-
 </body>
 </html>

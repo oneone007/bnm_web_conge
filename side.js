@@ -12,10 +12,28 @@ function navigateTo(pageId) {
     tab.onclick = () => showTab(pageId, timestamp);
     tab.draggable = true; // Enable drag and drop
   
-    // Add close button
+    // Add refresh button (left side)
+    const refreshBtn = document.createElement('span');
+    refreshBtn.innerHTML = '&#x21bb;'; // Refresh symbol
+    refreshBtn.className = 'refresh-btn';
+        refreshBtn.style.cssText = `
+    
+        color: #4CAF50;
+    `;
+    refreshBtn.onclick = (e) => {
+        e.stopPropagation();
+        refreshTab(pageId, timestamp);
+    };
+    tab.insertBefore(refreshBtn, tab.firstChild);
+  
+    // Add close button (right side)
     const closeBtn = document.createElement('span');
     closeBtn.textContent = '×';
     closeBtn.className = 'close-btn';
+        closeBtn.style.cssText = `
+    
+        color:rgb(245, 16, 0);
+    `;
     closeBtn.onclick = (e) => {
         e.stopPropagation();
         document.getElementById(tabId).remove();
@@ -26,8 +44,8 @@ function navigateTo(pageId) {
         if (remainingTabs.length > 0) {
             const activeTab = document.querySelector('.tab-button.active');
             if (!activeTab && remainingTabs[0]) {
-                const id = remainingTabs[0].id.split('-');
-                showTab(id[1], id[2]);
+                const idParts = remainingTabs[0].id.split('-');
+                showTab(idParts[1], idParts[2]);
             }
         }
     };
@@ -41,7 +59,7 @@ function navigateTo(pageId) {
     
     document.getElementById('tabs').appendChild(tab);
   
-    // Create content container
+    // Create content container with iframe
     const content = document.createElement('div');
     content.id = contentId;
     content.className = 'tab-pane';
@@ -51,16 +69,30 @@ function navigateTo(pageId) {
     showTab(pageId, timestamp);
 }
 
+function refreshTab(pageId, timestamp) {
+    const contentId = `content-${pageId}-${timestamp}`;
+    const content = document.getElementById(contentId);
+    if (content) {
+        const iframe = content.querySelector('iframe');
+        if (iframe) {
+            // Refresh by reassigning the src attribute
+            iframe.src = iframe.src;
+        }
+    }
+}
+
 function showTab(pageId, timestamp) {
     // Deactivate all tabs and contents
     document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.tab-pane').forEach(div => div.style.display = 'none');
   
     // Activate the selected tab
-    document.getElementById(`tab-${pageId}-${timestamp}`).classList.add('active');
-    document.getElementById(`content-${pageId}-${timestamp}`).style.display = 'block';
+    const tab = document.getElementById(`tab-${pageId}-${timestamp}`);
+    const content = document.getElementById(`content-${pageId}-${timestamp}`);
+    
+    if (tab) tab.classList.add('active');
+    if (content) content.style.display = 'block';
 }
-
 // Drag and Drop Functionality
 let draggedTab = null;
 

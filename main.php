@@ -120,7 +120,7 @@ file_put_contents(__DIR__ . "/login_logs.txt", $log_entry, FILE_APPEND);
 /* Sidebar Styling */
 .sidebar {
     min-width: 200px;
-    max-width: 250px;
+    max-width: 350px;
     background-color: #f9fafb;
     border-right: 1px solid #e5e7eb;
     transition: transform 0.3s ease-in-out;
@@ -396,8 +396,8 @@ body {
 
     .tab-button span {
       margin-left: 5px;
+      margin-right: 5px;
       cursor: pointer;
-      color: red;
     }
 
     /* Tab content area */
@@ -463,7 +463,7 @@ body {
 }
 
 .tab-button.active {
-  background-color: #007bff;
+  background-color:rgb(83, 118, 155);
   color: white;
 }
 
@@ -474,13 +474,46 @@ body {
 
 .tab-button span {
   margin-left: 8px;
-  color: red;
+    margin-right: 8px;
+
   font-weight: bold;
   cursor: pointer;
 }
 
 .dark .tab-button span {
-  color: #fc8181;
+  color: green;
+}
+
+.tab-button {
+    position: relative;
+    padding-left: 25px;
+    padding-right: 25px;
+}
+
+.tab-refresh, .tab-close {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+.tab-refresh {
+    left: 5px;
+}
+
+
+.tab-close {
+    right: 5px;
+    color:red;
+}
+
+.tab-refresh:hover {
+    color: #4CAF50;
+}
+
+.tab-close:hover {
+    color: #f44336;
 }
 </style>
   
@@ -517,90 +550,130 @@ body {
   <script>
     // Initialize with What's New tab on page load
 
+    function navigateTo(pageId) {
+        const tabId = `tab-${pageId}`;
+        const contentId = `content-${pageId}`;
 
-function navigateTo(pageId) {
-  const tabId = `tab-${pageId}`;
-  const contentId = `content-${pageId}`;
-
-  if (!document.getElementById(tabId) && pageId !== 'whatsnew') {
+   if (!document.getElementById(tabId) && pageId !== 'whatsnew') {
     const tab = document.createElement('button');
     tab.id = tabId;
     tab.className = 'tab-button';
     tab.textContent = pageId.replace('.html', '');
     tab.onclick = () => showTab(pageId);
 
+    // Create refresh button (left side) - green
+    const refreshBtn = document.createElement('span');
+    refreshBtn.innerHTML = '&#x21bb;'; // Refresh symbol
+    refreshBtn.style.cssText = `
+    
+        color: #4CAF50;
+    `;
+    refreshBtn.onclick = (e) => {
+        e.stopPropagation();
+        refreshTab(pageId);
+    };
+    tab.insertBefore(refreshBtn, tab.firstChild);
+
+    // Create close button (right side) - red
     const closeBtn = document.createElement('span');
-    closeBtn.textContent = '×';
+    closeBtn.innerHTML = '&times;';
+    closeBtn.style.cssText = `
+       
+        color: #f44336;
+    `;
     closeBtn.onclick = (e) => {
-      e.stopPropagation();
-      document.getElementById(tabId).remove();
-      document.getElementById(contentId).remove();
+        e.stopPropagation();
+        document.getElementById(tabId).remove();
+        document.getElementById(contentId).remove();
     };
     tab.appendChild(closeBtn);
+
+    // Style the tab to accommodate the buttons
+    tab.style.cssText = `
+        position: relative;
+        padding-left: 25px;
+        padding-right: 25px;
+    `;
+
     document.getElementById('tabs').appendChild(tab);
-  }
-
-  if (!document.getElementById(contentId)) {
-    const content = document.createElement('div');
-    content.id = contentId;
-    content.className = 'tab-pane';
-    content.style.display = 'none';
-    document.getElementById('tab-contents').appendChild(content);
-
-    fetch(pageId)
-      .then(res => res.text())
-      .then(html => {
-        // Inject HTML
-        content.innerHTML = html;
-
-        // Apply dark mode if needed
-        if (document.body.classList.contains('dark-mode')) {
-          content.classList.add('dark-mode');
-        }
-
-        // Extract and execute <script> tags manually
-        const scripts = Array.from(content.querySelectorAll('script'));
-        scripts.forEach(script => {
-          const newScript = document.createElement('script');
-          newScript.text = script.textContent;
-          script.parentNode.replaceChild(newScript, script);
-        });
-
-        showTab(pageId);
-      });
-  } else {
-    showTab(pageId);
-  }
 }
 
-  function showTab(pageId) {
-    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.tab-pane').forEach(div => div.style.display = 'none');
+        if (!document.getElementById(contentId)) {
+            loadTabContent(pageId);
+        } else {
+            showTab(pageId);
+        }
+    }
 
-    document.getElementById(`tab-${pageId}`).classList.add('active');
-    document.getElementById(`content-${pageId}`).style.display = 'block';
-  }
+    function loadTabContent(pageId) {
+        const contentId = `content-${pageId}`;
+        const content = document.createElement('div');
+        content.id = contentId;
+        content.className = 'tab-pane';
+        content.style.display = 'none';
+        document.getElementById('tab-contents').appendChild(content);
 
-  const toggle = document.getElementById('themeToggle');
+        fetch(pageId)
+            .then(res => res.text())
+            .then(html => {
+                // Inject HTML
+                content.innerHTML = html;
 
-  // Apply saved theme on load
-  if (localStorage.getItem('theme') === 'dark') {
-    document.body.classList.add('dark-mode');
-    toggle.checked = true;
-  }
+                // Apply dark mode if needed
+                if (document.body.classList.contains('dark-mode')) {
+                    content.classList.add('dark-mode');
+                }
 
-  toggle.addEventListener('change', () => {
-    const isDark = toggle.checked;
-    document.body.classList.toggle('dark-mode', isDark);
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                // Extract and execute <script> tags manually
+                const scripts = Array.from(content.querySelectorAll('script'));
+                scripts.forEach(script => {
+                    const newScript = document.createElement('script');
+                    newScript.text = script.textContent;
+                    script.parentNode.replaceChild(newScript, script);
+                });
 
-    // Apply to all open tab contents
-    document.querySelectorAll('.tab-pane').forEach(tab => {
-      tab.classList.toggle('dark-mode', isDark);
+                showTab(pageId);
+            });
+    }
+
+    function refreshTab(pageId) {
+        const contentId = `content-${pageId}`;
+        const content = document.getElementById(contentId);
+        if (content) {
+            content.innerHTML = ''; // Clear content while loading
+            loadTabContent(pageId);
+        }
+    }
+
+    function showTab(pageId) {
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(div => div.style.display = 'none');
+
+        const tab = document.getElementById(`tab-${pageId}`);
+        const content = document.getElementById(`content-${pageId}`);
+        
+        if (tab) tab.classList.add('active');
+        if (content) content.style.display = 'block';
+    }
+
+    const toggle = document.getElementById('themeToggle');
+
+    // Apply saved theme on load
+    if (localStorage.getItem('theme') === 'dark') {
+        document.body.classList.add('dark-mode');
+        toggle.checked = true;
+    }
+
+    toggle.addEventListener('change', () => {
+        const isDark = toggle.checked;
+        document.body.classList.toggle('dark-mode', isDark);
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+
+        // Apply to all open tab contents
+        document.querySelectorAll('.tab-pane').forEach(tab => {
+            tab.classList.toggle('dark-mode', isDark);
+        });
     });
-  });
-
-  
 </script>
 
 <style>

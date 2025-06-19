@@ -1,7 +1,7 @@
 <?php
 session_start();
-
-
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 // Check if the user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -15,6 +15,9 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup V
 }
 
 
+// Include database connection
+require_once 'db/db_connect.php';
+
 // Initialize default form values
 $default_values = [
     'bna_sold' => '',
@@ -25,26 +28,22 @@ $default_values = [
     'baraka_check' => ''
 ];
 
-// Try to get last submitted values from bank.json
-$json_file = 'json_files/bank.json';
-if (file_exists($json_file)) {
-    $json_data = file_get_contents($json_file);
-    $existing_data = json_decode($json_data, true);
+// Try to get last submitted values from database
+$sql = "SELECT * FROM bank ORDER BY creation_time DESC LIMIT 1";
+$result = $conn->query($sql);
+
+if ($result && $result->num_rows > 0) {
+    $last_entry = $result->fetch_assoc();
     
-    if (json_last_error() === JSON_ERROR_NONE && !empty($existing_data)) {
-        // Get the last entry
-        $last_entry = end($existing_data);
-        
-        // Update default values with last entry values
-        $default_values = [
-            'bna_sold' => $last_entry['bna_sold'] ?? '',
-            'bna_remise' => $last_entry['bna_remise'] ?? '',
-            'bna_check' => $last_entry['bna_check'] ?? '',
-            'baraka_sold' => $last_entry['baraka_sold'] ?? '',
-            'baraka_remise' => $last_entry['baraka_remise'] ?? '',
-            'baraka_check' => $last_entry['baraka_check'] ?? ''
-        ];
-    }
+    // Update default values with last entry values
+    $default_values = [
+        'bna_sold' => $last_entry['bna_sold'] ?? '',
+        'bna_remise' => $last_entry['bna_remise'] ?? '',
+        'bna_check' => $last_entry['bna_check'] ?? '',
+        'baraka_sold' => $last_entry['baraka_sold'] ?? '',
+        'baraka_remise' => $last_entry['baraka_remise'] ?? '',
+        'baraka_check' => $last_entry['baraka_check'] ?? ''
+    ];
 }
 
 // Check if the form has been submitted
@@ -63,56 +62,62 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $baraka_remise === false || $baraka_check === false) {
         $error_message = "Please enter valid numbers for all fields.";
     } else {
-        // Create an array with the form data and timestamp
-        $bank_data = array(
-            "date" => date('Y-m-d H:i:s'),
-            "bna_sold" => $bna_sold,
-            "bna_remise" => $bna_remise,
-            "bna_check" => $bna_check,
-            "baraka_sold" => $baraka_sold,
-            "baraka_remise" => $baraka_remise,
-            "baraka_check" => $baraka_check
-        );
-
-        // Create directory if it doesn't exist
-        if (!file_exists(dirname($json_file))) {
-            mkdir(dirname($json_file), 0755, true);
-        }
-
-        // Check if the JSON file exists, then read and decode the current data
-        if (file_exists($json_file)) {
-            $json_data = file_get_contents($json_file);
-            $existing_data = json_decode($json_data, true);
+                // Begin transaction
+        $conn->begin_transaction();
+        try {
+            // Calculate totals
+            $total_bank = $bna_sold + $bna_remise + $baraka_sold + $baraka_remise;
+            $total_checks = $bna_check + $baraka_check;
             
-            // If file is empty or invalid, initialize as empty array
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                $existing_data = [];
+            // Get current datetime
+            $creation_time = date('Y-m-d H:i:s');
+            
+            // Prepare SQL statement for bank table
+            $sql = "INSERT INTO bank (creation_time, bna_sold, bna_remise, bna_check, 
+                                    baraka_sold, baraka_remise, baraka_check, total_bank, total_checks) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    
+            $stmt = $conn->prepare($sql);
+            if ($stmt === false) {
+                throw new Exception("Error preparing bank statement: " . $conn->error);
             }
-        } else {
-            $existing_data = [];
-        }
+            if (!$stmt->bind_param("sdddddddd",
+                $creation_time,
+                $bna_sold,
+                $bna_remise,
+                $bna_check,
+                $baraka_sold,
+                $baraka_remise,
+                $baraka_check,
+                $total_bank,
+                $total_checks
+            )) {
+                throw new Exception("Error binding bank parameters: " . $stmt->error);
+            }
 
-        // Add new data to the existing data
-        $existing_data[] = $bank_data;
-
-        // Encode the data into a JSON string
-        $json_data = json_encode($existing_data, JSON_PRETTY_PRINT);
-
-        // Save the data to the JSON file with error handling
-        if (file_put_contents($json_file, $json_data, LOCK_EX) !== false) {
-            $success_message = "Data saved successfully!";
-            
-            // Update default values with newly submitted values
-            $default_values = [
-                'bna_sold' => $bna_sold,
-                'bna_remise' => $bna_remise,
-                'bna_check' => $bna_check,
-                'baraka_sold' => $baraka_sold,
-                'baraka_remise' => $baraka_remise,
-                'baraka_check' => $baraka_check
-            ];
-        } else {
-            $error_message = "Error saving data. Please check file permissions.";
+            // Execute the statement
+            if ($stmt->execute()) {
+                $conn->commit();
+                $success_message = "Data saved successfully!";
+                
+                // Update default values with newly submitted values
+                $default_values = [
+                    'bna_sold' => $bna_sold,
+                    'bna_remise' => $bna_remise,
+                    'bna_check' => $bna_check,
+                    'baraka_sold' => $baraka_sold,
+                    'baraka_remise' => $baraka_remise,
+                    'baraka_check' => $baraka_check
+                ];
+            } else {
+                $conn->rollback();
+                $error_message = "Error saving data: " . $stmt->error;
+            }
+        } catch (Exception $e) {
+            $conn->rollback();
+            $error_message = "Error: " . $e->getMessage();
+        } finally {
+            if (isset($stmt) && $stmt !== false) $stmt->close();
         }
     }
 }

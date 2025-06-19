@@ -1,3 +1,5 @@
+data panel works
+
 <?php
 session_start();
 
@@ -7,34 +9,23 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup V
     exit();
 }
 
-// Initialize bank variables
-$bna_sold = isset($_POST['bna_sold']) ? floatval($_POST['bna_sold']) : 0;
-$bna_remise = isset($_POST['bna_remise']) ? floatval($_POST['bna_remise']) : 0;
-$baraka_sold = isset($_POST['baraka_sold']) ? floatval($_POST['baraka_sold']) : 0;
-$baraka_remise = isset($_POST['baraka_remise']) ? floatval($_POST['baraka_remise']) : 0;
-$bna_check = isset($_POST['bna_check']) ? floatval($_POST['bna_check']) : 0;
-$baraka_check = isset($_POST['baraka_check']) ? floatval($_POST['baraka_check']) : 0;
+// Database connection
+require_once 'db/db_connect.php';
 
-$banque_total = $bna_sold + $bna_remise + $baraka_sold + $baraka_remise;
-$grand_total = 0;
-$json_file = 'json_files/bank.json';
+// Get latest bank data from database
+$query = "SELECT * FROM bank_data ORDER BY date DESC LIMIT 1";
+$result = $conn->query($query);
 
-// Process bank data
-if (file_exists($json_file)) {
-    $json_data = file_get_contents($json_file);
-    $bank_records = json_decode($json_data, true);
+if ($result && $result->num_rows > 0) {
+    $last_record = $result->fetch_assoc();
+    $bna_sold = isset($last_record['bna_sold']) ? (float)$last_record['bna_sold'] : 0;
+    $baraka_sold = isset($last_record['baraka_sold']) ? (float)$last_record['baraka_sold'] : 0;
+    $bna_remise = isset($last_record['bna_remise']) ? (float)$last_record['bna_remise'] : 0;
+    $baraka_remise = isset($last_record['baraka_remise']) ? (float)$last_record['baraka_remise'] : 0;
     
-    if (json_last_error() === JSON_ERROR_NONE && !empty($bank_records)) {
-        $last_record = $bank_records[0];
-        $bna_sold = isset($last_record['bna_sold']) ? (float)$last_record['bna_sold'] : 0;
-        $baraka_sold = isset($last_record['baraka_sold']) ? (float)$last_record['baraka_sold'] : 0;
-        $bna_remise = isset($last_record['bna_remise']) ? (float)$last_record['bna_remise'] : 0;
-        $baraka_remise = isset($last_record['baraka_remise']) ? (float)$last_record['baraka_remise'] : 0;
-        
-        $total_sold = $bna_sold + $baraka_sold;
-        $total_remise = $bna_remise + $baraka_remise;
-        $grand_total = $total_sold + $total_remise;
-    }
+    $total_sold = $bna_sold + $baraka_sold;
+    $total_remise = $bna_remise + $baraka_remise;
+    $grand_total = $total_sold + $total_remise;
 }
 ?>
 <!DOCTYPE html>
@@ -42,7 +33,6 @@ if (file_exists($json_file)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ComicLab - Advanced Research Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
@@ -328,35 +318,7 @@ if (file_exists($json_file)) {
                     <div class="text-xs mb-2 uppercase">TOTAL TRÉSORERIE</div>
                     <div class="flex justify-between items-end mb-1">
                         <div id="tresorerie-total" class="text-xl data-value">
-                            <?php
-                            $json_file = 'json_files/bank.json';
-                            $banque_value = 0;
-                            $bna_check = 0;
-                            $baraka_check = 0;
-
-                            if (file_exists($json_file)) {
-                                $json_data = file_get_contents($json_file);
-                                $bank_records = json_decode($json_data, true);
-                                
-                                if (json_last_error() === JSON_ERROR_NONE && !empty($bank_records)) {
-                                    usort($bank_records, function ($a, $b) {
-                                        return strtotime($b['date']) - strtotime($a['date']);
-                                    });
-
-                                    $last_record = $bank_records[0];
-                                    $bna_sold = isset($last_record['bna_sold']) ? (float)$last_record['bna_sold'] : 0;
-                                    $baraka_sold = isset($last_record['baraka_sold']) ? (float)$last_record['baraka_sold'] : 0;
-                                    $bna_remise = isset($last_record['bna_remise']) ? (float)$last_record['bna_remise'] : 0;
-                                    $baraka_remise = isset($last_record['baraka_remise']) ? (float)$last_record['baraka_remise'] : 0;
-                                    $bna_check = isset($last_record['bna_check']) ? (float)$last_record['bna_check'] : 0;
-                                    $baraka_check = isset($last_record['baraka_check']) ? (float)$last_record['baraka_check'] : 0;
-                                    
-                                    // Calculate bank total without checks
-                                    $banque_value = $bna_sold + $baraka_sold + $bna_remise + $baraka_remise;
-                                    echo "<span id='banque-value' data-banktotal='{$banque_value}' data-bna-check='{$bna_check}' data-baraka-check='{$baraka_check}'>Loading...</span>";
-                                }
-                            }
-                            ?>
+                            <span id='banque-value'>Loading...</span>
                         </div>
                     </div>
                 </div>
@@ -391,13 +353,11 @@ if (file_exists($json_file)) {
                                 <th class="text-right py-2 px-4">VALUE</th>
                                 <th class="text-right py-2 px-4">LAST UPDATE</th>
                                 <th class="text-right py-2 px-4">TODAY %</th>
-                                <th class="text-right py-2 px-4">THIS WEEK %</th>
-                                <th class="text-right py-2 px-4">THIS MONTH %</th>
                             </tr>
                         </thead>
                         <tbody id="performance-matrix">
                             <tr>
-                                <td colspan="6" class="text-center py-4">
+                                <td colspan="4" class="text-center py-4">
                                     <div class="spinner"></div>
                                 </td>
                             </tr>
@@ -420,6 +380,23 @@ if (file_exists($json_file)) {
         let refreshIntervalId = null;
         let isRefreshing = false;
 
+        // Start countdown timer
+        function startCountdown() {
+            if (refreshIntervalId) {
+                clearInterval(refreshIntervalId);
+            }
+            countdown = REFRESH_INTERVAL;
+            updateTimerDisplay();
+            
+            refreshIntervalId = setInterval(() => {
+                countdown--;
+                updateTimerDisplay();
+                if (countdown <= 0) {
+                    refreshAll();
+                }
+            }, 1000);
+        }
+
         // Format time display
         function formatTime(seconds) {
             const minutes = Math.floor(Math.abs(seconds) / 60);
@@ -441,6 +418,27 @@ if (file_exists($json_file)) {
             }
         }
 
+        function startCountdown() {
+            // Clear any existing countdown
+            if (refreshIntervalId) {
+                clearInterval(refreshIntervalId);
+            }
+            
+            // Reset countdown and update display
+            countdown = REFRESH_INTERVAL;
+            updateTimerDisplay();
+            
+            // Start new countdown
+            refreshIntervalId = setInterval(() => {
+                countdown--;
+                updateTimerDisplay();
+                
+                if (countdown === 0) {
+                    refreshAll(); // This will show/hide loaders automatically
+                }
+            }, 1000);
+        }
+
         // Helper function to format numbers
         function formatNumber(value) {
             return new Intl.NumberFormat('fr-FR', {
@@ -448,69 +446,7 @@ if (file_exists($json_file)) {
             }).format(value);
         }
 
-        // Calculate and update Total Profit
-        async function updateTotalProfit() {
-            const loadingElement = document.getElementById("loading-profit-animation");
-            const profitText = document.getElementById("profit-text");
-            const profitValue = document.getElementById("profit-value");
-
-            try {
-                loadingElement.classList.remove("hidden");
-                profitText.classList.add("hidden");
-
-                // Fetch all required values in parallel
-                const [stockResponse, creditResponse, caisseResponse, paiementResponse, bankResponse, detteResponse, checksResponse] = await Promise.all([
-                    fetch("http://192.168.1.94:5000/stock-summary"),
-                    fetch("http://192.168.1.94:5000/credit-client"),
-                    fetch("http://192.168.1.94:5000/caisse"),
-                    fetch("http://192.168.1.94:5000/paiement-net"),
-                    fetch("http://192.168.1.94:5000/total-bank"),
-                    fetch("http://192.168.1.94:5000/fourniseurdettfond"),
-                    fetch("http://192.168.1.94:5000/total-checks")
-                ]);
-
-                const [stockData, creditData, caisseData, paiementData, bankData, detteData, checksData] = await Promise.all([
-                    stockResponse.json(),
-                    creditResponse.json(),
-                    caisseResponse.json(),
-                    paiementResponse.json(),
-                    bankResponse.json(),
-                    detteResponse.json(),
-                    checksResponse.json()
-                ]);
-
-                // Extract values, default to 0 if undefined
-                const totalStock = parseFloat(stockData.total_stock) || 0;
-                const creditClient = creditData.credit_client || 0;
-                const caisse = caisseData.caisse || 0;
-                const paiementNet = paiementData.Total_Paiment || 0;
-                const totalBank = bankData.total_bank || 0;
-                const dette = detteData.value || 0;
-                const totalChecks = checksData.total_checks || 0;
-
-                // Calculate total profit
-                // Assets = stock + credit + tresorerie (caisse + paiement + bank)
-                // Liabilities = dette + checks
-                const totalProfit = (totalStock + creditClient + caisse + paiementNet + totalBank) - (dette + totalChecks);
-
-                // Update display with color coding
-                profitValue.textContent = formatNumber(totalProfit) + " DZD";
-                profitValue.style.color = totalProfit >= 0 ? '#00ff88' : '#ff0033';
-
-                // Update the profit breakdown chart
-                await updateProfitBreakdownChart(stockData, creditData, caisseData, paiementData, bankData, detteData, checksData);
-
-                loadingElement.classList.add("hidden");
-                profitText.classList.remove("hidden");
-
-            } catch (error) {
-                console.error("Error calculating profit:", error);
-                profitValue.textContent = "Error";
-                loadingElement.classList.add("hidden");
-                profitText.classList.remove("hidden");
-            }
-        }
-
+  
         // Performance Matrix Update Function
         async function updatePerformanceMatrix() {
             const tbody = document.getElementById('performance-matrix');
@@ -540,134 +476,267 @@ if (file_exists($json_file)) {
                     checksResponse.json()
                 ]);
 
-                // Get bank date from JSON file
-                const bankDateResponse = await fetch('json_files/bank.json');
-                const bankJsonData = await bankDateResponse.json();
-                const lastBankUpdate = bankJsonData[bankJsonData.length - 1].date;
+
+                // Get last update time from bank data response
+                const lastBankUpdate = new Date().toLocaleString('fr-FR');
+
+                // Helper function to calculate percentage change
+                function calculatePercentChange(current, previous) {
+                    if (!previous || previous === 0) return { value: 0, text: '0%', color: '#ffffff' };
+                    const change = ((current - previous) / Math.abs(previous)) * 100;
+                    const text = change === 0 ? '0%' : (change > 0 ? `+${change.toFixed(2)}%` : `${change.toFixed(2)}%`);
+                    const color = change === 0 ? '#ffffff' : (change > 0 ? '#00ff88' : '#ff0033');
+                    return { value: change, text, color };
+                }
 
                 // Helper function to create a row
-                function createRow(label, value, lastUpdate = '-', today = '-', weekly = '-', monthly = '-', isSubRow = false) {
+                function createRow(label, value, lastUpdate = '-', previousValue = null, weekly = '-', monthly = '-', isSubRow = false, color = '') {
+                    const baseStyle = color ? `color: ${color}` : '';
+                    let todayChange = { text: '-', color: '#ffffff' };
+                    
+                    if (previousValue !== null) {
+                        todayChange = calculatePercentChange(value, previousValue);
+                    }
+
                     return `
                         <tr class="border-t border-lab-border">
-                            <td class="py-2 px-4 ${isSubRow ? 'pl-8' : 'font-semibold'}">${label}</td>
-                            <td class="text-right py-2 px-4">${formatNumber(value)} DZD</td>
-                            <td class="text-right py-2 px-4">${lastUpdate}</td>
-                            <td class="text-right py-2 px-4">${today}</td>
-                            <td class="text-right py-2 px-4">${weekly}</td>
-                            <td class="text-right py-2 px-4">${monthly}</td>
+                            <td class="py-2 px-4 ${isSubRow ? 'pl-8' : 'font-semibold'}" style="${baseStyle}">${label}</td>
+                            <td class="text-right py-2 px-4" style="${baseStyle}">${formatNumber(value)} DZD</td>
+                            <td class="text-right py-2 px-4" style="${baseStyle}">${lastUpdate}</td>
+                            <td class="text-right py-2 px-4" style="color: ${todayChange.color}">${todayChange.text}</td>
                         </tr>
                     `;
+                }
+
+                // Get last saved data for comparison
+                let lastSavedData = null;
+                try {
+                    const response = await fetch('json_files/all_performance_data.json');
+                    const historyData = await response.json();
+                    lastSavedData = Object.values(historyData)[0]; // Get most recent entry
+                } catch (error) {
+                    console.error('Error loading last saved data:', error);
                 }
 
                 // Build the table HTML
                 let html = '';
 
                 // Stock Section
-                html += createRow('STOCK TOTAL', stockData.total_stock);
-                html += createRow('Stock Principale', stockData.STOCK_principale, '-', '-', '-', '-', true);
-                html += createRow('Depot Reserver', stockData.depot_reserver, '-', '-', '-', '-', true);
-                html += createRow('Hangar', stockData.hangar, '-', '-', '-', '-', true);
-                html += createRow('Hangar Reserve', stockData.hangarréserve, '-', '-', '-', '-', true);
+                html += createRow('STOCK TOTAL', stockData.total_stock, '-', 
+                    lastSavedData?.stock?.total, '-', '-', false, '#00f5d4');
+                html += createRow('Stock Principale', stockData.STOCK_principale, '-', 
+                    lastSavedData?.stock?.principale, '-', '-', true, 'rgba(0, 245, 212, 0.7)');
+                html += createRow('Depot Reserver', stockData.depot_reserver, '-', 
+                    lastSavedData?.stock?.depot_reserver, '-', '-', true, 'rgba(0, 245, 212, 0.7)');
+                html += createRow('Hangar', stockData.hangar, '-', 
+                    lastSavedData?.stock?.hangar, '-', '-', true, 'rgba(0, 245, 212, 0.7)');
+                html += createRow('Hangar Reserve', stockData.hangarréserve, '-', 
+                    lastSavedData?.stock?.hangar_reserve, '-', '-', true, 'rgba(0, 245, 212, 0.7)');
 
                 // Credit Client
-                html += createRow('CREANCE CLIENT', creditData.credit_client);
+                html += createRow('CREANCE CLIENT', creditData.credit_client, '-', 
+                    lastSavedData?.credit_client, '-', '-', false, '#0088ff');
 
+                const currentTresorerieTotal = caisseData.caisse + paiementData.Total_Paiment + bankData.total_bank;
 
-                html += createRow('TOTAL TRÉSORERIE', caisseData.caisse + paiementData.Total_Paiment+bankData.total_bank);
-
-
+                // Tresorerie Section
+                html += createRow('TOTAL TRÉSORERIE', currentTresorerieTotal, '-', 
+                    lastSavedData?.tresorerie?.total, '-', '-', false, '#9b5de5');
 
                 // Caisse Section
-                html += createRow('CAISSE', caisseData.caisse);
+                html += createRow('CAISSE', caisseData.caisse, '-', 
+                    lastSavedData?.tresorerie?.caisse, '-', '-', true, 'rgba(155, 93, 229, 0.7)');
 
                 // Paiement Net
-                html += createRow('PAIEMENT NET', paiementData.Total_Paiment);
+                html += createRow('PAIEMENT NET', paiementData.Total_Paiment, '-', 
+                    lastSavedData?.tresorerie?.paiement_net, '-', '-', true, 'rgba(155, 93, 229, 0.7)');
 
                 // Bank Section
-                html += createRow('BANK TOTAL', bankData.total_bank, lastBankUpdate);
-                html += createRow('BNA Total', bankData.details.BNA.total, lastBankUpdate, '-', '-', '-', true);
-                html += createRow('BNA Sold', bankData.details.BNA.sold, lastBankUpdate, '-', '-', '-', true);
-                html += createRow('BNA Remise', bankData.details.BNA.remise, lastBankUpdate, '-', '-', '-', true);
-                html += createRow('Baraka Total', bankData.details.Baraka.total, lastBankUpdate, '-', '-', '-', true);
-                html += createRow('Baraka Sold', bankData.details.Baraka.sold, lastBankUpdate, '-', '-', '-', true);
-                html += createRow('Baraka Remise', bankData.details.Baraka.remise, lastBankUpdate, '-', '-', '-', true);
+                html += createRow('BANK TOTAL', bankData.total_bank, lastBankUpdate, 
+                    lastSavedData?.tresorerie?.bank?.total, '-', '-', true, 'rgba(155, 93, 229, 0.7)');
+                html += createRow('BNA Sold', bankData.details.BNA.sold, lastBankUpdate, 
+                    lastSavedData?.tresorerie?.bank?.bna?.sold, '-', '-', true, 'rgba(155, 93, 229, 0.7)');
+                html += createRow('BNA Remise', bankData.details.BNA.remise, lastBankUpdate, 
+                    lastSavedData?.tresorerie?.bank?.bna?.remise, '-', '-', true, 'rgba(155, 93, 229, 0.7)');
+               
+                html += createRow('Baraka Sold', bankData.details.Baraka.sold, lastBankUpdate, 
+                    lastSavedData?.tresorerie?.bank?.baraka?.sold, '-', '-', true, 'rgba(155, 93, 229, 0.7)');
+                html += createRow('Baraka Remise', bankData.details.Baraka.remise, lastBankUpdate, 
+                    lastSavedData?.tresorerie?.bank?.baraka?.remise, '-', '-', true, 'rgba(155, 93, 229, 0.7)');
+
+                const currentDetteTotal = detteData.value + checksData.total_checks;
 
                 // Dette Section
-                html += createRow('DETTE TOTAL', detteData.value + checksData.total_checks);
+                html += createRow('DETTE TOTAL', currentDetteTotal, '-', 
+                    lastSavedData?.dette?.total, '-', '-', false, '#ff0033');
 
                 // Checks Section
-                html += createRow('Dette Fournisseur', detteData.value, '-', '-', '-', '-', true);
+                html += createRow('Dette Fournisseur', detteData.value, '-', 
+                    lastSavedData?.dette?.fournisseur, '-', '-', true, 'rgba(255, 0, 51, 0.7)');
 
-                html += createRow('TOTAL CHECKS', checksData.total_checks, lastBankUpdate);
-                html += createRow('BNA Checks', checksData.details.BNA.checks, lastBankUpdate, '-', '-', '-', true);
-                html += createRow('Baraka Checks', checksData.details.Baraka.checks, lastBankUpdate, '-', '-', '-', true);
+                html += createRow('TOTAL CHECKS', checksData.total_checks, lastBankUpdate, 
+                    lastSavedData?.dette?.checks?.total, '-', '-', true, 'rgba(255, 0, 51, 0.7)');
+                html += createRow('BNA Checks', checksData.details.BNA.checks, lastBankUpdate, 
+                    lastSavedData?.dette?.checks?.bna, '-', '-', true, 'rgba(255, 0, 51, 0.7)');
+                html += createRow('Baraka Checks', checksData.details.Baraka.checks, lastBankUpdate, 
+                    lastSavedData?.dette?.checks?.baraka, '-', '-', true, 'rgba(255, 0, 51, 0.7)');
 
                 tbody.innerHTML = html;
 
             } catch (error) {
                 console.error('Error updating performance matrix:', error);
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-lab-danger">Error loading data</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-lab-danger">Error loading data</td></tr>';
             }
         }
 
         // Main refresh function
         async function refreshAll() {
-            if (isRefreshing) return;
+            if (isRefreshing) {
+                console.log('Refresh already in progress, skipping...');
+                return;
+            }
+            
+            // Disable refresh button and show loading state
+            const refreshBtn = document.getElementById('manual-refresh-btn');
+            if (refreshBtn) {
+                refreshBtn.disabled = true;
+                refreshBtn.classList.add('opacity-50');
+            }
+            
+            console.log('Starting refresh...');
             isRefreshing = true;
+            showAllLoaders(); // Show all loading indicators
             
             try {
+                // Use the consolidated fetchAllFinancialData function for the data panels
+                await fetchAllFinancialData();
+                // Update charts and performance matrix
                 await Promise.all([
-                    fetchTotalStock(),
-                    fetchFournisseurDette(),
-                    fetchCreditClient(),
-                    updateTotalTresorerie(),
-                    updateTotalProfit(),
                     updateKPITrendsChart(),
                     updatePerformanceMatrix()
                 ]);
             } catch (error) {
                 console.error("Error during refresh:", error);
             } finally {
+                hideAllLoaders(); // Hide all loading indicators
                 isRefreshing = false;
+                console.log('Refresh completed');
+                
+                // Re-enable refresh button
+                const refreshBtn = document.getElementById('manual-refresh-btn');
+                if (refreshBtn) {
+                    refreshBtn.disabled = false;
+                    refreshBtn.classList.remove('opacity-50');
+                }
+
+                // Reset countdown after refresh completes
                 countdown = REFRESH_INTERVAL;
                 updateTimerDisplay();
             }
         }
 
+        async function savePerformanceData(stockData, creditData, caisseData, paiementData, bankData, detteData, checksData) {
+            const performanceData = {
+                timestamp: new Date().toISOString(),
+                stock: {
+                    total: stockData.total_stock,
+                    principale: stockData.STOCK_principale,
+                    depot_reserver: stockData.depot_reserver,
+                    hangar: stockData.hangar,
+                    hangar_reserve: stockData.hangarréserve
+                },
+                credit_client: creditData.credit_client,
+                tresorerie: {
+                    total: caisseData.caisse + paiementData.Total_Paiment + bankData.total_bank,
+                    caisse: caisseData.caisse,
+                    paiement_net: paiementData.Total_Paiment,
+                    bank: {
+                        total: bankData.total_bank,
+                        bna: bankData.details.BNA,
+                        baraka: bankData.details.Baraka
+                    }
+                },
+                dette: {
+                    total: detteData.value + checksData.total_checks,
+                    fournisseur: detteData.value,
+                    checks: {
+                        total: checksData.total_checks,
+                        bna: checksData.details.BNA.checks,
+                        baraka: checksData.details.Baraka.checks
+                    }
+                }
+            };
+
+            // Get the last saved data for comparison
+            let lastSavedData = null;
+            try {
+                const response = await fetch('json_files/all_performance_data.json');
+                const historyData = await response.json();
+                lastSavedData = Object.values(historyData)[0]; // Get most recent entry
+            } catch (error) {
+                console.error('Error loading last saved data:', error);
+            }
+
+            // Calculate total profit
+            const totalProfit = (performanceData.stock.total + 
+                               performanceData.credit_client + 
+                               performanceData.tresorerie.total) - 
+                               performanceData.dette.total;
+
+            performanceData.total_profit = totalProfit;
+
+            try {
+                const response = await fetch('save_performance_data.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(performanceData)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to save performance data');
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    if (result.message && result.message.includes('No changes')) {
+                        console.log(`No changes in data detected. Current entries: ${result.entries_count}`);
+                    } else {
+                        console.log(`Performance data saved successfully. Total entries: ${result.entries_count}`);
+                    }
+                } else {
+                    throw new Error(result.error || 'Unknown error saving data');
+                }
+            } catch (error) {
+                console.error('Error saving performance data:', error);
+            }
+        }
+
         // Initialize everything
         document.addEventListener('DOMContentLoaded', () => {
-            // Initial data load
-            fetchTotalStock();
-            fetchFournisseurDette();
-            fetchCreditClient();
-            updateTotalTresorerie();
-            updateTotalProfit();
-            updatePerformanceMatrix();
-
-            // Initial chart load
-            updateKPITrendsChart();
-
-            // Set up manual refresh button
-            document.getElementById('manual-refresh-btn')?.addEventListener('click', () => {
-                fetchTotalStock();
-                fetchFournisseurDette();
-                fetchCreditClient();
-                updateTotalTresorerie();
-                updateTotalProfit();
-                updateKPITrendsChart();
-                updatePerformanceMatrix();
+            // Initial data load and start countdown
+            refreshAll().then(() => {
+                startCountdown();
             });
 
-            // Set up automatic refresh every 5 minutes
-            setInterval(() => {
-                fetchTotalStock();
-                fetchFournisseurDette();
-                fetchCreditClient();
-                updateTotalTresorerie();
-                updateTotalProfit();
-                updateKPITrendsChart();
-                updatePerformanceMatrix();
-            }, 300000);
+            // Set up manual refresh button
+            document.getElementById('manual-refresh-btn')?.addEventListener('click', async () => {
+                // Clear existing countdown
+                if (refreshIntervalId) {
+                    clearInterval(refreshIntervalId);
+                }
+                
+                // Reset the countdown display immediately
+                countdown = REFRESH_INTERVAL;
+                updateTimerDisplay();
+                
+                // Perform refresh
+                await refreshAll();
+                
+                // Start new countdown after refresh completes
+                startCountdown();
+            });
 
             // Add toggle functionality for bank details
             document.getElementById('show-more-bank')?.addEventListener('click', function() {
@@ -704,87 +773,40 @@ if (file_exists($json_file)) {
 
         async function updateKPITrendsChart() {
             try {
-                // Fetch data from unified chart data endpoints
-                const [detteResponse, stockResponse, tresorerieResponse, creditResponse] = await Promise.all([
-                    fetch('http://192.168.1.94:5000/dette-fournisseur-chart-data'),
-                    fetch('kpi_stock.json'),
-                    fetch('http://192.168.1.94:5000/tresorerie-chart-data'),
-                    fetch('http://192.168.1.94:5000/credit-client-chart-data')
-                ]);
+                // Fetch data from consolidated endpoint
+                const response = await fetch('http://192.168.1.94:5000/kpi-trends-data');
+                const chartData = await response.json();
 
-                const [detteData, stockData, tresorerieData, creditData] = await Promise.all([
-                    detteResponse.json(),
-                    stockResponse.json(),
-                    tresorerieResponse.json(),
-                    creditResponse.json()
-                ]);
+                if (chartData.error) {
+                    console.error('Error fetching KPI trends data:', chartData.error);
+                    return;
+                }
 
                 // Destroy existing chart if it exists
                 if (marketGrowthChart) {
                     marketGrowthChart.destroy();
                 }
 
-                // Create filtered datasets
-                const datasets = [];
-                
-                if (seriesVisibility.dette) {
-                    datasets.push({
-                        label: 'Dette Fournisseur',
-                        data: detteData.values,
-                        borderColor: '#ff0033',
-                        backgroundColor: 'rgba(255, 0, 51, 0.1)',
-                        tension: 0.3,
-                        borderWidth: 2,
-                        fill: true
-                    });
-                }
-                
-                if (seriesVisibility.stock) {
-                    const stockValues = stockData.total_stock.map(item => ({
-                        x: item.date,
-                        y: item.value
-                    }));
-                    datasets.push({
-                        label: 'Total Stock',
-                        data: stockValues,
-                        borderColor: '#00ff88',
-                        backgroundColor: 'rgba(0, 255, 136, 0.1)',
-                        tension: 0.3,
-                        borderWidth: 2,
-                        fill: true
-                    });
-                }
-                
-                if (seriesVisibility.tresorerie) {
-                    datasets.push({
-                        label: 'Trésorerie',
-                        data: tresorerieData.values,
-                        borderColor: '#0088ff',
-                        backgroundColor: 'rgba(0, 136, 255, 0.1)',
-                        tension: 0.3,
-                        borderWidth: 2,
-                        fill: true
-                    });
-                }
-                
-                if (seriesVisibility.creance) {
-                    datasets.push({
-                        label: 'Créance Client',
-                        data: creditData.values,
-                        borderColor: '#9b5de5',
-                        backgroundColor: 'rgba(155, 93, 229, 0.1)',
-                        tension: 0.3,
-                        borderWidth: 2,
-                        fill: true
-                    });
-                }
+                // Filter datasets based on visibility
+                const visibleDatasets = chartData.datasets.filter(dataset => {
+                    if (dataset.label === 'Dette Fournisseur' && !seriesVisibility.dette) return false;
+                    if (dataset.label === 'Stock Total' && !seriesVisibility.stock) return false;
+                    if (dataset.label === 'Trésorerie' && !seriesVisibility.tresorerie) return false;
+                    if (dataset.label === 'Crédit Client' && !seriesVisibility.creance) return false;
+                    return true;
+                });
+
+                // Add fill property to datasets
+                visibleDatasets.forEach(dataset => {
+                    dataset.fill = true;
+                });
 
                 // Create new chart with improved configuration
                 marketGrowthChart = new Chart(marketGrowthCtx, {
                     type: 'line',
                     data: {
-                        labels: stockData.total_stock.map(item => item.date),
-                        datasets: datasets
+                        labels: chartData.labels,
+                        datasets: visibleDatasets
                     },
                     options: {
                         responsive: true,
@@ -1171,170 +1193,143 @@ if (file_exists($json_file)) {
             }
         });
 
-        // Fetch and calculate Total Stock
-        async function fetchTotalStock() {
-            const loadingElement = document.getElementById("loading-stock-animation");
-            const stockTextElement = document.getElementById("stock-text");
-            const stockValueElement = document.getElementById("stock-value");
-            const toggleBtn = document.getElementById("toggle-details");
-            const stockDetailsElement = document.getElementById("stock-details");
+     
 
-            try {
-                loadingElement.classList.remove("hidden");
-                stockTextElement.classList.add("hidden");
-                toggleBtn.classList.add("hidden");
-                stockDetailsElement.classList.add("hidden");
 
-                const response = await fetch("http://192.168.1.94:5000/stock-summary");
-                if (!response.ok) throw new Error("Network error");
+async function fetchAllFinancialData() {
+    // Get all loading elements
+    const loadingElements = {
+        profit: document.getElementById("loading-profit-animation"),
+        stock: document.getElementById("loading-stock-animation"),
+        dette: document.getElementById("loading-dette-animation"),
+        credit: document.getElementById("loading-credit-animation")
+    };
 
-                const data = await response.json();
-                const totalStock = parseFloat(data.total_stock) || 0;
-                
-                stockValueElement.textContent = formatNumber(totalStock) + " DZD";
-                stockDetailsElement.innerHTML = `
-                    <div>Stock Principale: ${formatNumber(data.STOCK_principale || 0)} DZD</div>
-                    <div>Hangar: ${formatNumber(data.hangar || 0)} DZD</div>
-                    <div>Hangar Réserve: ${formatNumber(data.hangarréserve || 0)} DZD</div>
-                    <div>Depot Reserver: ${formatNumber(data.depot_reserver || 0)} DZD</div>
-                `;
+    // Get all text elements to hide during loading
+    const textElements = {
+        profit: document.getElementById("profit-text"),
+        stock: document.getElementById("stock-text"),
+        dette: document.getElementById("dette-text"),
+        credit: document.getElementById("credit-text")
+    };
 
-                loadingElement.classList.add("hidden");
-                stockTextElement.classList.remove("hidden");
-                toggleBtn.classList.remove("hidden");
-            } catch (error) {
-                console.error("Error fetching total stock:", error);
-                stockValueElement.textContent = "Error";
-                loadingElement.classList.add("hidden");
-                stockTextElement.classList.remove("hidden");
-            }
+    // Get all value elements to update
+    const valueElements = {
+        profit: document.getElementById("profit-value"),
+        stock: document.getElementById("stock-value"),
+        dette: document.getElementById("dette-value"),
+        credit: document.getElementById("credit-client-value"),
+        tresorerie: document.getElementById("tresorerie-total")
+    };
+
+    // Stock-specific elements
+    const toggleBtn = document.getElementById("toggle-details");
+    const stockDetailsElement = document.getElementById("stock-details");
+
+    try {
+        // Show loading states for all elements
+        Object.values(loadingElements).forEach(el => el?.classList.remove("hidden"));
+        Object.values(textElements).forEach(el => el?.classList.add("hidden"));
+        if (toggleBtn) toggleBtn.classList.add("hidden");
+        if (stockDetailsElement) stockDetailsElement.classList.add("hidden");
+
+        // Make single API call
+        const response = await fetch("http://192.168.1.94:5000/total-profit-page");
+        const data = await response.json();
+        
+        if ('error' in data) {
+            throw new Error(data.error);
         }
 
-        // Fetch and calculate Dette Fournisseur
-        async function fetchFournisseurDette() {
-            const loading = document.getElementById("loading-dette-animation");
-            const detteText = document.getElementById("dette-text");
-            const detteValue = document.getElementById("dette-value");
-            const trendElement = document.querySelector(".trend-indicator");
-
-            try {
-                loading.classList.remove("hidden");
-                detteText.classList.add("hidden");
-
-                // Fetch dette fournisseur and total checks in parallel
-                const [detteResponse, checksResponse] = await Promise.all([
-                    fetch("http://192.168.1.94:5000/fourniseurdettfond"),
-                    fetch("http://192.168.1.94:5000/total-checks")
-                ]);
-                
-                const detteData = await detteResponse.json();
-                const checksData = await checksResponse.json();
-                
-                const fetchedDette = detteData.value || 0;
-                const totalChecks = checksData.total_checks || 0;
-
-                const totalDette = fetchedDette + totalChecks;
-                detteValue.textContent = formatNumber(totalDette) + " DZD";
-
-                loading.classList.add("hidden");
-                detteText.classList.remove("hidden");
-
-            } catch (error) {
-                console.error("Error:", error);
-                loading.innerHTML = `<p class="error-message">Erreur de chargement</p>`;
-            }
+        // Update profit
+        const totalProfit = data.total_profit || 0;
+        if (valueElements.profit) {
+            valueElements.profit.textContent = formatNumber(totalProfit) + " DZD";
+            valueElements.profit.style.color = totalProfit >= 0 ? '#00ff88' : '#ff0033';
         }
 
-        // Fetch and calculate Credit Client
-        async function fetchCreditClient() {
-            const loading = document.getElementById("loading-credit-animation");
-            const creditText = document.getElementById("credit-text");
-            const creditValue = document.getElementById("credit-client-value");
-
-            try {
-                loading.classList.remove("hidden");
-                creditText.classList.add("hidden");
-
-                const response = await fetch("http://192.168.1.94:5000/credit-client");
-                const data = await response.json();
-                const creditClientValue = data.credit_client || 0;
-
-                creditValue.textContent = formatNumber(creditClientValue) + " DZD";
-
-                loading.classList.add("hidden");
-                creditText.classList.remove("hidden");
-            } catch (error) {
-                console.error("Error:", error);
-                loading.innerHTML = `<p class="error-message">Erreur de chargement</p>`;
-            }
+        // Update stock
+        const totalStock = parseFloat(data.details?.total_stock) || 0;
+        if (valueElements.stock) {
+            valueElements.stock.textContent = formatNumber(totalStock) + " DZD";
         }
 
-        // Fetch and calculate Trésorerie
-        async function updateTotalTresorerie() {
-            try {
-                // Fetch all values in parallel
-                const [caisseResponse, paiementResponse, bankResponse] = await Promise.all([
-                    fetch('http://192.168.1.94:5000/caisse'),
-                    fetch('http://192.168.1.94:5000/paiement-net'),
-                    fetch('http://192.168.1.94:5000/total-bank')
-                ]);
+        // Update dette fournisseur
+        const totalDette = data.details?.total_dette || 0;
+        if (valueElements.dette) {
+            valueElements.dette.textContent = formatNumber(totalDette) + " DZD";
+        }
 
-                const [caisseData, paiementData, bankData] = await Promise.all([
-                    caisseResponse.json(),
-                    paiementResponse.json(),
-                    bankResponse.json()
-                ]);
+        // Update credit client
+        const creditClientValue = data.details?.credit_client || 0;
+        if (valueElements.credit) {
+            valueElements.credit.textContent = formatNumber(creditClientValue) + " DZD";
+        }
 
-                // Get values, default to 0 if undefined
-                const caisseValue = caisseData.caisse ?? 0;
-                const paiementNet = paiementData.Total_Paiment ?? 0;
-                const totalBank = bankData.total_bank ?? 0;
+        // Update tresorerie
+        const totalTresorerie = data.details?.total_tresorie || 0;
+        if (valueElements.tresorerie) {
+            valueElements.tresorerie.textContent = formatNumber(totalTresorerie) + ' DZD';
+        }
 
-                // Calculate total
-                const totalTresorerie = caisseValue + paiementNet + totalBank;
-                
-                // Update display
-                document.getElementById('tresorerie-total').textContent = formatNumber(totalTresorerie) + ' DZD';
-            } catch (error) {
-                console.error('Error updating trésorerie:', error);
-                document.getElementById('tresorerie-total').innerHTML = '<strong>Erreur</strong>';
-            }
+    } catch (error) {
+        console.error("Error fetching financial data:", error);
+        
+        // Set error states
+        Object.values(valueElements).forEach(el => {
+            if (el) el.textContent = "Error";
+        });
+    } finally {
+        // Hide loading states and show text
+        Object.values(loadingElements).forEach(el => el?.classList.add("hidden"));
+        Object.values(textElements).forEach(el => el?.classList.remove("hidden"));
+        if (toggleBtn) toggleBtn.classList.remove("hidden");
+    }
+}
+
+// You can now call this single function instead of all the separate ones
+// fetchAllFinancialData();
+
+
+
+
+        // Helper functions for loading states
+        function showAllLoaders() {
+            const loaderElements = document.querySelectorAll('.kpi-loader');
+            const textElements = document.querySelectorAll('[id$="-text"]');
+            loaderElements.forEach(el => el?.classList.remove('hidden'));
+            textElements.forEach(el => el?.classList.add('hidden'));
+        }
+
+        function hideAllLoaders() {
+            const loaderElements = document.querySelectorAll('.kpi-loader');
+            const textElements = document.querySelectorAll('[id$="-text"]');
+            loaderElements.forEach(el => el?.classList.add('hidden'));
+            textElements.forEach(el => el?.classList.remove('hidden'));
         }
 
         // Initialize everything when DOM is loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initial data load
-            fetchTotalStock();
-            fetchFournisseurDette();
-            fetchCreditClient();
-            updateTotalTresorerie();
-            updateTotalProfit();
-            updatePerformanceMatrix();
-
-            // Initial chart load
-            updateKPITrendsChart();
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Initial data load and start countdown
+            await refreshAll();
+            startCountdown();
 
             // Set up manual refresh button
-            document.getElementById('manual-refresh-btn')?.addEventListener('click', () => {
-                fetchTotalStock();
-                fetchFournisseurDette();
-                fetchCreditClient();
-                updateTotalTresorerie();
-                updateTotalProfit();
-                updateKPITrendsChart();
-                updatePerformanceMatrix();
+            document.getElementById('manual-refresh-btn')?.addEventListener('click', async () => {
+                // Clear existing countdown
+                if (refreshIntervalId) {
+                    clearInterval(refreshIntervalId);
+                }
+                
+                // Perform refresh (this will show/hide loaders)
+                await refreshAll();
+                
+                // Start new countdown after refresh completes
+                startCountdown();
             });
 
-            // Set up automatic refresh every 5 minutes
-            setInterval(() => {
-                fetchTotalStock();
-                fetchFournisseurDette();
-                fetchCreditClient();
-                updateTotalTresorerie();
-                updateTotalProfit();
-                updateKPITrendsChart();
-                updatePerformanceMatrix();
-            }, 300000);
+            // Start countdown timer initially
+            startCountdown();
 
             // Add toggle functionality for bank details
             document.getElementById('show-more-bank')?.addEventListener('click', function() {

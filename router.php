@@ -6,7 +6,7 @@ $pages = [
 
     "Etatstock" => "etatstock.php",
     "remise" => "remise.html",
-
+"rot_men_achat" => "rot_men_achat.php",
     "Coming" => "comingsoon.html",
     "Product" => "product.php",
     "Recap_Achat" => "recap_achat.php",
@@ -27,6 +27,7 @@ $pages = [
 
     "draft" => "draft.php",
 
+    "Mouvement_Stock"=> "mouvementstock.php",
     
     "AFFECTATION" => "affectation.php",
     "recouverement" => "rcvrmnt.php",
@@ -34,6 +35,9 @@ $pages = [
 
     "signup" => "signup.html",
     "mony" => "money.php",
+ "mony2" => "moneyv2.php",
+  "mony3" => "moneyv3.php",
+
 
     "Acess_Denied" => "access_denied.html",
     "view_data" => "view_data.php",

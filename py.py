@@ -1,14 +1,18 @@
 
 import oracledb
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, jsonify, request, send_file, make_response
 from flask_cors import CORS
 import logging
 import pandas as pd
 from io import BytesIO
+import io
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from datetime import datetime
+import os
+import json
+
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -26,6 +30,7 @@ DB_POOL = oracledb.create_pool(
     max=10,
     increment=1
 )
+
 
 # Fetch reserved data from Oracle DB
 def fetch_reserved_data():
@@ -477,7 +482,7 @@ def download_marge_excel():
 #----------------------------
 def generate_excel_marge(data, filters):
     if not data:
-        return {"error": "No data available"}, 400
+        return jsonify({"error": "No data available"}), 400
 
     df = pd.DataFrame(data)
     wb = Workbook()
@@ -3851,7 +3856,7 @@ purchase_data AS (
         AND xf.M_Warehouse_ID != 1000521
     JOIN M_INOUTLINE mi ON mi.M_INOUT_ID = xf.M_INOUT_ID
         AND mi.AD_Org_ID = 1000000
-    JOIN C_InvoiceLine ci ON ci.M_INOUTLINE_ID = mi.M_INOUTLINE_ID
+    left outer JOIN C_InvoiceLine ci ON ci.M_INOUTLINE_ID = mi.M_INOUTLINE_ID
     JOIN M_PRODUCT m ON m.M_PRODUCT_ID = mi.M_PRODUCT_ID
         AND m.AD_Org_ID = 1000000
         AND m.name LIKE '%' || :product || '%'
@@ -4847,106 +4852,6 @@ def get_total_stock_price():
         logger.error(f"Error fetching total stock price: {e}")
         return jsonify({"error": "Failed to fetch total price"}), 500
 
-def fetch_total_stock_by_location():
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-
-            query = """
-                WITH stock_principale_data AS (
-                    SELECT 
-                        ROUND(SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand), 2) AS stock_principale
-                    FROM 
-                        M_ATTRIBUTEINSTANCE
-                    JOIN 
-                        m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
-                    WHERE 
-                        M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
-                        AND m_storage.qtyonhand > 0
-                        AND m_storage.m_locator_id = 1000614
-                ),
-                hangar_data AS (
-                    SELECT 
-                        ROUND(SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand), 2) AS hangar
-                    FROM 
-                        M_ATTRIBUTEINSTANCE
-                    JOIN 
-                        m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
-                    WHERE 
-                        M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
-                        AND m_storage.qtyonhand > 0
-                        AND m_storage.m_locator_id = 1001135
-                ),
-                hangarresrev_data AS (
-                    SELECT 
-                        ROUND(SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand), 2) AS hangarresrev
-                    FROM 
-                        M_ATTRIBUTEINSTANCE
-                    JOIN 
-                        m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
-                    WHERE 
-                        M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
-                        AND m_storage.qtyonhand > 0
-                        AND m_storage.m_locator_id = 1001136
-                ),
-                depot_reserver_data AS (
-                    SELECT 
-                        ROUND(SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand), 2) AS depot_reserver
-                    FROM 
-                        M_ATTRIBUTEINSTANCE
-                    JOIN 
-                        m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
-                    WHERE 
-                        M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
-                        AND m_storage.qtyonhand > 0
-                        AND m_storage.m_locator_id = 1001128
-                )
-
-                SELECT 
-                    ROUND(SUM(sp.stock_principale), 2) AS STOCK_principale,
-                    ROUND(SUM(h.hangar), 2) AS hangar,
-                    ROUND(SUM(hr.hangarresrev), 2) AS hangarréserve,
-                    ROUND(SUM(dr.depot_reserver), 2) AS depot_reserver,
-                    ROUND(
-                        NVL(SUM(sp.stock_principale), 0) + 
-                        NVL(SUM(h.hangar), 0) + 
-                        NVL(SUM(hr.hangarresrev), 0) + 
-                        NVL(SUM(dr.depot_reserver), 0), 
-                        2
-                    ) AS total_stock
-                FROM 
-                    stock_principale_data sp,
-                    hangar_data h,
-                    hangarresrev_data hr,
-                    depot_reserver_data dr
-            """
-
-            cursor.execute(query)
-            result = cursor.fetchone()
-
-            return {
-                "STOCK_principale": result[0] or 0,
-                "hangar": result[1] or 0,
-                "hangarréserve": result[2] or 0,
-                "depot_reserver": result[3] or 0,
-                "total_stock": result[4] or 0
-            }
-
-    except Exception as e:
-        logger.error(f"Database error: {e}")
-        return {"error": "An error occurred while fetching stock data."}
-
-
-
-@app.route('/stock-summary', methods=['GET'])
-def get_stock_summary():
-    try:
-        stock_data = fetch_total_stock_by_location()
-        return jsonify(stock_data)
-    except Exception as e:
-        logger.error(f"Error fetching stock summary: {e}")
-        return jsonify({"error": "Failed to fetch stock summary"}), 500
-
 
 
 
@@ -4965,7 +4870,7 @@ def download_quota_excel():
 #----------------------------
 def generate_excel_quota(data, produit_filter):
     if not data:
-        return {"error": "No data available"}, 400
+        return jsonify({"error": "No data available"}), 400
 
     df = pd.DataFrame(data)
     wb = Workbook()
@@ -5109,6 +5014,783 @@ def quota_operator():
         return jsonify({"error": "Failed to connect to the database."}), 500
     data = fetch_quota_operator()
     return jsonify(data)
+
+
+
+
+
+
+
+
+
+
+from flask import request, jsonify
+
+@app.route('/fetchFournisseurDataByYear', methods=['GET'])
+def fetch_fournisseur_by_year():
+
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    years = request.args.getlist('years')  # Get all years parameters
+    month = request.args.get('month')
+
+    try:
+        years = [int(y) for y in years] if years else None
+        month = int(month) if month else None
+    except ValueError:
+        return jsonify({"error": "Invalid year or month format"}), 400
+
+    if not years:
+        # If no years specified, get current year
+        current_year = datetime.now().year
+        years = [current_year]
+
+    full_data = {}
+    for year in years:
+        yearly_data = fetch_fournisseur_data_by_year(
+            fournisseur=fournisseur,
+            product=product,
+            client=client,
+            operateur=operateur,
+            bccb=bccb,
+            zone=zone,
+            year=year,
+            month=month
+        )
+        full_data[str(year)] = yearly_data
+
+    return jsonify(full_data)
+
+
+
+def fetch_fournisseur_data_by_year(fournisseur=None, product=None, client=None, operateur=None,
+                                   bccb=None, zone=None, year=None, month=None):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            ad_org_id = 1000000
+
+            if year and month:
+                start_date = f"{year}-{month:02d}-01"
+                last_day = 31 if month in [1, 3, 5, 7, 8, 10, 12] else 30
+                if month == 2:
+                    last_day = 29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28
+                end_date = f"{year}-{month:02d}-{last_day}"
+            elif year:
+                start_date = f"{year}-01-01"
+                end_date = f"{year}-12-31"
+            else:
+                current_year = datetime.now().year
+                start_date = f"{current_year}-01-01"
+                end_date = f"{current_year}-12-31"
+                year = current_year
+
+            query = """
+                SELECT 
+                    TO_CHAR(xf.MOVEMENTDATE, 'YYYY') AS year,
+                    TO_CHAR(xf.MOVEMENTDATE, 'MM') AS month,
+                    SUM(xf.TOTALLINE) AS total,
+                    SUM(xf.qtyentered) AS QTY,
+                    ROUND(
+                        CASE 
+                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                            WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1) * 100
+                            ELSE ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION)) * 100
+                        END, 4) AS marge
+                FROM xx_ca_fournisseur xf
+                JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                JOIN C_ORDER C ON mi.C_ORDER_ID = c.C_ORDER_ID
+                WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                    AND xf.AD_Org_ID = :ad_org_id
+                    AND xf.DOCSTATUS != 'RE'
+                    AND (:fournisseur IS NULL OR xf.name LIKE :fournisseur || '%')
+                    AND (:product IS NULL OR xf.product LIKE :product || '%')
+                    AND (:client IS NULL OR cb.name LIKE :client || '%')
+                    AND (:operateur IS NULL OR au.name LIKE :operateur || '%')
+                    AND (:bccb IS NULL OR C.DOCUMENTNO LIKE :bccb || '%')
+                    AND (:zone IS NULL OR sr.name LIKE :zone || '%')
+                GROUP BY ROLLUP(TO_CHAR(xf.MOVEMENTDATE, 'YYYY'), TO_CHAR(xf.MOVEMENTDATE, 'MM'))
+                HAVING TO_CHAR(xf.MOVEMENTDATE, 'YYYY') = :year_str OR TO_CHAR(xf.MOVEMENTDATE, 'YYYY') IS NULL
+                ORDER BY year NULLS LAST, month NULLS LAST
+            """
+
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'fournisseur': fournisseur or None,
+                'product': product or None,
+                'client': client or None,
+                'operateur': operateur or None,
+                'bccb': bccb or None,
+                'zone': zone or None,
+                'ad_org_id': ad_org_id,
+                'year_str': str(year)
+            }
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            return [dict(zip(columns, row)) for row in rows]
+
+    except Exception as e:
+        logger.error(f"Error fetching total fournisseur data: {e}")
+        return {"error": "An error occurred while fetching total data."}
+
+@app.route('/listproduct')
+def listproduct():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+select name from M_PRODUCT
+WHERE AD_Client_ID = 1000000
+AND AD_Org_ID = 1000000
+  AND ISACTIVE = 'Y'
+ORDER BY name
+
+
+            """
+            cursor.execute(query)
+            result = [row[0] for row in cursor.fetchall()]
+            return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error fetching products: {e}")
+        return jsonify({"error": "Could not fetch products list"}), 500
+    
+
+
+
+
+
+
+@app.route('/listfournisseur')
+def list_fournisseur():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT cb.name
+                FROM C_BPartner cb
+                WHERE cb.AD_Client_ID = 1000000
+                  AND cb.ISVENDOR = 'Y'
+                  AND cb.ISACTIVE = 'Y'
+                ORDER BY cb.name
+            """
+            cursor.execute(query)
+            result = [row[0] for row in cursor.fetchall()]
+            return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error fetching fournisseurs: {e}")
+        return jsonify({"error": "Could not fetch fournisseur list"}), 500
+
+
+@app.route('/listregion')
+def list_region():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT name
+                FROM C_SalesRegion
+                WHERE ISACTIVE = 'Y'
+                  AND AD_Client_ID = 1000000
+            """
+            cursor.execute(query)
+            result = [row[0] for row in cursor.fetchall()]
+            return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error fetching regions: {e}")
+        return jsonify({"error": "Could not fetch region list"}), 500
+
+
+@app.route('/listclient')
+def list_client():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT name
+                FROM C_BPartner
+                WHERE iscustomer = 'Y'
+                  AND AD_Client_ID = 1000000
+                  AND AD_Org_ID = 1000000
+                ORDER BY name
+            """
+            cursor.execute(query)
+            result = [row[0] for row in cursor.fetchall()]
+            return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error fetching clients: {e}")
+        return jsonify({"error": "Could not fetch client list"}), 500
+
+
+
+@app.route('/fetchFournisseurRecapAchatByYear', methods=['GET'])
+def fetch_fournisseur_recap_achat_by_year():
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    years = request.args.getlist('years')  # Get all years parameters
+    month = request.args.get('month')
+
+    try:
+        years = [int(y) for y in years] if years else None
+        month = int(month) if month else None
+    except ValueError:
+        return jsonify({"error": "Invalid year or month format"}), 400
+
+    if not years:
+        # If no years specified, get current year
+        current_year = datetime.now().year
+        years = [current_year]
+
+    full_data = {}
+    for year in years:
+        yearly_data = fetch_fournisseur_recap_achat_data_by_year(
+            fournisseur=fournisseur,
+            product=product,
+            year=year,
+            month=month
+        )
+        full_data[str(year)] = yearly_data
+
+    return jsonify(full_data)
+
+def fetch_fournisseur_recap_achat_data_by_year(fournisseur=None, product=None, year=None, month=None):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            if year and month:
+                start_date = f"{year}-{month:02d}-01"
+                last_day = 31 if month in [1, 3, 5, 7, 8, 10, 12] else 30
+                if month == 2:
+                    last_day = 29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28
+                end_date = f"{year}-{month:02d}-{last_day}"
+            elif year:
+                start_date = f"{year}-01-01"
+                end_date = f"{year}-12-31"
+            else:
+                current_year = datetime.now().year
+                start_date = f"{current_year}-01-01"
+                end_date = f"{current_year}-12-31"
+                year = current_year
+
+            query = """
+                SELECT 
+                    TO_CHAR(xf.MOVEMENTDATE, 'YYYY') AS year,
+                    TO_CHAR(xf.MOVEMENTDATE, 'MM') AS month,
+                    SUM(CASE 
+                        WHEN xf.C_DocType_ID = 1000646 THEN -1 * TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED) 
+                        ELSE TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED) 
+                    END) AS chiffre,
+                    SUM(CASE 
+                        WHEN xf.C_DocType_ID = 1000646 THEN -1 * TO_NUMBER(mi.QTYENTERED)
+                        ELSE TO_NUMBER(mi.QTYENTERED)
+                    END) AS qty
+                FROM 
+                    M_InOut  xf
+                JOIN M_INOUTLINE mi ON mi.M_INOUT_ID=xf.M_INOUT_ID
+                JOIN C_BPartner cb ON cb.C_BPARTNER_ID=xf.C_BPARTNER_ID
+                LEFT JOIN C_InvoiceLine ci ON ci.M_INOUTLINE_ID=mi.M_INOUTLINE_ID
+                JOIN M_ATTRIBUTEINSTANCE ma ON ma.M_ATTRIBUTESETINSTANCE_ID=mi.M_ATTRIBUTESETINSTANCE_ID
+                JOIN M_PRODUCT m ON m.M_PRODUCT_id=mi.M_PRODUCT_id
+                WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                    AND ma.M_Attribute_ID=1000504
+                    AND xf.AD_Org_ID = 1000000
+                    AND xf.C_DocType_ID IN (1000013, 1000646)
+                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
+                    AND (:fournisseur IS NULL OR UPPER(cb.name) LIKE UPPER(:fournisseur) || '%')
+                    AND (:product IS NULL OR UPPER(m.name) LIKE UPPER(:product) || '%')
+                GROUP BY ROLLUP(TO_CHAR(xf.MOVEMENTDATE, 'YYYY'), TO_CHAR(xf.MOVEMENTDATE, 'MM'))
+                HAVING TO_CHAR(xf.MOVEMENTDATE, 'YYYY') = :year_str OR TO_CHAR(xf.MOVEMENTDATE, 'YYYY') IS NULL
+                ORDER BY year NULLS LAST, month NULLS LAST
+            """
+
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'fournisseur': fournisseur or None,
+                'product': product or None,
+                'year_str': str(year)
+            }
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            return [dict(zip(columns, row)) for row in rows]
+
+    except Exception as e:
+        logger.error(f"Error fetching fournisseur recap achat data by year: {e}")
+        return {"error": "An error occurred while fetching recap achat data by year."}
+
+@app.route('/download-fournisseur-recap-excel', methods=['GET'])
+def download_fournisseur_recap_excel():
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    years = request.args.getlist('years')
+    month = request.args.get('month')
+
+    try:
+        years = [int(y) for y in years] if years else []
+        month = int(month) if month else None
+    except ValueError:
+        return {"error": "Invalid year or month format"}, 400
+
+    if not years:
+        years = [datetime.now().year]
+
+    all_data = []
+    for year in years:
+        data = fetch_fournisseur_recap_achat_data_by_year(
+            fournisseur=fournisseur,
+            product=product,
+            year=year,
+            month=month
+        )
+        for row in data:
+            row['YEAR'] = year  # Add year for clarity if not in row
+        all_data.extend(data)
+
+    return generate_excel_fournisseur_recap(all_data, fournisseur, product, years, month)
+
+
+def generate_excel_fournisseur_recap(data, fournisseur, product, years, month):
+    if not data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Fournisseur Recap"
+
+    # Style header
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+    ws.append(df.columns.tolist())
+    
+    for cell in ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Append data rows with alternating colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Filename generation
+    today = datetime.now().strftime("%d-%m-%Y")
+    filters = []
+    if fournisseur:
+        filters.append(f"fournisseur-{fournisseur}")
+    if product:
+        filters.append(f"product-{product}")
+    if years:
+        filters.append(f"years-{'-'.join(map(str, years))}")
+    if month:
+        filters.append(f"month-{month}")
+    
+    filter_text = "_".join(filters)
+    filename = f"FournisseurRecap_{filter_text}_{today}.xlsx" if filters else f"FournisseurRecap_{today}.xlsx"
+
+    # Return file
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+FEEDBACK_FILE = 'json_files/feedback.json'
+
+@app.route('/submit_feedback', methods=['POST'])
+def submit_feedback():
+    data = request.get_json()
+    data['timestamp'] = datetime.now().isoformat()
+
+    # Load existing feedback
+    if os.path.exists(FEEDBACK_FILE):
+        with open(FEEDBACK_FILE, 'r') as f:
+            feedback_list = json.load(f)
+    else:
+        feedback_list = []
+
+    feedback_list.append(data)
+
+    # Save back to JSON
+    with open(FEEDBACK_FILE, 'w') as f:
+        json.dump(feedback_list, f, indent=2)
+
+    return jsonify({'status': 'success'}), 200
+
+
+import calendar
+
+
+# Add this at the top of your Flask app
+CURRENT_GOAL = 481114494.36  # Static default value
+
+@app.route('/recouvrement', methods=['GET'])
+def recouvrement():
+    global CURRENT_GOAL
+    
+    # Update goal if new value provided
+    new_goal = request.args.get('objectif', type=float)
+    if new_goal is not None:
+        CURRENT_GOAL = new_goal
+    
+    try:
+        # Rest of your existing query code remains the same
+        today = datetime.now()
+        year = today.year
+        month = today.month
+        start_date = f"{year}-{month:02d}-01"
+        last_day = calendar.monthrange(year, month)[1]
+        end_date = f"{year}-{month:02d}-{last_day}"
+
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+                SELECT 
+                    ROUND(:objectif, 2) AS "OBJECTIF_MENSUEL", 
+                    ROUND(SUM(p.payamt), 2) AS "TOTAL_RECOUVREMENT",
+                    ROUND(SUM(p.payamt)/:objectif, 4) AS "POURCENTAGE"
+                FROM 
+                    C_Payment p
+                    JOIN C_BPartner b ON b.C_BPartner_id = p.C_BPartner_id
+                WHERE 
+                    b.iscustomer = 'Y'
+                    AND b.C_PaymentTerm_ID != 1000000
+                    AND p.AD_Client_ID = 1000000
+                    AND p.docstatus in ('CO','CL')
+                    AND p.ZSubPaymentRule_ID in (1000007,1000016)
+                    AND p.datetrx >= TO_DATE(:start_date, 'YYYY-MM-DD')
+                    AND p.datetrx <= TO_DATE(:end_date, 'YYYY-MM-DD')
+            """
+
+            cursor.execute(query, {
+                'objectif': CURRENT_GOAL,
+                'start_date': start_date,
+                'end_date': end_date
+            })
+
+            row = cursor.fetchone()
+            if not row:
+                return jsonify({
+                    "OBJECTIF_MENSUEL": CURRENT_GOAL,
+                    "TOTAL_RECOUVREMENT": 0,
+                    "POURCENTAGE": 0
+                })
+                
+            columns = [col[0] for col in cursor.description]
+            result = dict(zip(columns, row))
+            
+            # Ensure we handle null values
+            if result["TOTAL_RECOUVREMENT"] is None:
+                result["TOTAL_RECOUVREMENT"] = 0
+            if result["POURCENTAGE"] is None:
+                result["POURCENTAGE"] = 0
+                
+            return jsonify(result)
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({
+            "error": "Erreur serveur",
+            "OBJECTIF_MENSUEL": CURRENT_GOAL,
+            "TOTAL_RECOUVREMENT": 0,
+            "POURCENTAGE": 0
+        }), 500
+
+
+
+
+
+@app.route('/pending_documents', methods=['GET'])
+def pending_documents():
+    try:
+        # Get sales_region parameter from request, default to None (fetch all)
+        sales_region = request.args.get('sales_region')
+        
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT 
+                    IO.DOCUMENTNO, 
+                    IO.CREATED, 
+                    IO.DESCRIPTION, 
+                    IO.M_InOut_ID, 
+                    BP.NAME,
+                    SR.NAME AS SALES_REGION
+                FROM 
+                    M_InOut IO
+                    JOIN C_BPartner BP ON IO.C_BPartner_ID = BP.C_BPartner_ID
+                    JOIN C_BPartner_Location BPL ON IO.C_BPartner_ID = BPL.C_BPartner_ID
+                    JOIN C_SalesRegion SR ON BPL.C_SalesRegion_ID = SR.C_SalesRegion_ID
+                WHERE 
+                    IO.ISACTIVE = 'Y'
+                    AND IO.DOCACTION = 'CO'
+                    AND IO.DOCSTATUS = 'IP'
+                    AND IO.PROCESSED = 'N'
+                    AND IO.ISAPPROVED = 'N'
+                    AND IO.XX_CONTROLEUR_ID IS NULL
+                    AND IO.XX_PREPARATEUR_ID IS NULL
+                    AND IO.XX_CONTROLEUR_CH_ID IS NULL
+                    AND IO.XX_PREPARATEUR_CH_ID IS NULL
+                    AND IO.XX_EMBALEUR_CH_ID IS NULL
+                    AND IO.XX_EMBALEUR_ID IS NULL
+                    AND IO.C_DocType_ID='1002733'
+            """
+            
+            # Add sales region filter if provided
+            params = []
+            if sales_region:
+                query += " AND SR.NAME = :1"
+                params.append(sales_region)
+            
+            cursor.execute(query, params)
+            results = cursor.fetchall()
+            
+            documents = []
+            for row in results:
+                doc_no, created, description, inoutid, bp_name, sales_region = row
+                # Format date as "26 May 2025 09:58"
+                formatted_date = created.strftime('%d %b %Y %H:%M')
+                documents.append({
+                    'documentNo': doc_no,
+                    'createdDate': formatted_date,
+                    'description': description if description else '-',
+                    'inoutid': inoutid,
+                    'businessPartner': bp_name,
+                    'salesRegion': sales_region,
+                    'status': 'Created'
+                })
+            
+            return jsonify({
+                "count": len(documents),
+                "documents": documents,
+                "lastUpdated": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                "salesRegionFilter": sales_region if sales_region else "All"
+            })
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({
+            "error": "Server error",
+            "message": str(e),
+            "count": 0,
+            "documents": []
+        }), 500
+
+
+
+@app.route('/regions', methods=['GET'])
+def select_regions():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+
+SELECT C_SALESREGION_ID, NAME 
+                FROM C_SalesRegion
+                     where ISACTIVE= 'Y'
+                     and AD_Client_ID = 1000000
+                ORDER BY NAME
+           
+            """
+            cursor.execute(query)
+            results = cursor.fetchall()
+            
+            regions = []
+            for row in results:
+                region_id, name = row
+                regions.append({
+                    'id': region_id,
+                    'name': name
+                })
+            
+            return jsonify({
+                "count": len(regions),
+                "regions": regions
+            })
+
+    except Exception as e:
+        print(f"Error fetching regions: {e}")
+        return jsonify({
+            "error": "Server error",
+            "message": str(e),
+            "count": 0,
+            "regions": []
+        }), 500
+
+
+@app.route('/inout_lines', methods=['GET'])
+def get_inout_lines():
+    try:
+        m_inout_id = request.args.get('m_inout_id')
+        
+        if not m_inout_id:
+            return jsonify({
+                "error": "Missing parameter",
+                "message": "m_inout_id parameter is required"
+            }), 400
+
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT P.NAME, ML.MOVEMENTQTY 
+                FROM M_InOutline ML
+                JOIN M_Product P ON ML.M_Product_ID = P.M_Product_ID
+                WHERE ML.M_InOut_ID = :m_inout_id
+            """
+            cursor.execute(query, {'m_inout_id': m_inout_id})
+            results = cursor.fetchall()
+            
+            lines = []
+            for name, movement_qty in results:
+                lines.append({
+                    'product_name': name,
+                    'quantity': float(movement_qty) if movement_qty else 0.0
+                })
+            
+            return jsonify({
+                "m_inout_id": m_inout_id,
+                "count": len(lines),
+                "lines": lines
+            })
+
+    except Exception as e:
+        print(f"Error fetching inout lines: {e}")
+        return jsonify({
+            "error": "Server error",
+            "message": str(e),
+            "count": 0,
+            "lines": []
+        }), 500
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+def fetch_total_stock_by_location():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+                WITH stock_principale_data AS (
+                    SELECT 
+                        ROUND(SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand), 2) AS stock_principale
+                    FROM 
+                        M_ATTRIBUTEINSTANCE
+                    JOIN 
+                        m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
+                    WHERE 
+                        M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
+                        AND m_storage.qtyonhand > 0
+                        AND m_storage.m_locator_id = 1000614
+                ),
+                hangar_data AS (
+                    SELECT 
+                        ROUND(SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand), 2) AS hangar
+                    FROM 
+                        M_ATTRIBUTEINSTANCE
+                    JOIN 
+                        m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
+                    WHERE 
+                        M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
+                        AND m_storage.qtyonhand > 0
+                        AND m_storage.m_locator_id = 1001135
+                ),
+                hangarresrev_data AS (
+                    SELECT 
+                        ROUND(SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand), 2) AS hangarresrev
+                    FROM 
+                        M_ATTRIBUTEINSTANCE
+                    JOIN 
+                        m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
+                    WHERE 
+                        M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
+                        AND m_storage.qtyonhand > 0
+                        AND m_storage.m_locator_id = 1001136
+                ),
+                depot_reserver_data AS (
+                    SELECT 
+                        ROUND(SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand), 2) AS depot_reserver
+                    FROM 
+                        M_ATTRIBUTEINSTANCE
+                    JOIN 
+                        m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
+                    WHERE 
+                        M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
+                        AND m_storage.qtyonhand > 0
+                        AND m_storage.m_locator_id = 1001128
+                )
+
+                SELECT 
+                    ROUND(SUM(sp.stock_principale), 2) AS STOCK_principale,
+                    ROUND(SUM(h.hangar), 2) AS hangar,
+                    ROUND(SUM(hr.hangarresrev), 2) AS hangarréserve,
+                    ROUND(SUM(dr.depot_reserver), 2) AS depot_reserver,
+                    ROUND(
+                        NVL(SUM(sp.stock_principale), 0) + 
+                        NVL(SUM(h.hangar), 0) + 
+                        NVL(SUM(hr.hangarresrev), 0) + 
+                        NVL(SUM(dr.depot_reserver), 0), 
+                        2
+                    ) AS total_stock
+                FROM 
+                    stock_principale_data sp,
+                    hangar_data h,
+                    hangarresrev_data hr,
+                    depot_reserver_data dr
+            """
+
+            cursor.execute(query)
+            result = cursor.fetchone()
+
+            return {
+                "STOCK_principale": result[0] or 0,
+                "hangar": result[1] or 0,
+                "hangarréserve": result[2] or 0,
+                "depot_reserver": result[3] or 0,
+                "total_stock": result[4] or 0
+            }
+
+    except Exception as e:
+        logger.error(f"Database error: {e}")
+        return {"error": "An error occurred while fetching stock data."}
+
+
+
+@app.route('/stock-summary', methods=['GET'])
+def get_stock_summary():
+    try:
+        stock_data = fetch_total_stock_by_location()
+        return jsonify(stock_data)
+    except Exception as e:
+        logger.error(f"Error fetching stock summary: {e}")
+        return jsonify({"error": "Failed to fetch stock summary"}), 500
+
+
 
 
 
@@ -5269,12 +5951,6 @@ def get_fourniseurdettfond():
 
 
 
-from flask import Flask, request, jsonify
-import os
-import json
-from datetime import datetime
-
-
 # Path to store the previous values
 DATA_FILE = os.path.join(os.path.dirname(__file__), 'kpi_data.json')
 
@@ -5317,41 +5993,6 @@ def store_fonds_propre():
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-# @app.route('/fonds-propre-chart-data')
-# def get_fonds_propre_chart_data():
-#     try:
-#         # Load the data from JSON file
-#         with open('kpi_data.json', 'r') as f:
-#             data = json.load(f)
-        
-#         # Extract and format the data
-#         chart_data = []
-#         for entry in data.get('fonds_propre', []):
-#             # Convert date string to datetime object for sorting
-#             date = datetime.strptime(entry['date'], '%Y-%m-%dT%H:%M:%S.%fZ')
-#             chart_data.append({
-#                 'date': date.strftime('%Y-%m-%d %H:%M:%S'),  # Format for display
-#                 'timestamp': date.timestamp(),  # For sorting
-#                 'value': entry['value']
-#             })
-        
-#         # Sort data by timestamp (oldest first)
-#         chart_data.sort(key=lambda x: x['timestamp'])
-        
-#         # Prepare response data
-#         response = {
-#             'labels': [entry['date'] for entry in chart_data],
-#             'values': [entry['value'] for entry in chart_data],
-#             'min_date': chart_data[0]['date'] if chart_data else None,
-#             'max_date': chart_data[-1]['date'] if chart_data else None
-#         }
-        
-#         return jsonify(response)
-    
-#     except Exception as e:
-#         return jsonify({'error': str(e)}), 500
-
 
 @app.route('/fonds-propre-chart-data')
 def get_fonds_propre_chart_data():
@@ -5798,663 +6439,933 @@ def paiment():
     data = fetch_paiment()
     return jsonify(data)
 
-
-
-
-from datetime import datetime
-from flask import request, jsonify
-
-@app.route('/fetchFournisseurDataByYear', methods=['GET'])
-def fetch_fournisseur_by_year():
-
-    fournisseur = request.args.get('fournisseur')
-    product = request.args.get('product')
-    client = request.args.get('client')
-    operateur = request.args.get('operateur')
-    bccb = request.args.get('bccb')
-    zone = request.args.get('zone')
-    years = request.args.getlist('years')  # Get all years parameters
-    month = request.args.get('month')
-
+def get_total_checks():
     try:
-        years = [int(y) for y in years] if years else None
-        month = int(month) if month else None
-    except ValueError:
-        return jsonify({"error": "Invalid year or month format"}), 400
+        # Read the bank.json file
+        with open('bank.json', 'r') as f:
+            bank_data = json.load(f)
+            
+        # Get the latest entry
+        latest_entry = bank_data[-1]
+        
+        # Get individual check amounts
+        bna_checks = latest_entry['bna_check']
+        baraka_checks = latest_entry['baraka_check']
+        
+        # Calculate total checks
+        total_checks = bna_checks + baraka_checks
+        
+        return {
+            "total_checks": total_checks,
+            "details": {
+                "BNA": {
+                    "checks": bna_checks
+                },
+                "Baraka": {
+                    "checks": baraka_checks
+                }
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error calculating total checks: {e}")
+        return {"error": "An error occurred while calculating total checks"}
 
-    if not years:
-        # If no years specified, get current year
-        current_year = datetime.now().year
-        years = [current_year]
-
-    full_data = {}
-    for year in years:
-        yearly_data = fetch_fournisseur_data_by_year(
-            fournisseur=fournisseur,
-            product=product,
-            client=client,
-            operateur=operateur,
-            bccb=bccb,
-            zone=zone,
-            year=year,
-            month=month
-        )
-        full_data[str(year)] = yearly_data
-
-    return jsonify(full_data)
+@app.route('/total-checks', methods=['GET'])
+def total_checks():
+    try:
+        result = get_total_checks()
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error in total checks route: {e}")
+        return jsonify({"error": "Failed to get total checks"}), 500
 
 
+def get_total_bank():
+    try:
+        # Read the bank.json file
+        with open('bank.json', 'r') as f:
+            bank_data = json.load(f)
+            
+        # Get the latest entry
+        latest_entry = bank_data[-1]
+        
+        # Calculate individual bank amounts
+        bna_total = latest_entry['bna_sold'] + latest_entry['bna_remise']
+        baraka_total = latest_entry['baraka_sold'] + latest_entry['baraka_remise']
+        
+        # Calculate total bank amount
+        total_bank = bna_total + baraka_total
+        
+        return {
+            "total_bank": total_bank,
+            "details": {
+                "BNA": {
+                    "sold": latest_entry['bna_sold'],
+                    "remise": latest_entry['bna_remise'],
+                    "total": bna_total
+                },
+                "Baraka": {
+                    "sold": latest_entry['baraka_sold'],
+                    "remise": latest_entry['baraka_remise'],
+                    "total": baraka_total
+                }
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error calculating total bank: {str(e)}")
+        return {"error": "An error occurred while calculating total bank"}
 
-def fetch_fournisseur_data_by_year(fournisseur=None, product=None, client=None, operateur=None,
-                                   bccb=None, zone=None, year=None, month=None):
+@app.route('/total-bank', methods=['GET'])
+def total_bank():
+    try:
+        result = get_total_bank()
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error in total bank route: {e}")
+        return jsonify({"error": "Failed to get total bank"}), 500
+
+
+
+JSON_FILE = 'json_files/all_performance_data.json'
+
+def get_filtered_data(start_date=None, end_date=None):
+    try:
+        with open(JSON_FILE, 'r') as f:
+            data = json.load(f)
+
+        # Convert dates if provided
+        start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00')) if start_date else None
+        end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00')) if end_date else None
+
+        # Filter entries if dates provided
+        entries = []
+        for timestamp, entry in data.items():
+            entry_dt = datetime.fromisoformat(entry['timestamp'].replace('Z', '+00:00'))
+            if ((not start_dt or entry_dt >= start_dt) and 
+                (not end_dt or entry_dt <= end_dt)):
+                entries.append(entry)
+
+        # Sort entries by timestamp
+        entries.sort(key=lambda x: x['timestamp'])
+
+        return entries
+
+    except Exception as e:
+        print(f"Error reading data: {e}")
+        return []
+
+@app.route('/kpi-trends-data', methods=['GET'])
+def get_kpi_trends_data():
+    try:
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        entries = get_filtered_data(start_date, end_date)
+        
+        if not entries:
+            return jsonify({
+                "error": "No data found for the specified period"
+            }), 404
+
+        # Extract data series
+        labels = [entry['timestamp'] for entry in entries]
+        dette = [float(entry['dette']['total']) if 'dette' in entry else None for entry in entries]
+        stock = [float(entry['stock']['total']) if 'stock' in entry else None for entry in entries]
+        tresorerie = [float(entry['tresorerie']['total']) if 'tresorerie' in entry else None for entry in entries]
+        credit = [float(entry['credit_client']) if 'credit_client' in entry else None for entry in entries]
+
+        # Build consolidated response
+        datasets = [
+            {
+                "label": "Dette Fournisseur",
+                "data": dette,
+                "borderColor": "#ff0033",
+                "backgroundColor": "rgba(255, 0, 51, 0.1)",
+                "tension": 0.3,
+                "borderWidth": 2
+            },
+            {
+                "label": "Stock Total",
+                "data": stock,
+                "borderColor": "#1cc88a",
+                "backgroundColor": "rgba(28, 200, 138, 0.1)",
+                "tension": 0.3,
+                "borderWidth": 2
+            },
+            {
+                "label": "Trésorerie",
+                "data": tresorerie,
+                "borderColor": "#36b9cc",
+                "backgroundColor": "rgba(54, 185, 204, 0.1)",
+                "tension": 0.3,
+                "borderWidth": 2
+            },
+            {
+                "label": "Crédit Client",
+                "data": credit,
+                "borderColor": "#f6c23e",
+                "backgroundColor": "rgba(246, 194, 62, 0.1)",
+                "tension": 0.3,
+                "borderWidth": 2
+            }
+        ]
+
+        return jsonify({
+            "labels": labels,
+            "datasets": datasets,
+            "min_date": labels[0] if labels else None,
+            "max_date": labels[-1] if labels else None
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# Stock Movement functionality
+def calculate_stock_initial_for_multiple_emplacements(start_date, product, fournisseur):
+    """
+    Calculate stock initial for multiple emplacements by summing each emplacement individually
+    This solves the issue when emplacement is empty and we need to aggregate stock from all main locations
+    Returns both total and breakdown by emplacement
+    """
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
-            ad_org_id = 1000000
+            
+            # Define the main emplacements
+            emplacements = ['Préparation', 'HANGAR', 'Dépot Hangar réserve', 'Dépot réserve']
+            total_stock_initial = 0
+            emplacement_breakdown = {}
+            
+            
+            for emp in emplacements:
+                query = """
+                SELECT COALESCE(SUM(s.movementqty), 0) as stock_initial
+                FROM m_transaction s
+                INNER JOIN m_product p ON (s.m_product_id = p.m_product_id)
+                INNER JOIN m_locator l ON (l.m_locator_id = s.m_locator_id)
+                INNER JOIN M_attributeinstance att ON (att.m_attributesetinstance_id = s.m_attributesetinstance_id)
+                WHERE s.movementdate < TO_DATE(:start_date, 'YYYY-MM-DD')
+                AND (:product IS NULL OR p.name LIKE :product || '%')
+                AND (:fournisseur IS NULL OR att.value LIKE :fournisseur || '%')
+                AND l.value LIKE :emplacement || '%'
+                AND att.m_attribute_id = 1000508
+                AND s.AD_Client_ID = 1000000
+                """
+                
+                params = {
+                    'start_date': start_date,
+                    'product': product,
+                    'fournisseur': fournisseur,
+                    'emplacement': emp
+                }
+                
+                cursor.execute(query, params)
+                result = cursor.fetchone()
+                emplacement_stock = result[0] if result and result[0] else 0
+                
+                total_stock_initial += emplacement_stock
+                emplacement_breakdown[emp] = emplacement_stock
+               
+            
+            return {
+                'total': total_stock_initial,
+                'breakdown': emplacement_breakdown
+            }
+            
+    except Exception as e:
+        logger.error(f"Error calculating stock initial for multiple emplacements: {e}")
+        return {
+            'total': 0,
+            'breakdown': {}
+        }
 
-            if year and month:
-                start_date = f"{year}-{month:02d}-01"
-                last_day = 31 if month in [1, 3, 5, 7, 8, 10, 12] else 30
-                if month == 2:
-                    last_day = 29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28
-                end_date = f"{year}-{month:02d}-{last_day}"
-            elif year:
-                start_date = f"{year}-01-01"
-                end_date = f"{year}-12-31"
-            else:
-                current_year = datetime.now().year
-                start_date = f"{current_year}-01-01"
-                end_date = f"{current_year}-12-31"
-                year = current_year
-
-            query = """
-                SELECT 
-                    TO_CHAR(xf.MOVEMENTDATE, 'YYYY') AS year,
-                    TO_CHAR(xf.MOVEMENTDATE, 'MM') AS month,
-                    SUM(xf.TOTALLINE) AS total,
-                    SUM(xf.qtyentered) AS QTY,
-                    ROUND(
-                        CASE 
-                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
-                            WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1) * 100
-                            ELSE ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION)) * 100
-                        END, 4) AS marge
-                FROM xx_ca_fournisseur xf
-                JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
-                JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
-                JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
-                JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
-                JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
-                JOIN C_ORDER C ON mi.C_ORDER_ID = c.C_ORDER_ID
-                WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                    AND xf.AD_Org_ID = :ad_org_id
-                    AND xf.DOCSTATUS != 'RE'
-                    AND (:fournisseur IS NULL OR xf.name LIKE :fournisseur || '%')
-                    AND (:product IS NULL OR xf.product LIKE :product || '%')
-                    AND (:client IS NULL OR cb.name LIKE :client || '%')
-                    AND (:operateur IS NULL OR au.name LIKE :operateur || '%')
-                    AND (:bccb IS NULL OR C.DOCUMENTNO LIKE :bccb || '%')
-                    AND (:zone IS NULL OR sr.name LIKE :zone || '%')
-                GROUP BY ROLLUP(TO_CHAR(xf.MOVEMENTDATE, 'YYYY'), TO_CHAR(xf.MOVEMENTDATE, 'MM'))
-                HAVING TO_CHAR(xf.MOVEMENTDATE, 'YYYY') = :year_str OR TO_CHAR(xf.MOVEMENTDATE, 'YYYY') IS NULL
-                ORDER BY year NULLS LAST, month NULLS LAST
-            """
-
-            params = {
+def fetch_stock_movement_data(start_date=None, end_date=None, product=None, fournisseur=None, emplacement=None):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            
+            # For empty or None emplacement, we want to fetch all main locations
+            if emplacement == '' or emplacement is None:
+                # Calculate stock initial separately for multiple emplacements
+                stock_initial_result = calculate_stock_initial_for_multiple_emplacements(start_date, product, fournisseur)
+                calculated_stock_initial = stock_initial_result['total']
+                emplacement_breakdown = stock_initial_result['breakdown']
+                
+                emplacement_condition = """
+                AND (l.value LIKE 'Préparation%' OR l.value LIKE 'HANGAR%' OR l.value LIKE 'Dépot Hangar réserve%' OR l.value LIKE 'Dépot réserve%')
+                """
+                # Use the calculated stock initial instead of subquery
+                stock_initial_value = str(calculated_stock_initial)
+                  # Exclude internal transfers when no specific emplacement is selected
+                movement_line_condition = ""
+                internal_transfer_condition = """
+                AND NOT (
+                    t.M_MovementLine_ID IS NOT NULL AND (
+                        (ml.M_Locator_ID = 1001135 AND ml.M_LocatorTo_ID = 1000614) OR
+                        (ml.M_Locator_ID = 1000614 AND ml.M_LocatorTo_ID = 1001135) OR
+                        (ml.M_Locator_ID = 1001136 AND ml.M_LocatorTo_ID = 1001135) OR
+                        (ml.M_Locator_ID = 1001135 AND ml.M_LocatorTo_ID = 1001136) OR
+                        (ml.M_Locator_ID = 1001136 AND ml.M_LocatorTo_ID = 1001128) OR
+                        (ml.M_Locator_ID = 1001128 AND ml.M_LocatorTo_ID = 1001136) OR
+                        (ml.M_Locator_ID = 1001136 AND ml.M_LocatorTo_ID = 1000614) OR
+                        (ml.M_Locator_ID = 1000614 AND ml.M_LocatorTo_ID = 1001136) OR
+                        (ml.M_Locator_ID = 1001128 AND ml.M_LocatorTo_ID = 1001135) OR
+                        (ml.M_Locator_ID = 1001135 AND ml.M_LocatorTo_ID = 1001128) OR
+                        (ml.M_Locator_ID = 1001128 AND ml.M_LocatorTo_ID = 1000614) OR
+                        (ml.M_Locator_ID = 1000614 AND ml.M_LocatorTo_ID = 1001128)
+                    )
+                )
+                """
+                # Don't include emplacement in params for this case
+                params = {
                 'start_date': start_date,
                 'end_date': end_date,
-                'fournisseur': fournisseur or None,
-                'product': product or None,
-                'client': client or None,
-                'operateur': operateur or None,
-                'bccb': bccb or None,
-                'zone': zone or None,
-                'ad_org_id': ad_org_id,
-                'year_str': str(year)
-            }
+                'product': product,
+                'fournisseur': fournisseur
+                }
+            else:
+                # For specific emplacement, use the original subquery method
+                emplacement_breakdown = {}  # No breakdown for specific emplacement
+                emplacement_condition = """
+                AND l.value LIKE :emplacement || '%'
+                """
+                stock_initial_value = """coalesce((SELECT SUM(s.movementqty)
+                FROM m_transaction s
+                inner join m_product p on (s.m_product_id = p.m_product_id)
+                inner join m_locator l on (l.m_locator_id = s.m_locator_id)
+                inner join M_attributeinstance att on (att.m_attributesetinstance_id = s.m_attributesetinstance_id)
+                WHERE s.movementdate <  TO_DATE(:start_date, 'YYYY-MM-DD')
+                AND (:product IS NULL OR p.name LIKE :product || '%')
+                AND (:fournisseur IS NULL OR att.value like :fournisseur || '%')
+                AND l.value LIKE :emplacement || '%'
+                AND att.m_attribute_id = 1000508
+                AND s.AD_Client_ID = 1000000
+                ), 0)"""
+                  # Don't exclude internal transfers when specific emplacement is selected
+                movement_line_condition = ""
+                internal_transfer_condition = ""
+                params = {
+                    'start_date': start_date,
+                    'end_date': end_date,
+                    'product': product,
+                    'fournisseur': fournisseur,
+                    'emplacement': emplacement                }
+            
+            query = """
+            SELECT
+                t.MovementDate AS MovementDate,
+                nvl(nvl(io.documentno,inv.documentno),m.documentno) as documentno,
+                nvl(bp.name, nvl(inv.description,m.description)) as name,
+                p.name AS productname,
+                CASE WHEN t.movementqty > 0 then t.movementqty else 0 end as ENTREE,
+                CASE WHEN t.movementqty < 0 then ABS(t.movementqty) else 0 end as SORTIE,
+                """ + stock_initial_value + """ AS StockInitial,
+                asi.lot,
+                l_from.value AS locator_from,
+                l_to.value AS locator_to,
+                COALESCE(io.docstatus, m.docstatus, inv.docstatus, 'N/A') AS docstatus
+            FROM M_Transaction t
+            INNER JOIN ad_org org
+            ON org.ad_org_id = t.ad_org_id
+            LEFT JOIN ad_orginfo oi
+            ON oi.ad_org_id = org.ad_org_id
+            LEFT JOIN c_location orgloc
+            ON orgloc.c_location_id = oi.c_location_id
+            INNER JOIN M_Locator l
+            ON (t.M_Locator_ID=l.M_Locator_ID)
+            INNER JOIN M_Product p
+            ON (t.M_Product_ID=p.M_Product_ID)
+            LEFT OUTER JOIN M_InventoryLine il
+            ON (t.M_InventoryLine_ID=il.M_InventoryLine_ID)
+            LEFT OUTER JOIN M_Inventory inv
+            ON (inv.m_inventory_id = il.m_inventory_id )
+            LEFT OUTER JOIN M_MovementLine ml
+            ON (t.M_MovementLine_ID=ml.M_MovementLine_ID""" + movement_line_condition + """
+            )
+            LEFT OUTER JOIN M_Movement m
+            ON (m.M_Movement_ID=ml.M_Movement_ID )
+            LEFT OUTER JOIN M_InOutLine iol
+            ON (t.M_InOutLine_ID=iol.M_InOutLine_ID)
+            LEFT OUTER JOIN M_Inout io
+            ON (iol.M_InOut_ID=io.M_InOut_ID )
+            LEFT OUTER JOIN C_BPartner bp
+            ON (bp.C_BPartner_ID = io.C_BPartner_ID)
+            INNER JOIN M_attributesetinstance asi on t.m_attributesetinstance_id = asi.m_attributesetinstance_id
+            INNER JOIN M_attributeinstance att on (att.m_attributesetinstance_id = asi.m_attributesetinstance_id)
+            -- Add joins for from and to locators
+            LEFT JOIN M_Locator l_from ON (
+                CASE 
+                    WHEN t.M_MovementLine_ID IS NOT NULL THEN ml.M_Locator_ID 
+                    WHEN t.M_InOutLine_ID IS NOT NULL THEN 
+                        CASE WHEN t.MovementQty > 0 THEN iol.M_Locator_ID ELSE NULL END
+                    ELSE NULL 
+                END = l_from.M_Locator_ID
+            )
+            LEFT JOIN M_Locator l_to ON (
+                CASE 
+                    WHEN t.M_MovementLine_ID IS NOT NULL THEN ml.M_LocatorTo_ID 
+                    WHEN t.M_InOutLine_ID IS NOT NULL THEN 
+                        CASE WHEN t.MovementQty < 0 THEN iol.M_Locator_ID ELSE NULL END
+                    ELSE NULL 
+                END = l_to.M_Locator_ID
+            )            WHERE
+            att.m_attribute_id = 1000508
+            AND (:end_date IS NULL OR t.movementdate <= TO_DATE(:end_date, 'YYYY-MM-DD'))
+            AND (:start_date IS NULL OR t.movementdate >= TO_DATE(:start_date, 'YYYY-MM-DD'))
+            AND (:product IS NULL OR P.NAME LIKE :product || '%')
+            AND (:fournisseur IS NULL OR att.value like :fournisseur || '%')
+            AND NOT (t.movementqty = 0)
+            """ + emplacement_condition + internal_transfer_condition + """
+            AND t.AD_Client_ID = 1000000
+            ORDER BY t.MovementDate DESC
+            """
 
+           
             cursor.execute(query, params)
             rows = cursor.fetchall()
             columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in rows]
-
-    except Exception as e:
-        logger.error(f"Error fetching total fournisseur data: {e}")
-        return {"error": "An error occurred while fetching total data."}
-
-@app.route('/listproduct')
-def listproduct():
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-select name from M_PRODUCT
-WHERE AD_Client_ID = 1000000
-AND AD_Org_ID = 1000000
-  AND ISACTIVE = 'Y'
-ORDER BY name
-
-
-            """
-            cursor.execute(query)
-            result = [row[0] for row in cursor.fetchall()]
-            return jsonify(result)
-    except Exception as e:
-        logger.error(f"Error fetching products: {e}")
-        return jsonify({"error": "Could not fetch products list"}), 500
-    
-
-
-
-
-
-
-@app.route('/listfournisseur')
-def list_fournisseur():
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT cb.name
-                FROM C_BPartner cb
-                WHERE cb.AD_Client_ID = 1000000
-                  AND cb.ISVENDOR = 'Y'
-                  AND cb.ISACTIVE = 'Y'
-                ORDER BY cb.name
-            """
-            cursor.execute(query)
-            result = [row[0] for row in cursor.fetchall()]
-            return jsonify(result)
-    except Exception as e:
-        logger.error(f"Error fetching fournisseurs: {e}")
-        return jsonify({"error": "Could not fetch fournisseur list"}), 500
-
-
-@app.route('/listregion')
-def list_region():
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT name
-                FROM C_SalesRegion
-                WHERE ISACTIVE = 'Y'
-                  AND AD_Client_ID = 1000000
-            """
-            cursor.execute(query)
-            result = [row[0] for row in cursor.fetchall()]
-            return jsonify(result)
-    except Exception as e:
-        logger.error(f"Error fetching regions: {e}")
-        return jsonify({"error": "Could not fetch region list"}), 500
-
-
-@app.route('/listclient')
-def list_client():
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT name
-                FROM C_BPartner
-                WHERE iscustomer = 'Y'
-                  AND AD_Client_ID = 1000000
-                  AND AD_Org_ID = 1000000
-                ORDER BY name
-            """
-            cursor.execute(query)
-            result = [row[0] for row in cursor.fetchall()]
-            return jsonify(result)
-    except Exception as e:
-        logger.error(f"Error fetching clients: {e}")
-        return jsonify({"error": "Could not fetch client list"}), 500
-
-
-
-@app.route('/fetchFournisseurRecapAchatByYear', methods=['GET'])
-def fetch_fournisseur_recap_achat_by_year():
-    fournisseur = request.args.get('fournisseur')
-    product = request.args.get('product')
-    years = request.args.getlist('years')  # Get all years parameters
-    month = request.args.get('month')
-
-    try:
-        years = [int(y) for y in years] if years else None
-        month = int(month) if month else None
-    except ValueError:
-        return jsonify({"error": "Invalid year or month format"}), 400
-
-    if not years:
-        # If no years specified, get current year
-        current_year = datetime.now().year
-        years = [current_year]
-
-    full_data = {}
-    for year in years:
-        yearly_data = fetch_fournisseur_recap_achat_data_by_year(
-            fournisseur=fournisseur,
-            product=product,
-            year=year,
-            month=month
-        )
-        full_data[str(year)] = yearly_data
-
-    return jsonify(full_data)
-
-def fetch_fournisseur_recap_achat_data_by_year(fournisseur=None, product=None, year=None, month=None):
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-
-            if year and month:
-                start_date = f"{year}-{month:02d}-01"
-                last_day = 31 if month in [1, 3, 5, 7, 8, 10, 12] else 30
-                if month == 2:
-                    last_day = 29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28
-                end_date = f"{year}-{month:02d}-{last_day}"
-            elif year:
-                start_date = f"{year}-01-01"
-                end_date = f"{year}-12-31"
-            else:
-                current_year = datetime.now().year
-                start_date = f"{current_year}-01-01"
-                end_date = f"{current_year}-12-31"
-                year = current_year
-
-            query = """
-                SELECT 
-                    TO_CHAR(xf.MOVEMENTDATE, 'YYYY') AS year,
-                    TO_CHAR(xf.MOVEMENTDATE, 'MM') AS month,
-                    SUM(CASE 
-                        WHEN xf.C_DocType_ID = 1000646 THEN -1 * TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED) 
-                        ELSE TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED) 
-                    END) AS chiffre,
-                    SUM(CASE 
-                        WHEN xf.C_DocType_ID = 1000646 THEN -1 * TO_NUMBER(mi.QTYENTERED)
-                        ELSE TO_NUMBER(mi.QTYENTERED)
-                    END) AS qty
-                FROM 
-                    M_InOut  xf
-                JOIN M_INOUTLINE mi ON mi.M_INOUT_ID=xf.M_INOUT_ID
-                JOIN C_BPartner cb ON cb.C_BPARTNER_ID=xf.C_BPARTNER_ID
-                LEFT JOIN C_InvoiceLine ci ON ci.M_INOUTLINE_ID=mi.M_INOUTLINE_ID
-                JOIN M_ATTRIBUTEINSTANCE ma ON ma.M_ATTRIBUTESETINSTANCE_ID=mi.M_ATTRIBUTESETINSTANCE_ID
-                JOIN M_PRODUCT m ON m.M_PRODUCT_id=mi.M_PRODUCT_id
-                WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                    AND ma.M_Attribute_ID=1000504
-                    AND xf.AD_Org_ID = 1000000
-                    AND xf.C_DocType_ID IN (1000013, 1000646)
-                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
-                    AND (:fournisseur IS NULL OR UPPER(cb.name) LIKE UPPER(:fournisseur) || '%')
-                    AND (:product IS NULL OR UPPER(m.name) LIKE UPPER(:product) || '%')
-                GROUP BY ROLLUP(TO_CHAR(xf.MOVEMENTDATE, 'YYYY'), TO_CHAR(xf.MOVEMENTDATE, 'MM'))
-                HAVING TO_CHAR(xf.MOVEMENTDATE, 'YYYY') = :year_str OR TO_CHAR(xf.MOVEMENTDATE, 'YYYY') IS NULL
-                ORDER BY year NULLS LAST, month NULLS LAST
-            """
-
-            params = {
-                'start_date': start_date,
-                'end_date': end_date,
-                'fournisseur': fournisseur or None,
-                'product': product or None,
-                'year_str': str(year)
+            data = [dict(zip(columns, row)) for row in rows]
+            
+            # Add emplacement breakdown to the response
+            return {
+                'data': data,
+                'emplacement_breakdown': emplacement_breakdown
             }
 
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in rows]
+    except Exception as e:
+        logger.error(f"Database error in fetch_stock_movement_data: {e}")
+        return {"error": "An error occurred while fetching stock movement data."}
+
+@app.route('/fetch-stock-movement-data', methods=['GET'])
+def fetch_stock_movement():
+    try:
+        start_date = request.args.get("start_date", None)
+        end_date = request.args.get("end_date", None)
+        product = request.args.get("product", None)
+        fournisseur = request.args.get("fournisseur", None)
+        emplacement = request.args.get("emplacement", None)
+
+        data = fetch_stock_movement_data(start_date, end_date, product, fournisseur, emplacement)
+        return jsonify(data)
 
     except Exception as e:
-        logger.error(f"Error fetching fournisseur recap achat data by year: {e}")
-        return {"error": "An error occurred while fetching recap achat data by year."}
+        logger.error(f"Error in fetch_stock_movement endpoint: {e}")
+        return jsonify({"error": "Failed to fetch stock movement data"}), 500
 
-@app.route('/download-fournisseur-recap-excel', methods=['GET'])
-def download_fournisseur_recap_excel():
-    fournisseur = request.args.get('fournisseur')
-    product = request.args.get('product')
-    years = request.args.getlist('years')
-    month = request.args.get('month')
-
+@app.route('/download-stock-movement-excel', methods=['GET'])
+def download_stock_movement_excel():
     try:
-        years = [int(y) for y in years] if years else []
-        month = int(month) if month else None
-    except ValueError:
-        return {"error": "Invalid year or month format"}, 400
+        start_date = request.args.get("start_date", None)
+        end_date = request.args.get("end_date", None)
+        product = request.args.get("product", None)
+        fournisseur = request.args.get("fournisseur", None)
+        emplacement = request.args.get("emplacement", None)
 
-    if not years:
-        years = [datetime.now().year]
+        data_result = fetch_stock_movement_data(start_date, end_date, product, fournisseur, emplacement)
+        
+        if isinstance(data_result, dict) and "error" in data_result:
+            return jsonify(data_result), 500
 
-    all_data = []
-    for year in years:
-        data = fetch_fournisseur_recap_achat_data_by_year(
-            fournisseur=fournisseur,
-            product=product,
-            year=year,
-            month=month
-        )
-        for row in data:
-            row['YEAR'] = year  # Add year for clarity if not in row
-        all_data.extend(data)
+        # Extract the data part for Excel generation
+        data = data_result.get('data', []) if isinstance(data_result, dict) else data_result
 
-    return generate_excel_fournisseur_recap(all_data, fournisseur, product, years, month)
+        # Generate Excel file
+        excel_output = generate_excel_stock_movement(data)
+        
+        # Generate filename
+        today_date = datetime.now().strftime("%d-%m-%Y")
+        filename = f"Stock_Movement_{today_date}.xlsx"
 
+        return send_file(excel_output, as_attachment=True, download_name=filename, 
+                        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-def generate_excel_fournisseur_recap(data, fournisseur, product, years, month):
-    if not data:
-        return {"error": "No data available"}, 400
+    except Exception as e:
+        logger.error(f"Error in download_stock_movement_excel: {e}")
+        return jsonify({"error": "Failed to generate Excel file"}), 500
 
+def generate_excel_stock_movement(data):
+    """Generate Excel file for stock movement data"""
     df = pd.DataFrame(data)
+    
     wb = Workbook()
     ws = wb.active
-    ws.title = "Fournisseur Recap"
+    ws.title = "Stock Movement"
 
-    # Style header
+    # Define header styles
     header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
     header_font = Font(color="FFFFFF", bold=True)
-    ws.append(df.columns.tolist())
-    
-    for cell in ws[1]:
-        cell.fill = header_fill
-        cell.font = header_font
 
-    # Append data rows with alternating colors
-    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
-        ws.append(row)
-        if row_idx % 2 == 0:
-            for cell in ws[row_idx]:
-                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+    # Write headers
+    if not df.empty:
+        ws.append(df.columns.tolist())
+        for cell in ws[1]:
+            cell.fill = header_fill
+            cell.font = header_font
 
-    # Filename generation
-    today = datetime.now().strftime("%d-%m-%Y")
-    filters = []
-    if fournisseur:
-        filters.append(f"fournisseur-{fournisseur}")
-    if product:
-        filters.append(f"product-{product}")
-    if years:
-        filters.append(f"years-{'-'.join(map(str, years))}")
-    if month:
-        filters.append(f"month-{month}")
-    
-    filter_text = "_".join(filters)
-    filename = f"FournisseurRecap_{filter_text}_{today}.xlsx" if filters else f"FournisseurRecap_{today}.xlsx"
+        # Apply auto filter
+        ws.auto_filter.ref = ws.dimensions
 
-    # Return file
+        # Write data rows
+        for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+            ws.append(row)
+
+        # Create table
+        table = Table(displayName="StockMovementTable", ref=ws.dimensions)
+        style = TableStyleInfo(
+            name="TableStyleMedium9",
+            showFirstColumn=False,
+            showLastColumn=False,
+            showRowStripes=True,
+            showColumnStripes=False
+        )
+        table.tableStyleInfo = style
+        ws.add_table(table)
+
+    # Save to BytesIO
     output = BytesIO()
     wb.save(output)
     output.seek(0)
-    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-FEEDBACK_FILE = 'json_files/feedback.json'
-
-@app.route('/submit_feedback', methods=['POST'])
-def submit_feedback():
-    data = request.get_json()
-    data['timestamp'] = datetime.now().isoformat()
-
-    # Load existing feedback
-    if os.path.exists(FEEDBACK_FILE):
-        with open(FEEDBACK_FILE, 'r') as f:
-            feedback_list = json.load(f)
-    else:
-        feedback_list = []
-
-    feedback_list.append(data)
-
-    # Save back to JSON
-    with open(FEEDBACK_FILE, 'w') as f:
-        json.dump(feedback_list, f, indent=2)
-
-    return jsonify({'status': 'success'}), 200
-
-
-import calendar
-
-
-# Add this at the top of your Flask app
-CURRENT_GOAL = 481114494.36  # Static default value
-
-@app.route('/recouvrement', methods=['GET'])
-def recouvrement():
-    global CURRENT_GOAL
-    
-    # Update goal if new value provided
-    new_goal = request.args.get('objectif', type=float)
-    if new_goal is not None:
-        CURRENT_GOAL = new_goal
-    
-    try:
-        # Rest of your existing query code remains the same
-        today = datetime.now()
-        year = today.year
-        month = today.month
-        start_date = f"{year}-{month:02d}-01"
-        last_day = calendar.monthrange(year, month)[1]
-        end_date = f"{year}-{month:02d}-{last_day}"
-
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-
-            query = """
-                SELECT 
-                    ROUND(:objectif, 2) AS "OBJECTIF_MENSUEL", 
-                    ROUND(SUM(p.payamt), 2) AS "TOTAL_RECOUVREMENT",
-                    ROUND(SUM(p.payamt)/:objectif, 4) AS "POURCENTAGE"
-                FROM 
-                    C_Payment p
-                    JOIN C_BPartner b ON b.C_BPartner_id = p.C_BPartner_id
-                WHERE 
-                    b.iscustomer = 'Y'
-                    AND b.C_PaymentTerm_ID != 1000000
-                    AND p.AD_Client_ID = 1000000
-                    AND p.docstatus in ('CO','CL')
-                    AND p.ZSubPaymentRule_ID in (1000007,1000016)
-                    AND p.datetrx >= TO_DATE(:start_date, 'YYYY-MM-DD')
-                    AND p.datetrx <= TO_DATE(:end_date, 'YYYY-MM-DD')
-            """
-
-            cursor.execute(query, {
-                'objectif': CURRENT_GOAL,
-                'start_date': start_date,
-                'end_date': end_date
-            })
-
-            row = cursor.fetchone()
-            if not row:
-                return jsonify({
-                    "OBJECTIF_MENSUEL": CURRENT_GOAL,
-                    "TOTAL_RECOUVREMENT": 0,
-                    "POURCENTAGE": 0
-                })
-                
-            columns = [col[0] for col in cursor.description]
-            result = dict(zip(columns, row))
-            
-            # Ensure we handle null values
-            if result["TOTAL_RECOUVREMENT"] is None:
-                result["TOTAL_RECOUVREMENT"] = 0
-            if result["POURCENTAGE"] is None:
-                result["POURCENTAGE"] = 0
-                
-            return jsonify(result)
-
-    except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({
-            "error": "Erreur serveur",
-            "OBJECTIF_MENSUEL": CURRENT_GOAL,
-            "TOTAL_RECOUVREMENT": 0,
-            "POURCENTAGE": 0
-        }), 500
+    return output
 
 
 
-
-
-@app.route('/pending_documents', methods=['GET'])
-def pending_documents():
-    try:
-        # Get sales_region parameter from request, default to None (fetch all)
-        sales_region = request.args.get('sales_region')
-        
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT 
-                    IO.DOCUMENTNO, 
-                    IO.CREATED, 
-                    IO.DESCRIPTION, 
-                    IO.M_InOut_ID, 
-                    BP.NAME,
-                    SR.NAME AS SALES_REGION
-                FROM 
-                    M_InOut IO
-                    JOIN C_BPartner BP ON IO.C_BPartner_ID = BP.C_BPartner_ID
-                    JOIN C_BPartner_Location BPL ON IO.C_BPartner_ID = BPL.C_BPartner_ID
-                    JOIN C_SalesRegion SR ON BPL.C_SalesRegion_ID = SR.C_SalesRegion_ID
-                WHERE 
-                    IO.ISACTIVE = 'Y'
-                    AND IO.DOCACTION = 'CO'
-                    AND IO.DOCSTATUS = 'IP'
-                    AND IO.PROCESSED = 'N'
-                    AND IO.ISAPPROVED = 'N'
-                    AND IO.XX_CONTROLEUR_ID IS NULL
-                    AND IO.XX_PREPARATEUR_ID IS NULL
-                    AND IO.XX_CONTROLEUR_CH_ID IS NULL
-                    AND IO.XX_PREPARATEUR_CH_ID IS NULL
-                    AND IO.XX_EMBALEUR_CH_ID IS NULL
-                    AND IO.XX_EMBALEUR_ID IS NULL
-                    AND IO.C_DocType_ID='1002733'
-            """
-            
-            # Add sales region filter if provided
-            params = []
-            if sales_region:
-                query += " AND SR.NAME = :1"
-                params.append(sales_region)
-            
-            cursor.execute(query, params)
-            results = cursor.fetchall()
-            
-            documents = []
-            for row in results:
-                doc_no, created, description, inoutid, bp_name, sales_region = row
-                # Format date as "26 May 2025 09:58"
-                formatted_date = created.strftime('%d %b %Y %H:%M')
-                documents.append({
-                    'documentNo': doc_no,
-                    'createdDate': formatted_date,
-                    'description': description if description else '-',
-                    'inoutid': inoutid,
-                    'businessPartner': bp_name,
-                    'salesRegion': sales_region,
-                    'status': 'Created'
-                })
-            
-            return jsonify({
-                "count": len(documents),
-                "documents": documents,
-                "lastUpdated": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                "salesRegionFilter": sales_region if sales_region else "All"
-            })
-
-    except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({
-            "error": "Server error",
-            "message": str(e),
-            "count": 0,
-            "documents": []
-        }), 500
-
-
-
-@app.route('/regions', methods=['GET'])
-def select_regions():
+@app.route('/fetch-emplacements-stock')
+def fetch_emplacements_stock():
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
             query = """
-
-SELECT C_SALESREGION_ID, NAME 
-                FROM C_SalesRegion
-                     where ISACTIVE= 'Y'
-                     and AD_Client_ID = 1000000
-                ORDER BY NAME
-           
+                SELECT ml.value AS EMPLACEMENT
+                FROM M_Locator ml
+                JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
+                WHERE m.ISACTIVE = 'Y'
+                  AND m.AD_Client_ID = 1000000
+                  AND ml.ISACTIVE = 'Y'
+                  AND ml.AD_Client_ID = 1000000
+                ORDER BY m.value
             """
             cursor.execute(query)
-            results = cursor.fetchall()
-            
-            regions = []
-            for row in results:
-                region_id, name = row
-                regions.append({
-                    'id': region_id,
-                    'name': name
-                })
-            
-            return jsonify({
-                "count": len(regions),
-                "regions": regions
-            })
-
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+            return jsonify(data)
     except Exception as e:
-        print(f"Error fetching regions: {e}")
-        return jsonify({
-            "error": "Server error",
-            "message": str(e),
-            "count": 0,
-            "regions": []
-        }), 500
+        logger.error(f"Error fetching emplacements: {e}")
+        return jsonify({"error": "Could not fetch emplacement list"}), 500
+    
 
 
-@app.route('/inout_lines', methods=['GET'])
-def get_inout_lines():
+def fetch_fournisseur_by_product(product):
     try:
-        m_inout_id = request.args.get('m_inout_id')
-        
-        if not m_inout_id:
-            return jsonify({
-                "error": "Missing parameter",
-                "message": "m_inout_id parameter is required"
-            }), 400
-
+        # Acquire a connection from the pool
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
+
             query = """
-                SELECT P.NAME, ML.MOVEMENTQTY 
-                FROM M_InOutline ML
-                JOIN M_Product P ON ML.M_Product_ID = P.M_Product_ID
-                WHERE ML.M_InOut_ID = :m_inout_id
+                SELECT DISTINCT
+                    CAST(cb.name AS VARCHAR2(300)) AS FOURNISSEUR
+                FROM 
+                    M_InOut xf
+                JOIN M_INOUTLINE mi ON mi.M_INOUT_ID = xf.M_INOUT_ID
+                JOIN C_BPartner cb ON cb.C_BPARTNER_ID = xf.C_BPARTNER_ID
+                JOIN M_PRODUCT m ON m.M_PRODUCT_id = mi.M_PRODUCT_id
+                WHERE 
+                    UPPER(m.name) LIKE UPPER(:product) || '%'
+                    AND xf.AD_Org_ID = 1000000
+                    AND xf.C_DocType_ID IN (1000013, 1000646)
+                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
+                ORDER BY 
+                    FOURNISSEUR
             """
-            cursor.execute(query, {'m_inout_id': m_inout_id})
-            results = cursor.fetchall()
+
+            params = {
+                'product': product or None
+            }
+
+            # Execute the query with the provided parameters
+            cursor.execute(query, params)
+
+            # Fetch the results
+            rows = cursor.fetchall()
+
+            # Format the results into a simple list of supplier names
+            suppliers = [row[0] for row in rows]
+
+            return suppliers
+    
+    except Exception as e:
+        logger.error(f"Error fetching suppliers by product: {e}")
+        return {"error": "An error occurred while fetching suppliers by product."}
+
+# Flask route to handle the request
+@app.route('/fetchSuppliersByProduct', methods=['GET'])
+def fetch_suppliers_by_product():
+    product = request.args.get('product')
+
+    # Ensure product is provided
+    if not product:
+        return jsonify({"error": "Missing product parameter"}), 400
+
+    # Fetch data from the database
+    suppliers = fetch_fournisseur_by_product(product)
+
+    # Return the result as a JSON response
+    return jsonify(suppliers)
+
+
+
+
+@app.route('/rotation_monthly_achat', methods=['GET'])
+def fetch_rotation_achat():
+    years = request.args.get('years')  # Comma-separated list of years
+    fournisseur_param = request.args.get('fournisseur')  # Can be comma-separated
+    product = request.args.get('product')
+
+    # If years is not provided, use current year
+    if not years:
+        current_year = datetime.now().year
+        years = str(current_year)
+    
+    # Handle multiple suppliers (comma-separated or single)
+    if fournisseur_param:
+        fournisseurs = [f.strip() for f in fournisseur_param.split(',') if f.strip()]
+    else:
+        return jsonify({"error": "At least one supplier is required"}), 400
+
+    try:
+        # Split the years string into a list and convert to integers
+        year_list = [int(year.strip()) for year in years.split(',')]
+    except ValueError:
+        return jsonify({"error": "Invalid years format. Please provide comma-separated years (e.g., 2022,2023,2024)"}), 400
+
+    # Fetch data from the database with the list of suppliers
+    data = fetch_rotation_monthly_achat(year_list, fournisseurs, product)
+
+    # Return the result as a JSON response
+    return jsonify(data)
+
+
+def fetch_rotation_monthly_achat(year_list, fournisseurs, product=None):
+    try:
+        # Acquire a connection from the pool
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            # Build the supplier condition
+            if isinstance(fournisseurs, str):
+                fournisseurs = [fournisseurs]
+
+            supplier_conditions = []
+            for i, f in enumerate(fournisseurs):
+                bind_var = f'fournisseur_{i}'
+                supplier_conditions.append(f"UPPER(cb.name) LIKE UPPER(:{bind_var}) || '%'")
+
+            supplier_condition = ' OR '.join(supplier_conditions) if supplier_conditions else '1=0'
+
+            # Create the years parameter list
+            year_placeholders = ', '.join([f':year_{i}' for i in range(len(year_list))])
             
-            lines = []
-            for name, movement_qty in results:
-                lines.append({
-                    'product_name': name,
-                    'quantity': float(movement_qty) if movement_qty else 0.0
+            query = """
+                WITH monthly_data AS (
+                    SELECT 
+                        TO_CHAR(xf.MOVEMENTDATE, 'YYYY') AS year,
+                        TO_CHAR(xf.MOVEMENTDATE, 'MM') AS month_num,
+                        TO_CHAR(xf.MOVEMENTDATE, 'Month') AS month_name,
+                        m.name AS produit,
+                        cb.name AS fournisseur,
+                        SUM(CASE 
+                            WHEN xf.C_DocType_ID = 1000646 THEN -1 * TO_NUMBER(mi.QTYENTERED)
+                            ELSE TO_NUMBER(mi.QTYENTERED)
+                        END) AS qty,
+                        SUM(CASE 
+                            WHEN xf.C_DocType_ID = 1000646 THEN -1 * TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED)
+                            ELSE TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED)
+                        END) AS chiffre
+                    FROM 
+                        M_InOut xf
+                        JOIN M_INOUTLINE mi ON mi.M_INOUT_ID = xf.M_INOUT_ID
+                        JOIN M_ATTRIBUTEINSTANCE ma ON ma.M_ATTRIBUTESETINSTANCE_ID = mi.M_ATTRIBUTESETINSTANCE_ID
+                        JOIN C_BPartner cb ON cb.C_BPARTNER_ID = xf.C_BPARTNER_ID
+                        JOIN M_PRODUCT m ON m.M_PRODUCT_id = mi.M_PRODUCT_id
+                    WHERE 
+                        TO_CHAR(xf.MOVEMENTDATE, 'YYYY') IN (""" + year_placeholders + """)
+                        AND xf.AD_Org_ID = 1000000
+                        AND xf.C_DocType_ID IN (1000013, 1000646)
+                        AND ma.M_Attribute_ID = 1000504
+                        AND xf.DOCSTATUS = 'CO'
+                        AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
+                        AND (""" + supplier_condition + """)
+                        AND (:product IS NULL OR UPPER(m.name) LIKE UPPER(:product) || '%')
+                    GROUP BY 
+                        TO_CHAR(xf.MOVEMENTDATE, 'YYYY'),
+                        TO_CHAR(xf.MOVEMENTDATE, 'MM'),
+                        TO_CHAR(xf.MOVEMENTDATE, 'Month'),
+                        m.name,
+                        cb.name
+                )
+                SELECT * FROM monthly_data
+                ORDER BY year, month_num, produit
+            """
+
+            # Prepare parameters
+            params = {'product': product}
+            
+            # Add supplier parameters
+            for i, f in enumerate(fournisseurs):
+                params[f'fournisseur_{i}'] = f
+
+            # Add year parameters
+            for i, year in enumerate(year_list):
+                params[f'year_{i}'] = str(year)
+
+            # Execute the query with the parameters
+            cursor.execute(query, params)
+
+            # Fetch the results
+            rows = cursor.fetchall()
+
+            # Format the results into a nested dictionary structure
+            result = {}
+            
+            # Process each row and organize by year and month
+            for row in rows:
+                year, month_num, month_name, produit, fournisseur, qty, chiffre = row
+                month_num = month_num.zfill(2)  # Ensure two digits for month number
+                
+                if year not in result:
+                    result[year] = {}
+                
+                if month_num not in result[year]:
+                    result[year][month_num] = {
+                        'month_name': month_name.strip(),
+                        'details': [],
+                        'total': {'QTY': 0, 'CHIFFRE': 0}
+                    }
+                
+                # Add product details with supplier info
+                result[year][month_num]['details'].append({
+                    'PRODUIT': produit,
+                    'FOURNISSEUR': fournisseur,
+                    'QTY': float(qty) if qty is not None else 0,
+                    'CHIFFRE': float(chiffre) if chiffre is not None else 0
                 })
-            
-            return jsonify({
-                "m_inout_id": m_inout_id,
-                "count": len(lines),
-                "lines": lines
-            })
+                
+                # Update monthly totals
+                result[year][month_num]['total']['QTY'] += float(qty) if qty is not None else 0
+                result[year][month_num]['total']['CHIFFRE'] += float(chiffre) if chiffre is not None else 0
+
+            # Sort years and months numerically
+            sorted_result = {
+                str(year): dict(sorted(months.items()))
+                for year, months in sorted(result.items())
+            }
+            return sorted_result
 
     except Exception as e:
-        print(f"Error fetching inout lines: {e}")
-        return jsonify({
-            "error": "Server error",
-            "message": str(e),
-            "count": 0,
-            "lines": []
-        }), 500
+        logger.error(f"Error fetching product recap achat: {e}")
+        return {"error": "An error occurred while fetching product recap achat."}
 
-        
+
+from flask import make_response
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table as ReportLabTable, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from datetime import datetime
+import io
+
+# Define a color palette for years (can be extended as needed)
+YEAR_COLORS = [
+    colors.HexColor('#4E79A7'),  # Blue
+    colors.HexColor('#F28E2B'),  # Orange
+    colors.HexColor('#E15759'),  # Red
+    colors.HexColor('#76B7B2'),  # Teal
+    colors.HexColor('#59A14F'),  # Green
+    colors.HexColor('#EDC948'),  # Yellow
+    colors.HexColor('#B07AA1'),  # Purple
+    colors.HexColor('#FF9DA7'),  # Pink
+    colors.HexColor('#9C755F'),  # Brown
+    colors.HexColor('#BAB0AC')   # Gray
+]
+
+@app.route('/rotation_monthly_achat_pdf', methods=['GET'])
+def download_product_achat_pdf():
+    from flask import request, jsonify
+
+    years = request.args.get('years')
+    fournisseur_param = request.args.get('fournisseur')
+    product = request.args.get('product')
+
+    if not years:
+        years = str(datetime.now().year)
+
+    try:
+        year_list = [int(y.strip()) for y in years.split(',')]
+    except ValueError:
+        return jsonify({"error": "Invalid years format"}), 400
+
+    # Handle multiple suppliers (comma-separated or single)
+    if fournisseur_param:
+        fournisseurs = [f.strip() for f in fournisseur_param.split(',') if f.strip()]
+    else:
+        return jsonify({"error": "Fournisseur parameter is required"}), 400
+
+    data = fetch_rotation_monthly_achat(year_list, fournisseurs, product)
+    if 'error' in data:
+        return jsonify(data), 500
+
+    # Create descriptive filename
+    supplier_text = f"{len(fournisseurs)}_suppliers" if len(fournisseurs) > 1 else fournisseurs[0][:20]
+    filename = f"achat_recap_{years.replace(',', '-')}_{supplier_text}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=30)
+    elements = []
+
+    styles = getSampleStyleSheet()
+    title_style = styles["Title"]
+    normal_style = styles["Normal"]
+    table_total_style = ParagraphStyle("row", parent=normal_style, alignment=1, textColor=colors.blue, fontName="Helvetica-Bold", fontSize=6)
+
+    table_header_style = ParagraphStyle("header", parent=normal_style, alignment=1, textColor=colors.white, fontSize=8)
+    table_row_style = ParagraphStyle("row", parent=normal_style, alignment=1, fontSize=6)
+
+    elements.append(Paragraph("Récapitulatif des Achats", title_style))
+    
+    # Create supplier display text
+    supplier_display = ", ".join(fournisseurs) if len(fournisseurs) <= 3 else f"{len(fournisseurs)} suppliers"
+    elements.append(Paragraph(f"Fournisseurs: {supplier_display} | Produit: {product or 'Tous'} | Années: {years}", styles["Heading2"]))
+    elements.append(Spacer(1, 0.25 * inch))
+
+    for year_idx, (year, months_data) in enumerate(data.items()):
+        year_color = YEAR_COLORS[year_idx % len(YEAR_COLORS)]
+        year_style = ParagraphStyle("year", parent=styles["Heading1"], textColor=colors.white, backColor=year_color)
+        elements.append(Paragraph(f"Année: {year}", year_style))
+
+        for part_label, month_range in [("Janvier à Juin", range(1, 7)), ("Juillet à Décembre", range(7, 13))]:
+            # For multiple suppliers, create a combined product map with supplier info
+            if len(fournisseurs) > 1:
+                combined_products = {}
+                for m in month_range:
+                    m_str = str(m).zfill(2)
+                    if m_str in months_data:
+                        for item in months_data[m_str]["details"]:
+                            product_key = f"{item['PRODUIT']} ({item['FOURNISSEUR']})"
+                            if product_key not in combined_products:
+                                combined_products[product_key] = {}
+                            combined_products[product_key][m] = item
+                unique_products = list(combined_products.keys())
+            else:
+                # Single supplier - use original logic
+                unique_products = set()
+                for m in month_range:
+                    m_str = str(m).zfill(2)
+                    if m_str in months_data:
+                        for item in months_data[m_str]["details"]:
+                            unique_products.add(item["PRODUIT"])
+                unique_products = list(unique_products)
+
+            if not unique_products:
+                continue
+
+            # Header rows
+            header_row1 = [Paragraph("Produit", table_header_style)]
+            for m in month_range:
+                m_str = str(m).zfill(2)
+                month_name = months_data.get(m_str, {}).get("month_name", datetime(2025, m, 1).strftime("%b")).capitalize()
+                header_row1.extend([Paragraph(month_name, table_header_style), ""])
+
+            header_row2 = [""]
+            for _ in month_range:
+                header_row2.extend([
+                    Paragraph("Qty", table_header_style),
+                    Paragraph("Prix", table_header_style)
+                ])
+
+            table_data = [header_row1, header_row2]
+
+            # Product rows
+            for prod in sorted(unique_products):
+                row = [Paragraph(prod, table_row_style)]
+                for m in month_range:
+                    m_str = str(m).zfill(2)
+                    month_data = months_data.get(m_str, {})
+                    
+                    if len(fournisseurs) > 1:
+                        # For combined view, find the specific product entry
+                        detail = combined_products.get(prod, {}).get(m)
+                        qty = f"{detail['QTY']:,.0f}" if detail else "-"
+                        amt = f"{detail['CHIFFRE']:,.2f}" if detail else "-"
+                    else:
+                        # Single supplier - use original logic
+                        detail = next((d for d in month_data.get("details", []) if d["PRODUIT"] == prod), None)
+                        qty = f"{detail['QTY']:,.0f}" if detail else "-"
+                        amt = f"{detail['CHIFFRE']:,.2f}" if detail else "-"
+                    
+                    row.append(Paragraph(qty, table_row_style))
+                    row.append(Paragraph(amt, table_row_style))
+                table_data.append(row)
+
+            # Total row
+            # Total row
+            total_row = [Paragraph("TOTAL", table_total_style)]
+            for m in month_range:
+                m_str = str(m).zfill(2)
+                month_data = months_data.get(m_str, {})
+                total = month_data.get("total", {})
+
+                qty_val = total.get("QTY")
+                amt_val = total.get("CHIFFRE")
+
+                qty = f"{qty_val:,.0f}" if qty_val is not None else "-"
+                amt = f"{amt_val:,.2f}" if amt_val is not None else "-"
+
+                total_row.append(Paragraph(qty, table_total_style))
+                total_row.append(Paragraph(amt, table_total_style))
+            table_data.append(total_row)
+
+            # Table construction
+            col_widths = [1.9 * inch] + [0.5 * inch] * (len(month_range) * 2)
+            table = ReportLabTable(table_data, colWidths=col_widths)
+
+            # Create span styles for merged headers
+            span_style = []
+            for i in range(len(month_range)):
+                col_start = 1 + i * 2
+                span_style.append(('SPAN', (col_start, 0), (col_start + 1, 0)))
+
+            # Final style
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 1), year_color),
+                ('TEXTCOLOR', (0, 0), (-1, 1), colors.white),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 2),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('ROWBACKGROUNDS', (0, 2), (-1, -2), [colors.whitesmoke, colors.white]),
+            ] + span_style))
+
+            elements.append(Paragraph(f"{part_label}", styles["Heading3"]))
+            elements.append(table)
+            elements.append(Spacer(1, 0.3 * inch))
+
+    doc.build(elements)
+    buffer.seek(0)
+    response = make_response(buffer.getvalue())
+    response.headers["Content-Type"] = "application/pdf"
+    response.headers["Content-Disposition"] = f"attachment; filedisplayName={filename}"
+
+    return response
+
+
+
+
+
+
+
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)

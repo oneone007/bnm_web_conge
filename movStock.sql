@@ -1,0 +1,83 @@
+SELECT
+                t.MovementDate AS MovementDate,
+                nvl(nvl(io.documentno,inv.documentno),m.documentno) as documentno,
+                nvl(bp.name, nvl(inv.description,m.description)) as name,
+                p.name AS productname,
+                CASE WHEN t.movementqty > 0 then t.movementqty else 0 end as ENTREE,
+                CASE WHEN t.movementqty < 0 then ABS(t.movementqty) else 0 end as SORTIE,                
+                coalesce((SELECT SUM(s.movementqty)
+                FROM m_transaction s
+                inner join m_product p on (s.m_product_id = p.m_product_id)
+                inner join m_locator l on (l.m_locator_id = s.m_locator_id)
+                WHERE s.movementdate < t.movementdate
+                AND (:product IS NULL OR p.name LIKE :product || '%')
+                AND (:emplacement IS NULL OR l.value LIKE :emplacement || '%')
+                ), 0) AS StockInitial,
+                asi.lot,
+                l_from.value AS locator_from,
+                l_to.value AS locator_to
+            FROM M_Transaction t
+            INNER JOIN ad_org org
+            ON org.ad_org_id = t.ad_org_id
+            LEFT JOIN ad_orginfo oi
+            ON oi.ad_org_id = org.ad_org_id
+            LEFT JOIN c_location orgloc
+            ON orgloc.c_location_id = oi.c_location_id
+            INNER JOIN M_Locator l
+            ON (t.M_Locator_ID=l.M_Locator_ID)
+            INNER JOIN M_Product p
+            ON (t.M_Product_ID=p.M_Product_ID)
+            LEFT OUTER JOIN M_InventoryLine il
+            ON (t.M_InventoryLine_ID=il.M_InventoryLine_ID)
+            LEFT OUTER JOIN M_Inventory inv
+            ON (inv.m_inventory_id = il.m_inventory_id)
+            LEFT OUTER JOIN M_MovementLine ml
+            ON (t.M_MovementLine_ID=ml.M_MovementLine_ID 
+                AND NOT (ml.M_Locator_ID = 1001135 AND ml.M_LocatorTo_ID = 1000614)
+                AND NOT (ml.M_Locator_ID = 1000614 AND ml.M_LocatorTo_ID = 1001135))
+            LEFT OUTER JOIN M_Movement m
+            ON (m.M_Movement_ID=ml.M_Movement_ID)
+            LEFT OUTER JOIN M_InOutLine iol
+            ON (t.M_InOutLine_ID=iol.M_InOutLine_ID)
+            LEFT OUTER JOIN M_Inout io
+            ON (iol.M_InOut_ID=io.M_InOut_ID)
+            LEFT OUTER JOIN C_BPartner bp
+            ON (bp.C_BPartner_ID = io.C_BPartner_ID)
+            INNER JOIN M_attributesetinstance asi on t.m_attributesetinstance_id = asi.m_attributesetinstance_id
+            INNER JOIN M_attributeinstance att on (att.m_attributesetinstance_id = asi.m_attributesetinstance_id)
+            -- Add joins for from and to locators
+            LEFT JOIN M_Locator l_from ON (
+                CASE 
+                    WHEN t.M_MovementLine_ID IS NOT NULL THEN ml.M_Locator_ID 
+                    WHEN t.M_InOutLine_ID IS NOT NULL THEN 
+                        CASE WHEN t.MovementQty > 0 THEN iol.M_Locator_ID ELSE NULL END
+                    ELSE NULL 
+                END = l_from.M_Locator_ID
+            )
+            LEFT JOIN M_Locator l_to ON (
+                CASE 
+                    WHEN t.M_MovementLine_ID IS NOT NULL THEN ml.M_LocatorTo_ID 
+                    WHEN t.M_InOutLine_ID IS NOT NULL THEN 
+                        CASE WHEN t.MovementQty < 0 THEN iol.M_Locator_ID ELSE NULL END
+                    ELSE NULL 
+                END = l_to.M_Locator_ID
+            )            WHERE (io.docstatus IN ('CO' , 'CL') 
+            OR m.docstatus IN ('CO' , 'CL')
+            OR inv.docstatus IN ('CO' , 'CL')) 
+            AND att.m_attribute_id = 1000508
+            AND (:end_date IS NULL OR t.movementdate <= TO_DATE(:end_date, 'YYYY-MM-DD'))
+            AND (:start_date IS NULL OR t.movementdate >= TO_DATE(:start_date, 'YYYY-MM-DD'))            AND (:product IS NULL OR P.NAME LIKE :product || '%')
+            AND (:fournisseur IS NULL OR att.value like :fournisseur || '%')
+            AND (:emplacement IS NULL OR l.value LIKE :emplacement || '%' OR l.value IN ('Préparation', 'HANGAR'))
+            AND t.AD_Client_ID = 1000000
+            ORDER BY t.MovementDate DESC;
+            
+
+
+            SELECT ml.value, ml.m_locator_id AS EMPLACEMENT
+                FROM M_Locator ml
+                JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
+                WHERE m.ISACTIVE = 'Y'
+                  AND m.AD_Client_ID = 1000000
+                  AND ml.ISACTIVE = 'Y'
+                  AND ml.AD_Client_ID = 1000000;

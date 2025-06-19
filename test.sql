@@ -370,10 +370,277 @@ COMMIT;
 
 --------------------------------------------------------------
 ----------------------- UPDATE  Remise IN (Articles ----> Articles-Tiers) ------------------------
-update C_BPartner_Product set m_discountschema_id = 1000718 -- id de remise
+update C_BPartner_Product set m_discountschema_id = 1001229 -- id de remise 5% 1000718    7% 1000720   10%  1000007    13% 1000724   8%  1000719
 where m_product_id in (select str.m_product_id from m_storage str
 inner join m_product mp on (str.m_product_id = mp.m_product_id)
 inner join m_attributeinstance att on (str.m_attributesetinstance_id = att.m_attributesetinstance_id)
-where att.m_attribute_id = 1000508 and att.value like '%TOUCHE%'-- fournisseur
-and mp.name like 'TOUCHE%' --produit
-) and c_bp_group_id in(1000003)-- id de type client (client para,client potentiel) ;1000003 PARA 1001330 POT
+where att.m_attribute_id = 1000508 and att.value like '%SPIC sifaoui (PARA)%'-- fournisseur
+and mp.name like 'SPIC%' --produit
+) and c_bp_group_id in(1001330)-- id de type client (client para,client potentiel) ;1000003 PARA 1001330 POT
+
+
+
+
+
+-- Select products with empty m_discountschema_id, showing product name and fournisseur
+SELECT 
+    mp.name AS product_name,
+    att.value AS fournisseur
+FROM 
+    C_BPartner_Product cbpp
+    INNER JOIN m_product mp ON cbpp.m_product_id = mp.m_product_id
+    INNER JOIN m_storage str ON str.m_product_id = mp.m_product_id
+    INNER JOIN m_attributeinstance att ON str.m_attributesetinstance_id = att.m_attributesetinstance_id
+WHERE 
+    cbpp.m_discountschema_id IS NULL
+    AND att.m_attribute_id = 1000508
+    AND att.value LIKE '%LILIUM PHARMA ALGERIA%'
+    AND mp.name LIKE 'LILIUM%';
+
+
+
+    CREATE TABLE IF NOT EXISTS bnm.bank_data (id INT AUTO_INCREMENT PRIMARY KEY, date DATETIME, bna_sold DECIMAL(10,2), bna_remise DECIMAL(10,2), bna_check DECIMAL(10,2), baraka_sold DECIMAL(10,2), baraka_remise DECIMAL(10,2), baraka_check DECIMAL(10,2));
+
+
+
+    ✅ 1. main_kpi – summary table
+
+CREATE TABLE IF NOT EXISTS bnm.main_kpi (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    time DATETIME NOT NULL,
+    total_profit DECIMAL(12,2),
+    total_stock DECIMAL(12,2),
+    credit_client DECIMAL(12,2),
+    total_tresorerie DECIMAL(12,2),
+    total_dette DECIMAL(12,2)
+);
+
+✅ 2. stock – stock details table
+
+CREATE TABLE IF NOT EXISTS bnm.stock (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    date DATETIME NOT NULL,
+    principale DECIMAL(12,2),
+    depot_reserver DECIMAL(12,2),
+    hangar DECIMAL(12,2),
+    hangar_reserve DECIMAL(12,2),
+    total_stock DECIMAL(12,2) GENERATED ALWAYS AS (principale + depot_reserver + hangar + hangar_reserve) STORED
+);
+
+✅ 3. tresori – treasury breakdown table
+
+CREATE TABLE IF NOT EXISTS bnm.tresori (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    date DATETIME NOT NULL,
+    caisse DECIMAL(12,2),
+    paiement_net DECIMAL(12,2),
+    total_bank DECIMAL(12,2),
+    total_tresorerie DECIMAL(12,2) GENERATED ALWAYS AS (caisse + paiement_net + total_bank) STORED
+);
+
+✅ 4. bank_data – bank-level details (used in both tresori and dette)
+
+CREATE TABLE IF NOT EXISTS bnm.bank_data (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    date DATETIME NOT NULL,
+    bna_sold DECIMAL(12,2),
+    bna_remise DECIMAL(12,2),
+    bna_check DECIMAL(12,2),
+    baraka_sold DECIMAL(12,2),
+    baraka_remise DECIMAL(12,2),
+    baraka_check DECIMAL(12,2),
+    total_bank DECIMAL(12,2) GENERATED ALWAYS AS (bna_sold + bna_remise + baraka_sold + baraka_remise) STORED,
+    total_checks DECIMAL(12,2) GENERATED ALWAYS AS (bna_check + baraka_check) STORED
+);
+
+✅ 5. dette – debt table
+
+CREATE TABLE IF NOT EXISTS bnm.dette (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    date DATETIME NOT NULL,
+    dette_fournisseur DECIMAL(12,2),
+    totalchecks DECIMAL(12,2),
+    total_dette DECIMAL(12,2) GENERATED ALWAYS AS (dette_fournisseur + totalchecks) STORED
+);
+
+
+
+select * from xx_vendor_status;
+
+
+
+SELECT ml.value, ml.m_locator_id AS EMPLACEMENT
+                FROM M_Locator ml
+                JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
+                WHERE m.ISACTIVE = 'Y'
+                  AND m.AD_Client_ID = 1000000
+                  AND ml.ISACTIVE = 'Y'
+                  AND ml.AD_Client_ID = 1000000;
+
+
+
+
+
+                  select * from M_MovementLine where M_MovementLine_ID=1102924
+
+                  1001135
+
+                  m_locator_id = 1001135
+                  m_locatorto_id = 1000614
+
+
+
+           SELECT *
+FROM (
+  SELECT *
+  FROM M_MovementLine
+  WHERE m_locator_id = 1000614
+    AND m_locatorto_id = 1001135
+)
+WHERE ROWNUM <= 50;
+
+select * from M_Movement where m_movement_id=1059403;
+
+
+SELECT
+                t.MovementDate AS MovementDate,
+                nvl(nvl(io.documentno,inv.documentno),m.documentno) as documentno,
+                nvl(bp.name, nvl(inv.description,m.description)) as name,
+                p.name AS productname,
+                CASE WHEN t.movementqty > 0 then t.movementqty else 0 end as ENTREE,
+                CASE WHEN t.movementqty < 0 then ABS(t.movementqty) else 0 end as SORTIE,
+                coalesce((SELECT SUM(s.movementqty)
+                FROM m_transaction s
+                inner join m_product p on (s.m_product_id = p.m_product_id)
+                inner join m_locator l on (l.m_locator_id = s.m_locator_id)
+                WHERE s.movementdate < t.movementdate
+                AND (:product IS NULL OR p.name LIKE :product || '%')
+                AND (:emplacement IS NULL OR
+                     CASE 
+                         WHEN :emplacement = '' THEN l.value IN ('Préparation', 'HANGAR')
+                         ELSE l.value LIKE :emplacement || '%'
+                     END)
+                ), 0) AS StockInitial,
+                asi.lot,
+                l_from.value AS locator_from,
+                l_to.value AS locator_to
+            FROM M_Transaction t
+            INNER JOIN ad_org org
+            ON org.ad_org_id = t.ad_org_id
+            LEFT JOIN ad_orginfo oi
+            ON oi.ad_org_id = org.ad_org_id
+            LEFT JOIN c_location orgloc
+            ON orgloc.c_location_id = oi.c_location_id
+            INNER JOIN M_Locator l
+            ON (t.M_Locator_ID=l.M_Locator_ID)
+            INNER JOIN M_Product p
+            ON (t.M_Product_ID=p.M_Product_ID)
+            LEFT OUTER JOIN M_InventoryLine il
+            ON (t.M_InventoryLine_ID=il.M_InventoryLine_ID)
+            LEFT OUTER JOIN M_Inventory inv
+            ON (inv.m_inventory_id = il.m_inventory_id)
+            LEFT OUTER JOIN M_MovementLine ml
+            ON (t.M_MovementLine_ID=ml.M_MovementLine_ID 
+                AND NOT (ml.M_Locator_ID = 1001135 AND ml.M_LocatorTo_ID = 1000614)
+                AND NOT (ml.M_Locator_ID = 1000614 AND ml.M_LocatorTo_ID = 1001135))
+            LEFT OUTER JOIN M_Movement m
+            ON (m.M_Movement_ID=ml.M_Movement_ID)
+            LEFT OUTER JOIN M_InOutLine iol
+            ON (t.M_InOutLine_ID=iol.M_InOutLine_ID)
+            LEFT OUTER JOIN M_Inout io
+            ON (iol.M_InOut_ID=io.M_InOut_ID)
+            LEFT OUTER JOIN C_BPartner bp
+            ON (bp.C_BPartner_ID = io.C_BPartner_ID)
+            INNER JOIN M_attributesetinstance asi on t.m_attributesetinstance_id = asi.m_attributesetinstance_id
+            INNER JOIN M_attributeinstance att on (att.m_attributesetinstance_id = asi.m_attributesetinstance_id)
+            -- Add joins for from and to locators
+            LEFT JOIN M_Locator l_from ON (
+                CASE 
+                    WHEN t.M_MovementLine_ID IS NOT NULL THEN ml.M_Locator_ID 
+                    WHEN t.M_InOutLine_ID IS NOT NULL THEN 
+                        CASE WHEN t.MovementQty > 0 THEN iol.M_Locator_ID ELSE NULL END
+                    ELSE NULL 
+                END = l_from.M_Locator_ID
+            )
+            LEFT JOIN M_Locator l_to ON (
+                CASE 
+                    WHEN t.M_MovementLine_ID IS NOT NULL THEN ml.M_LocatorTo_ID 
+                    WHEN t.M_InOutLine_ID IS NOT NULL THEN 
+                        CASE WHEN t.MovementQty < 0 THEN iol.M_Locator_ID ELSE NULL END
+                    ELSE NULL 
+                END = l_to.M_Locator_ID
+            )
+            WHERE (io.docstatus IN ('CO' , 'CL') 
+            OR m.docstatus IN ('CO' , 'CL')
+            OR inv.docstatus IN ('CO' , 'CL')) 
+            AND att.m_attribute_id = 1000508
+            AND (:end_date IS NULL OR t.movementdate <= TO_DATE(:end_date, 'YYYY-MM-DD'))
+            AND (:start_date IS NULL OR t.movementdate >= TO_DATE(:start_date, 'YYYY-MM-DD'))
+            AND (:product IS NULL OR P.NAME LIKE :product || '%')
+            AND (:fournisseur IS NULL OR att.value like :fournisseur || '%')
+            AND (:emplacement IS NULL OR 
+                 CASE 
+                     WHEN :emplacement = '' THEN l.value IN ('Préparation', 'HANGAR')
+                     ELSE l.value LIKE :emplacement || '%'
+                 END)
+            AND t.AD_Client_ID = 1000000
+            ORDER BY t.MovementDate DESC;
+
+            ------------------------------
+
+            select * from M_PRODUCT
+WHERE AD_Client_ID = 1000000
+AND AD_Org_ID = 1000000
+  AND ISACTIVE = 'Y'
+  and name like 'BIOMAX APPETIT MAX SIROP 150ML%'
+ORDER BY name;
+
+select * from XX_LABORATORY
+where XX_LABORATORY_ID=1003313;
+
+SELECT *
+                FROM C_BPartner cb
+                WHERE cb.AD_Client_ID = 1000000
+                  AND cb.ISVENDOR = 'Y'
+                  AND cb.ISACTIVE = 'Y'
+                  and cb.name like 'BIOMAX PHARM (PARA)%'
+                ORDER BY cb.name;
+
+
+
+SELECT DISTINCT
+                    CAST(cb.name AS VARCHAR2(300)) AS FOURNISSEUR
+                FROM 
+                    M_InOut xf
+                JOIN M_INOUTLINE mi ON mi.M_INOUT_ID = xf.M_INOUT_ID
+                JOIN C_BPartner cb ON cb.C_BPARTNER_ID = xf.C_BPARTNER_ID
+                JOIN M_PRODUCT m ON m.M_PRODUCT_id = mi.M_PRODUCT_id
+                WHERE 
+                    UPPER(m.name) LIKE UPPER(:product) || '%'
+                    AND xf.AD_Org_ID = 1000000
+                    AND xf.C_DocType_ID IN (1000013, 1000646)
+                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
+                ORDER BY 
+                 FOURNISSEUR;
+
+
+
+
+
+
+                 select processed, docstatus, docaction from M_InOut  where M_InOut_ID=3196674;
+
+                 UPDATE M_InOut
+SET processed = 'N',
+    docstatus = 'DR',
+    docaction = 'PR'
+WHERE M_InOut_ID = 3196674;
+
+
+
+
+                     elif processed == 'N' and docstatus == 'DR' and (docaction.upper() == 'PR' or docaction.upper() == 'CO'):
+        state = "Brouillon"
+
+
+    
