@@ -8,7 +8,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Vente', 'Comptable'])) {
+if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente', 'Comptable'])) {
     header("Location: Acess_Denied");    
     exit();
 }
@@ -192,6 +192,86 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
             text-align: center;
             max-width: 200px;
         }
+
+        /* Enhanced scrolling styles */
+        .table-container {
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            max-height: 80vh;
+            overflow: auto;
+        }
+        
+        .dark .table-container {
+            background-color: #374151;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Compact table cell styling */
+        .compact-cell {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            line-height: 1.2;
+        }
+        
+        /* Month data formatting */
+        .month-data {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 20px;
+        }
+        
+        .month-data-item {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            font-size: 0.75rem;
+        }
+        
+        .qty-item {
+            color: #1e40af;
+            font-weight: 500;
+        }
+        
+        .total-item {
+            color: #059669;
+            font-weight: 500;
+        }
+        
+        .separator {
+            color: #6b7280;
+            font-weight: normal;
+        }
+        
+        .dark .qty-item {
+            color: #93c5fd;
+        }
+        
+        .dark .total-item {
+            color: #34d399;
+        }
+        
+        /* Sticky headers for better navigation */
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background-color: white;
+        }
+        
+        .dark .sticky-header {
+            background-color: #374151;
+        }
+        
+        /* Sticky first column */
+        .sticky-left {
+            position: sticky;
+            left: 0;
+            z-index: 10;
+        }
     </style>
 </head>
 <body class="flex h-screen bg-gray-100 dark:bg-gray-900">
@@ -239,7 +319,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
                     <select id="recap_product_supplier" class="w-full p-2 border rounded recap-input" style="color:black" multiple size="4">
                         <option value="">Loading suppliers...</option>
                     </select>
-                    <div class="mt-1 text-xs text-black-500">Hold Ctrl/Cmd to select multiple suppliers</div>
+                    <div class="mt-1 text-xs text-black-500">Click to select/deselect multiple suppliers</div>
                 </div>
 
                 <!-- All Suppliers Search -->
@@ -297,6 +377,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
         <div id="dataContainer" class="space-y-8">
             <!-- Will be populated by JavaScript -->
         </div>
+        <br> <br>
     </div>
 
 
@@ -324,11 +405,11 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
 
         // Constants
         const API_ENDPOINTS = {
-            download_pdf: 'http://192.168.1.94:5000/rotation_monthly_achat_pdf',
-            fetchProductData: 'http://192.168.1.94:5000/rotation_monthly_achat',
-            listFournisseur: 'http://192.168.1.94:5000/listfournisseur',
-            listProduct: 'http://192.168.1.94:5000/listproduct',
-            fetchSuppliersByProduct: 'http://192.168.1.94:5000/fetchSuppliersByProduct'
+            download_pdf: 'http://192.168.1.94:5001/rotation_monthly_achat_pdf',
+            fetchProductData: 'http://192.168.1.94:5001/rotation_monthly_achat',
+            listFournisseur: 'http://192.168.1.94:5001/listfournisseur',
+            listProduct: 'http://192.168.1.94:5001/listproduct',
+            fetchSuppliersByProduct: 'http://192.168.1.94:5001/fetchSuppliersByProduct'
         };
 
 
@@ -685,7 +766,7 @@ function switchView(view, year) {
 
 function createCombinedMonthlyTable(products, year) {
     const tableContainer = document.createElement('div');
-    tableContainer.className = 'overflow-x-auto';
+    tableContainer.className = 'table-container overflow-auto';
 
     // Create the table
     const table = document.createElement('table');
@@ -693,65 +774,59 @@ function createCombinedMonthlyTable(products, year) {
 
     // Create header
     const thead = document.createElement('thead');
-    const headerRow1 = document.createElement('tr');
-    const headerRow2 = document.createElement('tr');
+    thead.className = 'sticky-header';
+    const headerRow = document.createElement('tr');
 
     // Product header cell
     const productHeader = document.createElement('th');
-    productHeader.className = 'sticky left-0 z-10 bg-white dark:bg-gray-800 border px-4 py-2 text-left';
+    productHeader.className = 'sticky-left sticky-header bg-white dark:bg-gray-800 border px-4 py-2 text-left z-30';
     productHeader.textContent = 'Product';
-    productHeader.rowSpan = 2;
-    headerRow1.appendChild(productHeader);
+    headerRow.appendChild(productHeader);
 
-    // Month headers
+    // Month headers (one column per month with combined data)
     for (let month = 1; month <= 12; month++) {
         const monthHeader = document.createElement('th');
-        monthHeader.className = 'border px-2 py-1 text-center bg-blue-50 dark:bg-blue-900 font-medium';
-        monthHeader.colSpan = 2;
-        monthHeader.textContent = monthNames[month - 1];
-        headerRow1.appendChild(monthHeader);
+        monthHeader.className = 'border px-2 py-1 text-center bg-blue-50 dark:bg-blue-900 font-medium sticky-header compact-cell';
+        monthHeader.innerHTML = `
+            <div class="text-sm font-semibold mb-1">${monthNames[month - 1]}</div>
+            <div style="font-size: 0.7rem; color: #6b7280;">Qty | Amount</div>
+        `;
+        headerRow.appendChild(monthHeader);
     }
 
-    // Qty/Amount subheaders
-    for (let month = 1; month <= 12; month++) {
-        const qtyHeader = document.createElement('th');
-        qtyHeader.className = 'border px-2 py-1 text-center bg-blue-100 dark:bg-blue-800';
-        qtyHeader.textContent = 'Qty';
-        headerRow2.appendChild(qtyHeader);
-
-        const amtHeader = document.createElement('th');
-        amtHeader.className = 'border px-2 py-1 text-center bg-green-100 dark:bg-green-800';
-        amtHeader.textContent = 'Amount';
-        headerRow2.appendChild(amtHeader);
-    }
-
-    thead.appendChild(headerRow1);
-    thead.appendChild(headerRow2);
+    thead.appendChild(headerRow);
     table.appendChild(thead);
 
     // Create table body
     const tbody = document.createElement('tbody');
     products.forEach(product => {
         const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50 dark:hover:bg-gray-700';
+        row.className = 'hover:bg-gray-50 dark:hover:bg-gray-700 product-row';
 
         // Product name cell
         const nameCell = document.createElement('td');
-        nameCell.className = 'sticky left-0 z-10 bg-white dark:bg-gray-800 border px-4 py-2';
+        nameCell.className = 'sticky-left bg-white dark:bg-gray-800 border px-4 py-2 z-10';
         nameCell.textContent = product.name;
         row.appendChild(nameCell);
 
-        // Data cells for each month
+        // Data cells for each month (combined format)
         for (let month = 0; month < 12; month++) {
-            const qtyCell = document.createElement('td');
-            qtyCell.className = 'border px-2 py-1 text-right bg-blue-50 dark:bg-blue-900/30';
-            qtyCell.textContent = formatNumber(product.quantities[month] || 0);
-            row.appendChild(qtyCell);
-
-            const amtCell = document.createElement('td');
-            amtCell.className = 'border px-2 py-1 text-right bg-green-50 dark:bg-green-900/30';
-            amtCell.textContent = formatNumber(product.amounts[month] || 0);
-            row.appendChild(amtCell);
+            const dataCell = document.createElement('td');
+            dataCell.className = 'border compact-cell text-center';
+            
+            const qty = formatNumber(product.quantities[month] || 0);
+            const amount = formatNumber(product.amounts[month] || 0);
+            
+            dataCell.innerHTML = `
+                <div class="month-data">
+                    <div class="month-data-item">
+                        <span class="qty-item">${qty}</span>
+                        <span class="separator"> | </span>
+                        <span class="total-item">${amount}</span>
+                    </div>
+                </div>
+            `;
+            row.appendChild(dataCell);
         }
 
         tbody.appendChild(row);
@@ -759,11 +834,11 @@ function createCombinedMonthlyTable(products, year) {
 
     // Create totals row
     const totalsRow = document.createElement('tr');
-    totalsRow.className = 'font-bold bg-gray-100 dark:bg-gray-700';
+    totalsRow.className = 'font-bold bg-gray-100 dark:bg-gray-700 totals-row';
 
     // Totals label
     const totalsLabel = document.createElement('td');
-    totalsLabel.className = 'sticky left-0 z-10 bg-gray-100 dark:bg-gray-700 border px-4 py-2';
+    totalsLabel.className = 'sticky-left bg-gray-100 dark:bg-gray-700 border px-4 py-2 z-10';
     totalsLabel.textContent = 'TOTAL';
     totalsRow.appendChild(totalsLabel);
 
@@ -772,15 +847,19 @@ function createCombinedMonthlyTable(products, year) {
         const monthQtyTotal = products.reduce((sum, product) => sum + (product.quantities[month] || 0), 0);
         const monthAmtTotal = products.reduce((sum, product) => sum + (product.amounts[month] || 0), 0);
 
-        const qtyTotalCell = document.createElement('td');
-        qtyTotalCell.className = 'border px-2 py-1 text-right bg-blue-200 dark:bg-blue-900';
-        qtyTotalCell.textContent = formatNumber(monthQtyTotal);
-        totalsRow.appendChild(qtyTotalCell);
-
-        const amtTotalCell = document.createElement('td');
-        amtTotalCell.className = 'border px-2 py-1 text-right bg-green-200 dark:bg-green-900';
-        amtTotalCell.textContent = formatNumber(monthAmtTotal);
-        totalsRow.appendChild(amtTotalCell);
+        const totalCell = document.createElement('td');
+        totalCell.className = 'border compact-cell text-center bg-gray-200 dark:bg-gray-600';
+        
+        totalCell.innerHTML = `
+            <div class="month-data">
+                <div class="month-data-item">
+                    <span class="qty-item">${formatNumber(monthQtyTotal)}</span>
+                    <span class="separator"> | </span>
+                    <span class="total-item">${formatNumber(monthAmtTotal)}</span>
+                </div>
+            </div>
+        `;
+        totalsRow.appendChild(totalCell);
     }
 
     tbody.appendChild(totalsRow);
@@ -1042,7 +1121,51 @@ elements.suggestionBoxes.fournisseur.addEventListener('click', function(e) {
             // Add event listeners
             elements.applyBtn.addEventListener('click', loadData);
             elements.resetBtn.addEventListener('click', resetFilters);
+            
+            // Add custom multi-select behavior for product supplier dropdown
+            setupCustomMultiSelect();
         });
+
+        // Custom multi-select functionality
+        function setupCustomMultiSelect() {
+            const select = elements.productSupplierSelect;
+            
+            // Override the default mousedown behavior
+            select.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                
+                const option = e.target;
+                if (option.tagName === 'OPTION') {
+                    // Toggle the selected state
+                    option.selected = !option.selected;
+                    
+                    // Trigger change event
+                    const changeEvent = new Event('change', { bubbles: true });
+                    select.dispatchEvent(changeEvent);
+                }
+                
+                return false;
+            });
+            
+            // Prevent the dropdown from closing after selection
+            select.addEventListener('click', function(e) {
+                e.preventDefault();
+                return false;
+            });
+            
+            // Handle keyboard navigation
+            select.addEventListener('keydown', function(e) {
+                if (e.code === 'Space' || e.code === 'Enter') {
+                    e.preventDefault();
+                    const focusedOption = select.options[select.selectedIndex];
+                    if (focusedOption) {
+                        focusedOption.selected = !focusedOption.selected;
+                        const changeEvent = new Event('change', { bubbles: true });
+                        select.dispatchEvent(changeEvent);
+                    }
+                }
+            });
+        }
 
 
         document.getElementById('exportPdf').addEventListener('click', async function() {

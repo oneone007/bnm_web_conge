@@ -153,7 +153,10 @@ FROM
             "source"."LABO" "LABO",
             "source"."LOT" "LOT",
             "source"."QTY" "QTY",
+            "source"."QTY_DISPO" "QTY_DISPO",
+
             "source"."GUARANTEEDATE" "GUARANTEEDATE",  -- Added the GUARANTEEDATE column
+            "source"."PPA" "PPA",  -- Added the PPA column
             "source"."LOCATION" "LOCATION"
         FROM
             (
@@ -173,7 +176,10 @@ FROM
                     labo,
                     lot,
                     qty,
+                    qty_dispo,
+
                     guaranteedate,  -- Added the GUARANTEEDATE column
+                    ppa,  -- Added the PPA column
                     CASE 
                         WHEN m_locator_id = 1000614 THEN 'Préparation'
                         WHEN m_locator_id = 1001135 THEN 'HANGAR'
@@ -220,6 +226,7 @@ FROM
                                                     XX_Laboratory_id = p.XX_Laboratory_id
                                             ) labo,
                                             mst.qtyonhand qty,
+                                            (mst.qtyonhand - mst.QTYRESERVED) qty_dispo,
                                             mst.m_locator_id,
                                             mati.value fournisseur,
                                             mats.guaranteedate,
@@ -293,7 +300,16 @@ FROM
                                                     m_attributesetinstance
                                                 WHERE
                                                     m_attributesetinstance_id = mst.m_attributesetinstance_id
-                                            ) lot
+                                            ) lot,
+                                            (
+                                                SELECT
+                                                    valuenumber
+                                                FROM
+                                                    m_attributeinstance
+                                                WHERE
+                                                    m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                    AND m_attribute_id = 1000503
+                                            ) ppa
                                         FROM
                                             m_product p
                                             INNER JOIN m_storage mst ON p.m_product_id = mst.m_product_id
@@ -330,7 +346,9 @@ FROM
                     labo,
                     lot,
                     qty,
+                    qty_dispo,
                     guaranteedate,  -- Added to GROUP BY
+                    ppa,  -- Added PPA to GROUP BY
                     m_locator_id
                 ORDER BY
                     fournisseur
@@ -566,6 +584,22 @@ def generate_excel(data, value):
     return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
+@app.route('/fetch-stock-data', methods=['GET'])
+def fetch_stock_data():
+    try:
+        fournisseur = request.args.get("fournisseur", None)
+        magasin = request.args.get("magasin", None)
+        emplacement = request.args.get("emplacement", None)
+        name = request.args.get("name", None)
+
+        data = fetch_stock_data_from_db(fournisseur, magasin, emplacement, name)
+        return jsonify(data)
+
+    except Exception as e:
+        logger.error(f"Error fetching stock data: {e}")
+        return jsonify({"error": "Failed to fetch stock data"}), 500
+
+
 def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None, name=None):
     try:
         with DB_POOL.acquire() as connection:
@@ -761,70 +795,6 @@ def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None, n
         logger.error(f"Database error: {e}")
         return {"error": "An error occurred while fetching stock data."}
 
-# Flask route
-@app.route('/fetch-stock-data', methods=['GET'])
-def fetch_stock_data():
-    try:
-        fournisseur = request.args.get("fournisseur", None)
-        magasin = request.args.get("magasin", None)
-        emplacement = request.args.get("emplacement", None)
-        name = request.args.get("name", None)
-
-        data = fetch_stock_data_from_db(fournisseur, magasin, emplacement, name)
-        return jsonify(data)
-
-    except Exception as e:
-        logger.error(f"Error fetching stock data: {e}")
-        return jsonify({"error": "Failed to fetch stock data"}), 500
-
-
-def generate_excel_stock(data):
-    # Create a DataFrame from the data
-    df = pd.DataFrame(data)
-
-    # Create workbook and worksheet using openpyxl
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Stock Data"
-
-    # Define header styles
-    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
-    header_font = Font(color="FFFFFF", bold=True)
-
-    # Write headers
-    ws.append(df.columns.tolist())
-    for cell in ws[1]:
-        cell.fill = header_fill
-        cell.font = header_font
-
-    # Apply auto filter (using the dimensions of the sheet)
-    ws.auto_filter.ref = ws.dimensions
-
-    # Write data rows with alternating row styling for readability
-    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
-        ws.append(row)
-        if row_idx % 2 == 0:
-            for cell in ws[row_idx]:
-                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
-
-    # Optionally, create an Excel table
-    table = Table(displayName="DataTable", ref=ws.dimensions)
-    style = TableStyleInfo(
-        name="TableStyleMedium9",
-        showFirstColumn=False,
-        showLastColumn=False,
-        showRowStripes=True,
-        showColumnStripes=False
-    )
-    table.tableStyleInfo = style
-    ws.add_table(table)
-
-    # Save workbook to a BytesIO stream
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-    return output
-
 
 @app.route('/download-stock-excel', methods=['GET'])
 def download_stock_excel():
@@ -880,9 +850,57 @@ def download_stock_excel():
         return jsonify({"error": "Failed to generate Excel file"}), 500
 
 
-    
-# Flask route for generating Excel from fetched stock data
+def generate_excel_stock(data):
+    # Create a DataFrame from the data
+    df = pd.DataFrame(data)
 
+    # Create workbook and worksheet using openpyxl
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Stock Data"
+
+    # Define header styles
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    # Write headers
+    ws.append(df.columns.tolist())
+    for cell in ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Apply auto filter (using the dimensions of the sheet)
+    ws.auto_filter.ref = ws.dimensions
+
+    # Write data rows with alternating row styling for readability
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Optionally, create an Excel table
+    table = Table(displayName="DataTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save workbook to a BytesIO stream
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output
+
+
+
+
+    
 def fetch_magasins_from_db(magasin=None, emplacement=None):
     try:
         with DB_POOL.acquire() as connection:
@@ -921,8 +939,33 @@ def fetch_magasins_from_db(magasin=None, emplacement=None):
     except Exception as e:
         logger.error(f"Error fetching magasins: {e}")
         return {"error": "An error occurred while fetching magasins."}
+    
+@app.route('/fetch-magasins', methods=['GET'])
+def fetch_magasins():
+    try:
+        magasin = request.args.get("magasin", None)
+        emplacement = request.args.get("emplacement", None)
 
+        data = fetch_magasins_from_db(magasin, emplacement)
+        return jsonify(data)
 
+    except Exception as e:
+        logger.error(f"Error fetching magasins: {e}")
+        return jsonify({"error": "Failed to fetch magasins"}), 500
+    
+@app.route('/fetch-emplacements', methods=['GET'])
+def fetch_emplacements():
+    try:
+        magasin = request.args.get("magasin", None)
+        emplacement = request.args.get("emplacement", None)
+
+        data = fetch_emplacements_from_db(magasin, emplacement)
+        return jsonify(data)
+
+    except Exception as e:
+        logger.error(f"Error fetching emplacements: {e}")
+        return jsonify({"error": "Failed to fetch emplacements"}), 500
+    
 def fetch_emplacements_from_db(magasin=None, emplacement=None):
     try:
         with DB_POOL.acquire() as connection:
@@ -962,33 +1005,361 @@ def fetch_emplacements_from_db(magasin=None, emplacement=None):
         logger.error(f"Error fetching emplacements: {e}")
         return {"error": "An error occurred while fetching emplacements."}
 
-
-@app.route('/fetch-magasins', methods=['GET'])
-def fetch_magasins():
+ 
+def fetch_product_details_data(product_name):
+    """
+    Fetch detailed product information similar to the marge data structure
+    """
     try:
-        magasin = request.args.get("magasin", None)
-        emplacement = request.args.get("emplacement", None)
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            
+            query = """
+            SELECT
+                *
+            FROM
+                (
+                    SELECT
+                        "source"."FOURNISSEUR" "FOURNISSEUR",
+                        "source"."PRODUCT" "PRODUCT",
+                        "source"."P_ACHAT" "P_ACHAT",
+                        "source"."P_VENTE" "P_VENTE",
+                        "source"."REM_ACHAT" "REM_ACHAT",
+                        "source"."REM_VENTE" "REM_VENTE",
+                        "source"."BON_ACHAT" "BON_ACHAT",
+                        "source"."BON_VENTE" "BON_VENTE",
+                        "source"."REMISE_AUTO" "REMISE_AUTO",
+                        "source"."BONUS_AUTO" "BONUS_AUTO",
+                        "source"."P_REVIENT" "P_REVIENT",
+                        "source"."MARGE" "MARGE",
+                        "source"."LABO" "LABO",
+                        "source"."LOT" "LOT",
+                        "source"."QTY" "QTY",
+                        "source"."QTY_DISPO" "QTY_DISPO",
+                        "source"."GUARANTEEDATE" "GUARANTEEDATE",
+                        "source"."PPA" "PPA",
+                        "source"."LOCATION" "LOCATION"
+                    FROM
+                        (
+                            SELECT
+                                DISTINCT fournisseur,
+                                product,
+                                p_achat,
+                                p_vente,
+                                round(rem_achat, 2) AS rem_achat,
+                                rem_vente,
+                                round(bon_achat, 2) AS bon_achat,
+                                bon_vente,
+                                remise_auto,
+                                bonus_auto,
+                                round(p_revient, 2) AS p_revient,
+                                LEAST(round((marge), 2), 100) AS marge,
+                                labo,
+                                lot,
+                                qty,
+                                qty_dispo,
+                                guaranteedate,
+                                ppa,
+                                CASE 
+                                    WHEN m_locator_id = 1000614 THEN 'Préparation'
+                                    WHEN m_locator_id = 1001135 THEN 'HANGAR'
+                                    WHEN m_locator_id = 1001128 THEN 'Dépot_réserve'
+                                    WHEN m_locator_id = 1001136 THEN 'HANGAR_'
+                                    WHEN m_locator_id = 1001020 THEN 'Depot_Vente'
+                                END AS location
+                            FROM
+                                (
+                                    SELECT
+                                        d.*,
+                                        LEAST(
+                                            round(
+                                                (((ventef - ((ventef * nvl(rma, 0)) / 100))) - p_revient) / p_revient * 100,
+                                                2
+                                            ), 
+                                            100
+                                        ) AS marge
+                                    FROM
+                                        (
+                                            SELECT
+                                                det.*,
+                                                (det.p_achat - ((det.p_achat * det.rem_achat) / 100)) / (1 + (det.bon_achat / 100)) p_revient,
+                                                (
+                                                    det.p_vente - ((det.p_vente * nvl(det.rem_vente, 0)) / 100)
+                                                ) / (
+                                                    1 + (
+                                                        CASE
+                                                            WHEN det.bna > 0 THEN det.bna
+                                                            ELSE det.bon_vente
+                                                        END / 100
+                                                    )
+                                                ) ventef
+                                            FROM
+                                                (
+                                                    SELECT
+                                                        p.name product,
+                                                        (
+                                                            SELECT
+                                                                NAME
+                                                            FROM
+                                                                XX_Laboratory
+                                                            WHERE
+                                                                XX_Laboratory_id = p.XX_Laboratory_id
+                                                        ) labo,
+                                                        mst.qtyonhand qty,
+                                                        (mst.qtyonhand - mst.QTYRESERVED) qty_dispo,
+                                                        mst.m_locator_id,
+                                                        mati.value fournisseur,
+                                                        mats.guaranteedate,
+                                                        md.name remise_auto,
+                                                        sal.description bonus_auto,
+                                                        md.flatdiscount rma,
+                                                        TO_NUMBER(
+                                                            CASE
+                                                                WHEN REGEXP_LIKE(sal.name, '^[0-9]+$') THEN sal.name
+                                                                ELSE NULL
+                                                            END
+                                                        ) AS bna,
+                                                        (
+                                                            SELECT
+                                                                valuenumber
+                                                            FROM
+                                                                m_attributeinstance
+                                                            WHERE
+                                                                m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                                AND m_attribute_id = 1000501
+                                                        ) p_achat,
+                                                        (
+                                                            SELECT
+                                                                valuenumber
+                                                            FROM
+                                                                m_attributeinstance
+                                                            WHERE
+                                                                m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                                AND m_attribute_id = 1001009
+                                                        ) rem_achat,
+                                                        (
+                                                            SELECT
+                                                                valuenumber
+                                                            FROM
+                                                                m_attributeinstance
+                                                            WHERE
+                                                                m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                                AND m_attribute_id = 1000808
+                                                        ) bon_achat,
+                                                        (
+                                                            SELECT
+                                                                valuenumber
+                                                            FROM
+                                                                m_attributeinstance
+                                                            WHERE
+                                                                m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                                AND m_attribute_id = 1000502
+                                                        ) p_vente,
+                                                        (
+                                                            SELECT
+                                                                valuenumber
+                                                            FROM
+                                                                m_attributeinstance
+                                                            WHERE
+                                                                m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                                AND m_attribute_id = 1001408
+                                                        ) rem_vente,
+                                                        (
+                                                            SELECT
+                                                                valuenumber
+                                                            FROM
+                                                                m_attributeinstance
+                                                            WHERE
+                                                                m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                                AND m_attribute_id = 1000908
+                                                        ) bon_vente,
+                                                        (
+                                                            SELECT
+                                                                lot
+                                                            FROM
+                                                                m_attributesetinstance
+                                                            WHERE
+                                                                m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                        ) lot,
+                                                        (
+                                                            SELECT
+                                                                valuenumber
+                                                            FROM
+                                                                m_attributeinstance
+                                                            WHERE
+                                                                m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                                AND m_attribute_id = 1000503
+                                                        ) ppa
+                                                    FROM
+                                                        m_product p
+                                                        INNER JOIN m_storage mst ON p.m_product_id = mst.m_product_id
+                                                        INNER JOIN m_attributeinstance mati ON mst.m_attributesetinstance_id = mati.m_attributesetinstance_id
+                                                        INNER JOIN m_attributesetinstance mats ON mst.m_attributesetinstance_id = mats.m_attributesetinstance_id
+                                                        LEFT JOIN C_BPartner_Product cp ON cp.m_product_id = p.m_product_id
+                                                            OR cp.C_BPartner_Product_id IS NULL
+                                                        LEFT JOIN M_DiscountSchema md ON cp.M_DiscountSchema_id = md.M_DiscountSchema_id
+                                                        LEFT JOIN XX_SalesContext sal ON p.XX_SalesContext_ID = sal.XX_SalesContext_ID
+                                                    WHERE
+                                                        mati.m_attribute_id = 1000508
+                                                        AND mst.m_locator_id IN (1001135, 1000614, 1001128, 1001136, 1001020)
+                                                        AND mst.qtyonhand != 0
+                                                        AND p.name = :product_name
+                                                    ORDER BY
+                                                        p.name
+                                                ) det
+                                            WHERE
+                                                det.rem_achat < 200
+                                        ) d
+                                )
+                            GROUP BY
+                                fournisseur,
+                                product,
+                                p_achat,
+                                p_vente,
+                                rem_achat,
+                                rem_vente,
+                                bon_achat,
+                                bon_vente,
+                                remise_auto,
+                                bonus_auto,
+                                p_revient,
+                                marge,
+                                labo,
+                                lot,
+                                qty,
+                                qty_dispo,
+                                guaranteedate,
+                                ppa,
+                                m_locator_id
+                            ORDER BY
+                                fournisseur
+                        ) "source"
+                )
+            WHERE
+                rownum <= 1048575
+            """
 
-        data = fetch_magasins_from_db(magasin, emplacement)
+            cursor.execute(query, {"product_name": product_name})
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+
+            return data
+
+    except Exception as e:
+        logger.error(f"Error fetching product details: {e}")
+        return {"error": "An error occurred while fetching product details."}
+
+@app.route('/fetch-product-details', methods=['GET'])
+def fetch_product_details():
+    try:
+        product_name = request.args.get("product_name", None)
+        
+        if not product_name:
+            return jsonify({"error": "Product name is required"}), 400
+
+        data = fetch_product_details_data(product_name)
         return jsonify(data)
 
     except Exception as e:
-        logger.error(f"Error fetching magasins: {e}")
-        return jsonify({"error": "Failed to fetch magasins"}), 500
+        logger.error(f"Error fetching product details: {e}")
+        return jsonify({"error": "Failed to fetch product details"}), 500
 
-@app.route('/fetch-emplacements', methods=['GET'])
-def fetch_emplacements():
+
+@app.route('/download-product-details-excel', methods=['GET'])
+def download_product_details_excel():
     try:
-        magasin = request.args.get("magasin", None)
-        emplacement = request.args.get("emplacement", None)
+        product_name = request.args.get("product_name", None)
+        
+        if not product_name:
+            return jsonify({"error": "Product name is required"}), 400
 
-        data = fetch_emplacements_from_db(magasin, emplacement)
-        return jsonify(data)
+        # Fetch data from the database
+        data = fetch_product_details_data(product_name)
+
+        # Check if data contains an error
+        if isinstance(data, dict) and "error" in data:
+            return jsonify(data), 500
+
+        # Check if data is empty
+        if not data:
+            return jsonify({"error": "No data found for the specified product"}), 404
+
+        # Generate Excel file in memory
+        excel_output = generate_excel_product_details(data, product_name)
+
+        # Generate filename
+        today_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"product_details_{product_name}_{today_date}.xlsx"
+
+        # Send file as a download response
+        return send_file(
+            excel_output,
+            as_attachment=True,
+            download_name=filename,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
     except Exception as e:
-        logger.error(f"Error fetching emplacements: {e}")
-        return jsonify({"error": "Failed to fetch emplacements"}), 500
+        logger.error(f"Error generating product details Excel: {e}")
+        return jsonify({"error": "Failed to generate Excel file"}), 500
+
+def generate_excel_product_details(data, product_name):
+    """Generate Excel file for product details data"""
+    if not data:
+        # Create empty workbook if no data
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Product Details"
+        ws.append(["No data available"])
+        
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        return output
+
+    df = pd.DataFrame(data)
     
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f"Details - {product_name[:20]}"
+
+    # Define header styles
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    # Write headers
+    if not df.empty:
+        ws.append(df.columns.tolist())
+        for cell in ws[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+
+        # Apply auto filter
+        ws.auto_filter.ref = ws.dimensions
+
+        # Write data rows
+        for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+            ws.append(row)
+
+        # Create table
+        table = Table(displayName="ProductDetailsTable", ref=ws.dimensions)
+        style = TableStyleInfo(
+            name="TableStyleMedium9",
+            showFirstColumn=False,
+            showLastColumn=False,
+            showRowStripes=True,
+            showColumnStripes=False
+        )
+        table.tableStyleInfo = style
+        ws.add_table(table)
+
+    # Save to BytesIO
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output
+
 
 
 
@@ -1237,6 +1608,52 @@ def fetch_bccb_fact():
 
 
 
+
+@app.route('/fetchZonerotation', methods=['GET'])
+def fetch_zone_rotation_endpoint():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    product = request.args.get('product')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    data = fetch_zone_rotation(start_date, end_date, product)
+    return jsonify(data)
+
+
+def fetch_zone_rotation(start_date, end_date, product):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT 
+                    sr.name AS "ZONE",
+                    SUM(xf.qtyentered) AS "QTY"
+                FROM C_SalesRegion sr
+                JOIN C_BPartner_Location bpl ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                JOIN xx_ca_fournisseur xf ON bpl.C_BPartner_ID = xf.CLIENTID
+                WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                      AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                      AND xf.AD_Org_ID = 1000000
+                      AND xf.DOCSTATUS != 'RE'
+                      AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
+                GROUP BY sr.name
+                ORDER BY SUM(xf.qtyentered) DESC
+            """
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'product': product or None
+            }
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            return [dict(zip(columns, row)) for row in rows]
+    except Exception as e:
+        logger.error(f"Error fetching zone recap: {e}")
+        return {"error": "An error occurred while fetching zone recap."}
 
 @app.route('/fetchZoneRecap', methods=['GET'])
 def fetch_zone():
@@ -3827,6 +4244,7 @@ invoice_data AS (
         AND ff.DATEINVOICED BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')
         AND ff.AD_ORG_ID = 1000000
         AND ff.product LIKE '%' || :product || '%'
+        AND NOT (ff.docstatus = 'RE' or ff.docstatus = 'VO')
     GROUP BY
         dr.invoice_period
 ),
@@ -3854,6 +4272,7 @@ purchase_data AS (
         AND xf.AD_Org_ID = 1000000
         AND xf.C_DocType_ID IN (1000013, 1000646)
         AND xf.M_Warehouse_ID != 1000521
+        AND NOT (xf.docstatus = 'RE' OR xf.docstatus = 'VO')
     JOIN M_INOUTLINE mi ON mi.M_INOUT_ID = xf.M_INOUT_ID
         AND mi.AD_Org_ID = 1000000
     left outer JOIN C_InvoiceLine ci ON ci.M_INOUTLINE_ID = mi.M_INOUTLINE_ID
@@ -5433,19 +5852,65 @@ def submit_feedback():
 
 
 import calendar
+import mysql.connector
 
 
-# Add this at the top of your Flask app
-CURRENT_GOAL = 481114494.36  # Static default value
+# MySQL connection for recouvrement data
+def get_localdb_connection():
+    try:
+        return mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="",
+            database="bnm"
+        )
+    except mysql.connector.Error as err:
+        logger.error(f"Error connecting to MySQL database: {err}")
+        return None
+
+
+def get_last_recouvrement_value():
+    """Get the last recouvrement value from the MySQL database"""
+    try:
+        conn = get_localdb_connection()
+        if not conn:
+            logger.error("Failed to connect to MySQL database for last recouvrement")
+            return 481114494.36  # Default fallback value
+        
+        cursor = conn.cursor()
+        
+        try:
+            # Get the last recouvrement value from the table
+            cursor.execute("""
+                SELECT value 
+                FROM recouvrement 
+                ORDER BY date DESC 
+                LIMIT 1
+            """)
+            
+            row = cursor.fetchone()
+            if row:
+                return float(row[0])
+            else:
+                return 481114494.36  # Default fallback value
+                
+        except Exception as e:
+            logger.error(f"Error fetching last recouvrement data: {e}")
+            return 481114494.36  # Default fallback value
+            
+        finally:
+            cursor.close()
+            conn.close()
+            
+    except Exception as e:
+        logger.error(f"Error in get_last_recouvrement_value: {e}")
+        return 481114494.36  # Default fallback value
+
 
 @app.route('/recouvrement', methods=['GET'])
 def recouvrement():
-    global CURRENT_GOAL
-    
-    # Update goal if new value provided
-    new_goal = request.args.get('objectif', type=float)
-    if new_goal is not None:
-        CURRENT_GOAL = new_goal
+    # Get the current goal from the database instead of using a static value
+    current_goal = get_last_recouvrement_value()
     
     try:
         # Rest of your existing query code remains the same
@@ -5478,7 +5943,7 @@ def recouvrement():
             """
 
             cursor.execute(query, {
-                'objectif': CURRENT_GOAL,
+                'objectif': current_goal,
                 'start_date': start_date,
                 'end_date': end_date
             })
@@ -5486,7 +5951,7 @@ def recouvrement():
             row = cursor.fetchone()
             if not row:
                 return jsonify({
-                    "OBJECTIF_MENSUEL": CURRENT_GOAL,
+                    "OBJECTIF_MENSUEL": current_goal,
                     "TOTAL_RECOUVREMENT": 0,
                     "POURCENTAGE": 0
                 })
@@ -5506,7 +5971,7 @@ def recouvrement():
         print(f"Error: {e}")
         return jsonify({
             "error": "Erreur serveur",
-            "OBJECTIF_MENSUEL": CURRENT_GOAL,
+            "OBJECTIF_MENSUEL": current_goal,
             "TOTAL_RECOUVREMENT": 0,
             "POURCENTAGE": 0
         }), 500
@@ -7361,6 +7826,803 @@ def download_product_achat_pdf():
     return response
 
 
+
+
+def rot_mont_vente(year_list, fournisseurs, products=None, clients=None, zones=None):
+    try:
+        # Acquire a connection from the pool
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            # Build the supplier condition
+            supplier_condition = "1=1"  # Default to include all suppliers
+            if fournisseurs:
+                if isinstance(fournisseurs, str):
+                    fournisseurs = [fournisseurs]
+
+                supplier_conditions = []
+                for i, f in enumerate(fournisseurs):
+                    bind_var = f'fournisseur_{i}'
+                    supplier_conditions.append(f"UPPER(xf.name) LIKE UPPER(:{bind_var}) || '%'")
+
+                supplier_condition = ' OR '.join(supplier_conditions) if supplier_conditions else '1=0'
+
+            # Build product condition for multiple products
+            product_condition = "1=1"
+            if products:
+                if isinstance(products, str):
+                    products = [products]
+                product_conditions = []
+                for i, p in enumerate(products):
+                    bind_var = f'product_{i}'
+                    product_conditions.append(f"UPPER(xf.product) LIKE UPPER(:{bind_var}) || '%'")
+                product_condition = ' OR '.join(product_conditions) if product_conditions else '1=0'
+
+            # Build client condition for multiple clients
+            client_condition = "1=1"
+            if clients:
+                if isinstance(clients, str):
+                    clients = [clients]
+                client_conditions = []
+                for i, c in enumerate(clients):
+                    bind_var = f'client_{i}'
+                    client_conditions.append(f"UPPER(cb.name) LIKE UPPER(:{bind_var}) || '%'")
+                client_condition = ' OR '.join(client_conditions) if client_conditions else '1=0'
+
+            # Build zone condition for multiple zones
+            zone_condition = "1=1"
+            if zones:
+                if isinstance(zones, str):
+                    zones = [zones]
+                zone_conditions = []
+                for i, z in enumerate(zones):
+                    bind_var = f'zone_{i}'
+                    zone_conditions.append(f"UPPER(sr.name) LIKE UPPER(:{bind_var}) || '%'")
+                zone_condition = ' OR '.join(zone_conditions) if zone_conditions else '1=0'
+
+            # Create the years parameter list
+            year_placeholders = ', '.join([f':year_{i}' for i in range(len(year_list))])
+            
+            query = f"""
+                WITH monthly_data AS (
+                    SELECT 
+                        TO_CHAR(xf.MOVEMENTDATE, 'YYYY') AS year,
+                        TO_CHAR(xf.MOVEMENTDATE, 'MM') AS month_num,
+                        TO_CHAR(xf.MOVEMENTDATE, 'Month') AS month_name,
+                        CAST(xf.product AS VARCHAR2(400)) AS produit,
+                        xf.name AS fournisseur,
+                        cb.name AS client,
+                        SUM(xf.TOTALLINE) AS total,
+                        SUM(xf.qtyentered) AS qty,
+                        CASE 
+                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                            ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
+                        END AS marge
+                    FROM 
+                        xx_ca_fournisseur xf
+                        LEFT JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                        LEFT JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                        LEFT JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                        LEFT JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                        LEFT JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                        LEFT JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE 
+                        TO_CHAR(xf.MOVEMENTDATE, 'YYYY') IN ({year_placeholders})
+                        AND xf.AD_Org_ID = 1000000
+                        AND xf.DOCSTATUS != 'RE'
+                        AND ({supplier_condition})
+                        AND ({product_condition})
+                        AND ({client_condition})
+                        AND ({zone_condition})
+                    GROUP BY 
+                        TO_CHAR(xf.MOVEMENTDATE, 'YYYY'),
+                        TO_CHAR(xf.MOVEMENTDATE, 'MM'),
+                        TO_CHAR(xf.MOVEMENTDATE, 'Month'),
+                        xf.product,
+                        xf.name,
+                        cb.name
+                )
+                SELECT * FROM monthly_data
+                ORDER BY year, month_num, produit
+            """
+
+            # Prepare parameters
+            params = {}
+            
+            # Add supplier parameters only if suppliers are specified
+            if fournisseurs:
+                for i, f in enumerate(fournisseurs):
+                    params[f'fournisseur_{i}'] = f
+
+            # Add product parameters
+            if products:
+                for i, p in enumerate(products):
+                    params[f'product_{i}'] = p
+
+            # Add client parameters
+            if clients:
+                for i, c in enumerate(clients):
+                    params[f'client_{i}'] = c
+
+            # Add zone parameters
+            if zones:
+                for i, z in enumerate(zones):
+                    params[f'zone_{i}'] = z
+
+            # Add year parameters
+            for i, year in enumerate(year_list):
+                params[f'year_{i}'] = str(year)
+
+            # Execute the query with the parameters
+            cursor.execute(query, params)
+
+            # Fetch the results
+            rows = cursor.fetchall()
+
+            # Format the results into a nested dictionary structure
+            result = {}
+            
+            # Process each row and organize by year and month
+            for row in rows:
+                year, month_num, month_name, produit, fournisseur, client, total, qty, marge = row
+                month_num = month_num.zfill(2)  # Ensure two digits for month number
+                
+                if year not in result:
+                    result[year] = {}
+                
+                if month_num not in result[year]:
+                    result[year][month_num] = {
+                        'month_name': month_name.strip(),
+                        'details': [],
+                        'total': {'QTY': 0, 'TOTAL': 0, 'MARGE': 0}
+                    }
+                
+                # Add product details with supplier and client info
+                result[year][month_num]['details'].append({
+                    'PRODUIT': produit,
+                    'FOURNISSEUR': fournisseur,
+                    'CLIENT': client if client else '',
+                    'QTY': float(qty) if qty is not None else 0,
+                    'TOTAL': float(total) if total is not None else 0,
+                    'MARGE': float(marge) if marge is not None else 0
+                })
+                
+                # Update monthly totals
+                result[year][month_num]['total']['QTY'] += float(qty) if qty is not None else 0
+                result[year][month_num]['total']['TOTAL'] += float(total) if total is not None else 0
+                # For marge, we need to recalculate it based on aggregated values
+                # This is a simplified approach; you might need to adjust based on your business logic
+
+            # Sort years and months numerically
+            sorted_result = {
+                str(year): dict(sorted(months.items()))
+                for year, months in sorted(result.items())
+            }
+            return sorted_result
+
+    except Exception as e:
+        logger.error(f"Error fetching rotation monthly vente: {e}")
+        return {"error": "An error occurred while fetching rotation monthly vente."}
+
+@app.route('/rot_mont_vente', methods=['GET'])
+def fetch_rotation_monthly_vente():
+    years = request.args.get('years')  # Comma-separated list of years
+    fournisseur_param = request.args.get('fournisseur')  # Can be comma-separated
+    product_param = request.args.get('product')  # Can be comma-separated
+    client_param = request.args.get('client')  # Can be comma-separated
+    zone_param = request.args.get('zone')  # Can be comma-separated
+
+    # If years is not provided, use current year
+    if not years:
+        current_year = datetime.now().year
+        years = str(current_year)
+    
+    # Handle multiple suppliers (comma-separated or single)
+    fournisseurs = None
+    if fournisseur_param:
+        fournisseurs = [f.strip() for f in fournisseur_param.split(',') if f.strip()]
+
+    # Handle multiple products (comma-separated or single)
+    products = None
+    if product_param:
+        products = [p.strip() for p in product_param.split(',') if p.strip()]
+
+    # Handle multiple clients (comma-separated or single)
+    clients = None
+    if client_param:
+        clients = [c.strip() for c in client_param.split(',') if c.strip()]
+
+    # Handle multiple zones (comma-separated or single)
+    zones = None
+    if zone_param:
+        zones = [z.strip() for z in zone_param.split(',') if z.strip()]
+
+    try:
+        # Split the years string into a list and convert to integers
+        year_list = [int(year.strip()) for year in years.split(',')]
+    except ValueError:
+        return jsonify({"error": "Invalid years format. Please provide comma-separated years (e.g., 2022,2023,2024)"}), 400
+
+    # Fetch data from the database with the list of parameters
+    data = rot_mont_vente(year_list, fournisseurs, products, clients, zones)
+
+    # Return the result as a JSON response
+    return jsonify(data)
+
+
+
+@app.route('/rotation_monthly_vente_pdf', methods=['GET'])
+def download_product_vente_pdf():
+    from flask import request, jsonify
+
+    years = request.args.get('years')
+    fournisseur_param = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client_param = request.args.get('client')
+    zone_param = request.args.get('zone')
+
+    if not years:
+        years = str(datetime.now().year)
+
+    try:
+        year_list = [int(y.strip()) for y in years.split(',')]
+    except ValueError:
+        return jsonify({"error": "Invalid years format"}), 400
+
+    # Handle multiple suppliers (comma-separated or single)
+    fournisseurs = None
+    if fournisseur_param:
+        fournisseurs = [f.strip() for f in fournisseur_param.split(',') if f.strip()]
+
+    # Handle multiple clients (comma-separated or single)
+    clients = None
+    if client_param:
+        clients = [c.strip() for c in client_param.split(',') if c.strip()]
+
+    # Handle multiple zones (comma-separated or single)
+    zones = None
+    if zone_param:
+        zones = [z.strip() for z in zone_param.split(',') if z.strip()]
+
+    # Handle multiple products (comma-separated or single)
+    products = None
+    if product:
+        products = [p.strip() for p in product.split(',') if p.strip()]
+
+    data = rot_mont_vente(year_list, fournisseurs, products, clients, zones)
+    if 'error' in data:
+        return jsonify(data), 500
+
+    # Create descriptive filename
+    product_text = product or 'all_products'
+    filename = f"vente_recap_{years.replace(',', '-')}_{product_text[:20]}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=30)
+    elements = []
+
+    styles = getSampleStyleSheet()
+    title_style = styles["Title"]
+    normal_style = styles["Normal"]
+    table_total_style = ParagraphStyle("row", parent=normal_style, alignment=1, textColor=colors.blue, fontName="Helvetica-Bold", fontSize=6)
+
+    table_header_style = ParagraphStyle("header", parent=normal_style, alignment=1, textColor=colors.white, fontSize=8)
+    table_row_style = ParagraphStyle("row", parent=normal_style, alignment=1, fontSize=6)
+
+    elements.append(Paragraph("Récapitulatif des Ventes", title_style))
+    
+    # Create filter display text
+    filter_parts = []
+    if clients:
+        client_display = ", ".join(clients) if len(clients) <= 3 else f"{len(clients)} clients"
+        filter_parts.append(f"Clients: {client_display}")
+    else:
+        filter_parts.append("Clients: Tous")
+    
+    if fournisseurs:
+        supplier_display = ", ".join(fournisseurs) if len(fournisseurs) <= 3 else f"{len(fournisseurs)} fournisseurs"
+        filter_parts.append(f"Fournisseurs: {supplier_display}")
+    
+    if zones:
+        zone_display = ", ".join(zones) if len(zones) <= 3 else f"{len(zones)} zones"
+        filter_parts.append(f"Zones: {zone_display}")
+    
+    filter_parts.append(f"Produit: {product or 'Tous'}")
+    filter_parts.append(f"Années: {years}")
+    
+    elements.append(Paragraph(" | ".join(filter_parts), styles["Heading2"]))
+    elements.append(Spacer(1, 0.25 * inch))
+
+    for year_idx, (year, months_data) in enumerate(data.items()):
+        year_color = YEAR_COLORS[year_idx % len(YEAR_COLORS)]
+        year_style = ParagraphStyle("year", parent=styles["Heading1"], textColor=colors.white, backColor=year_color)
+        elements.append(Paragraph(f"Année: {year}", year_style))
+
+        for part_label, month_range in [("Janvier à Juin", range(1, 7)), ("Juillet à Décembre", range(7, 13))]:
+            # Create a combined product map organized by product and supplier (not client)
+            product_suppliers = {}
+            for m in month_range:
+                m_str = str(m).zfill(2)
+                if m_str in months_data:
+                    for item in months_data[m_str]["details"]:
+                        product_name = item['PRODUIT']
+                        supplier_name = item.get('FOURNISSEUR', 'Unknown Supplier')
+                        
+                        # Create product-supplier key
+                        product_key = f"{product_name} ({supplier_name})"
+                        
+                        if product_key not in product_suppliers:
+                            product_suppliers[product_key] = {}
+                        
+                        # Aggregate data for the same product-supplier-month combination
+                        if m not in product_suppliers[product_key]:
+                            product_suppliers[product_key][m] = {
+                                'QTY': 0,
+                                'TOTAL': 0,
+                                'CONSOMATION': 0
+                            }
+                        
+                        product_suppliers[product_key][m]['QTY'] += item['QTY']
+                        product_suppliers[product_key][m]['TOTAL'] += item['TOTAL']
+                        # We need consomation to calculate margin properly
+                        # For now, we'll calculate margin from the data we have
+                        item_marge = item['MARGE'] if item['MARGE'] is not None else 0
+                        consomation = item['TOTAL'] / (1 + item_marge) if item_marge > 0 else item['TOTAL']
+                        product_suppliers[product_key][m]['CONSOMATION'] += consomation
+
+            if not product_suppliers:
+                continue
+
+            # Create table for this period
+            elements.append(Paragraph(f"{part_label}", styles["Heading3"]))
+            
+            # Header row - single row with month names
+            header_row = [Paragraph("Produit (Fournisseur)", table_header_style)]
+            for m in month_range:
+                m_str = str(m).zfill(2)
+                month_name = months_data.get(m_str, {}).get("month_name", datetime(2025, m, 1).strftime("%b")).capitalize()
+                header_row.append(Paragraph(month_name, table_header_style))
+
+            table_data = [header_row]
+
+            # Product-supplier rows
+            period_total_qty = {m: 0 for m in month_range}
+            period_total_amt = {m: 0 for m in month_range}
+            period_total_consomation = {m: 0 for m in month_range}
+            
+            for product_key in sorted(product_suppliers.keys()):
+                row = [Paragraph(product_key, table_row_style)]
+                for m in month_range:
+                    detail = product_suppliers.get(product_key, {}).get(m)
+                    if detail:
+                        qty = f"{detail['QTY']:,.0f}"
+                        total = f"{detail['TOTAL']:,.2f}"
+                        # Calculate margin percentage
+                        if detail['CONSOMATION'] > 0:
+                            marge_pct = ((detail['TOTAL'] - detail['CONSOMATION']) / detail['CONSOMATION']) * 100
+                            marge = f"{marge_pct:.2f}%"
+                        else:
+                            marge = "0.00%"
+                        
+                        # Create vertical layout like the frontend with better formatting
+                        month_data_parts = [
+                            f"<b>Qty:</b> {qty}",
+                            f"<b>Total:</b> {total}",
+                            f"<b>Marge:</b> {marge}"
+                        ]
+                        month_data = "<br/>".join(month_data_parts)
+                        
+                        period_total_qty[m] += detail['QTY']
+                        period_total_amt[m] += detail['TOTAL']
+                        period_total_consomation[m] += detail['CONSOMATION']
+                    else:
+                        month_data = "<b>Qty:</b> -<br/><b>Total:</b> -<br/><b>Marge:</b> -"
+                    
+                    row.append(Paragraph(month_data, table_row_style))
+                table_data.append(row)
+
+            # Period total row
+            total_row = [Paragraph("TOTAL", table_total_style)]
+            for m in month_range:
+                qty = f"{period_total_qty[m]:,.0f}" if period_total_qty[m] > 0 else "0"
+                amt = f"{period_total_amt[m]:,.2f}" if period_total_amt[m] > 0 else "0"
+                
+                if period_total_consomation[m] > 0:
+                    total_marge_pct = ((period_total_amt[m] - period_total_consomation[m]) / period_total_consomation[m]) * 100
+                    marge = f"{total_marge_pct:.2f}%"
+                else:
+                    marge = "0.00%"
+                
+                # Create vertical layout for totals too with better formatting
+                total_data_parts = [
+                    f"<b>Qty:</b> {qty}",
+                    f"<b>Total:</b> {amt}",
+                    f"<b>Marge:</b> {marge}"
+                ]
+                total_data = "<br/>".join(total_data_parts)
+                total_row.append(Paragraph(total_data, table_total_style))
+            table_data.append(total_row)
+
+            # Table construction - single column per month now
+            col_widths = [2.0 * inch] + [1.0 * inch] * len(month_range)
+            table = ReportLabTable(table_data, colWidths=col_widths, repeatRows=1)
+
+            # Simpler style without span since we have single column per month
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), year_color),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Top alignment for better readability
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 0), (-1, 0), 8),  # Header font size
+                ('FONTSIZE', (0, 1), (-1, -2), 7),  # Data rows font size
+                ('FONTSIZE', (0, -1), (-1, -1), 8),  # Total row font size
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.whitesmoke, colors.white]),
+                ('BACKGROUND', (0, -1), (-1, -1), colors.lightgrey),  # Total row background
+                ('TEXTCOLOR', (0, -1), (-1, -1), colors.black),
+                ('LEFTPADDING', (0, 0), (-1, -1), 4),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+                ('TOPPADDING', (0, 1), (-1, -1), 6),    # More padding for data rows
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+                ('LEADING', (0, 1), (-1, -1), 12),       # Line spacing
+            ]))
+
+            elements.append(table)
+            elements.append(Spacer(1, 0.2 * inch))
+
+    doc.build(elements)
+    buffer.seek(0)
+    response = make_response(buffer.getvalue())
+    response.headers["Content-Type"] = "application/pdf"
+    response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+
+    return response
+
+
+
+
+
+@app.route('/listfournisseur_etat')
+def list_fournisseur_etat():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT cb.name, cb.C_BPartner_ID
+                FROM C_BPartner cb
+                WHERE cb.AD_Client_ID = 1000000
+                  AND cb.ISVENDOR = 'Y'
+                  AND cb.ISACTIVE = 'Y'
+                ORDER BY cb.name
+            """
+            cursor.execute(query)
+            # Return both name and ID as a list of dictionaries
+            result = [{"name": row[0], "id": row[1]} for row in cursor.fetchall()]
+            return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error fetching fournisseurs: {e}")
+        return jsonify({"error": "Could not fetch fournisseur list"}), 500
+
+def fetch_etat_f(date1, date2, c_bpartner_id=None, ispaid=None):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT ispaid, ad_org_id, c_bpartner_id, dateinvoiced, nbl, nfact, documentno, grandtotal, verse_fact, 
+                       verse_cheque, cheque, name, dateversement, nb, region,  
+                       SUM(grandtotal/nb) OVER(PARTITION BY c_bpartner_id) AS bp_chiffre,
+                       SUM(verse_fact/nb) OVER(PARTITION BY c_bpartner_id) AS verse_tot,
+                       orgname, phone, phone2, fax,
+                       address1, address2, address3, address4, city, postal
+                FROM 
+                (SELECT cs.ispaid, cs.ad_org_id, cs.c_bpartner_id, cs.dateinvoiced, cs.nbl, cs.nfact, cs.documentno AS documentno, 
+                        cs.grandtotal, cs.verse_fact, 
+                        cs.verse_cheque, cs.cheque, cs.name, cs.dateversement, cs.region,  
+                        COUNT(cs.c_invoice_id) OVER(PARTITION BY cs.c_invoice_id) AS nb,
+                        org.name as orgname, oi.phone, oi.phone2, oi.fax,
+                        loc.address1, loc.address2, loc.address3, loc.address4, loc.city, loc.postal
+                 FROM xx_vendor_status cs  
+                 INNER JOIN ad_org org ON (cs.ad_org_id = org.ad_org_id)
+                 INNER JOIN ad_orginfo oi ON (org.ad_org_id = oi.ad_org_id)
+                 INNER JOIN c_location loc ON (oi.c_location_id = loc.c_location_id)
+                 WHERE cs.AD_Client_ID = 1000000
+                 AND cs.AD_Org_ID = 1000000
+                 AND (:c_bpartner_id IS NULL OR cs.C_BPartner_ID = :c_bpartner_id)
+                 AND cs.dateinvoiced BETWEEN TO_DATE(:date1, 'DD/MM/YYYY') AND TO_DATE(:date2, 'DD/MM/YYYY')
+                 AND (:ispaid IS NULL OR :ispaid = '' OR cs.ispaid = :ispaid)
+                 ORDER BY cs.dateinvoiced, cs.nbl, cs.nfact)
+                ORDER BY dateinvoiced, nbl, nfact
+            """
+            
+            params = {
+                'date1': date1,
+                'date2': date2,
+                'c_bpartner_id': c_bpartner_id,
+                'ispaid': ispaid
+            }
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            
+            data = [dict(zip(columns, row)) for row in rows]
+            return data
+            
+    except Exception as e:
+        logger.error(f"Error fetching etat_f data: {e}")
+        return {"error": "An error occurred while fetching vendor status data."}
+
+@app.route('/etat_f', methods=['GET'])
+def etat_f():
+    try:
+        date1 = request.args.get('date1')
+        date2 = request.args.get('date2')
+        c_bpartner_id = request.args.get('c_bpartner_id')
+        ispaid = request.args.get('ispaid')
+        
+        # Validate required parameters
+        if not date1 or not date2:
+            return jsonify({"error": "date1 and date2 are required parameters"}), 400
+        
+        # Convert c_bpartner_id to int if provided
+        if c_bpartner_id:
+            try:
+                c_bpartner_id = int(c_bpartner_id)
+            except ValueError:
+                return jsonify({"error": "c_bpartner_id must be a valid integer"}), 400
+        
+        data = fetch_etat_f(date1, date2, c_bpartner_id, ispaid)
+        
+        if isinstance(data, dict) and "error" in data:
+            return jsonify(data), 500
+            
+        return jsonify(data)
+        
+    except Exception as e:
+        logger.error(f"Error in etat_f route: {e}")
+        return jsonify({"error": "An error occurred while processing the request"}), 500
+
+
+@app.route('/fetch_etat_fournisseur_cumule')
+def fetch_etat_fournisseur_cumule():
+    try:
+        # Get parameters from request
+        c_bpartner_id = request.args.get('c_bpartner_id', type=int)
+        start_date = request.args.get('start_date', '01-01-2025')
+        end_date = request.args.get('end_date', '01-06-2025')
+        
+        # Validate required parameters
+        if not c_bpartner_id:
+            return jsonify({"error": "c_bpartner_id parameter is required"}), 400
+        
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            
+            # SQL query based on your provided SQL with character set fixes
+            query = """
+                SELECT inv.DATEINVOICED AS DateTrx ,
+                inv.DOCUMENTNO AS DOC_ID,
+                inv.POREFERENCE as N_BL,
+                doc.PrintName as DOC_TYPE,
+                CASE
+                  WHEN inv.DESCRIPTION IS NULL
+                  THEN
+                    (SELECT pro.NAME
+                    FROM M_PRODUCT pro,
+                      C_INVOICELINE il
+                    WHERE inv.C_INVOICE_ID=il.C_INVOICE_ID
+                    AND il.M_PRODUCT_ID   =pro.M_PRODUCT_ID
+                    AND rownum=1
+                    )
+                  ELSE inv.DESCRIPTION
+                END AS DESCRIPTION,
+                CASE
+                  WHEN (doc.docbasetype IN ('APC') OR doc.C_DocType_ID =1001510)
+                  THEN inv.GRANDTOTAL   *-1
+                  ELSE inv.GRANDTOTAL
+                END AS "MONTANT"
+              FROM C_INVOICE inv,
+                C_DOCTYPE doc
+              WHERE inv.C_DOCTYPE_ID =doc.C_DOCTYPE_ID
+              AND inv.DOCSTATUS     IN ('CO','CL')
+              AND doc.docbasetype   IN ('API','APC')
+              AND inv.C_BPARTNER_ID  = :c_bpartner_id
+              AND inv.AD_Client_ID = 1000000
+              AND inv.AD_Org_ID = 1000000
+              AND (inv.DATEINVOICED >= TO_DATE(:start_date, 'DD-MM-YYYY')
+              AND inv.DATEINVOICED  <= TO_DATE(:end_date, 'DD-MM-YYYY') )
+              UNION
+              SELECT pa.DATETRX AS DateTrx,
+                pa.DOCUMENTNO,
+                NULL as POREFERENCE,
+                N'Discount' AS NAME,
+                N''         AS DESCRIPTION,
+                pa.discountamt * -1
+              FROM C_PAYMENT pa ,
+                C_DOCTYPE doc
+              WHERE pa.C_DOCTYPE_ID=doc.C_DOCTYPE_ID
+              AND pa.DOCSTATUS    IN ('CO','CL')
+              AND doc.docbasetype IN ('APP')
+              AND pa.C_BPARTNER_ID = :c_bpartner_id
+              AND pa.AD_Client_ID = 1000000
+              AND pa.AD_Org_ID = 1000000
+              AND (pa.DATETRX     >= TO_DATE(:start_date, 'DD-MM-YYYY')
+              AND pa.DATETRX      <= TO_DATE(:end_date, 'DD-MM-YYYY') )
+              AND pa.discountamt   > 0
+              UNION
+              SELECT pa.DATETRX AS DateTrx,
+                pa.DOCUMENTNO,
+                NULL as POREFERENCE,
+                doc.Printname as NAME,
+                CASE
+                  WHEN pa.DESCRIPTION IS NOT NULL
+                  THEN pa.DESCRIPTION
+                  WHEN pa.C_INVOICE_ID IS NOT NULL
+                  THEN
+                    (SELECT inv.DOCUMENTNO
+                    FROM C_INVOICE inv
+                    WHERE inv.C_INVOICE_ID=pa.C_INVOICE_ID
+                    AND rownum=1
+                    )
+                  ELSE N''
+                END AS DESCRIPTION,
+                (pa.PAYAMT * -1)
+              FROM C_PAYMENT pa ,
+                C_DOCTYPE doc
+              WHERE pa.C_DOCTYPE_ID=doc.C_DOCTYPE_ID
+              AND pa.DOCSTATUS    IN ('CO','CL')
+              AND doc.docbasetype IN ('APP')
+              AND pa.C_BPARTNER_ID = :c_bpartner_id
+              AND pa.AD_Client_ID = 1000000
+              AND pa.AD_Org_ID = 1000000
+              AND (pa.DATETRX     >= TO_DATE(:start_date, 'DD-MM-YYYY')
+              AND pa.DATETRX      <= TO_DATE(:end_date, 'DD-MM-YYYY') )
+
+              UNION
+              select DATETRX as DateTrx , 
+              DOCUMENTNO as DOCUMENTNO  ,
+              NULL as POREFERENCE,
+              doc.PrintName  as  name , translate ('DIFFÉRENCE_' using nchar_cs) as DESCRIPTION ,  COALESCE( (select  sum(al.writeoffamt* -1) from C_ALLOCATIONLINE al where (al.C_PAYMENT_ID = par.C_PAYMENT_ID and par.C_BPartner_ID = :c_bpartner_id) ),0) 
+                            
+                            from C_PAYMENT par , c_doctype doc
+                            where doc.docbasetype IN ('APP')
+                            and par.DOCSTATUS IN ('CO','CL')
+                            and  par.C_BPARTNER_ID = :c_bpartner_id
+                            and par.AD_Client_ID = 1000000
+                            and par.AD_Org_ID = 1000000
+                            AND par.C_DOCTYPE_ID=doc.C_DOCTYPE_ID
+                            AND (par.DATETRX     >= TO_DATE(:start_date, 'DD-MM-YYYY')
+                    AND par.DATETRX      <= TO_DATE(:end_date, 'DD-MM-YYYY'))
+                            and COALESCE( (select  sum(al.writeoffamt* -1) from C_ALLOCATIONLINE al where (al.C_PAYMENT_ID = par.C_PAYMENT_ID and par.C_BPartner_ID = :c_bpartner_id) ),0) <> 0              
+                            
+
+              UNION
+              SELECT c.StatementDATE AS DateTrx,
+                c.Name As DOCUMENTNO,
+                i.POREFERENCE as POREFERENCE,
+                N'Facture sur Caisse' as NAME,
+              CASE
+                  WHEN cl.DESCRIPTION IS NOT NULL
+                  THEN cl.DESCRIPTION
+                  WHEN cl.C_INVOICE_ID IS NOT NULL
+                  THEN
+                    i.DOCUMENTNO
+                  ELSE N''
+                END  AS DESCRIPTION,
+                cl.Amount * -1
+              FROM C_CashLine cl
+              INNER JOIN  C_Cash c ON (cl.C_Cash_ID=c.C_Cash_ID)
+              INNER JOIN C_Invoice i ON (cl.C_Invoice_ID=i.C_Invoice_ID)
+              WHERE 
+              c.DOCSTATUS    IN ('CO','CL')
+              AND i.ispaid='Y'
+              AND cl.isactive='Y'
+              AND i.C_BPARTNER_ID = :c_bpartner_id
+              AND i.AD_Client_ID = 1000000
+              AND i.AD_Org_ID = 1000000
+              AND (c.StatementDATE     >= TO_DATE(:start_date, 'DD-MM-YYYY')
+              AND c.StatementDATE      <= TO_DATE(:end_date, 'DD-MM-YYYY') )
+              ORDER BY DateTrx
+            """
+            
+            # Execute query with parameters
+            cursor.execute(query, {
+                'c_bpartner_id': c_bpartner_id,
+                'start_date': start_date,
+                'end_date': end_date
+            })
+            
+            # Fetch results and convert to list of dictionaries
+            columns = [desc[0] for desc in cursor.description]
+            result = []
+            for row in cursor.fetchall():
+                row_dict = {}
+                for i, value in enumerate(row):
+                    # Convert Oracle date objects to string format
+                    if hasattr(value, 'strftime'):
+                        row_dict[columns[i]] = value.strftime('%Y-%m-%d')
+                    elif value is None:
+                        row_dict[columns[i]] = None
+                    else:
+                        row_dict[columns[i]] = value
+                result.append(row_dict)
+            
+            return jsonify(result)
+            
+    except Exception as e:
+        logger.error(f"Error fetching supplier cumulative statement: {e}")
+        return jsonify({"error": f"Could not fetch supplier cumulative statement: {str(e)}"}), 500
+
+
+@app.route('/sold_initial_etat_cum')
+def sold_initial_etat_cum():
+    try:
+        # Get parameters from request
+        c_bpartner_id = request.args.get('c_bpartner_id', type=int)
+        start_date = request.args.get('start_date', '01-01-2025')
+        
+        # Validate required parameters
+        if not c_bpartner_id:
+            return jsonify({"error": "c_bpartner_id parameter is required"}), 400
+        
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            
+            # SQL query to calculate opening balance
+            query = """
+                SELECT (
+                    (SELECT COALESCE(SUM(iar.GRANDTOTAL), 0) 
+                     FROM C_INVOICE_V iar
+                     WHERE iar.DOCSTATUS IN ('CO','CL') 
+                     AND iar.ISSOTRX = 'N'
+                     AND iar.C_BPARTNER_ID = :c_bpartner_id
+                     AND iar.DATEINVOICED < TO_DATE(:start_date, 'DD-MM-YYYY'))
+                     
+                    -
+                    
+                    (SELECT COALESCE(SUM(par.PAYAMT) + SUM(par.discountamt), 0)
+                     FROM C_PAYMENT par
+                     WHERE par.DOCSTATUS IN ('CO','CL') 
+                     AND par.ISRECEIPT = 'N'
+                     AND par.C_BPARTNER_ID = :c_bpartner_id
+                     AND par.DATETRX < TO_DATE(:start_date, 'DD-MM-YYYY'))
+                     
+                    -
+                    
+                    (SELECT COALESCE(SUM(cl.Amount), 0)
+                     FROM C_CashLine cl
+                     INNER JOIN C_Cash c ON (cl.C_Cash_ID = c.C_Cash_ID)
+                     INNER JOIN C_Invoice i ON (cl.C_Invoice_ID = i.C_Invoice_ID)
+                     WHERE c.DOCSTATUS IN ('CO','CL')
+                     AND i.ispaid = 'Y'
+                     AND cl.isactive = 'Y'
+                     AND i.C_BPARTNER_ID = :c_bpartner_id
+                     AND c.StatementDATE < TO_DATE(:start_date, 'DD-MM-YYYY'))
+                ) AS OpeningBal 
+                FROM DUAL
+            """
+            
+            # Execute query with parameters
+            cursor.execute(query, {
+                'c_bpartner_id': c_bpartner_id,
+                'start_date': start_date
+            })
+            
+            # Fetch result
+            result = cursor.fetchone()
+            opening_balance = result[0] if result else 0
+            
+            return jsonify({
+                "c_bpartner_id": c_bpartner_id,
+                "start_date": start_date,
+                "opening_balance": float(opening_balance) if opening_balance else 0.0
+            })
+            
+    except Exception as e:
+        logger.error(f"Error fetching opening balance: {e}")
+        return jsonify({"error": f"Could not fetch opening balance: {str(e)}"}), 500
 
 
 

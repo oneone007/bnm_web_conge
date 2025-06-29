@@ -201,7 +201,10 @@ def get_localdb_connection():
             host="localhost",
             user="root",
             password="",
-            database="bnm"
+            database="bnm",
+            charset="utf8",
+            use_unicode=True,
+            autocommit=False
         )
     except mysql.connector.Error as err:
         logger.error(f"Error connecting to MySQL database: {err}")
@@ -749,6 +752,9 @@ def calculate_total_profit():
         if conn:
             conn.close()
 
+
+
+
 @app.route('/total-profit', methods=['GET'])
 def total_profit():
     try:
@@ -830,10 +836,63 @@ def run_scheduler():
         except Exception as e:
             logger.error(f"Error in scheduled job: {e}")
 
+    def monthly_recouvrement_job():
+        """Monthly job to fetch credit client data and store in recouvrement table"""
+        try:
+            # Fetch credit client data
+            credit_data = fetch_credit_client()
+            if 'error' in credit_data:
+                logger.error(f"Monthly recouvrement job failed: {credit_data['error']}")
+                return
+            
+            credit_value = float(credit_data.get('credit_client', 0))
+            
+            # Connect to MySQL database
+            conn = get_localdb_connection()
+            if not conn:
+                logger.error("Failed to connect to MySQL database for recouvrement")
+                return
+            
+            cursor = conn.cursor()
+            
+            try:
+                # Get current date and time as string
+                current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                
+                # Insert new row in recouvrement table with DOUBLE value and VARCHAR datetime
+                cursor.execute("""
+                    INSERT INTO recouvrement (value, date) 
+                    VALUES (%s, %s)
+                """, (credit_value, current_datetime))
+                
+                conn.commit()
+                logger.info(f"Monthly recouvrement data saved - Value: {credit_value}, Date: {current_datetime}")
+                
+            except Exception as e:
+                conn.rollback()
+                logger.error(f"Error inserting recouvrement data: {e}")
+                logger.error(f"Attempted to insert - Value: {credit_value}, Date: {current_datetime}")
+                
+            finally:
+                cursor.close()
+                conn.close()
+                
+        except Exception as e:
+            logger.error(f"Error in monthly recouvrement job: {e}")
+
     # Schedule jobs
     schedule.every().day.at("08:00").do(job)
     schedule.every().day.at("12:00").do(job)
     schedule.every().day.at("17:00").do(job)
+    
+    # Schedule daily check for monthly recouvrement job at 12:00
+    def check_monthly_recouvrement():
+        """Check if today is the 1st of the month and run recouvrement job"""
+        from datetime import datetime
+        if datetime.now().day == 1:
+            monthly_recouvrement_job()
+    
+    schedule.every().day.at("12:00").do(check_monthly_recouvrement)
     
     while True:
         schedule.run_pending()
@@ -906,7 +965,7 @@ def get_kpi_trends_data():
             except ValueError:
                 return jsonify({"error": "Invalid days parameter"})
                 
-        # Add ordering by date and time
+        # Add ordering to query results
         query += """
         ORDER BY time ASC
         """
@@ -914,6 +973,7 @@ def get_kpi_trends_data():
         cursor.execute(query, params)
         rows = cursor.fetchall()
         
+        # Prepare data for response
         dates = []
         values = []
         
@@ -976,3 +1036,4 @@ if __name__ == "__main__":
     start_scheduler()
     # Run the Flask app
     app.run(host='0.0.0.0', port=5000)
+

@@ -694,3 +694,178 @@ SELECT C_SalesRegion_id from C_SalesRegion;
 SELECT s.sid, s.serial#, s.username
 FROM v$session s
 WHERE s.blocking_session IS NOT NULL;
+
+
+
+
+SELECT 
+                    ROUND(SUM(SoldeFact + SoldeBL), 2) AS credit_client
+                FROM (
+                    SELECT 
+                        bp.c_bpartner_id, 
+                        (
+                            SELECT COALESCE(SUM(invoiceOpen(inv.C_Invoice_ID, 0)), 0) 
+                            FROM C_Invoice inv 
+                            WHERE bp.c_bpartner_id = inv.c_bpartner_id 
+                            AND paymentTermDueDays(inv.C_PAYMENTTERM_ID, inv.DATEINVOICED, TO_DATE('01/01/3000', 'DD/MM/YYYY')) >= 0
+                            AND inv.docstatus IN ('CO', 'CL') 
+                            AND inv.AD_ORGTRX_ID = inv.ad_org_id 
+                            AND inv.ad_client_id = 1000000
+                            AND inv.C_PaymentTerm_ID != 1000000
+                        ) AS SoldeFact,
+                        (
+                            SELECT COALESCE(SUM(invoiceOpen(inv.C_Invoice_ID, 0)), 0) 
+                            FROM C_Invoice inv 
+                            WHERE bp.c_bpartner_id = inv.c_bpartner_id 
+                            AND paymentTermDueDays(inv.C_PAYMENTTERM_ID, inv.DATEINVOICED, TO_DATE('01/01/3000', 'DD/MM/YYYY')) >= 0
+                            AND inv.docstatus IN ('CO', 'CL') 
+                            AND inv.AD_ORGTRX_ID <> inv.ad_org_id 
+                            AND inv.ad_client_id = 1000000
+                            AND inv.C_PaymentTerm_ID != 1000000
+                        ) AS SoldeBL
+                    FROM 
+                        c_bpartner bp 
+                        INNER JOIN C_BPartner_Location bpl ON bp.C_BPartner_id = bpl.C_BPartner_id
+                        INNER JOIN ad_user u ON bp.salesrep_id = u.ad_user_id
+                        LEFT OUTER JOIN AD_User u2 ON u2.AD_User_ID = bp.XX_TempSalesRep_ID
+                        LEFT OUTER JOIN C_SalesRegion sr ON sr.C_SalesRegion_id = bpl.C_SalesRegion_id
+                        LEFT OUTER JOIN C_City sr2 ON sr2.C_City_id = bpl.C_City_id
+                    WHERE 
+                        bp.iscustomer = 'Y' 
+                        AND bp.C_BP_Group_ID IN (1000003, 1000926, 1001330)
+                        AND bp.isactive = 'Y' 
+                        AND bp.NAME not like '%MBN%'
+
+                        AND sr.isactive = 'Y'
+                        AND bp.C_PaymentTerm_ID != 1000000
+                        AND bpl.c_salesregion_id IN (
+                            101, 102, 1000032, 1001776, 1001777, 1001778, 1001779, 1001780, 1001781,
+                            1001782, 1001783, 1001784, 1001785, 1001786, 1001787, 1001788, 1001789,
+                            1001790, 1001791, 1001792, 1001793, 1001794, 1002076, 1002077, 1002078,
+                            1002079, 1002080, 1002176, 1002177, 1002178, 1002179, 1002180, 1002181,
+                            1002283, 1002285, 1002286, 1002287, 1002288
+                        )
+                ) subquery;
+                
+
+                SELECT inv.DATEINVOICED AS DateTrx,
+                  inv.DOCUMENTNO,
+                  inv.POREFERENCE as POREFERENCE,
+                  doc.PrintName as name,
+                  CASE
+                    WHEN inv.DESCRIPTION IS NULL
+                    THEN
+                      (SELECT pro.NAME
+                      FROM M_PRODUCT pro,
+                        C_INVOICELINE il
+                      WHERE inv.C_INVOICE_ID=il.C_INVOICE_ID
+                      AND il.M_PRODUCT_ID   =pro.M_PRODUCT_ID
+                      AND rownum=1
+                      )
+                    ELSE inv.DESCRIPTION
+                  END AS DESCRIPTION,
+                  CASE
+                    WHEN (doc.docbasetype IN ('APC') OR doc.C_DocType_ID =1001510)
+                    THEN inv.GRANDTOTAL   *-1
+                    ELSE inv.GRANDTOTAL
+                  END AS GRANDTOTAL
+                FROM C_INVOICE inv,
+                  C_DOCTYPE doc
+                WHERE inv.C_DOCTYPE_ID =doc.C_DOCTYPE_ID
+                AND inv.DOCSTATUS     IN ('CO','CL')
+                AND doc.docbasetype   IN ('API','APC')
+                AND inv.AD_Client_ID = 1000000
+                AND inv.AD_Org_ID = 1000000
+                AND inv.C_BPARTNER_ID  = :fournisseur_id
+                AND (inv.DATEINVOICED >= TO_DATE(:date1, 'YYYY-MM-DD')
+                AND inv.DATEINVOICED  <= TO_DATE(:date2, 'YYYY-MM-DD'))
+                UNION
+                SELECT pa.DATETRX AS DateTrx,
+                  pa.DOCUMENTNO,
+                  NULL as POREFERENCE,
+                  'Discount' AS NAME,
+                  '' AS DESCRIPTION,
+                  pa.discountamt * -1 AS GRANDTOTAL
+                FROM C_PAYMENT pa,
+                  C_DOCTYPE doc
+                WHERE pa.C_DOCTYPE_ID=doc.C_DOCTYPE_ID
+                AND pa.DOCSTATUS    IN ('CO','CL')
+                AND doc.docbasetype IN ('APP')
+                AND pa.AD_Client_ID = 1000000
+                AND pa.AD_Org_ID = 1000000
+                AND pa.C_BPARTNER_ID = :fournisseur_id
+                AND (pa.DATETRX     >= TO_DATE(:date1, 'YYYY-MM-DD')
+                AND pa.DATETRX      <= TO_DATE(:date2, 'YYYY-MM-DD'))
+                AND pa.discountamt   > 0
+                UNION
+                SELECT pa.DATETRX AS DateTrx,
+                  pa.DOCUMENTNO,
+                  NULL as POREFERENCE,
+                  doc.Printname as NAME,
+                  CASE
+                    WHEN pa.DESCRIPTION IS NOT NULL
+                    THEN pa.DESCRIPTION
+                    WHEN pa.C_INVOICE_ID IS NOT NULL
+                    THEN
+                      (SELECT inv.DOCUMENTNO
+                      FROM C_INVOICE inv
+                      WHERE inv.C_INVOICE_ID=pa.C_INVOICE_ID
+                       AND rownum=1
+                      )
+                    ELSE ''
+                  END AS DESCRIPTION,
+                  (pa.PAYAMT * -1) AS GRANDTOTAL
+                FROM C_PAYMENT pa,
+                  C_DOCTYPE doc
+                WHERE pa.C_DOCTYPE_ID=doc.C_DOCTYPE_ID
+                AND pa.DOCSTATUS    IN ('CO','CL')
+                AND doc.docbasetype IN ('APP')
+                AND pa.AD_Client_ID = 1000000
+                AND pa.AD_Org_ID = 1000000
+                AND pa.C_BPARTNER_ID = :fournisseur_id
+                AND (pa.DATETRX     >= TO_DATE(:date1, 'YYYY-MM-DD')
+                AND pa.DATETRX      <= TO_DATE(:date2, 'YYYY-MM-DD'))
+                UNION
+                SELECT DATETRX as DateTrx,
+                DOCUMENTNO as DOCUMENTNO,
+                NULL as POREFERENCE,
+                 doc.PrintName as name,
+                 'DIFFÉRENCE' as DESCRIPTION,
+                 COALESCE((select sum(al.writeoffamt* -1) from C_ALLOCATIONLINE al where (al.C_PAYMENT_ID = par.C_PAYMENT_ID and par.C_BPARTNER_ID = :fournisseur_id)), 0) AS GRANDTOTAL
+                FROM C_PAYMENT par, c_doctype doc
+                WHERE doc.docbasetype IN ('APP')
+                AND par.DOCSTATUS IN ('CO','CL')
+                AND par.AD_Client_ID = 1000000
+                AND par.AD_Org_ID = 1000000
+                AND par.C_BPARTNER_ID = :fournisseur_id
+                AND par.C_DOCTYPE_ID=doc.C_DOCTYPE_ID
+                AND (par.DATETRX >= TO_DATE(:date1, 'YYYY-MM-DD')
+                AND par.DATETRX <= TO_DATE(:date2, 'YYYY-MM-DD'))
+                AND COALESCE((select sum(al.writeoffamt* -1) from C_ALLOCATIONLINE al where (al.C_PAYMENT_ID = par.C_PAYMENT_ID and par.C_BPARTNER_ID = :fournisseur_id)), 0) <> 0
+                UNION
+                SELECT c.StatementDATE AS DateTrx,
+                  c.Name As DOCUMENTNO,
+                  i.POREFERENCE as POREFERENCE,
+                  'Facture sur Caisse' as NAME,
+                 CASE
+                    WHEN cl.DESCRIPTION IS NOT NULL
+                    THEN cl.DESCRIPTION
+                    WHEN cl.C_INVOICE_ID IS NOT NULL
+                    THEN
+                      i.DOCUMENTNO
+                    ELSE ''
+                  END AS DESCRIPTION,
+                  cl.Amount * -1 AS GRANDTOTAL
+                FROM C_CashLine cl
+                INNER JOIN C_Cash c ON (cl.C_Cash_ID=c.C_Cash_ID)
+                INNER JOIN C_Invoice i ON (cl.C_Invoice_ID=i.C_Invoice_ID)
+                WHERE 
+                 c.DOCSTATUS IN ('CO','CL')
+                 AND i.ispaid='Y'
+                AND cl.isactive='Y'
+                AND c.AD_Client_ID = 1000000
+                AND c.AD_Org_ID = 1000000
+                AND i.C_BPARTNER_ID = :fournisseur_id
+                AND (c.StatementDATE >= TO_DATE(:date1, 'YYYY-MM-DD')
+                AND c.StatementDATE <= TO_DATE(:date2, 'YYYY-MM-DD'))
+                ORDER BY DateTrx;

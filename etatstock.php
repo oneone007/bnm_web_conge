@@ -27,8 +27,11 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
     <title>Etat Stock</title>
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="etatstck.css">
+    <link rel="stylesheet" href="etatstock.css">
     <script src="theme.js" defer></script>
+    <style>
+        
+    </style>
 </head>
 <body class="flex h-screen bg-gray-100 dark:bg-gray-900">
 
@@ -40,7 +43,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
     
 
     <!-- Main Content -->
-    <div id="content" class="content flex-grow p-4">
+    <div id="content" class="content flex-grow p-4 pb-16">
         <div class="flex justify-center items-center mb-6">
         <h1 class="text-5xl font-bold dark:text-white text-center  ">
         Etat de Stock 
@@ -120,9 +123,8 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
 
 <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
     <div class="overflow-x-auto">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">ETAT DE STOCK </h2>
-
-
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">ETAT DE STOCK</h2>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4 text-center">Click on any row to view detailed product information</p>
 
         <table class="min-w-full border-collapse text-sm text-left dark:text-white">
     <thead>
@@ -173,26 +175,169 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
 </div>
 
 
+<!-- Product Details Table (Initially Hidden) -->
+<div id="productDetailsContainer" class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 mt-6 mb-16 pb-16" style="display: none;">
+    <div class="overflow-x-auto">
+        <div class="flex justify-between items-center mb-4 p-4">
+            <h2 id="productDetailsTitle" class="text-lg font-semibold text-gray-900 dark:text-white">Product Details</h2>
+            <div class="flex gap-2">
+                <button id="downloadProductDetailsExcel" class="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600" style="display: none;">
+                    Download Excel
+                </button>
+                <button id="closeProductDetails" class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600" onclick="closeProductDetails()">
+                    Close
+                </button>
+            </div>
+        </div>
+        
+        <style>
+        /* Product Details Table Only */
+        .product-details-table th {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-align: center;
+            padding: 4px 8px;
+        }
+        .product-details-table th[data-column="MARGE"],
+        .product-details-table th[data-column="QTY"],
+        .product-details-table th[data-column="QTY_DISPO"],
+        .product-details-table th[data-column="P_ACHAT"],
+        .product-details-table th[data-column="REM_ACHAT"],
+        .product-details-table th[data-column="BON_ACHAT"],
+        .product-details-table th[data-column="P_REVIENT"],
+        .product-details-table th[data-column="P_VENTE"],
+        .product-details-table th[data-column="REM_VENTE"],
+        .product-details-table th[data-column="BON_VENTE"],
+        .product-details-table th[data-column="REMISE_AUTO"],
+        .product-details-table th[data-column="BONUS_AUTO"],
+        .product-details-table th[data-column="PPA"] {
+            width: 60px;
+            white-space: nowrap;
+        }
+        .product-details-table th[data-column="LOCATION"],
+        .product-details-table th[data-column="LOT"],
+        .product-details-table th[data-column="GUARANTEEDATE"] {
+            width: 80px;
+        }
+        .product-details-table th[data-column="FOURNISSEUR"],
+        .product-details-table th[data-column="PRODUCT"] {
+            width: 120px;
+        }
+        </style>
+        <table class="product-details-table min-w-full border-collapse text-sm text-left dark:text-white">
+            <thead>
+                <tr class="table-header dark:bg-gray-700">
+                    <th data-column="FOURNISSEUR" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
+                        Fournisseur
+                        <div class="resizer"></div>
+                    </th>
+                    <th data-column="PRODUCT" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
+                        Product
+                        <div class="resizer"></div>
+                    </th>
+                    <th data-column="MARGE" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
+                        Marge
+                        <div class="resizer"></div>
+                    </th>
+                    <th data-column="QTY" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
+                        Qty
+                        <div class="resizer"></div>
+                    </th>
+                    <th data-column="QTY_DISPO" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
+                        Qty_Dispo
+                        <div class="resizer"></div>
+                    </th>
+                    <th data-column="P_ACHAT" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
+                        P_Achat
+                        <div class="resizer"></div>
+                    </th>
+                    <th data-column="REM_ACHAT" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
+                        Rem_Achat
+                        <div class="resizer"></div>
+                    </th>
+                    <th data-column="BON_ACHAT" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
+                        Bon_Achat
+                        <div class="resizer"></div>
+                    </th>
+                    <th data-column="P_REVIENT" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
+                        P_Revient
+                        <div class="resizer"></div>
+                    </th>
+                    <th data-column="P_VENTE" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
+                        P_Vente
+                        <div class="resizer"></div>
+                    </th>
+                    <th data-column="REM_VENTE" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
+                        Rem_Vente
+                        <div class="resizer"></div>
+                    </th>
+                    <th data-column="BON_VENTE" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
+                        Bon_Vente
+                        <div class="resizer"></div>
+                    </th>
+                    <th data-column="REMISE_AUTO" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
+                        Remise_Auto
+                        <div class="resizer"></div>
+                    </th>
+                    <th data-column="BONUS_AUTO" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
+                        Bonus_Auto
+                        <div class="resizer"></div>
+                    </th>
+                    <th data-column="PPA" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
+                        PPA
+                        <div class="resizer"></div>
+                    </th>
+                    <th data-column="LOCATION" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
+                        Location
+                        <div class="resizer"></div>
+                    </th>
+                    <th data-column="LOT" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
+                        Lot
+                        <div class="resizer"></div>
+                    </th>
+                    <th data-column="GUARANTEEDATE" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
+                        Guarantee Date
+                        <div class="resizer"></div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="product-details-table" class="dark:bg-gray-800">
+                <!-- Dynamic Product Details Rows -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
 <script>
-      document.querySelectorAll("th.resizable").forEach(function (th) {
-        const resizer = th.querySelector(".resizer");
+    // Initialize resizer functionality for all resizable table headers
+    function initializeResizers() {
+        document.querySelectorAll("th.resizable").forEach(function (th) {
+            const resizer = th.querySelector(".resizer");
+            
+            if (resizer && !resizer.hasListener) {
+                resizer.hasListener = true; // Prevent duplicate listeners
+                resizer.addEventListener("mousedown", function initResize(e) {
+                    e.preventDefault();
+                    window.addEventListener("mousemove", resizeColumn);
+                    window.addEventListener("mouseup", stopResize);
 
-        resizer.addEventListener("mousedown", function initResize(e) {
-            e.preventDefault();
-            window.addEventListener("mousemove", resizeColumn);
-            window.addEventListener("mouseup", stopResize);
+                    function resizeColumn(e) {
+                        const newWidth = e.clientX - th.getBoundingClientRect().left;
+                        th.style.width = newWidth + "px";
+                    }
 
-            function resizeColumn(e) {
-                const newWidth = e.clientX - th.getBoundingClientRect().left;
-                th.style.width = newWidth + "px";
-            }
-
-            function stopResize() {
-                window.removeEventListener("mousemove", resizeColumn);
-                window.removeEventListener("mouseup", stopResize);
+                    function stopResize() {
+                        window.removeEventListener("mousemove", resizeColumn);
+                        window.removeEventListener("mouseup", stopResize);
+                    }
+                });
             }
         });
-    });
+    }
+    
+    // Initialize resizers when page loads
+    document.addEventListener("DOMContentLoaded", initializeResizers);
 </script>
 
 
@@ -228,7 +373,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById('stock_excel').addEventListener('click', exportToExcel);
     setupFournisseurSearch();
+    setupProductSearch();
     setupThemeToggle();
+    
+    // Add close button event listener for product details
+    const closeBtn = document.getElementById("closeProductDetails");
+    if (closeBtn) {
+        closeBtn.addEventListener("click", closeProductDetails);
+    }
+    
+    // Add Excel download button event listener for product details
+    const downloadBtn = document.getElementById("downloadProductDetailsExcel");
+    if (downloadBtn) {
+        downloadBtn.addEventListener("click", downloadProductDetailsExcel);
+    }
 });
 
 // Initialize dropdown functionality
@@ -473,6 +631,14 @@ function createTableRow(row, isTotal = false) {
 
     if (isTotal) {
         tr.classList.add('font-bold', 'bg-gray-200', 'dark:bg-gray-800');
+    } else {
+        // Make non-total rows clickable
+        tr.classList.add('cursor-pointer', 'hover:bg-gray-100', 'dark:hover:bg-gray-600');
+        tr.addEventListener('click', () => {
+            if (row.NAME && row.NAME.trim() !== '') {
+                fetchProductDetails(row.NAME);
+            }
+        });
     }
 
     const formatNumber = (num) => num ? parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
@@ -596,30 +762,163 @@ function filterByProduct(product) {
 
     updatePagination(filtered.length);
 }
-document.addEventListener("DOMContentLoaded", () => {
-    fetchData(); // Load initial data
-    setupFournisseurSearch();
-    setupProductSearch();
-    setupThemeToggle();
-});
 
-  // Dark/Light Mode Toggle Functionality
-const themeToggle = document.getElementById('themeToggle');
-const htmlElement = document.documentElement;
+// Fetch and display product details
+async function fetchProductDetails(productName) {
+    try {
+        const url = `http://192.168.1.94:5000/fetch-product-details?product_name=${encodeURIComponent(productName)}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.error) {
+            console.error("API Error:", data.error);
+            alert("Error fetching product details: " + data.error);
+            return;
+        }
+        
+        displayProductDetails(productName, data);
+    } catch (error) {
+        console.error("Error fetching product details:", error);
+        alert("Failed to fetch product details. Please try again.");
+    }
+}
 
-themeToggle.addEventListener('click', () => {
-    htmlElement.classList.toggle('dark');
-    // Save the theme preference in localStorage
-    const isDarkMode = htmlElement.classList.contains('dark');
-    localStorage.setItem('darkMode', isDarkMode);
-});
+// Display product details in the table
+function displayProductDetails(productName, data) {
+    const container = document.getElementById("productDetailsContainer");
+    const title = document.getElementById("productDetailsTitle");
+    const tableBody = document.getElementById("product-details-table");
+    const downloadButton = document.getElementById("downloadProductDetailsExcel");
+    
+    // Update title
+    title.textContent = `Product Details - ${productName}`;
+    
+    // Clear previous data
+    tableBody.innerHTML = "";
+    
+    if (!data || data.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="18" class="border px-4 py-2 text-center dark:border-gray-600">
+                    No details found for this product
+                </td>
+            </tr>
+        `;
+        downloadButton.style.display = "none";
+    } else {
+        const formatNumber = (num, isInt = false) => {
+            if (num === null || num === undefined || num === "") return 0;
+            if (isInt) return parseInt(num, 10).toLocaleString('en-US');
+            return parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
+        const formatDate = (dateString) => {
+            if (!dateString) return '';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('fr-FR');
+            } catch (e) {
+                return dateString;
+            }
+        };
+        
+        data.forEach(row => {
+            const tr = document.createElement("tr");
+            tr.classList.add('table-row', 'dark:bg-gray-700', 'hover:bg-gray-100', 'dark:hover:bg-gray-600');
+            
+            tr.innerHTML = `
+                <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || ''}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${row.PRODUCT || ''}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.MARGE)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY, true)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY_DISPO, true)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.P_ACHAT)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.REM_ACHAT)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.BON_ACHAT)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.P_REVIENT)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.P_VENTE)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.REM_VENTE)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.BON_VENTE)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${row.REMISE_AUTO || ''}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${row.BONUS_AUTO || ''}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.PPA)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${row.LOCATION || ''}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${row.LOT || ''}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatDate(row.GUARANTEEDATE)}</td>
+            `;
+            
+            tableBody.appendChild(tr);
+        });
+        
+        downloadButton.style.display = "inline-flex"; // Show the button
+        downloadButton.onclick = () => downloadProductDetailsExcel(data);
+    }
+    
+    // Show the container
+    container.style.display = "block";
+    
+    // Show the download button
+    const downloadBtn = document.getElementById("downloadProductDetailsExcel");
+    if (downloadBtn) {
+        downloadBtn.style.display = "inline-block";
+    }
+    
+    // Re-initialize resizers for the product details table
+    setTimeout(() => {
+        initializeResizers();
+    }, 100);
+    
+    // Scroll to the product details table
+    container.scrollIntoView({ behavior: 'smooth' });
+}
 
-// Check for saved theme preference
-const savedDarkMode = localStorage.getItem('darkMode');
-if (savedDarkMode === 'true') {
-    htmlElement.classList.add('dark');
-} else {
-    htmlElement.classList.remove('dark');
+// Close product details
+function closeProductDetails() {
+    console.log("Close button clicked");
+    const container = document.getElementById("productDetailsContainer");
+    if (container) {
+        container.style.display = "none";
+        console.log("Product details container hidden");
+    } else {
+        console.error("Product details container not found");
+    }
+}
+
+// Download product details as Excel
+function downloadProductDetailsExcel() {
+    const productName = document.getElementById("productDetailsTitle").textContent.replace("Product Details - ", "");
+    if (productName && productName !== "Product Details") {
+        const url = `http://192.168.1.94:5000/download-product-details-excel?product_name=${encodeURIComponent(productName)}`;
+        window.location.href = url;
+    }
+}
+
+// Setup theme toggle functionality
+function setupThemeToggle() {
+    // Dark/Light Mode Toggle Functionality
+    const themeToggle = document.getElementById('themeToggle');
+    const htmlElement = document.documentElement;
+
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            htmlElement.classList.toggle('dark');
+            // Save the theme preference in localStorage
+            const isDarkMode = htmlElement.classList.contains('dark');
+            localStorage.setItem('darkMode', isDarkMode);
+        });
+    }
+
+    // Check for saved theme preference
+    const savedDarkMode = localStorage.getItem('darkMode');
+    if (savedDarkMode === 'true') {
+        htmlElement.classList.add('dark');
+    } else {
+        htmlElement.classList.remove('dark');
+    }
 }
     </script>
     <script>

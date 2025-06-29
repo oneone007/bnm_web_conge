@@ -1,6 +1,3 @@
-
-
-
 import oracledb
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
@@ -30,226 +27,13 @@ DB_POOL = oracledb.create_pool(
 )
 
 
-# Stock Movement functionality
-def fetch_stock_movement_data(start_date=None, end_date=None, product=None, fournisseur=None, emplacement=None):
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            
-            # For empty or None emplacement, we want to fetch both Préparation and HANGAR
-            if emplacement == '' or emplacement is None:
-                emplacement_condition = """
-                AND (l.value LIKE 'Préparation%' OR l.value LIKE 'HANGAR%')
-                """
-                stock_initial_condition = """
-                AND (l.value LIKE 'Préparation%' OR l.value LIKE 'HANGAR%')
-                """
-                # Don't include emplacement in params for this case
-                params = {
-                    'start_date': start_date,
-                    'end_date': end_date,
-                    'product': product,
-                    'fournisseur': fournisseur
-                }
-            else:
-                # For specific emplacement, use only that one
-                emplacement_condition = """
-                AND l.value LIKE :emplacement || '%'
-                """
-                stock_initial_condition = """
-                AND l.value LIKE :emplacement || '%'
-                """
-                params = {
-                    'start_date': start_date,
-                    'end_date': end_date,
-                    'product': product,
-                    'fournisseur': fournisseur,
-                    'emplacement': emplacement
-                }
-            
-            query = """
-            SELECT
-                t.MovementDate AS MovementDate,
-                nvl(nvl(io.documentno,inv.documentno),m.documentno) as documentno,
-                nvl(bp.name, nvl(inv.description,m.description)) as name,
-                p.name AS productname,
-                CASE WHEN t.movementqty > 0 then t.movementqty else 0 end as ENTREE,
-                CASE WHEN t.movementqty < 0 then ABS(t.movementqty) else 0 end as SORTIE,                coalesce((SELECT SUM(s.movementqty)
-                FROM m_transaction s
-                inner join m_product p on (s.m_product_id = p.m_product_id)
-                inner join m_locator l on (l.m_locator_id = s.m_locator_id)
-                WHERE s.movementdate < t.movementdate
-                AND (:product IS NULL OR p.name LIKE :product || '%')
-                """ + stock_initial_condition + """
-                ), 0) AS StockInitial,
-                asi.lot,
-                l_from.value AS locator_from,
-                l_to.value AS locator_to
-            FROM M_Transaction t
-            INNER JOIN ad_org org
-            ON org.ad_org_id = t.ad_org_id
-            LEFT JOIN ad_orginfo oi
-            ON oi.ad_org_id = org.ad_org_id
-            LEFT JOIN c_location orgloc
-            ON orgloc.c_location_id = oi.c_location_id
-            INNER JOIN M_Locator l
-            ON (t.M_Locator_ID=l.M_Locator_ID)
-            INNER JOIN M_Product p
-            ON (t.M_Product_ID=p.M_Product_ID)
-            LEFT OUTER JOIN M_InventoryLine il
-            ON (t.M_InventoryLine_ID=il.M_InventoryLine_ID)
-            LEFT OUTER JOIN M_Inventory inv
-            ON (inv.m_inventory_id = il.m_inventory_id)
-            LEFT OUTER JOIN M_MovementLine ml
-            ON (t.M_MovementLine_ID=ml.M_MovementLine_ID 
-                AND NOT (ml.M_Locator_ID = 1001135 AND ml.M_LocatorTo_ID = 1000614)
-                AND NOT (ml.M_Locator_ID = 1000614 AND ml.M_LocatorTo_ID = 1001135))
-            LEFT OUTER JOIN M_Movement m
-            ON (m.M_Movement_ID=ml.M_Movement_ID)
-            LEFT OUTER JOIN M_InOutLine iol
-            ON (t.M_InOutLine_ID=iol.M_InOutLine_ID)
-            LEFT OUTER JOIN M_Inout io
-            ON (iol.M_InOut_ID=io.M_InOut_ID)
-            LEFT OUTER JOIN C_BPartner bp
-            ON (bp.C_BPartner_ID = io.C_BPartner_ID)
-            INNER JOIN M_attributesetinstance asi on t.m_attributesetinstance_id = asi.m_attributesetinstance_id
-            INNER JOIN M_attributeinstance att on (att.m_attributesetinstance_id = asi.m_attributesetinstance_id)
-            -- Add joins for from and to locators
-            LEFT JOIN M_Locator l_from ON (
-                CASE 
-                    WHEN t.M_MovementLine_ID IS NOT NULL THEN ml.M_Locator_ID 
-                    WHEN t.M_InOutLine_ID IS NOT NULL THEN 
-                        CASE WHEN t.MovementQty > 0 THEN iol.M_Locator_ID ELSE NULL END
-                    ELSE NULL 
-                END = l_from.M_Locator_ID
-            )
-            LEFT JOIN M_Locator l_to ON (
-                CASE 
-                    WHEN t.M_MovementLine_ID IS NOT NULL THEN ml.M_LocatorTo_ID 
-                    WHEN t.M_InOutLine_ID IS NOT NULL THEN 
-                        CASE WHEN t.MovementQty < 0 THEN iol.M_Locator_ID ELSE NULL END
-                    ELSE NULL 
-                END = l_to.M_Locator_ID
-            )
-            WHERE (io.docstatus IN ('CO' , 'CL') 
-            OR m.docstatus IN ('CO' , 'CL')
-            OR inv.docstatus IN ('CO' , 'CL')) 
-            AND att.m_attribute_id = 1000508            AND (:end_date IS NULL OR t.movementdate <= TO_DATE(:end_date, 'YYYY-MM-DD'))
-            AND (:start_date IS NULL OR t.movementdate >= TO_DATE(:start_date, 'YYYY-MM-DD'))            AND (:product IS NULL OR P.NAME LIKE :product || '%')
-            AND (:fournisseur IS NULL OR att.value like :fournisseur || '%')
-            """ + emplacement_condition + """
-            AND t.AD_Client_ID = 1000000
-            ORDER BY t.MovementDate DESC            """
-
-            print("Query parameters:", params)
-            print("Emplacement value:", emplacement, "Type:", type(emplacement).__name__)
-
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]
-            data = [dict(zip(columns, row)) for row in rows]
-            
-            return data
-
-    except Exception as e:
-        logger.error(f"Database error in fetch_stock_movement_data: {e}")
-        return {"error": "An error occurred while fetching stock movement data."}
-
-@app.route('/fetch-stock-movement-data', methods=['GET'])
-def fetch_stock_movement():
-    try:
-        start_date = request.args.get("start_date", None)
-        end_date = request.args.get("end_date", None)
-        product = request.args.get("product", None)
-        fournisseur = request.args.get("fournisseur", None)
-        emplacement = request.args.get("emplacement", None)
-
-        data = fetch_stock_movement_data(start_date, end_date, product, fournisseur, emplacement)
-        return jsonify(data)
-
-    except Exception as e:
-        logger.error(f"Error in fetch_stock_movement endpoint: {e}")
-        return jsonify({"error": "Failed to fetch stock movement data"}), 500
-
-@app.route('/download-stock-movement-excel', methods=['GET'])
-def download_stock_movement_excel():
-    try:
-        start_date = request.args.get("start_date", None)
-        end_date = request.args.get("end_date", None)
-        product = request.args.get("product", None)
-        fournisseur = request.args.get("fournisseur", None)
-        emplacement = request.args.get("emplacement", None)
-
-        data = fetch_stock_movement_data(start_date, end_date, product, fournisseur, emplacement)
-        
-        if isinstance(data, dict) and "error" in data:
-            return jsonify(data), 500
-
-        # Generate Excel file
-        excel_output = generate_excel_stock_movement(data)
-        
-        # Generate filename
-        today_date = datetime.now().strftime("%d-%m-%Y")
-        filename = f"Stock_Movement_{today_date}.xlsx"
-
-        return send_file(excel_output, as_attachment=True, download_name=filename, 
-                        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-    except Exception as e:
-        logger.error(f"Error in download_stock_movement_excel: {e}")
-        return jsonify({"error": "Failed to generate Excel file"}), 500
-
-def generate_excel_stock_movement(data):
-    """Generate Excel file for stock movement data"""
-    df = pd.DataFrame(data)
-    
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Stock Movement"
-
-    # Define header styles
-    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
-    header_font = Font(color="FFFFFF", bold=True)
-
-    # Write headers
-    if not df.empty:
-        ws.append(df.columns.tolist())
-        for cell in ws[1]:
-            cell.fill = header_fill
-            cell.font = header_font
-
-        # Apply auto filter
-        ws.auto_filter.ref = ws.dimensions
-
-        # Write data rows
-        for row_idx, row in enumerate(df.itertuples(index=False), start=2):
-            ws.append(row)
-
-        # Create table
-        table = Table(displayName="StockMovementTable", ref=ws.dimensions)
-        style = TableStyleInfo(
-            name="TableStyleMedium9",
-            showFirstColumn=False,
-            showLastColumn=False,
-            showRowStripes=True,
-            showColumnStripes=False
-        )
-        table.tableStyleInfo = style
-        ws.add_table(table)
-
-    # Save to BytesIO
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-    return output
-
-@app.route('/listfournisseur')
-def list_fournisseur():
+@app.route('/listfournisseur_etat')
+def list_fournisseur_etat():
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
             query = """
-                SELECT cb.name
+                SELECT cb.name, cb.C_BPartner_ID
                 FROM C_BPartner cb
                 WHERE cb.AD_Client_ID = 1000000
                   AND cb.ISVENDOR = 'Y'
@@ -257,58 +41,337 @@ def list_fournisseur():
                 ORDER BY cb.name
             """
             cursor.execute(query)
-            result = [row[0] for row in cursor.fetchall()]
+            # Return both name and ID as a list of dictionaries
+            result = [{"name": row[0], "id": row[1]} for row in cursor.fetchall()]
             return jsonify(result)
     except Exception as e:
         logger.error(f"Error fetching fournisseurs: {e}")
         return jsonify({"error": "Could not fetch fournisseur list"}), 500
 
-
-@app.route('/listproduct')
-def list_product():
+def fetch_etat_f(date1, date2, c_bpartner_id=None, ispaid=None):
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
             query = """
-                SELECT name 
-                FROM M_PRODUCT
-                WHERE AD_Client_ID = 1000000
-                  AND AD_Org_ID = 1000000
-                  AND ISACTIVE = 'Y'
-                ORDER BY name
+                SELECT ispaid, ad_org_id, c_bpartner_id, dateinvoiced, nbl, nfact, documentno, grandtotal, verse_fact, 
+                       verse_cheque, cheque, name, dateversement, nb, region,  
+                       SUM(grandtotal/nb) OVER(PARTITION BY c_bpartner_id) AS bp_chiffre,
+                       SUM(verse_fact/nb) OVER(PARTITION BY c_bpartner_id) AS verse_tot,
+                       orgname, phone, phone2, fax,
+                       address1, address2, address3, address4, city, postal
+                FROM 
+                (SELECT cs.ispaid, cs.ad_org_id, cs.c_bpartner_id, cs.dateinvoiced, cs.nbl, cs.nfact, cs.documentno AS documentno, 
+                        cs.grandtotal, cs.verse_fact, 
+                        cs.verse_cheque, cs.cheque, cs.name, cs.dateversement, cs.region,  
+                        COUNT(cs.c_invoice_id) OVER(PARTITION BY cs.c_invoice_id) AS nb,
+                        org.name as orgname, oi.phone, oi.phone2, oi.fax,
+                        loc.address1, loc.address2, loc.address3, loc.address4, loc.city, loc.postal
+                 FROM xx_vendor_status cs  
+                 INNER JOIN ad_org org ON (cs.ad_org_id = org.ad_org_id)
+                 INNER JOIN ad_orginfo oi ON (org.ad_org_id = oi.ad_org_id)
+                 INNER JOIN c_location loc ON (oi.c_location_id = loc.c_location_id)
+                 WHERE cs.AD_Client_ID = 1000000
+                 AND cs.AD_Org_ID = 1000000
+                 AND (:c_bpartner_id IS NULL OR cs.C_BPartner_ID = :c_bpartner_id)
+                 AND cs.dateinvoiced BETWEEN TO_DATE(:date1, 'DD/MM/YYYY') AND TO_DATE(:date2, 'DD/MM/YYYY')
+                 AND (:ispaid IS NULL OR :ispaid = '' OR cs.ispaid = :ispaid)
+                 ORDER BY cs.dateinvoiced, cs.nbl, cs.nfact)
+                ORDER BY dateinvoiced, nbl, nfact
             """
-            cursor.execute(query)
-            result = [row[0] for row in cursor.fetchall()]
-            return jsonify(result)
-    except Exception as e:
-        logger.error(f"Error fetching products: {e}")
-        return jsonify({"error": "Could not fetch products list"}), 500
-
-@app.route('/fetch-emplacements')
-def fetch_emplacements():
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT ml.value AS EMPLACEMENT
-                FROM M_Locator ml
-                JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
-                WHERE m.ISACTIVE = 'Y'
-                  AND m.AD_Client_ID = 1000000
-                  AND ml.ISACTIVE = 'Y'
-                  AND ml.AD_Client_ID = 1000000
-                ORDER BY m.value
-            """
-            cursor.execute(query)
+            
+            params = {
+                'date1': date1,
+                'date2': date2,
+                'c_bpartner_id': c_bpartner_id,
+                'ispaid': ispaid
+            }
+            
+            cursor.execute(query, params)
             rows = cursor.fetchall()
             columns = [col[0] for col in cursor.description]
+            
             data = [dict(zip(columns, row)) for row in rows]
-            return jsonify(data)
+            return data
+            
     except Exception as e:
-        logger.error(f"Error fetching emplacements: {e}")
-        return jsonify({"error": "Could not fetch emplacement list"}), 500
-    
+        logger.error(f"Error fetching etat_f data: {e}")
+        return {"error": "An error occurred while fetching vendor status data."}
 
+@app.route('/etat_f', methods=['GET'])
+def etat_f():
+    try:
+        date1 = request.args.get('date1')
+        date2 = request.args.get('date2')
+        c_bpartner_id = request.args.get('c_bpartner_id')
+        ispaid = request.args.get('ispaid')
+        
+        # Validate required parameters
+        if not date1 or not date2:
+            return jsonify({"error": "date1 and date2 are required parameters"}), 400
+        
+        # Convert c_bpartner_id to int if provided
+        if c_bpartner_id:
+            try:
+                c_bpartner_id = int(c_bpartner_id)
+            except ValueError:
+                return jsonify({"error": "c_bpartner_id must be a valid integer"}), 400
+        
+        data = fetch_etat_f(date1, date2, c_bpartner_id, ispaid)
+        
+        if isinstance(data, dict) and "error" in data:
+            return jsonify(data), 500
+            
+        return jsonify(data)
+        
+    except Exception as e:
+        logger.error(f"Error in etat_f route: {e}")
+        return jsonify({"error": "An error occurred while processing the request"}), 500
+
+
+@app.route('/fetch_etat_fournisseur_cumule')
+def fetch_etat_fournisseur_cumule():
+    try:
+        # Get parameters from request
+        c_bpartner_id = request.args.get('c_bpartner_id', type=int)
+        start_date = request.args.get('start_date', '01-01-2025')
+        end_date = request.args.get('end_date', '01-06-2025')
+        
+        # Validate required parameters
+        if not c_bpartner_id:
+            return jsonify({"error": "c_bpartner_id parameter is required"}), 400
+        
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            
+            # SQL query based on your provided SQL with character set fixes
+            query = """
+                SELECT inv.DATEINVOICED AS DateTrx ,
+                inv.DOCUMENTNO AS DOC_ID,
+                inv.POREFERENCE as N_BL,
+                doc.PrintName as DOC_TYPE,
+                CASE
+                  WHEN inv.DESCRIPTION IS NULL
+                  THEN
+                    (SELECT pro.NAME
+                    FROM M_PRODUCT pro,
+                      C_INVOICELINE il
+                    WHERE inv.C_INVOICE_ID=il.C_INVOICE_ID
+                    AND il.M_PRODUCT_ID   =pro.M_PRODUCT_ID
+                    AND rownum=1
+                    )
+                  ELSE inv.DESCRIPTION
+                END AS DESCRIPTION,
+                CASE
+                  WHEN (doc.docbasetype IN ('APC') OR doc.C_DocType_ID =1001510)
+                  THEN inv.GRANDTOTAL   *-1
+                  ELSE inv.GRANDTOTAL
+                END AS "MONTANT"
+              FROM C_INVOICE inv,
+                C_DOCTYPE doc
+              WHERE inv.C_DOCTYPE_ID =doc.C_DOCTYPE_ID
+              AND inv.DOCSTATUS     IN ('CO','CL')
+              AND doc.docbasetype   IN ('API','APC')
+              AND inv.C_BPARTNER_ID  = :c_bpartner_id
+              AND inv.AD_Client_ID = 1000000
+              AND inv.AD_Org_ID = 1000000
+              AND (inv.DATEINVOICED >= TO_DATE(:start_date, 'DD-MM-YYYY')
+              AND inv.DATEINVOICED  <= TO_DATE(:end_date, 'DD-MM-YYYY') )
+              UNION
+              SELECT pa.DATETRX AS DateTrx,
+                pa.DOCUMENTNO,
+                NULL as POREFERENCE,
+                N'Discount' AS NAME,
+                N''         AS DESCRIPTION,
+                pa.discountamt * -1
+              FROM C_PAYMENT pa ,
+                C_DOCTYPE doc
+              WHERE pa.C_DOCTYPE_ID=doc.C_DOCTYPE_ID
+              AND pa.DOCSTATUS    IN ('CO','CL')
+              AND doc.docbasetype IN ('APP')
+              AND pa.C_BPARTNER_ID = :c_bpartner_id
+              AND pa.AD_Client_ID = 1000000
+              AND pa.AD_Org_ID = 1000000
+              AND (pa.DATETRX     >= TO_DATE(:start_date, 'DD-MM-YYYY')
+              AND pa.DATETRX      <= TO_DATE(:end_date, 'DD-MM-YYYY') )
+              AND pa.discountamt   > 0
+              UNION
+              SELECT pa.DATETRX AS DateTrx,
+                pa.DOCUMENTNO,
+                NULL as POREFERENCE,
+                doc.Printname as NAME,
+                CASE
+                  WHEN pa.DESCRIPTION IS NOT NULL
+                  THEN pa.DESCRIPTION
+                  WHEN pa.C_INVOICE_ID IS NOT NULL
+                  THEN
+                    (SELECT inv.DOCUMENTNO
+                    FROM C_INVOICE inv
+                    WHERE inv.C_INVOICE_ID=pa.C_INVOICE_ID
+                    AND rownum=1
+                    )
+                  ELSE N''
+                END AS DESCRIPTION,
+                (pa.PAYAMT * -1)
+              FROM C_PAYMENT pa ,
+                C_DOCTYPE doc
+              WHERE pa.C_DOCTYPE_ID=doc.C_DOCTYPE_ID
+              AND pa.DOCSTATUS    IN ('CO','CL')
+              AND doc.docbasetype IN ('APP')
+              AND pa.C_BPARTNER_ID = :c_bpartner_id
+              AND pa.AD_Client_ID = 1000000
+              AND pa.AD_Org_ID = 1000000
+              AND (pa.DATETRX     >= TO_DATE(:start_date, 'DD-MM-YYYY')
+              AND pa.DATETRX      <= TO_DATE(:end_date, 'DD-MM-YYYY') )
+
+              UNION
+              select DATETRX as DateTrx , 
+              DOCUMENTNO as DOCUMENTNO  ,
+              NULL as POREFERENCE,
+              doc.PrintName  as  name , translate ('DIFFÉRENCE_' using nchar_cs) as DESCRIPTION ,  COALESCE( (select  sum(al.writeoffamt* -1) from C_ALLOCATIONLINE al where (al.C_PAYMENT_ID = par.C_PAYMENT_ID and par.C_BPartner_ID = :c_bpartner_id) ),0) 
+                            
+                            from C_PAYMENT par , c_doctype doc
+                            where doc.docbasetype IN ('APP')
+                            and par.DOCSTATUS IN ('CO','CL')
+                            and  par.C_BPARTNER_ID = :c_bpartner_id
+                            and par.AD_Client_ID = 1000000
+                            and par.AD_Org_ID = 1000000
+                            AND par.C_DOCTYPE_ID=doc.C_DOCTYPE_ID
+                            AND (par.DATETRX     >= TO_DATE(:start_date, 'DD-MM-YYYY')
+                    AND par.DATETRX      <= TO_DATE(:end_date, 'DD-MM-YYYY'))
+                            and COALESCE( (select  sum(al.writeoffamt* -1) from C_ALLOCATIONLINE al where (al.C_PAYMENT_ID = par.C_PAYMENT_ID and par.C_BPartner_ID = :c_bpartner_id) ),0) <> 0              
+                            
+
+              UNION
+              SELECT c.StatementDATE AS DateTrx,
+                c.Name As DOCUMENTNO,
+                i.POREFERENCE as POREFERENCE,
+                N'Facture sur Caisse' as NAME,
+              CASE
+                  WHEN cl.DESCRIPTION IS NOT NULL
+                  THEN cl.DESCRIPTION
+                  WHEN cl.C_INVOICE_ID IS NOT NULL
+                  THEN
+                    i.DOCUMENTNO
+                  ELSE N''
+                END  AS DESCRIPTION,
+                cl.Amount * -1
+              FROM C_CashLine cl
+              INNER JOIN  C_Cash c ON (cl.C_Cash_ID=c.C_Cash_ID)
+              INNER JOIN C_Invoice i ON (cl.C_Invoice_ID=i.C_Invoice_ID)
+              WHERE 
+              c.DOCSTATUS    IN ('CO','CL')
+              AND i.ispaid='Y'
+              AND cl.isactive='Y'
+              AND i.C_BPARTNER_ID = :c_bpartner_id
+              AND i.AD_Client_ID = 1000000
+              AND i.AD_Org_ID = 1000000
+              AND (c.StatementDATE     >= TO_DATE(:start_date, 'DD-MM-YYYY')
+              AND c.StatementDATE      <= TO_DATE(:end_date, 'DD-MM-YYYY') )
+              ORDER BY DateTrx
+            """
+            
+            # Execute query with parameters
+            cursor.execute(query, {
+                'c_bpartner_id': c_bpartner_id,
+                'start_date': start_date,
+                'end_date': end_date
+            })
+            
+            # Fetch results and convert to list of dictionaries
+            columns = [desc[0] for desc in cursor.description]
+            result = []
+            for row in cursor.fetchall():
+                row_dict = {}
+                for i, value in enumerate(row):
+                    # Convert Oracle date objects to string format
+                    if hasattr(value, 'strftime'):
+                        row_dict[columns[i]] = value.strftime('%Y-%m-%d')
+                    elif value is None:
+                        row_dict[columns[i]] = None
+                    else:
+                        row_dict[columns[i]] = value
+                result.append(row_dict)
+            
+            return jsonify(result)
+            
+    except Exception as e:
+        logger.error(f"Error fetching supplier cumulative statement: {e}")
+        return jsonify({"error": f"Could not fetch supplier cumulative statement: {str(e)}"}), 500
+
+
+@app.route('/sold_initial_etat_cum')
+def sold_initial_etat_cum():
+    try:
+        # Get parameters from request
+        c_bpartner_id = request.args.get('c_bpartner_id', type=int)
+        start_date = request.args.get('start_date', '01-01-2025')
+        
+        # Validate required parameters
+        if not c_bpartner_id:
+            return jsonify({"error": "c_bpartner_id parameter is required"}), 400
+        
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            
+            # SQL query to calculate opening balance
+            query = """
+                SELECT (
+                    (SELECT COALESCE(SUM(iar.GRANDTOTAL), 0) 
+                     FROM C_INVOICE_V iar
+                     WHERE iar.DOCSTATUS IN ('CO','CL') 
+                     AND iar.ISSOTRX = 'N'
+                     AND iar.C_BPARTNER_ID = :c_bpartner_id
+                     AND iar.DATEINVOICED < TO_DATE(:start_date, 'DD-MM-YYYY'))
+                     
+                    -
+                    
+                    (SELECT COALESCE(SUM(par.PAYAMT) + SUM(par.discountamt), 0)
+                     FROM C_PAYMENT par
+                     WHERE par.DOCSTATUS IN ('CO','CL') 
+                     AND par.ISRECEIPT = 'N'
+                     AND par.C_BPARTNER_ID = :c_bpartner_id
+                     AND par.DATETRX < TO_DATE(:start_date, 'DD-MM-YYYY'))
+                     
+                    -
+                    
+                    (SELECT COALESCE(SUM(cl.Amount), 0)
+                     FROM C_CashLine cl
+                     INNER JOIN C_Cash c ON (cl.C_Cash_ID = c.C_Cash_ID)
+                     INNER JOIN C_Invoice i ON (cl.C_Invoice_ID = i.C_Invoice_ID)
+                     WHERE c.DOCSTATUS IN ('CO','CL')
+                     AND i.ispaid = 'Y'
+                     AND cl.isactive = 'Y'
+                     AND i.C_BPARTNER_ID = :c_bpartner_id
+                     AND c.StatementDATE < TO_DATE(:start_date, 'DD-MM-YYYY'))
+                ) AS OpeningBal 
+                FROM DUAL
+            """
+            
+            # Execute query with parameters
+            cursor.execute(query, {
+                'c_bpartner_id': c_bpartner_id,
+                'start_date': start_date
+            })
+            
+            # Fetch result
+            result = cursor.fetchone()
+            opening_balance = result[0] if result else 0
+            
+            return jsonify({
+                "c_bpartner_id": c_bpartner_id,
+                "start_date": start_date,
+                "opening_balance": float(opening_balance) if opening_balance else 0.0
+            })
+            
+    except Exception as e:
+        logger.error(f"Error fetching opening balance: {e}")
+        return jsonify({"error": f"Could not fetch opening balance: {str(e)}"}), 500
+
+
+
+
+
+# ...existing code...
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5002)
+    app.run(host='0.0.0.0', port=5000)

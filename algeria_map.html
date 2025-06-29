@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Map of Algeria</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+
+        .map-container {
+            flex: 2;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            background: white;
+            position: relative;
+        }
+
+        .main-content {
+            display: flex;
+            gap: 2rem;
+            margin: 2rem;
+            align-items: flex-start;
+        }
+
+        #map {
+            height: 75vh;
+            min-height: 600px;
+            width: 100%;
+            background: #f8f9fa !important;
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            flex: 1;
+            max-width: 400px;
+            min-width: 300px;
+        }
+
+        .info-panel h3 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card h4 {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card p {
+            opacity: 0.9;
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            margin: 0 2rem 2rem 2rem;
+            padding: 1rem;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.7rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            padding: 0.7rem 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .date-inputs {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .date-inputs input {
+            padding: 0.7rem 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .date-inputs input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        #map {
+            height: 75vh;
+            min-height: 600px;
+            width: 100%;
+            background: #f8f9fa !important;
+        }
+
+        .zones-list {
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .zone-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .zone-item:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .zone-name {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 0.9rem;
+        }
+
+        .zone-qty {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 2rem;
+            background: rgba(127, 140, 141, 0.1);
+            border-radius: 8px;
+            border: 2px dashed rgba(127, 140, 141, 0.3);
+        }
+
+        .legend {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 1rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            max-width: 200px;
+        }
+
+        .legend h4 {
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+            font-size: 0.9rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.3rem;
+            font-size: 0.8rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 15px;
+            border-radius: 3px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+                margin: 0 1rem 1rem 1rem;
+            }
+            
+            .search-box {
+                min-width: unset;
+            }
+            
+            .main-content {
+                flex-direction: column;
+                margin: 1rem;
+                gap: 1rem;
+            }
+            
+            .map-container {
+                order: 1;
+            }
+            
+            .info-panel {
+                order: 2;
+                max-width: none;
+                min-width: unset;
+            }
+            
+            #map {
+                height: 60vh;
+                min-height: 400px;
+            }
+            
+            .legend {
+                position: relative;
+                top: unset;
+                right: unset;
+                margin: 1rem;
+                max-width: none;
+            }
+            
+            .map-controls {
+                position: relative;
+                top: unset;
+                left: unset;
+                margin-bottom: 1rem;
+                display: inline-block;
+            }
+        }
+
+        /* Custom popup styles */
+        .leaflet-popup-content-wrapper {
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .popup-content {
+            text-align: center;
+            padding: 0.5rem;
+        }
+
+        .popup-content h3 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+
+        .popup-content p {
+            color: #7f8c8d;
+            margin: 0.2rem 0;
+        }
+
+        /* Hover tooltip styles */
+        .hover-tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            pointer-events: none;
+            max-width: 250px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .hover-tooltip::before {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: rgba(0, 0, 0, 0.9);
+        }
+
+        .hover-tooltip h4 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1rem;
+            color: #fff;
+        }
+
+        .hover-tooltip p {
+            margin: 0.2rem 0;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.85rem;
+        }
+
+        .hover-tooltip .qty-highlight {
+            color: #32CD32;
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+
+        /* Map controls styles */
+        .map-controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 0.8rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .zoom-control-switch {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #667eea;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .switch-label {
+            font-size: 0.85rem;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-map-marked-alt"></i> Algeria Interactive Map</h1>
+        <p>Explore the 58 Wilayas (Provinces) of Algeria</p>
+    </div>
+
+    <div class="controls">
+        <input type="text" class="search-box" id="productSearch" placeholder="Search for a product..." />
+        <div class="date-inputs">
+            <input type="date" id="startDate" />
+            <input type="date" id="endDate" />
+        </div>
+        <button class="btn" onclick="fetchZoneData()">
+            <i class="fas fa-search"></i> Load Data
+        </button>
+        <button class="btn" onclick="resetMap()">
+            <i class="fas fa-home"></i> Reset View
+        </button>
+        <button class="btn" onclick="exportMap()">
+            <i class="fas fa-download"></i> Export
+        </button>
+    </div>
+
+    <div class="main-content">
+        <div class="info-panel">
+            <h3><i class="fas fa-chart-bar"></i> Map Statistics</h3>
+            <div id="zonesList">
+                <p class="no-data">No data loaded. Click "Load Data" to fetch zone information.</p>
+            </div>
+        </div>
+        
+        <div class="map-container">
+            <div class="map-controls">
+                <div class="zoom-control-switch">
+                    <label class="switch">
+                        <input type="checkbox" id="zoomToggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label">Enable Zoom</span>
+                </div>
+            </div>
+            <div id="map"></div>
+            <div class="legend">
+                <h4><i class="fas fa-info-circle"></i> Legend</h4>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #e8f5e8;"></div>
+                    <span>Low QTY</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #90EE90;"></div>
+                    <span>Medium QTY</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #32CD32;"></div>
+                    <span>High QTY</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #228B22;"></div>
+                    <span>Very High QTY</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f39c12;"></div>
+                    <span>Selected</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #95a5a6;"></div>
+                    <span>No Data</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // Initialize the map with better zoom controls
+        let map = L.map('map', {
+            zoomControl: true,
+            scrollWheelZoom: true,
+            doubleClickZoom: true,
+            touchZoom: true,
+            boxZoom: true,
+            keyboard: true,
+            dragging: true,
+            zoomAnimation: true,
+            fadeAnimation: true,
+            markerZoomAnimation: true,
+            maxZoom: 12,
+            minZoom: 4
+        }).setView([28.0339, 1.6596], 7); // Zoom level 7 ≈ 200km scale
+        let algeriaLayer;
+        let selectedWilaya = null;
+        let wilayaLayers = new Map();
+        let zoneData = new Map(); // Store QTY data by zone
+        let maxQty = 0; // For color scaling
+        let hoverTooltip = null; // For hover tooltip
+
+        // No base map tiles - show only administrative boundaries
+        map.getPane('mapPane').style.background = '#f8f9fa';
+
+        // Zone name mapping for special cases - comprehensive mapping
+        const zoneNameMapping = {
+            // Constantine zones (CNE 1, 2, 3) - all map to Constantine
+            'CNE 1': 'Constantine',
+            'CNE 2': 'Constantine', 
+            'CNE 3': 'Constantine',
+            'SMK/DJBEL WAHECHE/BOUSSOUF': 'Constantine',
+            'NOUVELLE/KHROUB': 'Constantine',
+            'AIN SMARA/ZOUAGHI': 'Constantine',
+            
+            // JIJEL/MILA zone maps to both wilayas
+            'JIJEL/ MILA': ['Jijel', 'Mila'],
+            
+            // Direct mappings - zones that match wilaya names
+            'TIZI OUZOU': 'Tizi Ouzou',
+            'BATNA': 'Batna',
+            'BEJAIA': 'Bejaia',
+            'EL OUED': 'El Oued',
+            'SKIKDA': 'Skikda',
+            'SETIF': 'Setif',
+            'GUELMA': 'Guelma',
+            'ANNABA': 'Annaba',
+            'OUARGLA': 'Ouargla',
+            'BISKRA': 'Biskra',
+            'CHLEF': 'Chlef',
+            'LAGHOUAT': 'Laghouat',
+            'OUM EL BOUAGHI': 'Oum El Bouaghi',
+            'BOUIRA': 'Bouira',
+            'TAMANRASSET': 'Tamanrasset',
+            'TLEMCEN': 'Tlemcen',
+            'TIARET': 'Tiaret',
+            'SAIDA': 'Saida',
+            'MASCARA': 'Mascara',
+            'ORAN': 'Oran',
+            'MEDEA': 'Medea',
+            'AIN DEFLA': 'Ain-Defla',
+            'NAAMA': 'Naama',
+            'AIN TEMOUCHENT': 'Ain-Temouchent',
+            'GHARDAIA': 'Ghardaia',
+            'RELIZANE': 'Relizane',
+            'MOSTAGANEM': 'Mostaganem',  
+            'M SILA': 'M\'Sila',
+            'MILA': 'Mila',
+            'AIN MLILA': 'Oum El Bouaghi', // Aïn M'lila is in Oum El Bouaghi
+            'EL TARF': 'El-Tarf',
+            'JIJEL': 'Jijel',
+            'SOUK AHRAS': 'Souk-Ahras',
+            'TIPAZA': 'Tipaza',
+            'BOUMERDES': 'Boumerdes',
+            'EL BAYADH': 'El Bayadh',
+            'ILLIZI': 'Illizi',
+            'BORDJ BOU ARRERIDJ': 'Bordj Bou Arrer',
+            'BOUMERDES': 'Boumerdes',
+            'TINDOUF': 'Tindouf',
+            'TISSEMSILT': 'Tissemsilt',
+            'KHENCHELA': 'Khenchela',
+            'EL MGHAIER': 'El M\'Ghair',
+            'MENIAA': 'El Menia', // Ménéa is in El Menia
+            'OULED DJELLAL': 'Ouled Djellal', // Ouled Djellal is its own wilaya
+            'BORDJ BADJI MOKHTAR': 'Bordj Baji Mokhtar', // Bordj Badji Mokhtar is in Adrar
+            'BENI ABBES': 'Béni Abbès', // Béni Abbès is in Béchar
+            'TIMIMOUN': 'Timimoun', // Timimoun is its own wilaya
+            'TOUGGOURT': 'Touggourt', // Touggourt is its own wilaya
+            'DJANET': 'Djanet', // Djanet is its own wilaya
+            'IN SALAH': 'In Salah', // In Salah is its own wilaya
+            'IN GUEZZAM': 'In Guezzam', // In Guezzam is its own wilaya
+            
+            // Main wilayas that might not be directly covered above
+            'ADRAR': 'Adrar',
+            'BECHAR': 'Bechar',
+            'DJELFA': 'Djelfa', // Added missing Djelfa
+            'SIDI BEL ABBES': 'Sidi Bel Abbes', // Added missing Sidi Bel Abbes
+            'TEBESSA': 'Tebessa', // Added for direct mapping
+            
+            // Complex zone mappings
+            'EL BORDJ /MSILA': ['Bordj Bou Arrer', 'M\'Sila'], // El Bordj/Msila covers both wilayas
+            'TEBESSA / KHENCHELA': ['Tebessa', 'Khenchela'], // This zone covers both wilayas
+            'CHELGHOUM': 'Mila', // Chelghoum El Laïd is in Mila
+            'EL KALA': 'El-Tarf', // El Kala is in El Tarf
+            
+            // Algiers region
+            'ALGER': 'Alger',
+            'BLIDA': 'Blida'
+        };
+
+        // Anonymous zones that should not be colored
+        const anonymousZones = ['<Aucune>'];
+
+        // Combined zones that should have the same color
+        const combinedZones = [
+            ['Jijel', 'Mila'], // JIJEL/MILA maps to both
+            ['Tebessa', 'Khenchela'], // TEBESSA/KHENCHELA maps to both
+            ['Bordj Bou Arrer', 'M\'Sila'] // EL BORDJ /MSILA maps to both
+        ];
+
+        // Function to get color based on QTY
+        function getColorByQty(qty) {
+            if (!qty || qty === 0) return '#95a5a6'; // Gray for no data
+            
+            const ratio = qty / maxQty;
+            
+            if (ratio <= 0.25) return '#e8f5e8'; // Light green
+            if (ratio <= 0.5) return '#90EE90';  // Light green
+            if (ratio <= 0.75) return '#32CD32'; // Lime green
+            return '#228B22'; // Forest green
+        }
+
+        // Function to normalize zone names
+        function normalizeZoneName(zoneName) {
+            // Convert to uppercase for case-insensitive matching
+            const upperZoneName = zoneName.toUpperCase();
+            
+            // Handle exact matches first (case-insensitive)
+            for (const [key, value] of Object.entries(zoneNameMapping)) {
+                if (key.toUpperCase() === upperZoneName) {
+                    console.log('Direct mapping found:', zoneName, '->', value);
+                    return value;
+                }
+            }
+            
+            // Handle partial matches for Constantine zones (backup for incomplete zone names)
+            if (upperZoneName.includes('CNE 1') || upperZoneName.includes('SMK/DJBEL WAHECHE/BOUSSOUF')) {
+                return 'Constantine';
+            }
+            if (upperZoneName.includes('CNE 2') || upperZoneName.includes('NOUVELLE/KHROUB')) {
+                return 'Constantine';
+            }
+            if (upperZoneName.includes('CNE 3') || upperZoneName.includes('AIN SMARA/ZOUAGHI')) {
+                return 'Constantine';
+            }
+            
+            // Handle JIJEL/MILA case (backup)
+            if (upperZoneName.includes('JIJEL/ MILA') || upperZoneName.includes('JIJEL/MILA')) {
+                return ['Jijel', 'Mila'];
+            }
+            
+            // Handle TEBESSA/KHENCHELA case
+            if (upperZoneName.includes('TEBESSA / KHENCHELA') || upperZoneName.includes('TEBESSA/KHENCHELA')) {
+                return ['Tebessa', 'Khenchela'];
+            }
+            
+            // Handle EL BORDJ/MSILA case
+            if (upperZoneName.includes('EL BORDJ /MSILA') || upperZoneName.includes('EL BORDJ/MSILA')) {
+                return ['Bordj Bou Arrer', 'M\'Sila'];
+            }
+            
+            // Handle case variations and common abbreviations
+            if (upperZoneName.includes('MSILA') || upperZoneName.includes('M SILA')) {
+                return 'M\'Sila';
+            }
+            if (upperZoneName.includes('BEJAIA') || upperZoneName.includes('BÉJAÏA')) {
+                return 'Bejaia';
+            }
+            if (upperZoneName.includes('SETIF') || upperZoneName.includes('SÉTIF')) {
+                return 'Setif'; // Match the GeoJSON name exactly
+            }
+            if (upperZoneName.includes('TEBESSA') || upperZoneName.includes('TÉBESSA')) {
+                return 'Tebessa';
+            }
+            if (upperZoneName.includes('SAIDA') || upperZoneName.includes('SAÏDA')) {
+                return 'Saida';
+            }
+            if (upperZoneName.includes('GHARDAIA') || upperZoneName.includes('GHARDAÏA')) {
+                return 'Ghardaia';
+            }
+            if (upperZoneName.includes('MEDEA') || upperZoneName.includes('MÉDÉA')) {
+                return 'Medea';
+            }
+            if (upperZoneName.includes('AIN DEFLA') || upperZoneName.includes('AÏN DEFLA')) {
+                return 'Ain-Defla';
+            }
+            if (upperZoneName.includes('NAAMA') || upperZoneName.includes('NAÂMA')) {
+                return 'Naama';
+            }
+            if (upperZoneName.includes('AIN TEMOUCHENT') || upperZoneName.includes('AÏN TÉMOUCHENT')) {
+                return 'Ain-Temouchent';
+            }
+            if (upperZoneName.includes('BOUMERDES') || upperZoneName.includes('BOUMERDÈS')) {
+                return 'Boumerdes';
+            }
+            if (upperZoneName.includes('SIDI BEL ABBES') || upperZoneName.includes('SIDI BEL ABBÈS')) {
+                return 'Sidi Bel Abbes';
+            }
+            if (upperZoneName.includes('DJELFA')) {
+                return 'Djelfa';
+            }
+            if (upperZoneName.includes('GUELMA')) {
+                return 'Guelma';
+            }
+            
+            // Return original if no match found
+            console.log('No mapping found for zone:', zoneName, 'returning as-is');
+            return zoneName;
+        }
+
+        // Function to get QTY for a wilaya (for coloring - shared zones use same QTY)
+        function getWilayaQty(wilayaName) {
+            let primaryQty = 0; // Main QTY for coloring
+            let debugInfo = [];
+            
+            // Special handling for shared zones - they should have the same color
+            zoneData.forEach((qty, zoneName) => {
+                // Skip anonymous zones for coloring
+                if (anonymousZones.includes(zoneName)) {
+                    return;
+                }
+                
+                const normalizedZone = normalizeZoneName(zoneName);
+                
+                // Handle array case (JIJEL/MILA, TEBESSA/KHENCHELA) - shared zones
+                if (Array.isArray(normalizedZone)) {
+                    if (normalizedZone.includes(wilayaName)) {
+                        // For shared zones, use the zone QTY directly (don't add individual zones)
+                        primaryQty = Math.max(primaryQty, qty); // Use the highest shared zone QTY
+                        debugInfo.push(`${zoneName} -> ${normalizedZone.join(', ')} (shared: ${qty})`);
+                    }
+                } 
+                // Handle single wilaya case - individual zones
+                else if (normalizedZone === wilayaName) {
+                    // For individual zones, only add if no shared zone exists
+                    if (primaryQty === 0) {
+                        primaryQty += qty;
+                        debugInfo.push(`${zoneName} -> ${normalizedZone} (individual: ${qty})`);
+                    }
+                }
+            });
+            
+            // Debug logging for wilayas that commonly have issues or are important
+            if (['Guelma', 'Jijel', 'Mila', 'Setif', 'Bordj Bou Arrer', 'M\'Sila', 
+                 'Tebessa', 'Khenchela', 'Sidi Bel Abbes', 'Djelfa', 'Batna',
+                 'Constantine', 'Annaba', 'Oran', 'Alger'].includes(wilayaName)) {
+                console.log(`${wilayaName} QTY for coloring:`, debugInfo, `Primary QTY: ${primaryQty}`);
+            }
+            
+            return primaryQty;
+        }
+
+        // Function to get detailed zone information for a wilaya (for popup display)
+        function getWilayaZoneDetails(wilayaName) {
+            let zones = [];
+            
+            zoneData.forEach((qty, zoneName) => {
+                const normalizedZone = normalizeZoneName(zoneName);
+                
+                // Handle array case (shared zones)
+                if (Array.isArray(normalizedZone)) {
+                    if (normalizedZone.includes(wilayaName)) {
+                        zones.push({
+                            name: zoneName,
+                            qty: qty,
+                            type: 'shared',
+                            mappedTo: normalizedZone
+                        });
+                    }
+                } 
+                // Handle single wilaya case
+                else if (normalizedZone === wilayaName) {
+                    zones.push({
+                        name: zoneName,
+                        qty: qty,
+                        type: 'individual',
+                        mappedTo: [normalizedZone]
+                    });
+                }
+            });
+            
+            return zones;
+        }
+
+        // Hover tooltip functions
+        function showHoverTooltip(e, feature) {
+            const wilayaName = feature.properties.name;
+            const qty = getWilayaQty(wilayaName);
+            const zoneDetails = getWilayaZoneDetails(wilayaName);
+            
+            // Create tooltip content
+            let tooltipContent = `<h4>${wilayaName}</h4>`;
+            tooltipContent += `<p class="qty-highlight">Total QTY: ${qty.toLocaleString()}</p>`;
+            
+            if (zoneDetails.length > 0) {
+                tooltipContent += '<p style="margin-top: 0.5rem; font-size: 0.8rem; opacity: 0.8;">Zones:</p>';
+                const maxZonesToShow = 3; // Limit zones shown in hover
+                zoneDetails.slice(0, maxZonesToShow).forEach(zone => {
+                    if (zone.type === 'shared') {
+                        tooltipContent += `<p>• ${zone.name}: ${zone.qty.toLocaleString()} (shared)</p>`;
+                    } else {
+                        tooltipContent += `<p>• ${zone.name}: ${zone.qty.toLocaleString()}</p>`;
+                    }
+                });
+                
+                if (zoneDetails.length > maxZonesToShow) {
+                    tooltipContent += `<p style="font-style: italic; opacity: 0.7;">+${zoneDetails.length - maxZonesToShow} more zones...</p>`;
+                }
+                tooltipContent += '<p style="font-size: 0.75rem; opacity: 0.6; margin-top: 0.5rem;">Click for full details</p>';
+            } else if (qty === 0) {
+                tooltipContent += '<p style="opacity: 0.7;">No data available</p>';
+            }
+            
+            // Remove existing tooltip
+            hideHoverTooltip();
+            
+            // Create new tooltip
+            hoverTooltip = document.createElement('div');
+            hoverTooltip.className = 'hover-tooltip';
+            hoverTooltip.innerHTML = tooltipContent;
+            document.body.appendChild(hoverTooltip);
+            
+            // Position tooltip
+            updateTooltipPosition(e.originalEvent);
+        }
+
+        function hideHoverTooltip() {
+            if (hoverTooltip) {
+                document.body.removeChild(hoverTooltip);
+                hoverTooltip = null;
+            }
+        }
+
+        function updateTooltipPosition(e) {
+            if (hoverTooltip) {
+                const tooltipRect = hoverTooltip.getBoundingClientRect();
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+                
+                let x = e.clientX;
+                let y = e.clientY - tooltipRect.height - 10;
+                
+                // Adjust horizontal position if tooltip goes off screen
+                if (x + tooltipRect.width > viewportWidth) {
+                    x = viewportWidth - tooltipRect.width - 10;
+                }
+                if (x < 10) {
+                    x = 10;
+                }
+                
+                // Adjust vertical position if tooltip goes off screen
+                if (y < 10) {
+                    y = e.clientY + 10; // Show below cursor
+                }
+                
+                hoverTooltip.style.left = x + 'px';
+                hoverTooltip.style.top = y + 'px';
+            }
+        }
+
+        // Track mouse movement to update tooltip position
+        document.addEventListener('mousemove', function(e) {
+            if (hoverTooltip) {
+                updateTooltipPosition(e);
+            }
+        });
+
+        // Styling functions
+        function getStyleByQty(feature) {
+            const wilayaName = feature.properties.name;
+            const qty = getWilayaQty(wilayaName);
+            
+            return {
+                fillColor: getColorByQty(qty),
+                weight: 2,
+                opacity: 1,
+                color: '#2c3e50',
+                dashArray: '',
+                fillOpacity: 0.8
+            };
+        }
+
+        function getHighlightStyle(feature) {
+            return {
+                fillColor: '#e74c3c',
+                weight: 3,
+                opacity: 1,
+                color: '#2c3e50',
+                dashArray: '',
+                fillOpacity: 0.9
+            };
+        }
+
+        function getSelectedStyle(feature) {
+            return {
+                fillColor: '#f39c12',
+                weight: 4,
+                opacity: 1,
+                color: '#2c3e50',
+                dashArray: '',
+                fillOpacity: 0.9
+            };
+        }
+
+        // Event handlers for each feature
+        function onEachFeature(feature, layer) {
+            // Store layer reference for quick access
+            wilayaLayers.set(feature.properties.name, layer);
+
+            // Update popup content with QTY only
+            function updatePopup() {
+                const qty = getWilayaQty(feature.properties.name);
+                
+                const popupContent = `
+                    <div class="popup-content">
+                        <h3>${qty.toLocaleString()}</h3>
+                    </div>
+                `;
+                layer.bindPopup(popupContent);
+            }
+
+            updatePopup();
+
+            // Mouse events
+            layer.on({
+                mouseover: function(e) {
+                    if (selectedWilaya !== layer) {
+                        layer.setStyle(getHighlightStyle(feature));
+                    }
+                    layer.bringToFront();
+                    
+                    // Show hover tooltip with basic information
+                    showHoverTooltip(e, feature);
+                },
+                mouseout: function(e) {
+                    if (selectedWilaya !== layer) {
+                        layer.setStyle(getStyleByQty(feature));
+                    }
+                    
+                    // Hide hover tooltip
+                    hideHoverTooltip();
+                },
+                click: function(e) {
+                    selectWilayaLayer(layer, feature);
+                }
+            });
+        }
+
+        function selectWilayaLayer(layer, feature) {
+            // Reset previously selected
+            if (selectedWilaya && selectedWilaya !== layer) {
+                selectedWilaya.setStyle(getStyleByQty(selectedWilaya.feature));
+            }
+            
+            // Set new selection
+            selectedWilaya = layer;
+            layer.setStyle(getSelectedStyle(feature));
+            
+            // Get zone details for this wilaya
+            const zoneDetails = getWilayaZoneDetails(feature.properties.name);
+            const mainQty = getWilayaQty(feature.properties.name);
+            
+            // Create popup content with zone breakdown
+            let popupContent = `
+                <div class="popup-content">
+                    <h3>${feature.properties.name}: ${mainQty.toLocaleString()}</h3>
+            `;
+            
+            if (zoneDetails.length > 0) {
+                popupContent += '<div style="margin-top: 10px; font-size: 0.9em; color: #666;">';
+                zoneDetails.forEach(zone => {
+                    if (zone.type === 'shared') {
+                        popupContent += `<p><strong>${zone.name}</strong>: ${zone.qty.toLocaleString()} (shared with ${zone.mappedTo.filter(w => w !== feature.properties.name).join(', ')})</p>`;
+                    } else {
+                        popupContent += `<p><strong>${zone.name}</strong>: ${zone.qty.toLocaleString()}</p>`;
+                    }
+                });
+                popupContent += '</div>';
+            }
+            
+            popupContent += '</div>';
+            
+            layer.bindPopup(popupContent);
+            
+            // Zoom to feature
+            map.fitBounds(layer.getBounds(), {padding: [20, 20]});
+            
+            // Open popup
+            layer.openPopup();
+        }
+
+        // Load the Algeria GeoJSON data
+        fetch('dz.json')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                algeriaLayer = L.geoJSON(data, {
+                    style: getStyleByQty,
+                    onEachFeature: onEachFeature
+                }).addTo(map);
+
+                // Fit map to Algeria bounds
+                map.fitBounds(algeriaLayer.getBounds());
+                
+                console.log('Algeria map loaded successfully with', data.features.length, 'wilayas');
+                
+                // Set default dates
+                const today = new Date();
+                const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+                document.getElementById('startDate').value = firstDay.toISOString().split('T')[0];
+                document.getElementById('endDate').value = today.toISOString().split('T')[0];
+            })
+            .catch(error => {
+                console.error('Error loading Algeria map data:', error);
+                alert('Error loading map data. Please check if dz.json file exists and is accessible.');
+            });
+
+        // Fetch zone data from API
+        async function fetchZoneData() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const product = document.getElementById('productSearch').value.trim();
+
+            if (!startDate || !endDate) {
+                alert('Please select both start and end dates');
+                return;
+            }
+
+            try {
+                let url = `http://192.168.1.94:5000/fetchZonerotation?start_date=${startDate}&end_date=${endDate}`;
+                if (product) {
+                    url += `&product=${encodeURIComponent(product)}`;
+                }
+
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Clear previous data
+                zoneData.clear();
+                maxQty = 0;
+
+                // Process the data
+                data.forEach(item => {
+                    if (item.ZONE && item.QTY) {
+                        // Store original zone data
+                        zoneData.set(item.ZONE, item.QTY);
+                        maxQty = Math.max(maxQty, item.QTY);
+                    }
+                });
+
+                // Debug: Show all zone mappings
+                console.log('=== Zone Mapping Debug ===');
+                zoneData.forEach((qty, zoneName) => {
+                    const normalizedZone = normalizeZoneName(zoneName);
+                    console.log(`Zone: "${zoneName}" -> Mapped to: "${Array.isArray(normalizedZone) ? normalizedZone.join(', ') : normalizedZone}" (QTY: ${qty})`);
+                });
+                console.log('=== End Zone Mapping Debug ===');
+
+                // Update map colors
+                updateMapColors();
+                
+                // Update zones list
+                updateZonesList();
+
+                console.log('Zone data loaded:', data.length, 'zones');
+
+            } catch (error) {
+                console.error('Error fetching zone data:', error);
+                alert('Error fetching zone data. Please check your connection and try again.');
+            }
+        }
+
+        // Function to update map colors based on fetched data
+        function updateMapColors() {
+            if (algeriaLayer) {
+                algeriaLayer.eachLayer(layer => {
+                    // Update style
+                    layer.setStyle(getStyleByQty(layer.feature));
+                    
+                    // Update popup (QTY only)
+                    const qty = getWilayaQty(layer.feature.properties.name);
+                    
+                    const popupContent = `
+                        <div class="popup-content">
+                            <h3>${qty.toLocaleString()}</h3>
+                        </div>
+                    `;
+                    layer.bindPopup(popupContent);
+                });
+                
+                // If there's a selected wilaya, ensure it shows detailed zone breakdown
+                if (selectedWilaya) {
+                    const zoneDetails = getWilayaZoneDetails(selectedWilaya.feature.properties.name);
+                    const mainQty = getWilayaQty(selectedWilaya.feature.properties.name);
+                    
+                    let popupContent = `
+                        <div class="popup-content">
+                            <h3>${selectedWilaya.feature.properties.name}: ${mainQty.toLocaleString()}</h3>
+                    `;
+                    
+                    if (zoneDetails.length > 0) {
+                        popupContent += '<div style="margin-top: 10px; font-size: 0.9em; color: #666;">';
+                        zoneDetails.forEach(zone => {
+                            if (zone.type === 'shared') {
+                                popupContent += `<p><strong>${zone.name}</strong>: ${zone.qty.toLocaleString()} (shared with ${zone.mappedTo.filter(w => w !== selectedWilaya.feature.properties.name).join(', ')})</p>`;
+                            } else {
+                                popupContent += `<p><strong>${zone.name}</strong>: ${zone.qty.toLocaleString()}</p>`;
+                            }
+                        });
+                        popupContent += '</div>';
+                    }
+                    
+                    popupContent += '</div>';
+                    selectedWilaya.bindPopup(popupContent);
+                }
+            }
+        }
+
+        // Function to update the zones list display
+        function updateZonesList() {
+            const zonesList = document.getElementById('zonesList');
+            
+            if (zoneData.size === 0) {
+                zonesList.innerHTML = '<p class="no-data">No data loaded. Click "Load Data" to fetch zone information.</p>';
+                return;
+            }
+            
+            // Convert zoneData to array and sort by QTY (descending)
+            const sortedZones = Array.from(zoneData.entries())
+                .filter(([zone, qty]) => qty > 0)
+                .sort((a, b) => b[1] - a[1]);
+            
+            if (sortedZones.length === 0) {
+                zonesList.innerHTML = '<p class="no-data">No zones with data found for the selected criteria.</p>';
+                return;
+            }
+            
+            const zonesHTML = sortedZones.map(([zoneName, qty]) => `
+                <div class="zone-item">
+                    <span class="zone-name">${zoneName}</span>
+                    <span class="zone-qty">${qty.toLocaleString()}</span>
+                </div>
+            `).join('');
+            
+            zonesList.innerHTML = `<div class="zones-list">${zonesHTML}</div>`;
+        }
+
+        // Control functions
+        function resetMap() {
+            if (algeriaLayer) {
+                fitMapToAlgeria();
+                
+                // Reset selection
+                selectedWilaya = null;
+                
+                // Clear search
+                document.getElementById('productSearch').value = '';
+                
+                // Clear zone data
+                zoneData.clear();
+                maxQty = 0;
+                
+                // Reset colors to default
+                algeriaLayer.eachLayer(layer => {
+                    layer.setStyle(getStyleByQty(layer.feature));
+                    
+                    // Reset popup to show QTY only
+                    const popupContent = `
+                        <div class="popup-content">
+                            <h3>0</h3>
+                        </div>
+                    `;
+                    layer.bindPopup(popupContent);
+                });
+                
+                // Reset zones list
+                document.getElementById('zonesList').innerHTML = '<p class="no-data">No data loaded. Click "Load Data" to fetch zone information.</p>';
+            }
+        }
+
+        function exportMap() {
+            // Create downloadable JSON data including QTY information
+            const exportData = {
+                message: "Algeria Map Data Export with QTY",
+                timestamp: new Date().toISOString(),
+                zone_data: Object.fromEntries(zoneData),
+                max_qty: maxQty,
+                product_filter: document.getElementById('productSearch').value,
+                date_range: {
+                    start: document.getElementById('startDate').value,
+                    end: document.getElementById('endDate').value
+                }
+            };
+            
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+            
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "algeria_map_data_" + new Date().toISOString().split('T')[0] + ".json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+
+        // Add scale control
+        L.control.scale().addTo(map);
+
+        // Zoom control toggle functionality
+        document.getElementById('zoomToggle').addEventListener('change', function(e) {
+            const isEnabled = e.target.checked;
+            
+            if (isEnabled) {
+                // Enable all zoom controls
+                map.scrollWheelZoom.enable();
+                map.doubleClickZoom.enable();
+                map.touchZoom.enable();
+                map.boxZoom.enable();
+                map.keyboard.enable();
+                map.dragging.enable();
+                console.log('Zoom controls enabled');
+            } else {
+                // Disable all zoom controls
+                map.scrollWheelZoom.disable();
+                map.doubleClickZoom.disable();
+                map.touchZoom.disable();
+                map.boxZoom.disable();
+                map.keyboard.disable();
+                map.dragging.disable();
+                console.log('Zoom controls disabled');
+            }
+        });
+
+        // Enhanced zoom controls and map fitting
+        map.on('zoomend', function() {
+            console.log('Current zoom level:', map.getZoom());
+        });
+
+        // Function to fit map to Algeria bounds with better padding
+        function fitMapToAlgeria() {
+            if (algeriaLayer) {
+                map.fitBounds(algeriaLayer.getBounds(), {
+                    padding: [10, 10],
+                    maxZoom: 9 // Allow higher zoom when fitting to bounds
+                });
+            }
+        }
+
+        // Add a custom reset button to the map
+        const resetControl = L.control({position: 'topleft'});
+        resetControl.onAdd = function(map) {
+            const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
+            div.innerHTML = '<a href="#" title="Reset View" style="background: white; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; text-decoration: none; color: #333; font-weight: bold;">⌂</a>';
+            div.style.backgroundColor = 'white';
+            div.onclick = function(e) {
+                e.preventDefault();
+                fitMapToAlgeria();
+                return false;
+            };
+            return div;
+        };
+        resetControl.addTo(map);
+
+        // Add keyboard shortcuts for better navigation
+        map.on('keydown', function(e) {
+            if (e.originalEvent.code === 'KeyH') {
+                fitMapToAlgeria(); // Press 'H' for Home view
+            }
+        });
+
+        console.log('Algeria Interactive Map loaded successfully!');
+    </script>
+</body>
+</html>

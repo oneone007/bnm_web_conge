@@ -3,21 +3,25 @@ $pages = [
     "BNM" => "index.php",
     "Main" => "main.php",
     "whatsnew" => "whatsnew.html",
-
     "Etatstock" => "etatstock.php",
     "remise" => "remise.html",
-"rot_men_achat" => "rot_men_achat.php",
+    "rot_men_achat" => "rot_men_achat.php",
+    "rot_men_vente" => "rot_men_vente.php",
     "Coming" => "comingsoon.html",
     "Product" => "product.php",
     "Recap_Achat" => "recap_achat.php",
     "Recap_Vente" => "recapvente.php",
     "Recap_Vente_Facturation" => "recapvente_fact.php",
-    
+    "ETAT_F" => "etat_fournisseur.php",
+    "ETAT_F_CUMULE" => "etat_fournisseur_cumule.php",
+
     "CONFIRMED_ORDERS" => "confirm_order.php",
     "Annual_Recap_V" => "year.php",
     "Annual_Recap_A" => "yeara.php",
+    "dz" => "algeria_map.html",
+        "dzz" => "algeria_map.php",
 
-    "ETAT_Fourniseeur" => "etatfournisseur.php",
+    "DETTE_F" => "etatfournisseur.php",
 
     "recap_achat_facturation" => "recap_achat_facturation.php",
     "Rotation" => "rotation.php",

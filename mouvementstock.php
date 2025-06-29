@@ -21,7 +21,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Movement</title>
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="etatstck.css">    <style>
+    <link rel="stylesheet" href="etatstock.css">    <style>
         /* Custom CSS for date inputs in dark mode */
         .dark input[type="date"] {
             color-scheme: dark;

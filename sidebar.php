@@ -19,17 +19,17 @@ $role_allowed_pages = [
     'Developer' => 'all',   // dev can access all
     'DRH' => 'all',   // drh can access all
     'Sup Achat' => [
-         'Etatstock', 'Product', 'Rotation', 'Recap_Achat', 'ETAT_Fourniseeur',
-        'Annual_Recap_A', 'Recap_Vente', 'Annual_Recap_V'
+         'Etatstock', 'Product', 'Rotation', 'Recap_Achat', 'DETTE_F',
+        'Annual_Recap_A', 'Recap_Vente', 'Annual_Recap_V','ETAT_F', 'ETAT_F_CUMULE','rot_men_achat','rot_men_vente'
     ],
     'Sup Vente' => [
      'Etatstock', 'Product', 'Rotation', 'Quota', 
-        'Recap_Achat', 'Annual_Recap_A', 'Recap_Vente', 'Annual_Recap_V','CONFIRMED_ORDERS'
+        'Recap_Achat', 'Annual_Recap_A', 'Recap_Vente', 'Annual_Recap_V','CONFIRMED_ORDERS','rot_men_vente'
     ],
     'Comptable' => [
-        'mony', 'bank', 'ETAT_Fourniseeur',
+        'mony', 'bank', 'DETTE_F',
         'recap_achat_facturation', 'Recap_Vente_Facturation'
-        , 'Journal_Vente'
+        , 'Journal_Vente','ETAT_F', 'ETAT_F_CUMULE'
     ],
 ];
 
@@ -327,7 +327,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
         }
 
         .dark .text-xs{
-            color:black;
+            color: var(--sidebar-text) !important;
         }
     </style>
 </head>
@@ -428,11 +428,36 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
 
                 <!-- DETTES Section -->
                 <li>
-                    <?php $page = 'ETAT_Fourniseeur'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
-                    <button <?php if (!$disabled) {?>onclick="navigateTo('ETAT_Fourniseeur')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
-                        <i class="fas fa-handshake icon"></i>
-                        <span>DETTES</span>
+                    <button onclick="toggleSubmenu('dettes-submenu')" class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-handshake icon"></i>
+                            <span class="flex-1">DETTES</span>
+                        </div>
+                        <i class="fas fa-chevron-right chevron text-xs"></i>
                     </button>
+                    <ul id="dettes-submenu" class="submenu pl-4">
+                        <li>
+                            <?php $page = 'DETTE_F'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('DETTE_F')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-file-invoice-dollar icon text-sm"></i>
+                                <span class="">DETTE_F</span>
+                            </button>
+                        </li>
+                        <li>
+                            <?php $page = 'ETAT_F'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('ETAT_F')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-chart-line icon text-sm"></i>
+                                <span class="">ETAT_F</span>
+                            </button>
+                        </li>
+                        <li>
+                            <?php $page = 'ETAT_F_CUMULE'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('ETAT_F_CUMULE')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-file-invoice icon text-sm"></i>
+                                <span class="">ETAT_F_CUMULE</span>
+                            </button>
+                        </li>
+                    </ul>
                 </li>
 
                 <hr class="my-2 border-gray-200 dark:border-gray-600">
@@ -564,6 +589,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
                             <button <?php if (!$disabled) {?>onclick="navigateTo('CONFIRMED_ORDERS')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
                                 <i class="fas fa-check-circle icon text-sm"></i>
                                 <span class="text-sm">Confirm Order</span>
+                            </button>
+                        </li>
+                   
+                        <li>
+                            <?php $page = 'rot_men_vente'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('rot_men_vente')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-calendar-alt icon text-sm"></i>
+                                <span class="">rot_men_vente</span>
                             </button>
                         </li>
                     </ul>

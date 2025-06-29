@@ -150,7 +150,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
 table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: auto; /* Allows columns to resize based on content */
+    table-layout: auto; /* Allow columns to resize dynamically */
 }
 
 /* Styles for table cells */
@@ -158,8 +158,11 @@ th, td {
     padding: 8px;
     border: 1px solid #ddd;
     text-align: left;
-    word-wrap: break-word; /* Allows text to wrap onto multiple lines */
-    white-space: normal; /* Allows automatic wrapping for long text */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    /* Removed max-width for resizer to work */
+    height: 40px;
 }
 
 /* Header styles */
@@ -211,14 +214,17 @@ th, td {
 
 /* Smaller header font and making column headers more compact */
 th {
-    font-size: 0.875rem;  /* Smaller font for headers */
+    font-size: 0.75rem;  /* Even smaller font for headers */
     font-weight: 600;
     text-align: center;  /* Center align header text */
+    padding: 4px 8px;    /* Reduced padding */
 }
 
 /* Resizing numeric columns for better alignment */
 th[data-column="MARGE"],
 th[data-column="QTY"],
+th[data-column="QTY_DISPO"],
+
 th[data-column="P_ACHAT"],
 th[data-column="REM_ACHAT"],
 th[data-column="BON_ACHAT"],
@@ -227,21 +233,28 @@ th[data-column="P_VENTE"],
 th[data-column="REM_VENTE"],
 th[data-column="BON_VENTE"],
 th[data-column="REMISE_AUTO"],
-th[data-column="BONUS_AUTO"] {
-    width: 80px;  /* Fixed width for number-heavy columns */
+th[data-column="BONUS_AUTO"],
+th[data-column="PPA"] {
+    width: 60px;  /* Smaller fixed width for number-heavy columns */
     white-space: nowrap;  /* Prevents text wrapping */
 }
 
 th[data-column="LOCATION"],
 th[data-column="LOT"],
 th[data-column="GUARANTEEDATE"] {
-    width: 120px;  /* Slightly larger width for these columns */
+    width: 80px;  /* Reduced width for these columns */
+}
+
+th[data-column="FOURNISSEUR"],
+th[data-column="PRODUCT"] {
+    width: 120px;  /* Controlled width for text columns */
 }
 
 /* Table rows */
 td {
-    font-size: 0.875rem;  /* Smaller font for table data */
+    font-size: 0.75rem;  /* Smaller font for table data */
     text-align: center;  /* Center align numeric data */
+    padding: 4px 8px;    /* Reduced padding */
 }
 
 /* Alternate row colors for better readability */
@@ -250,13 +263,29 @@ td {
 /* Resizer divs for resizable columns */
 .resizer {
     cursor: ew-resize;
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 5px;
+    height: 100%;
+    background: transparent;
+    user-select: none;
+    z-index: 1;
+}
+
+.resizer:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.resizable {
+    position: relative;
 }
 
 /* Sticky header for long tables */
 thead {
     position: sticky;
     top: 0;
-    z-index: 1;
+    z-index: 2;
 }
 
 /* Mobile responsiveness */
@@ -272,6 +301,8 @@ thead {
 
     th[data-column="MARGE"],
     th[data-column="QTY"],
+    th[data-column="QTY_DISPO"],
+
     th[data-column="P_ACHAT"],
     th[data-column="REM_ACHAT"],
     th[data-column="BON_ACHAT"],
@@ -280,14 +311,20 @@ thead {
     th[data-column="REM_VENTE"],
     th[data-column="BON_VENTE"],
     th[data-column="REMISE_AUTO"],
-    th[data-column="BONUS_AUTO"] {
-        width: 60px;  /* Smaller width on mobile for numeric columns */
+    th[data-column="BONUS_AUTO"],
+    th[data-column="PPA"] {
+        width: 45px;  /* Even smaller width on mobile for numeric columns */
     }
 
     th[data-column="LOCATION"],
     th[data-column="LOT"],
     th[data-column="GUARANTEEDATE"] {
-        width: 100px;  /* Adjusted column widths for mobile */
+        width: 60px;  /* Adjusted column widths for mobile */
+    }
+
+    th[data-column="FOURNISSEUR"],
+    th[data-column="PRODUCT"] {
+        width: 80px;  /* Smaller width for text columns on mobile */
     }
 }
 
@@ -300,54 +337,60 @@ thead {
         <table class="min-w-full border-collapse text-sm text-left dark:text-white">
     <thead>
         <tr class="table-header dark:bg-gray-700">
-            <th data-column="FOURNISSEUR" onclick="sortTable('FOURNISSEUR')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+            <th data-column="FOURNISSEUR" onclick="sortTable('FOURNISSEUR')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
                 Fournisseur <div class="resizer"></div>
             </th>
-            <th data-column="PRODUCT" onclick="sortTable('PRODUCT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+            <th data-column="PRODUCT" onclick="sortTable('PRODUCT')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
                 Produit <div class="resizer"></div>
             </th>
-            <th data-column="MARGE" onclick="sortTable('MARGE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                MARGE <div class="resizer"></div>
+            <th data-column="MARGE" onclick="sortTable('MARGE')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+                Marge <div class="resizer"></div>
             </th>
-            <th data-column="QTY" onclick="sortTable('QTY')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                QTY <div class="resizer"></div>
+            <th data-column="QTY" onclick="sortTable('QTY')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+                Qty <div class="resizer"></div>
             </th>
-            <th data-column="P_ACHAT" onclick="sortTable('P_ACHAT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                P_Achat <div class="resizer"></div>
+            <th data-column="QTY_DISPO" onclick="sortTable('QTY_DISPO')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+                QTY_DISPO
+                <div class="resizer"></div>
             </th>
-            <th data-column="REM_ACHAT" onclick="sortTable('REM_ACHAT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                REM_ACHAT <div class="resizer"></div>
+            <th data-column="P_ACHAT" onclick="sortTable('P_ACHAT')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+                P_A <div class="resizer"></div>
             </th>
-            <th data-column="BON_ACHAT" onclick="sortTable('BON_ACHAT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                BON_ACHAT <div class="resizer"></div>
+            <th data-column="REM_ACHAT" onclick="sortTable('REM_ACHAT')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+                R_A <div class="resizer"></div>
             </th>
-            <th data-column="P_REVIENT" onclick="sortTable('P_REVIENT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                P_REVIENT <div class="resizer"></div>
+            <th data-column="BON_ACHAT" onclick="sortTable('BON_ACHAT')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+                B_A <div class="resizer"></div>
             </th>
-            <th data-column="P_VENTE" onclick="sortTable('P_VENTE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                P_Vente <div class="resizer"></div>
+            <th data-column="P_REVIENT" onclick="sortTable('P_REVIENT')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+                P_R <div class="resizer"></div>
             </th>
-            <th data-column="REM_VENTE" onclick="sortTable('REM_VENTE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                REM_VENTE <div class="resizer"></div>
+            <th data-column="P_VENTE" onclick="sortTable('P_VENTE')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+                P_V <div class="resizer"></div>
             </th>
-            <th data-column="BON_VENTE" onclick="sortTable('BON_VENTE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                BON_VENTE <div class="resizer"></div>
+            <th data-column="REM_VENTE" onclick="sortTable('REM_VENTE')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+                R_V <div class="resizer"></div>
             </th>
-            <th data-column="REMISE_AUTO" onclick="sortTable('REMISE_AUTO')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                REMISE_AUTO <div class="resizer"></div>
+            <th data-column="BON_VENTE" onclick="sortTable('BON_VENTE')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+                B_V <div class="resizer"></div>
             </th>
-            <th data-column="BONUS_AUTO" onclick="sortTable('BONUS_AUTO')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                BONUS_AUTO <div class="resizer"></div>
+            <th data-column="REMISE_AUTO" onclick="sortTable('REMISE_AUTO')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+                Rem_A <div class="resizer"></div>
             </th>
-            <th data-column="LOCATION" onclick="sortTable('LOCATION')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                LOCATION <div class="resizer"></div>
+            <th data-column="BONUS_AUTO" onclick="sortTable('BONUS_AUTO')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+                Bo_A <div class="resizer"></div>
             </th>
-            <th data-column="LOT" onclick="sortTable('LOT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                LOT <div class="resizer"></div>
+            <th data-column="PPA" onclick="sortTable('PPA')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+                PPA <div class="resizer"></div>
             </th>
-            <!-- New Guaranteedate Column -->
-            <th data-column="GUARANTEEDATE" onclick="sortTable('GUARANTEEDATE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                Date EXP <div class="resizer"></div>
+            <th data-column="LOCATION" onclick="sortTable('LOCATION')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+                Location <div class="resizer"></div>
+            </th>
+            <th data-column="LOT" onclick="sortTable('LOT')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+                Lot <div class="resizer"></div>
+            </th>
+            <th data-column="GUARANTEEDATE" onclick="sortTable('GUARANTEEDATE')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+                Exp_Date <div class="resizer"></div>
             </th>
         </tr>
     </thead>
@@ -361,27 +404,82 @@ thead {
 <div class="mt-4 flex justify-center space-x-2" id="pagination"></div>
 
 <script>
-    document.querySelectorAll("th.resizable").forEach(function (th) {
-        const resizer = document.createElement("div");
-        resizer.classList.add("resizer");
-        th.appendChild(resizer);
-
-        resizer.addEventListener("mousedown", function initResize(e) {
-            e.preventDefault();
-            window.addEventListener("mousemove", resizeColumn);
-            window.addEventListener("mouseup", stopResize);
-
-            function resizeColumn(e) {
-                const newWidth = e.clientX - th.getBoundingClientRect().left;
-                th.style.width = newWidth + "px";
+    // Apply resizing functionality to all tables with resizable columns
+    function initializeColumnResizing() {
+        document.querySelectorAll("th.resizable").forEach(function (th, thIndex) {
+            // Remove existing resizer if any
+            const existingResizer = th.querySelector('.resizer');
+            if (existingResizer) {
+                existingResizer.remove();
             }
 
-            function stopResize() {
-                window.removeEventListener("mousemove", resizeColumn);
-                window.removeEventListener("mouseup", stopResize);
-            }
+            const resizer = document.createElement("div");
+            resizer.classList.add("resizer");
+            resizer.style.cssText = `
+                position: absolute;
+                top: 0;
+                right: 0;
+                width: 5px;
+                height: 100%;
+                cursor: ew-resize;
+                user-select: none;
+                z-index: 1;
+            `;
+            th.style.position = "relative";
+            th.appendChild(resizer);
+
+            resizer.addEventListener("mousedown", function initResize(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const startX = e.clientX;
+                const startWidth = th.offsetWidth;
+                function resizeColumn(e) {
+                    const newWidth = startWidth + e.clientX - startX;
+                    if (newWidth > 50) {
+                        th.style.width = newWidth + "px";
+                        // Set width for all td in this column
+                        const table = th.closest('table');
+                        if (table) {
+                            Array.from(table.rows).forEach(row => {
+                                if (row.cells[th.cellIndex]) {
+                                    row.cells[th.cellIndex].style.width = newWidth + "px";
+                                }
+                            });
+                        }
+                    }
+                }
+                function stopResize() {
+                    window.removeEventListener("mousemove", resizeColumn);
+                    window.removeEventListener("mouseup", stopResize);
+                }
+                window.addEventListener("mousemove", resizeColumn);
+                window.addEventListener("mouseup", stopResize);
+            });
         });
-    });
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', initializeColumnResizing);
+    
+    // Re-initialize after data loads (since tables are dynamically populated)
+    const originalFetchRemiseData = fetchRemiseData;
+    const originalFetchBonusData = fetchBonusData;
+    const originalFetchReservedData = fetchReservedData;
+    
+    fetchRemiseData = async function() {
+        await originalFetchRemiseData();
+        setTimeout(initializeColumnResizing, 100);
+    };
+    
+    fetchBonusData = async function() {
+        await originalFetchBonusData();
+        setTimeout(initializeColumnResizing, 100);
+    };
+    
+    fetchReservedData = async function() {
+        await originalFetchReservedData();
+        setTimeout(initializeColumnResizing, 100);
+    };
 </script>
 
 
@@ -474,11 +572,21 @@ thead {
                     <table class="min-w-full border-collapse text-sm text-left dark:text-white">
                         <thead>
                             <tr class="table-header dark:bg-gray-700">
-                                <th data-column="FOURNISSEUR" onclick="sortRemiseTable('FOURNISSEUR')" class="border px-4 py-2">Fournisseur</th>
-                                <th data-column="LABORATORY_NAME" onclick="sortRemiseTable('LABORATORY_NAME')" class="border px-4 py-2">Laboratory Name</th>
-                                <th data-column="PRODUCT" onclick="sortRemiseTable('PRODUCT')" class="border px-4 py-2">Produit</th>
-                                <th data-column="REWARD" onclick="sortRemiseTable('REWARD')" class="border px-4 py-2">Reward</th>
-                                <th data-column="TYPE_CLIENT" onclick="sortRemiseTable('TYPE_CLIENT')" class="border px-4 py-2">Type Client</th>
+                                <th data-column="FOURNISSEUR" onclick="sortRemiseTable('FOURNISSEUR')" class="resizable border px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                                    Fournisseur <div class="resizer"></div>
+                                </th>
+                                <th data-column="LABORATORY_NAME" onclick="sortRemiseTable('LABORATORY_NAME')" class="resizable border px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                                    Laboratory Name <div class="resizer"></div>
+                                </th>
+                                <th data-column="PRODUCT" onclick="sortRemiseTable('PRODUCT')" class="resizable border px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                                    Produit <div class="resizer"></div>
+                                </th>
+                                <th data-column="REWARD" onclick="sortRemiseTable('REWARD')" class="resizable border px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                                    Reward <div class="resizer"></div>
+                                </th>
+                                <th data-column="TYPE_CLIENT" onclick="sortRemiseTable('TYPE_CLIENT')" class="resizable border px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                                    Type Client <div class="resizer"></div>
+                                </th>
                             </tr>
                         </thead>
                         <tbody id="remise-table" class="dark:bg-gray-800">
@@ -543,10 +651,18 @@ var loadingAnimation = lottie.loadAnimation({
                     <table class="min-w-full border-collapse text-sm text-left dark:text-white">
                         <thead>
                             <tr class="table-header dark:bg-gray-700">
-                                <th data-column="PRODUCT" onclick="sortBonusTable('PRODUCT')" class="border px-4 py-2">Product</th>
-                                <th data-column="BONUS" onclick="sortBonusTable('BONUS')" class="border px-4 py-2">Bonus</th>
-                                <th data-column="LABORATORY_NAME" onclick="sortBonusTable('LABORATORY_NAME')" class="border px-4 py-2">Laboratory Name</th>
-                                <th data-column="FOURNISSEUR" onclick="sortBonusTable('FOURNISSEUR')" class="border px-4 py-2">Fournisseur</th>
+                                <th data-column="PRODUCT" onclick="sortBonusTable('PRODUCT')" class="resizable border px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                                    Product <div class="resizer"></div>
+                                </th>
+                                <th data-column="BONUS" onclick="sortBonusTable('BONUS')" class="resizable border px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                                    Bonus <div class="resizer"></div>
+                                </th>
+                                <th data-column="LABORATORY_NAME" onclick="sortBonusTable('LABORATORY_NAME')" class="resizable border px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                                    Laboratory Name <div class="resizer"></div>
+                                </th>
+                                <th data-column="FOURNISSEUR" onclick="sortBonusTable('FOURNISSEUR')" class="resizable border px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                                    Fournisseur <div class="resizer"></div>
+                                </th>
                             </tr>
                         </thead>
                         <tbody id="bonus-table" class="dark:bg-gray-800"></tbody>
@@ -606,14 +722,30 @@ var loadingAnimation = lottie.loadAnimation({
         <table class="min-w-full border-collapse text-sm text-left dark:text-white">
             <thead>
                 <tr class="table-header dark:bg-gray-700">
-                    <th data-column="OPERATEUR" onclick="sortReservedTable('OPERATEUR')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">OPERATEUR</th>
-                    <th data-column="NDOCUMENT" onclick="sortReservedTable('NDOCUMENT')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">NDOCUMENT</th>
-                    <th data-column="PRODUCT" onclick="sortReservedTable('PRODUCT')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">PRODUCT</th>
-                    <th data-column="DATECOMMANDE" onclick="sortReservedTable('DATECOMMANDE')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">DATE COMMANDE</th>
-                    <th data-column="TOTALRESERVE" onclick="sortReservedTable('TOTALRESERVE')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">TOTAL RESERVE</th>
-                    <th data-column="QTYRESERVE" onclick="sortReservedTable('QTYRESERVE')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">QTY RESERVE</th>
-                    <th data-column="NAME" onclick="sortReservedTable('NAME')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">NAME</th>
-                    <th data-column="STATUS" onclick="sortReservedTable('STATUS')" class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">STATUS</th>
+                    <th data-column="OPERATEUR" onclick="sortReservedTable('OPERATEUR')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                        OPERATEUR <div class="resizer"></div>
+                    </th>
+                    <th data-column="NDOCUMENT" onclick="sortReservedTable('NDOCUMENT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                        NDOCUMENT <div class="resizer"></div>
+                    </th>
+                    <th data-column="PRODUCT" onclick="sortReservedTable('PRODUCT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                        PRODUCT <div class="resizer"></div>
+                    </th>
+                    <th data-column="DATECOMMANDE" onclick="sortReservedTable('DATECOMMANDE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                        DATE COMMANDE <div class="resizer"></div>
+                    </th>
+                    <th data-column="TOTALRESERVE" onclick="sortReservedTable('TOTALRESERVE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                        TOTAL RESERVE <div class="resizer"></div>
+                    </th>
+                    <th data-column="QTYRESERVE" onclick="sortReservedTable('QTYRESERVE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                        QTY RESERVE <div class="resizer"></div>
+                    </th>
+                    <th data-column="NAME" onclick="sortReservedTable('NAME')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                        NAME <div class="resizer"></div>
+                    </th>
+                    <th data-column="STATUS" onclick="sortReservedTable('STATUS')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                        STATUS <div class="resizer"></div>
+                    </th>
                 </tr>
             </thead>
             <tbody id="reserved-table" class="dark:bg-gray-800">
@@ -744,7 +876,8 @@ const availableMetrics = [
     { id: 'MARGE', name: 'Marge', color: 'rgba(75, 192, 192, 0.7)' },
     { id: 'P_REVIENT', name: 'Prix Revient', color: 'rgba(255, 159, 64, 0.7)' },
     { id: 'REM_ACHAT', name: 'Remise Achat', color: 'rgba(153, 102, 255, 0.7)' },
-    { id: 'REM_VENTE', name: 'Remise Vente', color: 'rgba(255, 205, 86, 0.7)' }
+    { id: 'REM_VENTE', name: 'Remise Vente', color: 'rgba(255, 205, 86, 0.7)' },
+    { id: 'PPA', name: 'PPA', color: 'rgba(255, 102, 0, 0.7)' }
 ];
 const activeMetrics = new Set(availableMetrics.map(m => m.id));
 let currentFilterValue = '';
@@ -1065,28 +1198,34 @@ function renderTablePage(page) {
         if (margeValue && !isNaN(marge) && marge < margeValue) {
             tr.style.backgroundColor = margeColor;  // Apply the color to the entire row
         }
-
+        const formatNumber = (num, isInt = false) => {
+            if (num === null || num === undefined || num === "") return 0;
+            if (isInt) return parseInt(num, 10).toLocaleString('en-US');
+            return parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
         // Format the GUARANTEEDATE value to DD/MM/YYYY
         let guaranteedDate = row.GUARANTEEDATE ? new Date(row.GUARANTEEDATE) : null;
         let formattedDate = guaranteedDate ? guaranteedDate.toLocaleDateString('en-GB') : '';  // Format as DD/MM/YYYY
 
         tr.innerHTML = `
-<td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || ''}</td>
-<td class="border px-4 py-2 dark:border-gray-600">${row.PRODUCT || ''}</td>
-<td class="border px-4 py-2 dark:border-gray-600">${row.MARGE || ''}</td>
-<td class="border px-4 py-2 dark:border-gray-600">${row.QTY || ''}</td>
-<td class="border px-4 py-2 dark:border-gray-600">${row.P_ACHAT || ''}</td>
-<td class="border px-4 py-2 dark:border-gray-600">${row.REM_ACHAT || ''}</td>
-<td class="border px-4 py-2 dark:border-gray-600">${row.BON_ACHAT || ''}</td>
-<td class="border px-4 py-2 dark:border-gray-600">${row.P_REVIENT || ''}</td>
-<td class="border px-4 py-2 dark:border-gray-600">${row.P_VENTE || ''}</td>
-<td class="border px-4 py-2 dark:border-gray-600">${row.REM_VENTE || ''}</td>
-<td class="border px-4 py-2 dark:border-gray-600">${row.BON_VENTE || ''}</td>
-<td class="border px-4 py-2 dark:border-gray-600">${row.REMISE_AUTO || ''}</td>
-<td class="border px-4 py-2 dark:border-gray-600">${row.BONUS_AUTO || ''}</td>
-<td class="border px-4 py-2 dark:border-gray-600">${row.LOCATION || ''}</td>
-<td class="border px-4 py-2 dark:border-gray-600">${row.LOT || ''}</td>
-<td class="border px-4 py-2 dark:border-gray-600">${formattedDate || ''}</td> <!-- New column data formatted -->
+                <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || ''}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${row.PRODUCT || ''}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.MARGE)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY, true)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY_DISPO, true)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.P_ACHAT)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.REM_ACHAT)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.BON_ACHAT)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.P_REVIENT)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.P_VENTE)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.REM_VENTE)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.BON_VENTE)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${row.REMISE_AUTO || ''}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${row.BONUS_AUTO || ''}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.PPA)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${row.LOCATION || ''}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${row.LOT || ''}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formattedDate || ''}</td>
         `;
         tableBody.appendChild(tr);
     });
