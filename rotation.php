@@ -36,6 +36,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
     <!-- Leaflet CSS and JS for Map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="api_config.js"></script>
 
     <link rel="stylesheet" href="rotation.css">
     <style>
@@ -240,14 +241,13 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
 
 
 
-<div class="product-container">
-    <input type="text" id="product-search" placeholder="Search product...">
+<div class="product-search-wrapper">
+    <div class="product-container">
+        <input type="text" id="product-search" placeholder="Search product...">
+        <button id="clear-search" class="clear-btn" style="display: none;">Clear</button>
+    </div>
     
-
-
-
-</div>
-<div class="products-table-container" id="products-table-container">
+    <div class="products-table-container" id="products-table-container">
         <table class="products-table" id="products-table">
             <thead>
                 <tr>
@@ -265,6 +265,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
             <button id="next-page">Next</button>
         </div>
     </div>
+</div>
 
 
 
@@ -358,7 +359,12 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
         <div class="w-1/2">
             <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
                 <div class="flex justify-between items-center p-3">
-                    <h2 class="text-lg font-semibold text-black dark:text-white">ROTATION PAR MOIS</h2>
+                    <h2 id="rotation-table-title" class="text-lg font-semibold text-black dark:text-white">ROTATION PAR MOIS</h2>
+                    <?php if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Admin', 'Developer'])): ?>
+                    <button id="v2ToggleButton" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 font-medium transition-colors duration-200" style="display: none;">
+                        ✅ V2 Mode (VO included)
+                    </button>
+                    <?php endif; ?>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full border-collapse text-sm text-left dark:text-white">
@@ -367,6 +373,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
                                 <th class="border px-3 py-2">PERIOD</th>
                                 <th class="border px-3 py-2">QTY_VENDU</th>
                                 <th class="border px-3 py-2">QTY_ACHETE</th>
+                                <th class="border px-3 py-2">QTY_INITIAL</th>
                             </tr>
                         </thead>
                         <tbody id="rotation-table" class="dark:bg-gray-800"></tbody>
@@ -508,7 +515,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 function fetchHistogramData() {
-    const productName = document.getElementById("product-search")?.value.trim();
+    const productElement = document.getElementById("product-search");
+    const productName = productElement?.value.trim();
+    const productId = productElement?.dataset.productId;
     const startDate = document.getElementById("start-date")?.value;
     const endDate = document.getElementById("end-date")?.value;
     const chartContainer = document.getElementById("chartContainer");
@@ -520,7 +529,7 @@ function fetchHistogramData() {
         return;
     }
 
-    const url = `http://192.168.1.94:5000/histogram?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}&product=${encodeURIComponent(productName)}`;
+    const url = API_CONFIG.getApiUrl(`/histogram?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}&product_id=${productId}`);
 
     fetch(url)
         .then(response => response.ok ? response.json() : Promise.reject(`HTTP error! Status: ${response.status}`))
@@ -669,21 +678,28 @@ document.addEventListener("DOMContentLoaded", async function() {
     await fetchProducts();
     setupProductSearch();
     setupDateInputs();
+    setupV2Toggle();
+    
+    // Set initial button text and style for V2 toggle
+    updateV2ButtonText();
+    
+    // Initialize empty tables
+    initializeEmptyTables();
     
     // Event listeners for chart updates
     document.getElementById("product-search")?.addEventListener("input", fetchHistogramData);
     document.getElementById("start-date")?.addEventListener("change", function() {
         if (document.getElementById("end-date").value) {
             fetchHistogramData();
-            // Auto-update map if product is selected and map is visible
-            autoUpdateMapIfNeeded();
+            // Use debounced function instead of direct call
+            debounceRotationData();
         }
     });
     document.getElementById("end-date")?.addEventListener("change", function() {
         if (document.getElementById("start-date").value) {
             fetchHistogramData();
-            // Auto-update map if product is selected and map is visible
-            autoUpdateMapIfNeeded();
+            // Use debounced function instead of direct call
+            debounceRotationData();
         }
     });
 });
@@ -717,16 +733,22 @@ function setupDateInputs() {
             endDate.value = today;
         }
         // Auto-show map if product is selected and both dates are available
-        const productName = document.getElementById("product-search").value.trim();
+        const productInput = document.getElementById("product-search");
+        const productName = productInput.dataset.selectedProductName || productInput.value.trim();
         if (productName && this.value && endDate.value) {
+            // Use debounced function instead of direct call
+            debounceRotationData();
             autoShowMapWithData();
         }
     });
     
     // When end date changes, auto-show map if product and start date are available
     endDate.addEventListener("change", function() {
-        const productName = document.getElementById("product-search").value.trim();
+        const productInput = document.getElementById("product-search");
+        const productName = productInput.dataset.selectedProductName || productInput.value.trim();
         if (productName && startDate.value && this.value) {
+            // Use debounced function instead of direct call
+            debounceRotationData();
             autoShowMapWithData();
         }
     });
@@ -739,12 +761,22 @@ async function fetchProducts(forceRefresh = false) {
     }
 
     try {
-        const response = await fetch("http://192.168.1.94:5000/fetch-rotation-product-data");
+        const response = await fetch(API_CONFIG.getApiUrl("/fetch-rotation-product-data"));
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
         allProducts = await response.json();
         lastFetchTime = currentTime;
         filteredProducts = [...allProducts];
+        
+        // Log basic info and sample structure for debugging
+        if (allProducts.length > 0) {
+            console.log("✅ Loaded", allProducts.length, "products");
+            // Only log structure if there are issues
+            if (!allProducts[0].NAME) {
+                console.warn("⚠️ Product structure may be incorrect:", allProducts[0]);
+            }
+        }
+        
         renderTable();
     } catch (error) {
         console.error("❌ Error fetching products:", error);
@@ -754,32 +786,70 @@ async function fetchProducts(forceRefresh = false) {
 function setupProductSearch() {
     const productSearch = document.getElementById("product-search");
     const productsTableContainer = document.getElementById("products-table-container");
+    const clearBtn = document.getElementById("clear-search");
+    
+    // Clear button functionality
+    clearBtn.addEventListener("click", function() {
+        productSearch.value = "";
+        productSearch.dataset.productId = "";
+        productSearch.dataset.selectedProductName = "";
+        clearBtn.style.display = "none";
+        productsTableContainer.style.display = "none";
+        
+        // Reset table title
+        document.getElementById("rotation-table-title").textContent = "ROTATION PAR MOIS";
+        
+        // Hide V2 toggle button when clearing product
+        hideV2Toggle();
+        
+        // Disable date inputs when clearing product
+        const startDateInput = document.getElementById("start-date");
+        const endDateInput = document.getElementById("end-date");
+        startDateInput.disabled = true;
+        endDateInput.disabled = true;
+        
+        // Clear all tables and charts
+        clearAllData();
+    });
     
     productSearch.addEventListener("focus", function() {
-        if (filteredProducts.length > 0) {
+        const searchValue = this.value.trim();
+        if (searchValue) {
+            // Re-filter products based on current input value
+            filteredProducts = allProducts.filter(product => 
+                product.NAME.toLowerCase().includes(searchValue.toLowerCase())
+            );
+            
             productsTableContainer.style.display = "block";
+            renderTable();
         }
     });
     
     productSearch.addEventListener("input", debounce(function(e) {
-        const searchValue = e.target.value.toLowerCase();
+        const searchValue = e.target.value.toLowerCase().trim();
         
-        if (!searchValue.trim()) {
+        // Show/hide clear button
+        clearBtn.style.display = searchValue ? "block" : "none";
+        
+        if (!searchValue) {
             filteredProducts = [...allProducts];
+            productsTableContainer.style.display = "none";
         } else {
             filteredProducts = allProducts.filter(product => 
                 product.NAME.toLowerCase().includes(searchValue)
             );
+            
+            productsTableContainer.style.display = "block";
         }
         
         currentPage = 1;
         renderTable();
-        productsTableContainer.style.display = filteredProducts.length > 0 ? "block" : "none";
     }, 300));
     
-    // Close table when clicking outside
+    // Hide table when clicking outside the wrapper
     document.addEventListener("click", function(e) {
-        if (!productSearch.contains(e.target) && !productsTableContainer.contains(e.target)) {
+        const wrapper = document.querySelector('.product-search-wrapper');
+        if (!wrapper.contains(e.target)) {
             productsTableContainer.style.display = "none";
         }
     });
@@ -801,6 +871,152 @@ function setupProductSearch() {
     });
 }
 
+
+
+// Function to select a product
+async function selectProduct(product) {
+    const productSearch = document.getElementById("product-search");
+    const clearBtn = document.getElementById("clear-search");
+    const productsTableContainer = document.getElementById("products-table-container");
+    
+    // Try to find the product ID field - check multiple possible field names
+    let productId = product.M_PRODUCT_ID || product.ID || product.id || product.PRODUCT_ID || product.product_id;
+    
+    // If we still don't have an ID, try to use the first available field that looks like an ID
+    if (!productId) {
+        const idFields = Object.keys(product).filter(key => 
+            key.toLowerCase().includes('id') || 
+            key.toLowerCase().includes('product')
+        );
+        if (idFields.length > 0) {
+            productId = product[idFields[0]];
+        }
+    }
+    
+    // If we still don't have an ID, use the NAME as fallback
+    if (!productId) {
+        productId = product.NAME;
+        console.warn("⚠️ Using product NAME as ID fallback:", productId);
+    }
+    
+    // DO NOT change the input field value - keep the search term
+    // Only set the product ID for data fetching
+    productSearch.dataset.productId = productId;
+    productSearch.dataset.selectedProductName = product.NAME;
+    
+    // Show clear button
+    clearBtn.style.display = "block";
+    
+    // Hide the dropdown table
+    productsTableContainer.style.display = "none";
+    
+    // Update the ROTATION PAR MOIS table title
+    document.getElementById("rotation-table-title").textContent = `ROTATION PAR MOIS - ${product.NAME}`;
+    
+    // Check reversed/voided stock movements to auto-set V2 mode
+    try {
+        const url = API_CONFIG.getApiUrl(`/fetch-reversed-voided-stock-movements?product_id=${productId}`);
+        console.log("🔍 Checking reversed/voided stock movements:", url);
+        
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        
+        const data = await response.json();
+        console.log("📊 Reversed/voided stock movements data:", data);
+        
+        // Use debug helper
+        debugApiResponse(data, "Reversed/Voided Stock Movements");
+        
+        // Properly handle the difference value based on the actual API response structure
+        let hasDifference = false;
+        
+        // Check if data has movements array
+        if (data && data.movements && Array.isArray(data.movements)) {
+            // If there are any movements, we should set V2 mode to false (VO included)
+            // This is the opposite of the previous logic
+            hasDifference = data.movements.length === 0;
+            console.log(`🔢 Found ${data.movements.length} reversed/voided movements, hasDifference: ${hasDifference}`);
+            
+            // Alternatively, if summary contains a difference property, use that
+            if (data.summary && 'difference' in data.summary) {
+                const numericDifference = Number(data.summary.difference);
+                // Reversed logic: If there's a difference, set V2 mode to false
+                hasDifference = isNaN(numericDifference) || numericDifference === 0;
+                console.log(`🔢 Summary difference: ${numericDifference}, hasDifference: ${hasDifference}`);
+            }
+        }
+        
+        // Set V2 mode based on the result
+        isV2Mode = hasDifference;
+        
+        // Update the V2 toggle button text and show it
+        showV2Toggle();
+        updateV2ButtonText();
+        
+        console.log(`🔄 Auto-setting V2 Mode to: ${isV2Mode} based on reversed/voided movements (reversed logic)`);
+    } catch (error) {
+        console.error("❌ Error checking reversed/voided stock movements:", error);
+        // Default to normal mode in case of error
+        isV2Mode = false;
+        showV2Toggle();
+        updateV2ButtonText();
+    }
+    
+    // Enable date inputs and preserve their existing values
+    const startDateInput = document.getElementById("start-date");
+    const endDateInput = document.getElementById("end-date");
+    startDateInput.disabled = false;
+    endDateInput.disabled = false;
+    
+    // Only set end date to today if it's empty
+    if (!endDateInput.value) {
+        const today = new Date().toISOString().split("T")[0];
+        endDateInput.value = today;
+    }
+    
+    // Fetch product data in proper order - historique first, then rotation (for QTY_INITIAL calculation)
+    try {
+        await fetchHistoriqueRotation();
+        await fetchRotationData();
+        fetchHistogramData();
+        refreshWeeklyTables();
+    } catch (error) {
+        console.error("❌ Error fetching product data:", error);
+    }
+    
+    // Auto-show map and load data if both dates are available
+    if (startDateInput.value && endDateInput.value) {
+        autoShowMapWithData();
+    }
+}
+
+// Function to clear all data
+function clearAllData() {
+    // Clear tables
+    document.getElementById("historique-table").innerHTML = "<tr><td colspan='3' class='text-center text-gray-500'>Select a product</td></tr>";
+    document.getElementById("rotation-table").innerHTML = "<tr><td colspan='4' class='text-center text-gray-500'>Select a product</td></tr>";
+    document.getElementById("this-week-table").innerHTML = "<tr><td colspan='4' class='text-center text-gray-500'>Select a product</td></tr>";
+    document.getElementById("last-week-table").innerHTML = "<tr><td colspan='4' class='text-center text-gray-500'>Select a product</td></tr>";
+    
+    // Hide chart
+    const chartContainer = document.getElementById("chartContainer");
+    if (chartContainer) {
+        chartContainer.style.display = "none";
+    }
+    
+    // Clear chart instance
+    if (chartInstance) {
+        chartInstance.destroy();
+        chartInstance = null;
+    }
+    
+    // Hide map data
+    const mapContainer = document.getElementById('mapContainer');
+    if (mapContainer && mapContainer.style.display !== 'none') {
+        resetMap();
+    }
+}
+
 function renderTable() {
     const tableBody = document.getElementById("products-table-body");
     const paginationInfo = document.getElementById("page-info");
@@ -820,27 +1036,7 @@ function renderTable() {
             <td>${product.NAME}</td>
         `;
         row.addEventListener("click", function() {
-            document.getElementById("product-search").value = product.NAME;
-            document.getElementById("products-table-container").style.display = "none";
-            // Enable date inputs and preserve their existing values
-            const startDateInput = document.getElementById("start-date");
-            const endDateInput = document.getElementById("end-date");
-            startDateInput.disabled = false;
-            endDateInput.disabled = false;
-            // Only set end date to today if it's empty
-            if (!endDateInput.value) {
-                const today = new Date().toISOString().split("T")[0];
-                endDateInput.value = today;
-            }
-            fetchHistoriqueRotation();
-            fetchRotationData();
-            fetchHistogramData();
-            refreshWeeklyTables(); // Only fetch weekly tables after product is selected
-            
-            // Auto-show map and load data if both dates are available
-            if (startDateInput.value && endDateInput.value) {
-                autoShowMapWithData();
-            }
+            selectProduct(product);
         });
         tableBody.appendChild(row);
     });
@@ -863,17 +1059,19 @@ function debounce(func, delay) {
 
 
 async function fetchHistoriqueRotation() {
-    const productName = document.getElementById("product-search").value.trim();
+    const productElement = document.getElementById("product-search");
+    const productName = productElement.dataset.selectedProductName || productElement.value.trim();
+    const productId = productElement.dataset.productId;
 
-    console.log("Product Name:", `"${productName}"`); // ✅ Check if it's empty
+    console.log("Product Name:", `"${productName}"`, "Product ID:", productId); // ✅ Check if it's empty
 
-    if (!productName) {
-        console.error("❌ Missing product name, not sending request.");
+    if (!productName || !productId) {
+        console.error("❌ Missing product name or ID, not sending request.");
         return; 
     }
 
     try {
-        const url = `http://192.168.1.94:5000/fetchHistoriqueRotation?product=${encodeURIComponent(productName)}`;
+        const url = API_CONFIG.getApiUrl(`/fetchHistoriqueRotation?product_id=${productId}`);
         console.log("Requesting URL:", url); // ✅ Debugging
 
         const response = await fetch(url);
@@ -925,89 +1123,297 @@ function updateHistoriqueTable(data) {
 
 
 
-// ✅ Attach event listeners to trigger fetching when filters change
-["start-date", "end-date", "product-search"].forEach(id => {
-    document.getElementById(id).addEventListener("change", fetchRotationData);
-});
+// ✅ Add debounced function to prevent multiple calls
+let rotationDataTimeout = null;
 
-// Clear search input but preserve date fields
-document.getElementById("product-search").addEventListener("click", function () {
-    this.value = ""; // Clear search input only
-    // Keep the date values as they are - do not reset them
+function debounceRotationData() {
+    if (rotationDataTimeout) {
+        clearTimeout(rotationDataTimeout);
+    }
+    
+    rotationDataTimeout = setTimeout(async () => {
+        const productInput = document.getElementById("product-search");
+        const productName = productInput.dataset.selectedProductName || productInput.value.trim();
+        
+        if (productName) {
+            try {
+                await fetchHistoriqueRotation();
+                await fetchRotationData();
+            } catch (error) {
+                console.error("❌ Error fetching data on date change:", error);
+            }
+        }
+    }, 300); // 300ms delay
+}
+
+// ✅ Attach event listeners to trigger fetching when filters change
+["start-date", "end-date"].forEach(id => {
+    document.getElementById(id).addEventListener("change", debounceRotationData);
 });
 
 
 async function fetchRotationData() {
-    const productInput = document.getElementById("product-search");
-    const startDateInput = document.getElementById("start-date");
-    const endDateInput = document.getElementById("end-date");
-
-    const productName = productInput.value.trim();
+    // Prevent duplicate calls
+    if (fetchRotationData.isRunning) {
+        console.log("⚠️ fetchRotationData already running, skipping...");
+        return;
+    }
     
-    if (!productName) {
-        console.warn("⚠️ Please select a product first.");
-        return;
-    }
-
-    // Ensure startDate and endDate are selected after the product
-    const startDate = startDateInput.value;
-    const endDate = endDateInput.value;
-
-    if (!startDate || !endDate) {
-        console.warn("⚠️ Please select both start and end dates.");
-        return;
-    }
-
-    const url = `http://192.168.1.94:5000/rotationParMois?product=${encodeURIComponent(productName)}&start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
-    console.log("🔗 Request URL:", url); // ✅ Debugging
-
+    fetchRotationData.isRunning = true;
+    
     try {
+        const productInput = document.getElementById("product-search");
+        const startDateInput = document.getElementById("start-date");
+        const endDateInput = document.getElementById("end-date");
+
+        const productName = productInput.dataset.selectedProductName || productInput.value.trim();
+        const productId = productInput.dataset.productId;
+        
+        if (!productName || !productId) {
+            console.warn("⚠️ Please select a product first.");
+            return;
+        }
+
+        // Ensure startDate and endDate are selected after the product
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+
+        if (!startDate || !endDate) {
+            console.warn("⚠️ Please select both start and end dates.");
+            return;
+        }
+
+        const url = API_CONFIG.getApiUrl(`/rotationParMois?product_id=${productId}&start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}&v2_mode=${isV2Mode}`);
+        console.log("🔗 Request URL:", url); // ✅ Debugging
+
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
         const data = await response.json();
         console.log("📥 Response Data:", data); // ✅ Debugging
 
-        updateRotationTable(data);
+        // Check if the response contains an error
+        if (data && data.error) {
+            throw new Error(`API Error: ${data.error}`);
+        }
+
+        // Check if data is an array
+        if (!Array.isArray(data)) {
+            throw new Error(`Invalid data format: expected array, got ${typeof data}`);
+        }
+
+        await updateRotationTable(data);
     } catch (error) {
         console.error("❌ Error fetching rotation data:", error);
-        document.getElementById('rotation-table').innerHTML = "<tr><td colspan='3' class='text-center text-red-500'>Failed to load data</td></tr>";
+        document.getElementById('rotation-table').innerHTML = "<tr><td colspan='4' class='text-center text-red-500'>Failed to load data</td></tr>";
+    } finally {
+        fetchRotationData.isRunning = false;
     }
 }
 
-function updateRotationTable(data) {
+// Function to calculate QTY_INITIAL for each period using API calls
+let isCalculatingInitial = false; // Flag to prevent duplicate calculations
+
+async function calculateQtyInitial(data) {
+    // Prevent duplicate calculations
+    if (isCalculatingInitial) {
+        console.log("⚠️ QTY_INITIAL calculation already in progress, skipping...");
+        return data;
+    }
+    
+    isCalculatingInitial = true;
+    
+    try {
+        // Validate data format
+        if (!Array.isArray(data)) {
+            console.error("❌ calculateQtyInitial: data is not an array:", typeof data);
+            return data; // Return original data
+        }
+        
+        // Get product ID
+        const productElement = document.getElementById("product-search");
+        const productId = productElement.dataset.productId;
+        
+        if (!productId) {
+            console.error("❌ No product ID available for QTY_INITIAL calculation");
+            return data; // Return original data without QTY_INITIAL
+        }
+        
+        // Filter out TOTAL and MOYENNE rows for calculation, keep them for display
+        const regularPeriods = data.filter(row => row.PERIOD !== "TOTAL" && row.PERIOD !== "MOYENNE");
+        const specialRows = data.filter(row => row.PERIOD === "TOTAL" || row.PERIOD === "MOYENNE");
+        
+        // Sort regular periods chronologically
+        regularPeriods.sort((a, b) => {
+            const periodA = a.PERIOD || '';
+            const periodB = b.PERIOD || '';
+            return periodA.localeCompare(periodB);
+        });
+        
+        console.log(`📊 Starting QTY_INITIAL calculation for ${regularPeriods.length} periods`);
+        
+        // Calculate QTY_INITIAL for each period by calling the API
+        const periodsWithInitial = [];
+        
+        for (const period of regularPeriods) {
+            try {
+                // Convert period to date format (assuming period is like "2024-01" or "2024-01-01")
+                let targetDate;
+                if (period.PERIOD.includes('-')) {
+                    // If period is already in date format, use it
+                    if (period.PERIOD.split('-').length === 2) {
+                        // Format: "2024-01" -> "2024-01-01"
+                        targetDate = period.PERIOD + '-01';
+                    } else {
+                        // Format: "2024-01-15" -> use as is
+                        targetDate = period.PERIOD;
+                    }
+                } else {
+                    // Handle other formats if needed
+                    targetDate = period.PERIOD + '-01-01';
+                }
+                
+                // Call API to get initial stock for this date
+                const url = API_CONFIG.getApiUrl(`/getInitialStock?date=${encodeURIComponent(targetDate)}&product_id=${productId}&v2_mode=${isV2Mode}`);
+                console.log(`📤 Fetching initial stock for ${period.PERIOD} (${targetDate}) - V2 Mode: ${isV2Mode}`);
+                
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.error) {
+                    console.error(`❌ Error getting initial stock for ${period.PERIOD}:`, result.error);
+                    period.QTY_INITIAL = 0;
+                } else {
+                    period.QTY_INITIAL = result.initial_stock || 0;
+                    console.log(`✅ Got initial stock for ${period.PERIOD}: ${period.QTY_INITIAL}`);
+                }
+                
+            } catch (error) {
+                console.error(`❌ Error fetching initial stock for period ${period.PERIOD}:`, error);
+                period.QTY_INITIAL = 0;
+            }
+            
+            periodsWithInitial.push(period);
+        }
+        
+        // For special rows (TOTAL, MOYENNE), calculate appropriate values
+        specialRows.forEach(row => {
+            if (row.PERIOD === "TOTAL") {
+                // For TOTAL row, QTY_INITIAL could be the sum of all initial quantities
+                const totalInitial = periodsWithInitial.reduce((sum, p) => sum + (p.QTY_INITIAL || 0), 0);
+                row.QTY_INITIAL = totalInitial;
+            } else if (row.PERIOD === "MOYENNE") {
+                // For MOYENNE row, QTY_INITIAL could be the average of all initial quantities
+                const avgInitial = periodsWithInitial.length > 0 
+                    ? Math.round(periodsWithInitial.reduce((sum, p) => sum + (p.QTY_INITIAL || 0), 0) / periodsWithInitial.length)
+                    : 0;
+                row.QTY_INITIAL = avgInitial;
+            }
+        });
+        
+        console.log(`✅ QTY_INITIAL calculation completed for ${regularPeriods.length} periods`);
+        
+        // Return combined data with special rows at the end (they'll be moved to top in updateRotationTable)
+        return [...periodsWithInitial, ...specialRows];
+        
+    } finally {
+        isCalculatingInitial = false;
+    }
+}
+
+async function updateRotationTable(data) {
     const tableBody = document.getElementById("rotation-table");
     tableBody.innerHTML = ""; // Clear previous data
 
-    if (!data || data.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="3" class="text-center p-4">No data available</td></tr>`;
+    // Add validation for data format
+    if (!data) {
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">No data received</td></tr>`;
         return;
     }
 
-    let specialRows = "";
-    let normalRows = "";
+    if (!Array.isArray(data)) {
+        console.error("❌ Invalid data format for rotation table:", data);
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-red-500">Invalid data format received</td></tr>`;
+        return;
+    }
 
-    data.forEach(row => {
-        const rowHTML = `
-            <tr class="dark:bg-gray-700 ${row.PERIOD === "TOTAL" || row.PERIOD === "MOYENNE" ? "font-bold" : ""}">
-                <td class="border px-3 py-2 dark:border-gray-600">${row.PERIOD ?? 'N/A'}</td>
-                <td class="border px-3 py-2 dark:border-gray-600">${formatNumberWithSpace(row.QTY_VENDU ?? 0)}</td>
-                <td class="border px-3 py-2 dark:border-gray-600">${formatNumberWithSpace(row.QTY_ACHETÉ ?? 0)}</td>
-            </tr>
-        `;
+    if (data.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">No data available</td></tr>`;
+        return;
+    }
 
-        // Move "TOTAL" and "MOYENNE" rows to the top
-        if (row.PERIOD === "TOTAL" || row.PERIOD === "MOYENNE") {
-            specialRows += rowHTML;
-        } else {
-            normalRows += rowHTML;
-        }
-    });
+    try {
+        // Calculate QTY_INITIAL for each period (now async)
+        const dataWithInitial = await calculateQtyInitial(data);
 
-    // Append special rows first, followed by normal rows
-    tableBody.innerHTML = specialRows + normalRows;
+        let specialRows = "";
+        let normalRows = "";
 
-    console.log("✅ Table updated successfully.");
+        dataWithInitial.forEach(row => {
+            const rowHTML = `
+                <tr class="dark:bg-gray-700 ${row.PERIOD === "TOTAL" || row.PERIOD === "MOYENNE" ? "font-bold" : ""}">
+                    <td class="border px-3 py-2 dark:border-gray-600">${row.PERIOD ?? 'N/A'}</td>
+                    <td class="border px-3 py-2 dark:border-gray-600">${formatNumberWithSpace(row.QTY_VENDU ?? 0)}</td>
+                    <td class="border px-3 py-2 dark:border-gray-600">${formatNumberWithSpace(row.QTY_ACHETÉ ?? 0)}</td>
+                    <td class="border px-3 py-2 dark:border-gray-600">${formatNumberWithSpace(row.QTY_INITIAL ?? 0)}</td>
+                </tr>
+            `;
+
+            // Move "TOTAL" and "MOYENNE" rows to the top
+            if (row.PERIOD === "TOTAL" || row.PERIOD === "MOYENNE") {
+                specialRows += rowHTML;
+            } else {
+                normalRows += rowHTML;
+            }
+        });
+
+        // Append special rows first, followed by normal rows
+        tableBody.innerHTML = specialRows + normalRows;
+
+        console.log("✅ Table updated successfully with QTY_INITIAL calculations from API.");
+    } catch (error) {
+        console.error("❌ Error updating rotation table with QTY_INITIAL:", error);
+        
+        // Fallback: display table without QTY_INITIAL
+        let specialRows = "";
+        let normalRows = "";
+
+        data.forEach(row => {
+            const rowHTML = `
+                <tr class="dark:bg-gray-700 ${row.PERIOD === "TOTAL" || row.PERIOD === "MOYENNE" ? "font-bold" : ""}">
+                    <td class="border px-3 py-2 dark:border-gray-600">${row.PERIOD ?? 'N/A'}</td>
+                    <td class="border px-3 py-2 dark:border-gray-600">${formatNumberWithSpace(row.QTY_VENDU ?? 0)}</td>
+                    <td class="border px-3 py-2 dark:border-gray-600">${formatNumberWithSpace(row.QTY_ACHETÉ ?? 0)}</td>
+                    <td class="border px-3 py-2 dark:border-gray-600">Error</td>
+                </tr>
+            `;
+
+            if (row.PERIOD === "TOTAL" || row.PERIOD === "MOYENNE") {
+                specialRows += rowHTML;
+            } else {
+                normalRows += rowHTML;
+            }
+        });
+
+        tableBody.innerHTML = specialRows + normalRows;
+    }
+}
+
+// Function to initialize empty tables
+function initializeEmptyTables() {
+    document.getElementById("historique-table").innerHTML = "<tr><td colspan='3' class='text-center text-gray-500'>Select a product to view data</td></tr>";
+    document.getElementById("rotation-table").innerHTML = "<tr><td colspan='4' class='text-center text-gray-500'>Select a product to view data</td></tr>";
+    document.getElementById("this-week-table").innerHTML = "<tr><td colspan='4' class='text-center text-gray-500'>Select a product to view data</td></tr>";
+    document.getElementById("last-week-table").innerHTML = "<tr><td colspan='4' class='text-center text-gray-500'>Select a product to view data</td></tr>";
+    
+    // Initialize headers for weekly tables
+    document.getElementById("this-week-header").innerHTML = "<th class='border px-3 py-2'></th><th class='border px-3 py-2'>Select Product</th>";
+    document.getElementById("last-week-header").innerHTML = "<th class='border px-3 py-2'></th><th class='border px-3 py-2'>Select Product</th>";
 }
 
 // Set up event listeners for product and date inputs
@@ -1028,16 +1434,18 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 document.getElementById("downloadExcel_rotation").addEventListener("click", async () => {
-    const productName = document.getElementById("product-search").value.trim();
+    const productInput = document.getElementById("product-search");
+    const productName = productInput.dataset.selectedProductName || productInput.value.trim();
+    const productId = productInput.dataset.productId;
     const startDate = document.getElementById("start-date").value;
     const endDate = document.getElementById("end-date").value;
 
-    if (!productName || !startDate || !endDate) {
+    if (!productName || !productId || !startDate || !endDate) {
         console.error("❌ Missing required fields. Not downloading file.");
         return;
     }
 
-    const url = `http://192.168.1.94:5000/download-rotation-par-mois-excel?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}&product=${encodeURIComponent(productName)}`;
+    const url = API_CONFIG.getApiUrl(`/download-rotation-par-mois-excel?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}&product_id=${productId}`);
     console.log("🔗 Download URL:", url); // ✅ Debugging
 
     // Create a hidden link and trigger download
@@ -1067,8 +1475,11 @@ function getWeekRange(offset = 0) {
 }
 
 async function fetchWeekRotationData(weekType) {
-    const productName = document.getElementById("product-search").value.trim();
-    if (!productName) {
+    const productInput = document.getElementById("product-search");
+    const productName = productInput.dataset.selectedProductName || productInput.value.trim();
+    const productId = productInput.dataset.productId;
+    
+    if (!productName || !productId) {
         document.getElementById(weekType + '-table').innerHTML = "<tr><td colspan='3' class='text-center text-gray-500'>Select a product</td></tr>";
         return;
     }
@@ -1080,7 +1491,7 @@ async function fetchWeekRotationData(weekType) {
     } else {
         return;
     }
-    const url = `http://192.168.1.94:5000/rotationParMois?product=${encodeURIComponent(productName)}&start_date=${range.start}&end_date=${range.end}`;
+    const url = API_CONFIG.getApiUrl(`/rotationParMois?product_id=${productId}&start_date=${range.start}&end_date=${range.end}`);
     try {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
@@ -1123,27 +1534,48 @@ function updateWeekTable(weekType, data) {
     tableBody.innerHTML = qtyVenduRow + qtyAcheteRow;
 }
 
-// Call these when product changes
-function refreshWeeklyTables() {
-    fetchWeekRotationData('this-week');
-    fetchWeekRotationData('last-week');
+// Function to refresh both weekly tables
+async function refreshWeeklyTables() {
+    try {
+        // Fetch data for this week and last week
+        await fetchWeekRotationData('this-week');
+        await fetchWeekRotationData('last-week');
+        console.log("✅ Weekly tables refreshed successfully");
+    } catch (error) {
+        console.error("❌ Error refreshing weekly tables:", error);
+    }
 }
 
-// Attach to product search and on page load
-const productSearchInput = document.getElementById("product-search");
-if (productSearchInput) {
-    // Only fetch weekly tables after product is selected from dropdown (handled in renderTable)
-    // Remove these lines:
-    // productSearchInput.addEventListener("change", ...);
-    // productSearchInput.addEventListener("input", ...);
-}
-document.addEventListener("DOMContentLoaded", function() {
-    // Only refresh weekly tables if a product is already selected
-    const productInput = document.getElementById("product-search");
-    if (productInput && productInput.value.trim()) {
-        refreshWeeklyTables();
+// Debug helper function
+function debugApiResponse(response, title) {
+    console.log(`🔍 DEBUG ${title || 'API Response'}: `, response);
+    
+    if (response === null) {
+        console.log(`   - Value is null`);
+        return;
     }
-});
+    
+    if (response === undefined) {
+        console.log(`   - Value is undefined`);
+        return;
+    }
+    
+    if (typeof response === 'object') {
+        console.log(`   - Type: ${Array.isArray(response) ? 'Array' : 'Object'}`);
+        console.log(`   - Keys: ${Object.keys(response).join(', ')}`);
+        
+        if ('difference' in response) {
+            console.log(`   - difference value: ${response.difference}`);
+            console.log(`   - difference type: ${typeof response.difference}`);
+            console.log(`   - difference == 0: ${response.difference == 0}`);
+            console.log(`   - difference === 0: ${response.difference === 0}`);
+            console.log(`   - Number(difference) === 0: ${Number(response.difference) === 0}`);
+        }
+    } else {
+        console.log(`   - Type: ${typeof response}`);
+        console.log(`   - Value: ${response}`);
+    }
+}
 
 // --- MAP FUNCTIONALITY ---
 let map = null;
@@ -1428,17 +1860,6 @@ function getStyleByQty(feature) {
         opacity: 1,
         color: '#374151',
         dashArray: '',
-        fillOpacity: 0.7
-    };
-}
-
-function getHighlightStyle(feature) {
-    return {
-        fillColor: '#fbbf24',
-        weight: 3,
-        opacity: 1,
-        color: '#374151',
-        dashArray: '',
         fillOpacity: 0.9
     };
 }
@@ -1460,7 +1881,7 @@ function onEachFeature(feature, layer) {
 
     layer.on({
         mouseover: function(e) {
-            if (selectedWilaya !== layer) {
+                       if (selectedWilaya !== layer) {
                 layer.setStyle(getHighlightStyle(feature));
             }
             layer.bringToFront();
@@ -1554,11 +1975,14 @@ function selectWilayaLayer(layer, feature) {
 
 // Load map data
 async function loadMapData() {
-    const productName = document.getElementById("product-search").value.trim();
+    const productInput = document.getElementById("product-search");
+    const productName = productInput.value.trim();
+    const productId = productInput.dataset.productId;
     const startDate = document.getElementById("start-date").value;
     const endDate = document.getElementById("end-date").value;
 
-    if (!productName) {
+    if (!productName || !productId) {
+
         alert('Please select a product first');
         return;
     }
@@ -1569,9 +1993,9 @@ async function loadMapData() {
     }
 
     try {
-        let url = `http://192.168.1.94:5000/fetchZonerotation?start_date=${startDate}&end_date=${endDate}`;
-        if (productName) {
-            url += `&product=${encodeURIComponent(productName)}`;
+        let url = API_CONFIG.getApiUrl(`/fetchZonerotation?start_date=${startDate}&end_date=${endDate}`);
+        if (productId) {
+            url += `&product_id=${productId}`;
         }
 
         const response = await fetch(url);
@@ -1674,12 +2098,14 @@ document.addEventListener('mousemove', function(e) {
 
 // Auto-show map and load data when product and dates are available
 function autoShowMapWithData() {
-    const productName = document.getElementById("product-search").value.trim();
+    const productInput = document.getElementById("product-search");
+    const productName = productInput.value.trim();
+    const productId = productInput.dataset.productId;
     const startDate = document.getElementById("start-date").value;
     const endDate = document.getElementById("end-date").value;
     
     // Only proceed if we have all required data
-    if (productName && startDate && endDate) {
+    if (productName && productId && startDate && endDate) {
         // Show map if it's hidden
         const mapContainer = document.getElementById('mapContainer');
         if (mapContainer.style.display === 'none') {
@@ -1695,14 +2121,92 @@ function autoShowMapWithData() {
 
 // Auto-update map if needed when dates change
 function autoUpdateMapIfNeeded() {
-    const productName = document.getElementById("product-search").value.trim();
+    const productInput = document.getElementById("product-search");
+    const productName = productInput.value.trim();
+    const productId = productInput.dataset.productId;
     const startDate = document.getElementById("start-date").value;
     const endDate = document.getElementById("end-date").value;
     const mapContainer = document.getElementById('mapContainer');
     
     // Only update if product is selected, dates are available, and map is visible
-    if (productName && startDate && endDate && mapContainer.style.display !== 'none') {
+    if (productName && productId && startDate && endDate && mapContainer.style.display !== 'none') {
         loadMapData();
+    }
+}
+
+// V2 Mode state management
+let isV2Mode = false;
+console.log("🔄 Initializing V2 Mode to:", isV2Mode);
+
+function setupV2Toggle() {
+    const v2ToggleButton = document.getElementById("v2ToggleButton");
+    
+    if (v2ToggleButton) {
+        console.log("🔄 Setting up V2 toggle button event listener");
+        
+        v2ToggleButton.addEventListener("click", function() {
+            // Toggle mode
+            isV2Mode = !isV2Mode;
+            console.log(`🔄 V2 Mode toggled to: ${isV2Mode}`);
+            
+            // Update button appearance
+            updateV2ButtonText();
+            
+            // Refresh rotation data with new mode
+            debounceRotationData();
+        });
+    } else {
+        console.error("❌ V2 toggle button not found during setup");
+    }
+}
+
+function showV2Toggle() {
+    const v2ToggleButton = document.getElementById("v2ToggleButton");
+    if (v2ToggleButton) {
+        console.log("🔄 Showing V2 toggle button");
+        v2ToggleButton.style.display = "inline-block";
+        // Update button text and styling when showing
+        updateV2ButtonText();
+    } else {
+        console.error("❌ V2 toggle button not found when trying to show it");
+    }
+}
+
+function hideV2Toggle() {
+    const v2ToggleButton = document.getElementById("v2ToggleButton");
+    if (v2ToggleButton) {
+        console.log("🔄 Hiding V2 toggle button");
+        v2ToggleButton.style.display = "none";
+    } else {
+        console.error("❌ V2 toggle button not found when trying to hide it");
+    }
+}
+
+// Update V2 button text based on current mode
+function updateV2ButtonText() {
+    const v2ToggleButton = document.getElementById("v2ToggleButton");
+    if (v2ToggleButton) {
+        console.log(`📣 Updating V2 button text. Current isV2Mode: ${isV2Mode}`);
+        
+        // Update text based on current mode - with reversed logic
+        if (isV2Mode) {
+            v2ToggleButton.textContent = "❌ V2 Mode (VO excluded)";
+            console.log("📣 Setting button text to: ❌ V2 Mode (VO excluded)");
+        } else {
+            v2ToggleButton.textContent = "✅ V2 Mode (VO included)";
+            console.log("📣 Setting button text to: ✅ V2 Mode (VO included)");
+        }
+        
+        // Update button styling based on current mode
+        if (isV2Mode) {
+            v2ToggleButton.classList.remove("bg-green-600", "hover:bg-green-700", "dark:bg-green-500", "dark:hover:bg-green-600");
+            v2ToggleButton.classList.add("bg-red-600", "hover:bg-red-700", "dark:bg-red-500", "dark:hover:bg-red-600");
+        } else {
+            v2ToggleButton.classList.remove("bg-red-600", "hover:bg-red-700", "dark:bg-red-500", "dark:hover:bg-red-600");
+            v2ToggleButton.classList.add("bg-green-600", "hover:bg-green-700", "dark:bg-green-500", "dark:hover:bg-green-600");
+        }
+    } else {
+        console.error("❌ V2 toggle button not found in the DOM");
     }
 }
 </script>

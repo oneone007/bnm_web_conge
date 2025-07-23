@@ -21,7 +21,9 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Movement</title>
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="etatstock.css">    <style>
+    <link rel="stylesheet" href="etatstock.css"> 
+    <script src="api_config.js"></script>
+    <style>
         /* Custom CSS for date inputs in dark mode */
         .dark input[type="date"] {
             color-scheme: dark;
@@ -175,6 +177,60 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
         
         .dark #product-summary .text-indigo-700 {
             color: rgb(199 210 254) !important; /* indigo-200 */
+        }
+        
+        /* Search Container and Dropdown Styles */
+        .search-container {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            display: none;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            max-height: 400px;
+            overflow: hidden;
+        }
+        
+        .search-container input[type="text"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            color: #374151;
+        }
+        
+        .search-container input[type="text"]:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+        }
+        
+        /* Dark mode for search container */
+        .dark .search-container input[type="text"] {
+            background-color: #374151;
+            border-color: #4b5563;
+            color: #f9fafb;
+        }
+        
+        .dark .search-container input[type="text"]:focus {
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgb(96 165 250 / 0.1);
+        }
+        
+        .dark .dropdown {
+            background-color: #374151;
+            border-color: #4b5563;
         }
         
         /* Product Search Table Styles */
@@ -362,6 +418,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
             </div>
         </div>
         <br>
+        <br>
 
         <!-- Emplacement Dropdown -->
         <div class="dropdown-container bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md mb-4">
@@ -375,7 +432,11 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
                 🔍 Apply Filters
             </button>
             
-            
+            <?php if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Admin', 'Developer'])): ?>
+            <button id="v2ToggleButton" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 font-medium transition-colors duration-200" style="display: none;">
+                ✅ V2 Mode (VO included)
+            </button>
+            <?php endif; ?>
             
             <button class="Btn center-btn" id="movement_excel">
                 <div class="svgWrapper">
@@ -495,7 +556,9 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
         const rowsPerPage = 10;
         let selectedEmplacement = null;
         let filtersApplied = false; // Track if filters have been applied
-        let productList = []; // Cache for product list
+        let productList = []; // Cache for product list (now contains {id, name} objects)
+        let selectedProductId = null; // Store selected product ID
+        let v2ModeEnabled = false; // Track V2 mode state
 
         // Debounce function to limit API calls
         function debounce(func, delay) {
@@ -530,7 +593,17 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
                 fetchFilteredData();
             });
 
-          
+            // V2 Toggle button
+            document.getElementById("v2ToggleButton").addEventListener("click", () => {
+                v2ModeEnabled = !v2ModeEnabled;
+                updateV2ButtonState();
+                
+                // If filters have been applied, refresh data with new mode
+                if (filtersApplied) {
+                    console.log("V2 Mode manually toggled to:", v2ModeEnabled);
+                    fetchData("", selectedEmplacement, selectedProductId);
+                }
+            });
 
             document.getElementById('movement_excel').addEventListener('click', exportToExcel);
             
@@ -548,16 +621,29 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
             setupProductSearch();
         }
 
+        // Update V2 button visual state
+        function updateV2ButtonState() {
+            const v2Button = document.getElementById("v2ToggleButton");
+            if (v2ModeEnabled) {
+                v2Button.classList.remove("bg-green-600", "hover:bg-green-700", "dark:bg-green-500", "dark:hover:bg-green-600");
+                v2Button.classList.add("bg-red-600", "hover:bg-red-700", "dark:bg-red-500", "dark:hover:bg-red-600");
+                v2Button.innerHTML = "❌ V2 Mode (VO excluded)";
+            } else {
+                v2Button.classList.remove("bg-red-600", "hover:bg-red-700", "dark:bg-red-500", "dark:hover:bg-red-600");
+                v2Button.classList.add("bg-green-600", "hover:bg-green-700", "dark:bg-green-500", "dark:hover:bg-green-600");
+                v2Button.innerHTML = "✅ V2 Mode (VO included)";
+            }
+        }
+
         // Load emplacements dropdown
         async function loadEmplacements() {
             const dropdown = document.getElementById("emplacementDropdown");
             try {
-                const response = await fetch("http://192.168.1.94:5000/fetch-emplacements-stock");
+                const url = API_CONFIG.getApiUrl("/fetch-emplacements-stock");
+                const response = await fetch(url);
                 if (!response.ok) throw new Error("Failed to load emplacements");
-                
                 const data = await response.json();
                 dropdown.innerHTML = '<option value="">Default (Préparation + Hangar + Réserve)</option>';
-                
                 data.forEach(emplacement => {
                     const option = document.createElement("option");
                     option.value = emplacement.EMPLACEMENT;
@@ -573,12 +659,53 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
         // Load product list once on page load
         async function loadProductList() {
             try {
-                const response = await fetch("http://192.168.1.94:5000/listproduct");
-                if (!response.ok) throw new Error("Failed to load products");
+                const url = API_CONFIG.getApiUrl("/fetch-rotation-product-data");
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to load products: ${response.status} ${response.statusText}`);
+                }
                 
                 const products = await response.json();
                 productList = products || []; // Cache the product list
-                console.log(`Loaded ${productList.length} products for search`);
+                
+                if (productList.length > 0) {
+                    const firstProduct = productList[0];
+                    if (typeof firstProduct === 'string') {
+                        productList = productList.map(product => ({
+                            id: product,
+                            name: product
+                        }));
+                    } else if (firstProduct && !firstProduct.name && !firstProduct.id) {
+                        // Look specifically for NAME field first (exact match)
+                        let nameField = 'NAME';
+                        let idField = 'M_PRODUCT_ID';
+                        
+                        // Verify the exact fields exist
+                        if (!firstProduct.hasOwnProperty(nameField)) {
+                            // Fallback to field detection
+                            nameField = Object.keys(firstProduct).find(key => 
+                                key.toLowerCase().includes('name') || 
+                                key.toLowerCase().includes('product')
+                            );
+                        }
+                        
+                        if (!firstProduct.hasOwnProperty(idField)) {
+                            // Fallback to field detection  
+                            idField = Object.keys(firstProduct).find(key => 
+                                key.toLowerCase().includes('id')
+                            );
+                        }
+                        
+                        if (nameField && firstProduct[nameField]) {
+                            productList = productList.map(product => ({
+                                id: product[idField] || product[nameField],
+                                name: product[nameField]
+                            }));
+                        }
+                    }
+                }
+                
             } catch (error) {
                 console.error("Error loading product list:", error);
                 productList = []; // Set empty array on error
@@ -591,35 +718,34 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
             try {
                 // Show loading state
                 showLoading(true);
-                
-                const url = new URL("http://192.168.1.94:5000/fetch-stock-movement-data");
-                
+                const params = [];
                 const startDate = document.getElementById("start-date").value;
                 const endDate = document.getElementById("end-date").value;
-                
-                if (startDate) url.searchParams.append("start_date", startDate);
-                if (endDate) url.searchParams.append("end_date", endDate);
-                if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
-                if (emplacement) url.searchParams.append("emplacement", emplacement);
-                if (product) url.searchParams.append("product", product);
-
+                if (startDate) params.push(`start_date=${encodeURIComponent(startDate)}`);
+                if (endDate) params.push(`end_date=${encodeURIComponent(endDate)}`);
+                if (fournisseur) params.push(`fournisseur=${encodeURIComponent(fournisseur)}`);
+                if (emplacement) params.push(`emplacement=${encodeURIComponent(emplacement)}`);
+                if (product) {
+                    params.push(`product=${encodeURIComponent(product)}`);
+                    console.log("Fetching data for product ID:", product);
+                }
+                if (v2ModeEnabled) {
+                    params.push(`v2_mode=true`);
+                }
+                const url = API_CONFIG.getApiUrl(`/fetch-stock-movement-data${params.length ? '?' + params.join('&') : ''}`);
                 const response = await fetch(url);
                 if (!response.ok) throw new Error('Network response was not ok');
-
                 const responseData = await response.json();
-                
-                // Handle new response format
+                // ...existing code...
                 if (responseData && responseData.error) {
                     console.error("API Error:", responseData.error);
                     allData = [];
                     emplacementBreakdown = {};
                 } else if (responseData && responseData.data) {
-                    // New format with data and emplacement_breakdown
                     allData = Array.isArray(responseData.data) ? responseData.data : [];
                     emplacementBreakdown = responseData.emplacement_breakdown || {};
                     console.log("Emplacement breakdown received:", emplacementBreakdown);
                 } else if (Array.isArray(responseData)) {
-                    // Old format (backward compatibility)
                     allData = responseData;
                     emplacementBreakdown = {};
                 } else {
@@ -627,7 +753,6 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
                     allData = [];
                     emplacementBreakdown = {};
                 }
-                
                 currentPage = 1; // Reset to first page
                 renderTable();
             } catch (error) {
@@ -636,14 +761,88 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
                 emplacementBreakdown = {};
                 renderTable(); // Still render table (empty)
             } finally {
-                // Hide loading state
                 showLoading(false);
             }
         }        // Fetch filtered data - matches etatstock.php pattern
-        function fetchFilteredData() {
-            const product = document.getElementById("recap_product").value.trim();
+        async function fetchFilteredData() {
+            // Only use product ID if a product was properly selected from dropdown
+            const productId = selectedProductId; 
+            
+            // Validate that if there's text in the input, we have a corresponding ID
+            const productInputValue = document.getElementById("recap_product").value.trim();
+            if (productInputValue && !selectedProductId) {
+                alert('Please select a product from the dropdown list.');
+                return;
+            }
+            
             filtersApplied = true; // Mark that filters have been applied
-            fetchData("", selectedEmplacement, product || null);
+            
+            // Show the V2 toggle button after first filter application
+            const v2Button = document.getElementById("v2ToggleButton");
+            v2Button.style.display = "block";
+            
+            // First, check for reversed/voided movements to determine V2 mode automatically
+            try {
+                await checkReversedVoidedMovements(productId);
+            } catch (error) {
+                console.error("Error checking reversed/voided movements:", error);
+                // Continue with current V2 mode setting if API fails
+            }
+            
+            // Ensure V2 button state is correctly displayed
+            updateV2ButtonState();
+            
+            fetchData("", selectedEmplacement, productId);
+        }
+
+        // Check reversed/voided movements and auto-set V2 mode
+        async function checkReversedVoidedMovements(productId) {
+            try {
+                let url = API_CONFIG.getApiUrl("/fetch-reversed-voided-stock-movements");
+                if (productId) {
+                    url += `?product_id=${encodeURIComponent(productId)}`;
+                }
+                const response = await fetch(url);
+                if (!response.ok) {
+                    console.warn("Failed to fetch reversed/voided movements, using current V2 mode setting");
+                    return;
+                }
+                const data = await response.json();
+                console.log("Raw API response:", data);
+                // ...existing code...
+                let difference = 0;
+                if (data && data.summary && typeof data.summary.difference !== 'undefined') {
+                    difference = parseFloat(data.summary.difference) || 0;
+                    console.log("Found difference in summary:", difference);
+                } else if (data && typeof data.difference !== 'undefined') {
+                    difference = parseFloat(data.difference) || 0;
+                    console.log("Found difference in root:", difference);
+                } else if (data && data.movements && Array.isArray(data.movements)) {
+                    difference = data.movements.reduce((sum, item) => {
+                        const entree = parseFloat(item.ENTREE) || 0;
+                        const sortie = parseFloat(item.SORTIE) || 0;
+                        return sum + entree - sortie;
+                    }, 0);
+                    console.log("Calculated difference from movements:", difference);
+                } else if (data && Array.isArray(data)) {
+                    difference = data.reduce((sum, item) => {
+                        const entree = parseFloat(item.ENTREE) || 0;
+                        const sortie = parseFloat(item.SORTIE) || 0;
+                        return sum + entree - sortie;
+                    }, 0);
+                    console.log("Calculated difference from array:", difference);
+                }
+                console.log("Final calculated difference:", difference);
+                if (difference === 0) {
+                    v2ModeEnabled = true;
+                    console.log("Auto-enabled V2 mode: No difference in reversed/voided movements - VO movements should be included");
+                } else {
+                    v2ModeEnabled = false;
+                    console.log("Auto-disabled V2 mode: Difference found in reversed/voided movements:", difference, "- VO movements should be excluded");
+                }
+            } catch (error) {
+                console.error("Error in checkReversedVoidedMovements:", error);
+            }
         }        // Render table with pagination
         function renderTable() {
             const tableBody = document.getElementById("data-table");
@@ -658,10 +857,10 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
             tableBody.innerHTML = "";
 
             // Check if a product is selected and show/hide summary
-            const selectedProduct = document.getElementById("recap_product").value.trim();
+            const selectedProductName = document.getElementById("recap_product").value.trim();
             const summarySection = document.getElementById("product-summary");
             
-            if (selectedProduct && allData.length > 0) {
+            if (selectedProductName && allData.length > 0) {
                 // Calculate totals for the selected product (includes all data, even RE status)
                 calculateAndShowSummary();
                 summarySection.style.display = "block";
@@ -676,8 +875,8 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
                 return;
             }
 
-            // Filter out RE status rows for display only
-            const displayData = allData.filter(row => row.DOCSTATUS !== 'RE');
+            // Filter out RE and VO status rows for display only
+            const displayData = allData.filter(row => row.DOCSTATUS !== 'RE' && row.DOCSTATUS !== 'VO');
 
             // Show empty state if no displayable data
             if (displayData.length === 0) {
@@ -710,23 +909,9 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
                     stockInitial = parseFloat(row.STOCKINITIAL) || 0;
                 }
                 
-                // Handle rows with DOCSTATUS 'RE' differently
-                if (row.DOCSTATUS === 'RE') {
-                    // RE rows don't count in total entree and total sortie
-                    // But they affect stock initial
-                    const entree = parseFloat(row.ENTREE) || 0;
-                    const sortie = parseFloat(row.SORTIE) || 0;
-                    
-                    if (entree > 0) {
-                        // If RE row is entree, add to stock initial
-                        stockInitial += entree;
-                    }
-                    if (sortie > 0) {
-                        // If RE row is sortie, subtract from stock initial
-                        stockInitial -= sortie;
-                    }
-                } else {
-                    // Normal rows: count in total entree and total sortie
+                // Handle rows with DOCSTATUS 'RE' or 'VO' - don't count them
+                if (row.DOCSTATUS !== 'RE' && row.DOCSTATUS !== 'VO') {
+                    // Only count non-RE and non-VO rows in total entree and total sortie
                     totalEntree += parseFloat(row.ENTREE) || 0;
                     totalSortie += parseFloat(row.SORTIE) || 0;
                 }
@@ -882,14 +1067,17 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
                 return;
             }
 
-            const product = document.getElementById('recap_product').value.trim() || null;
+            const productId = selectedProductId; // Use selected product ID instead of input value
             const startDate = document.getElementById("start-date").value;
             const endDate = document.getElementById("end-date").value;
 
-            let url = 'http://192.168.1.94:5000/download-stock-movement-excel?';
+            let url = API_CONFIG.getApiUrl('/download-stock-movement-excel?');
             if (startDate) url += `start_date=${startDate}&`;
             if (endDate) url += `end_date=${endDate}&`;
-            if (product) url += `product=${encodeURIComponent(product)}&`;
+            if (productId) {
+                url += `product=${encodeURIComponent(productId)}&`;
+                console.log("Exporting data for product ID:", productId);
+            }
             
             // Handle emplacement parameter properly
             if (selectedEmplacement !== null && selectedEmplacement !== undefined) {
@@ -898,13 +1086,23 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
                 // Send empty string for default behavior (Préparation + HANGAR)
                 url += `emplacement=&`;
             }
+            
+            // Add V2 mode parameter
+            if (v2ModeEnabled) {
+                url += `v2_mode=true&`;
+            }
 
             if (url.endsWith('&')) url = url.slice(0, -1);
             window.location.href = url;
         }        // Product search functionality - no auto-fetch
+        let showProductDropdown; // Declare function variable in outer scope
+        
         function setupProductSearch() {
             const productInput = document.getElementById("recap_product");
             const productDropdown = document.getElementById("product-dropdown");
+            
+            if (!productInput || !productDropdown) return;
+            
             let searchCurrentPage = 1;
             const searchRowsPerPage = 10;
             let currentFilteredProducts = [];
@@ -912,6 +1110,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
 
             function clearProductSearch() {
                 productInput.value = "";
+                selectedProductId = null; // Clear selected product ID
                 hideDropdown();
                 // Don't auto-fetch, wait for Apply Filter button
             }
@@ -941,6 +1140,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
                 } else {
                     hideDropdown();
                     currentFilteredProducts = [];
+                    selectedProductId = null; // Clear selected product ID when input is cleared
                 }
             }, 100));
 
@@ -966,7 +1166,8 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
                 event.stopPropagation();
             });
 
-            function showProductDropdown(searchValue) {
+            // Assign function to outer scope variable
+            showProductDropdown = function(searchValue) {
                 const tableContainer = document.getElementById("products-table-container");
                 
                 // If product list is not loaded yet, show loading message
@@ -977,18 +1178,47 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
                     loadingOption.classList.add("dropdown-item");
                     loadingOption.style.fontStyle = "italic";
                     loadingOption.style.color = "#666";
+                    loadingOption.style.padding = "8px 12px";
                     loadingOption.textContent = "Loading products...";
                     productDropdown.appendChild(loadingOption);
                     
                     // Try to reload product list
-                    loadProductList();
+                    loadProductList().then(() => {
+                        if (productList.length > 0) {
+                            // Retry showing dropdown if products were loaded
+                            showProductDropdown(searchValue);
+                        }
+                    });
                     return;
                 }
-
-                // Filter products from cached list
-                currentFilteredProducts = productList.filter(product => 
-                    product && product.toLowerCase().includes(searchValue)
-                );
+                
+                // Filter products from cached list by name only (for display)
+                currentFilteredProducts = productList.filter(product => {
+                    if (!product) return false;
+                    
+                    let productName = '';
+                    if (typeof product === 'string') {
+                        productName = product;
+                    } else if (product.name) {
+                        productName = String(product.name);
+                    } else {
+                        // Try to find a name field in the object
+                        const nameFields = Object.keys(product).filter(key => 
+                            key.toLowerCase().includes('name') || 
+                            key.toLowerCase().includes('product')
+                        );
+                        if (nameFields.length > 0) {
+                            productName = String(product[nameFields[0]] || '');
+                        } else {
+                            // Use first string value as name
+                            const stringValue = Object.values(product).find(val => typeof val === 'string');
+                            productName = stringValue || '';
+                        }
+                    }
+                    
+                    // Ensure productName is a string before calling toLowerCase
+                    return productName && typeof productName === 'string' && productName.toLowerCase().includes(searchValue);
+                });
 
                 if (currentFilteredProducts.length === 0) {
                     hideDropdown();
@@ -1035,7 +1265,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
                     prevPageBtn.setAttribute('data-listeners-attached', 'true');
                     nextPageBtn.setAttribute('data-listeners-attached', 'true');
                 }
-            }
+            }; // End of showProductDropdown assignment
 
             function renderSearchTable() {
                 const tableBody = document.getElementById("products-table-body");
@@ -1064,13 +1294,46 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Ve
                     row.appendChild(numberCell);
                     
                     const nameCell = document.createElement("td");
-                    nameCell.textContent = product;
+                    let displayName = '';
+                    let productId = '';
+                    
+                    if (typeof product === 'string') {
+                        displayName = product;
+                        productId = product;
+                    } else if (product && product.name) {
+                        displayName = product.name;
+                        productId = product.id || product.name;
+                    } else if (product) {
+                        // Try to find name and id fields
+                        const nameFields = Object.keys(product).filter(key => 
+                            key.toLowerCase().includes('name') || 
+                            key.toLowerCase().includes('product')
+                        );
+                        const idFields = Object.keys(product).filter(key => 
+                            key.toLowerCase().includes('id')
+                        );
+                        
+                        if (nameFields.length > 0) {
+                            displayName = product[nameFields[0]];
+                            productId = idFields.length > 0 ? product[idFields[0]] : displayName;
+                        } else {
+                            // Use first string value
+                            const firstValue = Object.values(product)[0];
+                            displayName = firstValue;
+                            productId = firstValue;
+                        }
+                    }
+                    
+                    nameCell.textContent = displayName;
                     row.appendChild(nameCell);
                     
                     // Add click handler to select product
                     row.addEventListener("click", function(e) {
                         e.stopPropagation();
-                        productInput.value = product;
+                        
+                        productInput.value = displayName;
+                        selectedProductId = productId;
+                        
                         hideDropdown();
                     });
                     

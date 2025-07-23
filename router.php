@@ -11,9 +11,15 @@ $pages = [
     "Product" => "product.php",
     "Recap_Achat" => "recap_achat.php",
     "Recap_Vente" => "recapvente.php",
+    "r" => "recapventev2.php",
     "Recap_Vente_Facturation" => "recapvente_fact.php",
     "ETAT_F" => "etat_fournisseur.php",
     "ETAT_F_CUMULE" => "etat_fournisseur_cumule.php",
+
+    "retour" => "retour_documents.php",
+
+    
+    "charge" => "charges_dashboard.php",
 
     "CONFIRMED_ORDERS" => "confirm_order.php",
     "Annual_Recap_V" => "year.php",
@@ -22,14 +28,21 @@ $pages = [
         "dzz" => "algeria_map.php",
 
     "DETTE_F" => "etatfournisseur.php",
+        "inv" => "inventory/inv.php",
+        "inv_admin" => "inventory/inv_admin.php",
+        "inv_saisie" => "inventory/saise.php",
+
+        "print" => "printing.php",
+
 
     "recap_achat_facturation" => "recap_achat_facturation.php",
     "Rotation" => "rotation.php",
     
     "Journal_Vente" => "journal.php",
-    "admin" => "admin_feedback.php",
+    "admin" => ".php",
 
     "draft" => "draft.php",
+    "simuler" => "simulation.php",
 
     "Mouvement_Stock"=> "mouvementstock.php",
     

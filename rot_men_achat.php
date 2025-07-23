@@ -405,12 +405,15 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente', 'Compt
 
         // Constants
         const API_ENDPOINTS = {
-            download_pdf: 'http://192.168.1.94:5001/rotation_monthly_achat_pdf',
-            fetchProductData: 'http://192.168.1.94:5001/rotation_monthly_achat',
-            listFournisseur: 'http://192.168.1.94:5001/listfournisseur',
-            listProduct: 'http://192.168.1.94:5001/listproduct',
-            fetchSuppliersByProduct: 'http://192.168.1.94:5001/fetchSuppliersByProduct'
+            download_pdf: 'http://192.168.1.94:5003/rotation_monthly_achat_pdf',
+            fetchProductData: 'http://192.168.1.94:5003/rotation_monthly_achat',
+            listFournisseur: 'http://192.168.1.94:5003/listfournisseur',
+            listProduct: 'http://192.168.1.94:5003/fetch-rotation-product-data',
+            fetchSuppliersByProduct: 'http://192.168.1.94:5003/fetchSuppliersByProduct'
         };
+
+        // Store product mapping (name -> id)
+        let productMap = {};
 
 
         const monthNames = [
@@ -546,8 +549,8 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente', 'Compt
 async function loadData() {
     const years = getSelectedYears();
     const fournisseurs = getSelectedSuppliers();
-    const product = elements.inputs.product.value;
-
+    const productName = elements.inputs.product.value;
+    
     if (!years.length || !fournisseurs.length) {
         document.getElementById('dataContainer').innerHTML = `
             <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative dark:bg-yellow-900 dark:border-yellow-700 dark:text-yellow-100" role="alert">
@@ -562,8 +565,13 @@ async function loadData() {
     try {
         // Create URL with comma-separated suppliers
         let url = `${API_ENDPOINTS.fetchProductData}?years=${years.join(',')}&fournisseur=${fournisseurs.join(',')}`;
-        if (product) {
-            url += `&product=${encodeURIComponent(product)}`;
+        if (productName) {
+            const productId = productMap[productName];
+            if (productId) {
+                url += `&product_id=${encodeURIComponent(productId)}`;
+            } else {
+                console.warn(`No product ID found for: ${productName}, skipping product filter`);
+            }
         }
 
         const response = await fetch(url);
@@ -996,7 +1004,12 @@ elements.suggestionBoxes.fournisseur.addEventListener('click', function(e) {
             // Load products
             try {
                 const response = await fetch(API_ENDPOINTS.listProduct);
-                allProducts = await response.json();
+                const productsData = await response.json();
+                // Store both product ID and name, but only display names in UI
+                productsData.forEach(product => {
+                    productMap[product.NAME] = product.M_PRODUCT_ID;
+                });
+                allProducts = productsData.map(product => product.NAME);
                 
                 elements.inputs.product.addEventListener('input', () => {
                     const value = elements.inputs.product.value.toLowerCase();
@@ -1007,13 +1020,20 @@ elements.suggestionBoxes.fournisseur.addEventListener('click', function(e) {
                 
                 // Handle product selection to load suppliers
                 elements.inputs.product.addEventListener('change', async function() {
-                    const product = this.value;
-                    if (product) {
+                    const productName = this.value;
+                    if (productName) {
                         try {
+                            const productId = productMap[productName];
+                            if (!productId) {
+                                console.warn(`No product ID found for: ${productName}`);
+                                elements.productSupplierContainer.classList.add('hidden');
+                                return;
+                            }
+                            
                             elements.productSupplierSelect.disabled = true;
                             elements.productSupplierSelect.innerHTML = '<option value="">Loading suppliers...</option>';
                             
-                            const response = await fetch(`${API_ENDPOINTS.fetchSuppliersByProduct}?product=${encodeURIComponent(product)}`);
+                            const response = await fetch(`${API_ENDPOINTS.fetchSuppliersByProduct}?product_id=${encodeURIComponent(productId)}`);
                             const suppliers = await response.json();
                             
                             elements.productSupplierSelect.innerHTML = '<option value="">Select a supplier</option>';
@@ -1179,7 +1199,7 @@ elements.suggestionBoxes.fournisseur.addEventListener('click', function(e) {
                 // Get selected parameters
                 const years = getSelectedYears();
                 const fournisseurs = getSelectedSuppliers();
-                const product = elements.inputs.product.value;
+                const productName = elements.inputs.product.value;
 
                 // Validate required parameters
                 if (!years.length || !fournisseurs.length) {
@@ -1198,8 +1218,13 @@ elements.suggestionBoxes.fournisseur.addEventListener('click', function(e) {
                 
                 // Construct the URL with all parameters
                 let url = `${API_ENDPOINTS.download_pdf}?years=${years.join(',')}&fournisseur=${fournisseurs.join(',')}`;
-                if (product) {
-                    url += `&product=${encodeURIComponent(product)}`;
+                if (productName) {
+                    const productId = productMap[productName];
+                    if (productId) {
+                        url += `&product_id=${encodeURIComponent(productId)}`;
+                    } else {
+                        console.warn(`No product ID found for: ${productName}, skipping product filter for PDF`);
+                    }
                 }
 
                 // Try fetch approach first for better error handling
@@ -1243,6 +1268,17 @@ elements.suggestionBoxes.fournisseur.addEventListener('click', function(e) {
                 spinner.classList.add('hidden');
                 pdfIcon.classList.remove('hidden');
                 btnText.textContent = 'Download PDF';
+            }
+        });
+
+        // Add validation for the product input - only allow valid product names
+        elements.inputs.product.addEventListener('blur', function() {
+            const productName = this.value.trim();
+            if (productName && !allProducts.includes(productName)) {
+                // If an invalid product name is entered, clear it
+                console.warn(`Invalid product name entered: ${productName}`);
+                this.value = '';
+                elements.productSupplierContainer.classList.add('hidden');
             }
         });
     </script>

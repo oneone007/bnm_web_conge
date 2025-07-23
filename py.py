@@ -1,4 +1,5 @@
 
+
 import oracledb
 from flask import Flask, jsonify, request, send_file, make_response
 from flask_cors import CORS
@@ -13,9 +14,14 @@ from datetime import datetime
 import os
 import json
 
+import calendar
+import mysql.connector
+
+
+
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)  # Allow your DDNS domains and ports
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -30,6 +36,23 @@ DB_POOL = oracledb.create_pool(
     max=10,
     increment=1
 )
+
+
+# MySQL connection for recouvrement data
+def get_localdb_connection():
+    try:
+        return mysql.connector.connect(
+            host="localhost",
+            user="bmk",
+            password="",
+            database="bnm_web",
+            charset="utf8",
+            use_unicode=True,
+            autocommit=False
+        )
+    except mysql.connector.Error as err:
+        logger.error(f"Error connecting to MySQL database: {err}")
+        return None
 
 
 # Fetch reserved data from Oracle DB
@@ -127,6 +150,9 @@ def fetch_remise_data():
         logger.error(f"Error fetching remise data: {e}")
         return {"error": "An error occurred while fetching remise data."}
 
+# Fetch marge data from Oracle DB
+
+# Fetch marge data from Oracle DB
 # Fetch marge data from Oracle DB
 def fetch_marge_data():
     try:
@@ -367,6 +393,7 @@ WHERE
         return {"error": "An error occurred while fetching marge data."}
 
 
+
 # Fetch bonus data from Oracle DB
 def fetch_bonus_data():
     try:
@@ -440,6 +467,7 @@ def fetch_marge():
         return jsonify({"error": "Failed to connect to the database."}), 500
     data = fetch_marge_data()
     return jsonify(data)
+
 
 
 # Route to fetch bonus data
@@ -898,112 +926,7 @@ def generate_excel_stock(data):
     return output
 
 
-
-
-    
-def fetch_magasins_from_db(magasin=None, emplacement=None):
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-
-            query = """
-                SELECT DISTINCT m.value AS MAGASIN
-                FROM M_Locator ml
-                JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
-                WHERE m.ISACTIVE = 'Y'
-                  AND m.AD_Client_ID = 1000000
-                  AND ml.ISACTIVE = 'Y'
-                  AND ml.AD_Client_ID = 1000000
-            """
-
-            params = {}
-
-            # Dynamically add filters
-            if magasin:
-                query += " AND m.value LIKE :magasin || '%'"
-                params["magasin"] = magasin
-
-            if emplacement:
-                query += " AND ml.value LIKE :emplacement || '%'"
-                params["emplacement"] = emplacement
-
-            query += " ORDER BY m.value"
-
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]
-            data = [dict(zip(columns, row)) for row in rows]
-
-            return data
-
-    except Exception as e:
-        logger.error(f"Error fetching magasins: {e}")
-        return {"error": "An error occurred while fetching magasins."}
-    
-@app.route('/fetch-magasins', methods=['GET'])
-def fetch_magasins():
-    try:
-        magasin = request.args.get("magasin", None)
-        emplacement = request.args.get("emplacement", None)
-
-        data = fetch_magasins_from_db(magasin, emplacement)
-        return jsonify(data)
-
-    except Exception as e:
-        logger.error(f"Error fetching magasins: {e}")
-        return jsonify({"error": "Failed to fetch magasins"}), 500
-    
-@app.route('/fetch-emplacements', methods=['GET'])
-def fetch_emplacements():
-    try:
-        magasin = request.args.get("magasin", None)
-        emplacement = request.args.get("emplacement", None)
-
-        data = fetch_emplacements_from_db(magasin, emplacement)
-        return jsonify(data)
-
-    except Exception as e:
-        logger.error(f"Error fetching emplacements: {e}")
-        return jsonify({"error": "Failed to fetch emplacements"}), 500
-    
-def fetch_emplacements_from_db(magasin=None, emplacement=None):
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-
-            query = """
-                SELECT ml.value AS EMPLACEMENT
-                FROM M_Locator ml
-                JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
-                WHERE m.ISACTIVE = 'Y'
-                  AND m.AD_Client_ID = 1000000
-                  AND ml.ISACTIVE = 'Y'
-                  AND ml.AD_Client_ID = 1000000
-            """
-
-            params = {}
-
-            # Dynamically add filters
-            if magasin:
-                query += " AND m.value LIKE :magasin || '%'"
-                params["magasin"] = magasin
-
-            if emplacement:
-                query += " AND ml.value LIKE :emplacement || '%'"
-                params["emplacement"] = emplacement
-
-            query += " ORDER BY m.value"
-
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]
-            data = [dict(zip(columns, row)) for row in rows]
-
-            return data
-
-    except Exception as e:
-        logger.error(f"Error fetching emplacements: {e}")
-        return {"error": "An error occurred while fetching emplacements."}
+ 
 
  
 def fetch_product_details_data(product_name):
@@ -1034,11 +957,14 @@ def fetch_product_details_data(product_name):
                         "source"."MARGE" "MARGE",
                         "source"."LABO" "LABO",
                         "source"."LOT" "LOT",
+                        "source"."LOT_ACTIVE" "LOT_ACTIVE",
+
                         "source"."QTY" "QTY",
                         "source"."QTY_DISPO" "QTY_DISPO",
                         "source"."GUARANTEEDATE" "GUARANTEEDATE",
                         "source"."PPA" "PPA",
                         "source"."LOCATION" "LOCATION"
+
                     FROM
                         (
                             SELECT
@@ -1056,6 +982,7 @@ def fetch_product_details_data(product_name):
                                 LEAST(round((marge), 2), 100) AS marge,
                                 labo,
                                 lot,
+                                lot_active,
                                 qty,
                                 qty_dispo,
                                 guaranteedate,
@@ -1183,6 +1110,14 @@ def fetch_product_details_data(product_name):
                                                         ) lot,
                                                         (
                                                             SELECT
+                                                                isactive
+                                                            FROM
+                                                                m_attributesetinstance
+                                                            WHERE
+                                                                m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                        ) lot_active,
+                                                        (
+                                                            SELECT
                                                                 valuenumber
                                                             FROM
                                                                 m_attributeinstance
@@ -1226,6 +1161,8 @@ def fetch_product_details_data(product_name):
                                 marge,
                                 labo,
                                 lot,
+                                lot_active,
+
                                 qty,
                                 qty_dispo,
                                 guaranteedate,
@@ -1359,6 +1296,120 @@ def generate_excel_product_details(data, product_name):
     wb.save(output)
     output.seek(0)
     return output
+
+
+    
+def fetch_magasins_from_db(magasin=None, emplacement=None):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+                SELECT DISTINCT m.value AS MAGASIN
+                FROM M_Locator ml
+                JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
+                WHERE m.ISACTIVE = 'Y'
+                  AND m.AD_Client_ID = 1000000
+                  AND ml.ISACTIVE = 'Y'
+                  AND ml.AD_Client_ID = 1000000
+            """
+
+            params = {}
+
+            # Dynamically add filters
+            if magasin:
+                query += " AND m.value LIKE :magasin || '%'"
+                params["magasin"] = magasin
+
+            if emplacement:
+                query += " AND ml.value LIKE :emplacement || '%'"
+                params["emplacement"] = emplacement
+
+            query += " ORDER BY m.value"
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+
+            return data
+
+    except Exception as e:
+        logger.error(f"Error fetching magasins: {e}")
+        return {"error": "An error occurred while fetching magasins."}
+    
+
+@app.route('/fetch-magasins', methods=['GET'])
+def fetch_magasins():
+    try:
+        magasin = request.args.get("magasin", None)
+        emplacement = request.args.get("emplacement", None)
+
+        data = fetch_magasins_from_db(magasin, emplacement)
+        return jsonify(data)
+
+    except Exception as e:
+        logger.error(f"Error fetching magasins: {e}")
+        return jsonify({"error": "Failed to fetch magasins"}), 500
+    
+
+
+
+
+@app.route('/fetch-emplacements', methods=['GET'])
+def fetch_emplacements():
+    try:
+        magasin = request.args.get("magasin", None)
+        emplacement = request.args.get("emplacement", None)
+
+        data = fetch_emplacements_from_db(magasin, emplacement)
+        return jsonify(data)
+
+    except Exception as e:
+        logger.error(f"Error fetching emplacements: {e}")
+        return jsonify({"error": "Failed to fetch emplacements"}), 500
+    
+
+
+
+def fetch_emplacements_from_db(magasin=None, emplacement=None):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+                SELECT ml.value AS EMPLACEMENT
+                FROM M_Locator ml
+                JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
+                WHERE m.ISACTIVE = 'Y'
+                  AND m.AD_Client_ID = 1000000
+                  AND ml.ISACTIVE = 'Y'
+                  AND ml.AD_Client_ID = 1000000
+            """
+
+            params = {}
+
+            # Dynamically add filters
+            if magasin:
+                query += " AND m.value LIKE :magasin || '%'"
+                params["magasin"] = magasin
+
+            if emplacement:
+                query += " AND ml.value LIKE :emplacement || '%'"
+                params["emplacement"] = emplacement
+
+            query += " ORDER BY m.value"
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+
+            return data
+
+    except Exception as e:
+        logger.error(f"Error fetching emplacements: {e}")
+        return {"error": "An error occurred while fetching emplacements."}
 
 
 
@@ -1608,52 +1659,6 @@ def fetch_bccb_fact():
 
 
 
-
-@app.route('/fetchZonerotation', methods=['GET'])
-def fetch_zone_rotation_endpoint():
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    product = request.args.get('product')
-
-    if not start_date or not end_date:
-        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
-
-    data = fetch_zone_rotation(start_date, end_date, product)
-    return jsonify(data)
-
-
-def fetch_zone_rotation(start_date, end_date, product):
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT 
-                    sr.name AS "ZONE",
-                    SUM(xf.qtyentered) AS "QTY"
-                FROM C_SalesRegion sr
-                JOIN C_BPartner_Location bpl ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
-                JOIN xx_ca_fournisseur xf ON bpl.C_BPartner_ID = xf.CLIENTID
-                WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                      AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                      AND xf.AD_Org_ID = 1000000
-                      AND xf.DOCSTATUS != 'RE'
-                      AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
-                GROUP BY sr.name
-                ORDER BY SUM(xf.qtyentered) DESC
-            """
-            params = {
-                'start_date': start_date,
-                'end_date': end_date,
-                'product': product or None
-            }
-            
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]  # Get column names
-            return [dict(zip(columns, row)) for row in rows]
-    except Exception as e:
-        logger.error(f"Error fetching zone recap: {e}")
-        return {"error": "An error occurred while fetching zone recap."}
 
 @app.route('/fetchZoneRecap', methods=['GET'])
 def fetch_zone():
@@ -4058,17 +4063,16 @@ def generate_excel_bccb_productf(data, filename):
     return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
-
 def fetch_rotation_product_data():
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
             query = """
-            select name from M_PRODUCT
-WHERE AD_Client_ID = 1000000
-AND AD_Org_ID = 1000000
-  AND ISACTIVE = 'Y'
-ORDER BY name
+            select M_product_id as id, name from M_PRODUCT
+                WHERE AD_Client_ID = 1000000
+                AND AD_Org_ID = 1000000
+                AND ISACTIVE = 'Y'
+                ORDER BY name
             """
             cursor.execute(query)
             rows = cursor.fetchall()
@@ -4076,16 +4080,162 @@ ORDER BY name
             data = [dict(zip(columns, row)) for row in rows]
             return data
     except Exception as e:
-        logger.error(f"Error fetching remise data: {e}")
-        return {"error": "An error occurred while fetching emplacement data."}
+        logger.error(f"Error fetching product data: {e}")
+        return {"error": "An error occurred while fetching product data."}
     
 @app.route('/fetch-rotation-product-data', methods=['GET'])
-def fetch_data():
+def fetch_rotation_product_data_endpoint():
     data = fetch_rotation_product_data()
     return jsonify(data)
 
 
-def fetch_historique_rotation(product):
+
+def histogram(start_date, end_date, product_id):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+WITH 
+date_range AS (
+  SELECT 
+    CASE 
+      WHEN TO_DATE(:end_date, 'YYYY-MM-DD') - TO_DATE(:start_date, 'YYYY-MM-DD') < 30 THEN 
+        TO_CHAR(TO_DATE(:start_date, 'YYYY-MM-DD') + LEVEL - 1, 'YYYY-MM-DD')
+      ELSE 
+        TO_CHAR(ADD_MONTHS(TO_DATE(:start_date, 'YYYY-MM-DD'), LEVEL - 1), 'YYYY-MM')
+    END AS invoice_period
+  FROM DUAL
+  CONNECT BY 
+    CASE 
+      WHEN TO_DATE(:end_date, 'YYYY-MM-DD') - TO_DATE(:start_date, 'YYYY-MM-DD') < 30 THEN 
+        TO_DATE(:start_date, 'YYYY-MM-DD') + LEVEL - 1
+      ELSE 
+        ADD_MONTHS(TO_DATE(:start_date, 'YYYY-MM-DD'), LEVEL - 1)
+    END <= TO_DATE(:end_date, 'YYYY-MM-DD')
+),
+
+invoice_data AS (
+  SELECT
+    dr.invoice_period,
+    NVL(SUM(ff.QTYENTERED), 0) AS qty_vendu
+  FROM
+    date_range dr
+  LEFT JOIN
+    xx_ca_fournisseur_facture ff
+  ON
+    CASE 
+      WHEN TO_DATE(:end_date, 'YYYY-MM-DD') - TO_DATE(:start_date, 'YYYY-MM-DD') < 30 THEN 
+        TO_CHAR(ff.DATEINVOICED, 'YYYY-MM-DD')
+      ELSE 
+        TO_CHAR(ff.DATEINVOICED, 'YYYY-MM')
+    END = dr.invoice_period
+    AND ff.DATEINVOICED BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')
+    AND ff.AD_ORG_ID = 1000000
+    AND (:product_id IS NULL OR ff.M_Product_ID = :product_id)
+  GROUP BY
+    dr.invoice_period
+),
+
+purchase_data AS (
+  SELECT
+    dr.invoice_period,
+    SUM(
+      CASE 
+        WHEN xf.C_DocType_ID = 1000646 THEN -1 * mi.QTYENTERED
+        ELSE mi.QTYENTERED
+      END
+    ) AS qty_acheté
+  FROM
+    date_range dr
+  LEFT JOIN
+    M_InOut xf ON
+      CASE 
+        WHEN TO_DATE(:end_date, 'YYYY-MM-DD') - TO_DATE(:start_date, 'YYYY-MM-DD') < 30 THEN 
+          TO_CHAR(xf.MOVEMENTDATE, 'YYYY-MM-DD')
+        ELSE 
+          TO_CHAR(xf.MOVEMENTDATE, 'YYYY-MM')
+      END = dr.invoice_period
+    AND xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')
+    AND xf.AD_Org_ID = 1000000
+    AND xf.C_DocType_ID IN (1000013, 1000646)
+    AND xf.M_Warehouse_ID != 1000521
+  JOIN M_INOUTLINE mi ON mi.M_INOUT_ID = xf.M_INOUT_ID
+    AND mi.AD_Org_ID = 1000000
+  JOIN C_InvoiceLine ci ON ci.M_INOUTLINE_ID = mi.M_INOUTLINE_ID
+  JOIN M_PRODUCT m ON m.M_PRODUCT_ID = mi.M_PRODUCT_ID
+    AND m.AD_Org_ID = 1000000
+    AND (:product_id IS NULL OR m.M_PRODUCT_ID = :product_id)
+  LEFT JOIN C_BPartner cb ON cb.C_BPARTNER_ID = xf.C_BPARTNER_ID
+  GROUP BY
+    dr.invoice_period
+),
+
+combined_data AS (
+  SELECT
+    COALESCE(id.invoice_period, pd.invoice_period) AS invoice_period,
+    id.qty_vendu,
+    pd.qty_acheté,
+    1 AS sort_order
+  FROM
+    invoice_data id
+  FULL OUTER JOIN
+    purchase_data pd
+  ON
+    id.invoice_period = pd.invoice_period
+)
+
+SELECT
+  invoice_period AS period,
+  COALESCE(SUM(qty_acheté), 0) AS qty_acheté,
+  COALESCE(SUM(qty_vendu), 0) AS qty_vendu
+FROM
+  combined_data
+GROUP BY
+  invoice_period,
+  sort_order
+ORDER BY
+  invoice_period
+            """
+
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'product_id': product_id or None
+            }
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+
+            data = [
+                {
+                    "PERIOD": row[0],
+                    "QTY_ACHETÉ": row[1],
+                    "QTY_VENDU": row[2]
+                }
+                for row in rows
+            ]
+
+            return data
+
+    except Exception as e:
+        logger.error(f"Error fetching histogram data: {e}")
+        return {"error": "An error occurred while fetching histogram data."}
+
+@app.route('/histogram', methods=['GET'])
+def histogram_route():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    product_id = request.args.get('product_id', '')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date"}), 400
+
+    data = histogram(start_date, end_date, product_id)
+    return jsonify(data)
+
+
+def fetch_historique_rotation(product_id):
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
@@ -4134,7 +4284,7 @@ def fetch_historique_rotation(product):
                         s.AD_Client_ID = 1000000
                         AND m.AD_Client_ID = 1000000
                         AND s.M_Locator_ID IN (1001135, 1000614, 1001128, 1001136)
-                        AND (:product IS NULL OR UPPER(m.name) LIKE UPPER(:product) || '%')
+                        AND (:product_id IS NULL OR m.M_PRODUCT_ID = :product_id)
                     GROUP BY 
                         m.M_Product_ID, m.name
                 ),
@@ -4148,7 +4298,7 @@ def fetch_historique_rotation(product):
                         M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
                         AND m_storage.qtyonhand > 0
                         AND m_storage.M_Locator_ID IN (1001135, 1000614, 1001128, 1001136)
-                        AND (:product IS NULL OR m_storage.M_Product_ID IN (SELECT M_Product_ID FROM M_Product WHERE UPPER(name) LIKE UPPER(:product) || '%'))
+                        AND (:product_id IS NULL OR m_storage.M_Product_ID = :product_id)
                 )
                 SELECT 
                     oq.midp,
@@ -4168,7 +4318,7 @@ def fetch_historique_rotation(product):
             """
 
             params = {
-                'product': product or None
+                'product_id': product_id or None
             }
 
             cursor.execute(query, params)
@@ -4194,15 +4344,99 @@ def fetch_historique_rotation(product):
 
 @app.route('/fetchHistoriqueRotation', methods=['GET'])
 def fetch_historique():
-    product = request.args.get('product')
+    product_id = request.args.get('product_id')
+    
+    # If product_id is "undefined", set it to None
+    if product_id == "undefined":
+        product_id = None
 
-    data = fetch_historique_rotation(product)
+    data = fetch_historique_rotation(product_id)
     return jsonify(data)
 
 
 
 
-def rotation_par_mois(start_date, end_date, product):
+@app.route('/download-rotation-par-mois-excel', methods=['GET'])
+def download_rotation_par_mois_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    product_id = request.args.get('product_id', 'All_Products')  # Default if no product is provided
+    
+    # If product_id is "undefined", set it to None
+    if product_id == "undefined":
+        product_id = None
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    # Fetch data
+    data = rotation_par_mois(start_date, end_date, product_id)
+
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename with product ID, date range, and download date & time
+    download_datetime = datetime.now().strftime("%d-%m-%Y_%H-%M")  # Day-Month-Year_Hour-Minute
+    sanitized_product = str(product_id).replace(" ", "_").replace("/", "-")  # Replace spaces & slashes
+    filename = f"Rotation_{sanitized_product}_{start_date}_to_{end_date}_{download_datetime}.xlsx"
+
+    return generate_excel_rotation(data, filename)
+
+
+def generate_excel_rotation(data, filename):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Convert data to DataFrame
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    # Create Excel workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Rotation Par Mois"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    # Add headers
+    ws.append(df.columns.tolist())
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+    ws.auto_filter.ref = ws.dimensions
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="RotationTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    # Send the file to the client
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+def rotation_par_mois(start_date, end_date, product_id):
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
@@ -4243,7 +4477,7 @@ invoice_data AS (
         END = dr.invoice_period
         AND ff.DATEINVOICED BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')
         AND ff.AD_ORG_ID = 1000000
-        AND ff.product LIKE '%' || :product || '%'
+        AND (:product_id IS NULL OR ff.M_Product_ID = :product_id)
         AND NOT (ff.docstatus = 'RE' or ff.docstatus = 'VO')
     GROUP BY
         dr.invoice_period
@@ -4278,7 +4512,7 @@ purchase_data AS (
     left outer JOIN C_InvoiceLine ci ON ci.M_INOUTLINE_ID = mi.M_INOUTLINE_ID
     JOIN M_PRODUCT m ON m.M_PRODUCT_ID = mi.M_PRODUCT_ID
         AND m.AD_Org_ID = 1000000
-        AND m.name LIKE '%' || :product || '%'
+        AND (:product_id IS NULL OR m.M_PRODUCT_ID = :product_id)
     LEFT JOIN C_BPartner cb ON cb.C_BPARTNER_ID = xf.C_BPARTNER_ID
     GROUP BY
         dr.invoice_period
@@ -4394,20 +4628,75 @@ ORDER BY
             params = {
                 'start_date': start_date,
                 'end_date': end_date,
-                'product': product or '%'
+                'product_id': product_id or None
             }
 
             cursor.execute(query, params)
             rows = cursor.fetchall()
 
-            data = [
-                {
-                    "PERIOD": row[0],
-                    "QTY_VENDU": row[1],
-                    "QTY_ACHETÉ": row[2]
-                }
-                for row in rows
-            ]
+            data = []
+            for row in rows:
+                period = row[0]
+                qty_vendu = row[1]
+                qty_achete = row[2]
+                
+                # Calculate QTY_INITIAL for each period (except TOTAL and MOYENNE)
+                qty_initial = 0
+                if period not in ['TOTAL', 'MOYENNE'] and product_id:
+                    try:
+                        # Convert period to date format for initial stock calculation
+                        if '-' in period:
+                            if len(period.split('-')) == 2:
+                                # Format: "2024-01" -> "2024-01-01"
+                                target_date = period + '-01'
+                            else:
+                                # Format: "2024-01-15" -> use as is
+                                target_date = period
+                        else:
+                            # Handle other formats
+                            target_date = period + '-01-01'
+                        
+                        # Call the existing get_initial_stock_for_date function
+                        initial_stock_result = get_initial_stock_for_date(target_date, product_id)
+                        
+                        if 'error' not in initial_stock_result:
+                            qty_initial = initial_stock_result.get('initial_stock', 0)
+                        else:
+                            logger.warning(f"Error getting initial stock for period {period}: {initial_stock_result['error']}")
+                            qty_initial = 0
+                    except Exception as e:
+                        logger.error(f"Error calculating initial stock for period {period}: {e}")
+                        qty_initial = 0
+                elif period == 'TOTAL':
+                    # For TOTAL, sum up all the initial stocks from regular periods
+                    try:
+                        total_initial = 0
+                        for data_row in data:
+                            if data_row['PERIOD'] not in ['TOTAL', 'MOYENNE']:
+                                total_initial += data_row.get('QTY_INITIAL', 0)
+                        qty_initial = total_initial
+                    except Exception as e:
+                        logger.error(f"Error calculating total initial stock: {e}")
+                        qty_initial = 0
+                elif period == 'MOYENNE':
+                    # For MOYENNE, calculate average of all initial stocks from regular periods
+                    try:
+                        regular_periods = [d for d in data if d['PERIOD'] not in ['TOTAL', 'MOYENNE']]
+                        if regular_periods:
+                            avg_initial = sum(d.get('QTY_INITIAL', 0) for d in regular_periods) / len(regular_periods)
+                            qty_initial = round(avg_initial)
+                        else:
+                            qty_initial = 0
+                    except Exception as e:
+                        logger.error(f"Error calculating average initial stock: {e}")
+                        qty_initial = 0
+                
+                data.append({
+                    "PERIOD": period,
+                    "QTY_VENDU": qty_vendu,
+                    "QTY_ACHETÉ": qty_achete,
+                    "QTY_INITIAL": qty_initial
+                })
 
             return data
 
@@ -4417,240 +4706,72 @@ ORDER BY
 
 @app.route('/rotationParMois', methods=['GET'])
 def fetch_rotation():
-    product = request.args.get('product')  # Ensure product is received first
+    product_id = request.args.get('product_id')  # Ensure product_id is received first
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
 
     # Debugging
-    logger.info(f"Received parameters: product={product}, start_date={start_date}, end_date={end_date}")
+    logger.info(f"Received parameters: product_id={product_id}, start_date={start_date}, end_date={end_date}")
 
-    data = rotation_par_mois(start_date, end_date, product)
+    data = rotation_par_mois(start_date, end_date, product_id)
     return jsonify(data)
 
 
 
-
-@app.route('/download-rotation-par-mois-excel', methods=['GET'])
-def download_rotation_par_mois_excel():
+@app.route('/fetchZonerotation', methods=['GET'])
+def fetch_zone_rotation_endpoint():
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
-    product = request.args.get('product', 'All_Products')  # Default if no product is provided
+    product_id = request.args.get('product_id')
+    
+    # If product_id is "undefined", set it to None
+    if product_id == "undefined":
+        product_id = None
 
     if not start_date or not end_date:
         return jsonify({"error": "Missing start_date or end_date parameters"}), 400
 
-    # Fetch data
-    data = rotation_par_mois(start_date, end_date, product)
-
-    if not data or "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
-    # Generate filename with product name, date range, and download date & time
-    download_datetime = datetime.now().strftime("%d-%m-%Y_%H-%M")  # Day-Month-Year_Hour-Minute
-    sanitized_product = product.replace(" ", "_").replace("/", "-")  # Replace spaces & slashes
-    filename = f"Rotation_{sanitized_product}_{start_date}_to_{end_date}_{download_datetime}.xlsx"
-
-    return generate_excel_rotation(data, filename)
+    data = fetch_zone_rotation(start_date, end_date, product_id)
+    return jsonify(data)
 
 
-def generate_excel_rotation(data, filename):
-    if not data or "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
-    # Convert data to DataFrame
-    df = pd.DataFrame(data)
-    if df.empty:
-        return jsonify({"error": "No data available"}), 400
-
-    # Create Excel workbook
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Rotation Par Mois"
-
-    # Formatting headers
-    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
-    header_font = Font(color="FFFFFF", bold=True)
-
-    # Add headers
-    ws.append(df.columns.tolist())
-    for col_idx, cell in enumerate(ws[1], 1):
-        cell.fill = header_fill
-        cell.font = header_font
-    ws.auto_filter.ref = ws.dimensions
-
-    # Add data rows with alternating row colors
-    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
-        ws.append(row)
-        if row_idx % 2 == 0:
-            for cell in ws[row_idx]:
-                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
-
-    # Add an Excel table
-    table = Table(displayName="RotationTable", ref=ws.dimensions)
-    style = TableStyleInfo(
-        name="TableStyleMedium9",
-        showFirstColumn=False,
-        showLastColumn=False,
-        showRowStripes=True,
-        showColumnStripes=False
-    )
-    table.tableStyleInfo = style
-    ws.add_table(table)
-
-    # Save the file in memory
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-
-    # Send the file to the client
-    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-
-
-
-def histogram(start_date, end_date, product):
+def fetch_zone_rotation(start_date, end_date, product_id):
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
-
             query = """
-WITH 
-date_range AS (
-  SELECT 
-    CASE 
-      WHEN TO_DATE(:end_date, 'YYYY-MM-DD') - TO_DATE(:start_date, 'YYYY-MM-DD') < 30 THEN 
-        TO_CHAR(TO_DATE(:start_date, 'YYYY-MM-DD') + LEVEL - 1, 'YYYY-MM-DD')
-      ELSE 
-        TO_CHAR(ADD_MONTHS(TO_DATE(:start_date, 'YYYY-MM-DD'), LEVEL - 1), 'YYYY-MM')
-    END AS invoice_period
-  FROM DUAL
-  CONNECT BY 
-    CASE 
-      WHEN TO_DATE(:end_date, 'YYYY-MM-DD') - TO_DATE(:start_date, 'YYYY-MM-DD') < 30 THEN 
-        TO_DATE(:start_date, 'YYYY-MM-DD') + LEVEL - 1
-      ELSE 
-        ADD_MONTHS(TO_DATE(:start_date, 'YYYY-MM-DD'), LEVEL - 1)
-    END <= TO_DATE(:end_date, 'YYYY-MM-DD')
-),
-
-invoice_data AS (
-  SELECT
-    dr.invoice_period,
-    NVL(SUM(ff.QTYENTERED), 0) AS qty_vendu
-  FROM
-    date_range dr
-  LEFT JOIN
-    xx_ca_fournisseur_facture ff
-  ON
-    CASE 
-      WHEN TO_DATE(:end_date, 'YYYY-MM-DD') - TO_DATE(:start_date, 'YYYY-MM-DD') < 30 THEN 
-        TO_CHAR(ff.DATEINVOICED, 'YYYY-MM-DD')
-      ELSE 
-        TO_CHAR(ff.DATEINVOICED, 'YYYY-MM')
-    END = dr.invoice_period
-    AND ff.DATEINVOICED BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')
-    AND ff.AD_ORG_ID = 1000000
-    AND ff.product LIKE '%' || :product || '%'
-  GROUP BY
-    dr.invoice_period
-),
-
-purchase_data AS (
-  SELECT
-    dr.invoice_period,
-    SUM(
-      CASE 
-        WHEN xf.C_DocType_ID = 1000646 THEN -1 * mi.QTYENTERED
-        ELSE mi.QTYENTERED
-      END
-    ) AS qty_acheté
-  FROM
-    date_range dr
-  LEFT JOIN
-    M_InOut xf ON
-      CASE 
-        WHEN TO_DATE(:end_date, 'YYYY-MM-DD') - TO_DATE(:start_date, 'YYYY-MM-DD') < 30 THEN 
-          TO_CHAR(xf.MOVEMENTDATE, 'YYYY-MM-DD')
-        ELSE 
-          TO_CHAR(xf.MOVEMENTDATE, 'YYYY-MM')
-      END = dr.invoice_period
-    AND xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')
-    AND xf.AD_Org_ID = 1000000
-    AND xf.C_DocType_ID IN (1000013, 1000646)
-    AND xf.M_Warehouse_ID != 1000521
-  JOIN M_INOUTLINE mi ON mi.M_INOUT_ID = xf.M_INOUT_ID
-    AND mi.AD_Org_ID = 1000000
-  JOIN C_InvoiceLine ci ON ci.M_INOUTLINE_ID = mi.M_INOUTLINE_ID
-  JOIN M_PRODUCT m ON m.M_PRODUCT_ID = mi.M_PRODUCT_ID
-    AND m.AD_Org_ID = 1000000
-    AND m.name LIKE '%' || :product || '%'
-  LEFT JOIN C_BPartner cb ON cb.C_BPARTNER_ID = xf.C_BPARTNER_ID
-  GROUP BY
-    dr.invoice_period
-),
-
-combined_data AS (
-  SELECT
-    COALESCE(id.invoice_period, pd.invoice_period) AS invoice_period,
-    id.qty_vendu,
-    pd.qty_acheté,
-    1 AS sort_order
-  FROM
-    invoice_data id
-  FULL OUTER JOIN
-    purchase_data pd
-  ON
-    id.invoice_period = pd.invoice_period
-)
-
-SELECT
-  invoice_period AS period,
-  COALESCE(SUM(qty_acheté), 0) AS qty_acheté,
-  COALESCE(SUM(qty_vendu), 0) AS qty_vendu
-FROM
-  combined_data
-GROUP BY
-  invoice_period,
-  sort_order
-ORDER BY
-  invoice_period
+                SELECT 
+                    sr.name AS "ZONE",
+                    SUM(xf.qtyentered) AS "QTY"
+                FROM C_SalesRegion sr
+                JOIN C_BPartner_Location bpl ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                JOIN xx_ca_fournisseur xf ON bpl.C_BPartner_ID = xf.CLIENTID
+                WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                      AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                      AND xf.AD_Org_ID = 1000000
+                      AND xf.DOCSTATUS != 'RE'
+                      AND (:product_id IS NULL OR xf.M_Product_ID = :product_id)
+                GROUP BY sr.name
+                ORDER BY SUM(xf.qtyentered) DESC
             """
-
             params = {
                 'start_date': start_date,
                 'end_date': end_date,
-                'product': product or '%'
+                'product_id': product_id or None
             }
-
+            
             cursor.execute(query, params)
             rows = cursor.fetchall()
-
-            data = [
-                {
-                    "PERIOD": row[0],
-                    "QTY_ACHETÉ": row[1],
-                    "QTY_VENDU": row[2]
-                }
-                for row in rows
-            ]
-
-            return data
-
+            columns = [col[0] for col in cursor.description]  # Get column names
+            return [dict(zip(columns, row)) for row in rows]
     except Exception as e:
-        logger.error(f"Error fetching histogram data: {e}")
-        return {"error": "An error occurred while fetching histogram data."}
+        logger.error(f"Error fetching zone recap: {e}")
+        return {"error": "An error occurred while fetching zone recap."}
 
-@app.route('/histogram', methods=['GET'])
-def histogram_route():
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    product = request.args.get('product', '')
 
-    if not start_date or not end_date:
-        return jsonify({"error": "Missing start_date or end_date"}), 400
 
-    data = histogram(start_date, end_date, product)
-    return jsonify(data)
+
+
 
 
 
@@ -5851,24 +5972,6 @@ def submit_feedback():
     return jsonify({'status': 'success'}), 200
 
 
-import calendar
-import mysql.connector
-
-
-# MySQL connection for recouvrement data
-def get_localdb_connection():
-    try:
-        return mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="",
-            database="bnm"
-        )
-    except mysql.connector.Error as err:
-        logger.error(f"Error connecting to MySQL database: {err}")
-        return None
-
-
 def get_last_recouvrement_value():
     """Get the last recouvrement value from the MySQL database"""
     try:
@@ -5907,6 +6010,7 @@ def get_last_recouvrement_value():
         return 481114494.36  # Default fallback value
 
 
+
 @app.route('/recouvrement', methods=['GET'])
 def recouvrement():
     # Get the current goal from the database instead of using a static value
@@ -5915,8 +6019,21 @@ def recouvrement():
     try:
         # Rest of your existing query code remains the same
         today = datetime.now()
-        year = today.year
-        month = today.month
+        
+        # If it's before 12:00 PM on the first day of the month, use the previous month
+        if today.hour < 12 and today.day == 1:
+            # Use previous month
+            if today.month == 1:
+                year = today.year - 1
+                month = 12
+            else:
+                year = today.year
+                month = today.month - 1
+        else:
+            # Use current month (after 12:00 PM or not the first day)
+            year = today.year
+            month = today.month
+            
         start_date = f"{year}-{month:02d}-01"
         last_day = calendar.monthrange(year, month)[1]
         end_date = f"{year}-{month:02d}-{last_day}"
@@ -7087,7 +7204,7 @@ def get_kpi_trends_data():
 
 
 # Stock Movement functionality
-def calculate_stock_initial_for_multiple_emplacements(start_date, product, fournisseur):
+def calculate_stock_initial_for_multiple_emplacements(start_date, product, fournisseur, v2_mode=False):
     """
     Calculate stock initial for multiple emplacements by summing each emplacement individually
     This solves the issue when emplacement is empty and we need to aggregate stock from all main locations
@@ -7102,16 +7219,33 @@ def calculate_stock_initial_for_multiple_emplacements(start_date, product, fourn
             total_stock_initial = 0
             emplacement_breakdown = {}
             
+            # Determine the exclusion clause based on V2 mode
+            if v2_mode:
+                exclusion_clause = "WHEN COALESCE(inv.docstatus, m.docstatus, io.docstatus) IN ('RE','VO')"
+            else:
+                exclusion_clause = "WHEN COALESCE(inv.docstatus, m.docstatus, io.docstatus) IN ('RE')"
             
             for emp in emplacements:
-                query = """
-                SELECT COALESCE(SUM(s.movementqty), 0) as stock_initial
+                query = f"""
+                SELECT SUM(
+                    CASE
+                        {exclusion_clause}
+                        THEN 0
+                        ELSE s.movementqty
+                    END
+                ) AS initial_stock
                 FROM m_transaction s
                 INNER JOIN m_product p ON (s.m_product_id = p.m_product_id)
                 INNER JOIN m_locator l ON (l.m_locator_id = s.m_locator_id)
                 INNER JOIN M_attributeinstance att ON (att.m_attributesetinstance_id = s.m_attributesetinstance_id)
+                LEFT OUTER JOIN M_InventoryLine il ON (s.M_InventoryLine_ID=il.M_InventoryLine_ID)
+                LEFT OUTER JOIN M_Inventory inv ON (inv.m_inventory_id = il.m_inventory_id)
+                LEFT OUTER JOIN M_MovementLine ml ON (s.M_MovementLine_ID=ml.M_MovementLine_ID)
+                LEFT OUTER JOIN M_Movement m ON (m.M_Movement_ID=ml.M_Movement_ID)
+                LEFT OUTER JOIN M_InOutLine iol ON (s.M_InOutLine_ID=iol.M_InOutLine_ID)
+                LEFT OUTER JOIN M_Inout io ON (iol.M_InOut_ID=io.M_InOut_ID)
                 WHERE s.movementdate < TO_DATE(:start_date, 'YYYY-MM-DD')
-                AND (:product IS NULL OR p.name LIKE :product || '%')
+                AND (:product IS NULL OR p.M_Product_ID = :product)
                 AND (:fournisseur IS NULL OR att.value LIKE :fournisseur || '%')
                 AND l.value LIKE :emplacement || '%'
                 AND att.m_attribute_id = 1000508
@@ -7145,7 +7279,7 @@ def calculate_stock_initial_for_multiple_emplacements(start_date, product, fourn
             'breakdown': {}
         }
 
-def fetch_stock_movement_data(start_date=None, end_date=None, product=None, fournisseur=None, emplacement=None):
+def fetch_stock_movement_data(start_date=None, end_date=None, product=None, fournisseur=None, emplacement=None, v2_mode=False):
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
@@ -7153,7 +7287,7 @@ def fetch_stock_movement_data(start_date=None, end_date=None, product=None, four
             # For empty or None emplacement, we want to fetch all main locations
             if emplacement == '' or emplacement is None:
                 # Calculate stock initial separately for multiple emplacements
-                stock_initial_result = calculate_stock_initial_for_multiple_emplacements(start_date, product, fournisseur)
+                stock_initial_result = calculate_stock_initial_for_multiple_emplacements(start_date, product, fournisseur, v2_mode)
                 calculated_stock_initial = stock_initial_result['total']
                 emplacement_breakdown = stock_initial_result['breakdown']
                 
@@ -7195,13 +7329,32 @@ def fetch_stock_movement_data(start_date=None, end_date=None, product=None, four
                 emplacement_condition = """
                 AND l.value LIKE :emplacement || '%'
                 """
-                stock_initial_value = """coalesce((SELECT SUM(s.movementqty)
+                
+                # Determine the exclusion clause based on V2 mode
+                if v2_mode:
+                    exclusion_clause = "WHEN COALESCE(inv.docstatus, m.docstatus, io.docstatus) IN ('RE','VO')"
+                else:
+                    exclusion_clause = "WHEN COALESCE(inv.docstatus, m.docstatus, io.docstatus) IN ('RE')"
+                
+                stock_initial_value = f"""coalesce((SELECT SUM(
+                    CASE
+                        {exclusion_clause}
+                        THEN 0
+                        ELSE s.movementqty
+                    END
+                )
                 FROM m_transaction s
                 inner join m_product p on (s.m_product_id = p.m_product_id)
                 inner join m_locator l on (l.m_locator_id = s.m_locator_id)
                 inner join M_attributeinstance att on (att.m_attributesetinstance_id = s.m_attributesetinstance_id)
+                LEFT OUTER JOIN M_InventoryLine il ON (s.M_InventoryLine_ID=il.M_InventoryLine_ID)
+                LEFT OUTER JOIN M_Inventory inv ON (inv.m_inventory_id = il.m_inventory_id)
+                LEFT OUTER JOIN M_MovementLine ml ON (s.M_MovementLine_ID=ml.M_MovementLine_ID)
+                LEFT OUTER JOIN M_Movement m ON (m.M_Movement_ID=ml.M_Movement_ID)
+                LEFT OUTER JOIN M_InOutLine iol ON (s.M_InOutLine_ID=iol.M_InOutLine_ID)
+                LEFT OUTER JOIN M_Inout io ON (iol.M_InOut_ID=io.M_InOut_ID)
                 WHERE s.movementdate <  TO_DATE(:start_date, 'YYYY-MM-DD')
-                AND (:product IS NULL OR p.name LIKE :product || '%')
+                AND (:product IS NULL OR p.M_Product_ID = :product)
                 AND (:fournisseur IS NULL OR att.value like :fournisseur || '%')
                 AND l.value LIKE :emplacement || '%'
                 AND att.m_attribute_id = 1000508
@@ -7278,7 +7431,7 @@ def fetch_stock_movement_data(start_date=None, end_date=None, product=None, four
             att.m_attribute_id = 1000508
             AND (:end_date IS NULL OR t.movementdate <= TO_DATE(:end_date, 'YYYY-MM-DD'))
             AND (:start_date IS NULL OR t.movementdate >= TO_DATE(:start_date, 'YYYY-MM-DD'))
-            AND (:product IS NULL OR P.NAME LIKE :product || '%')
+            AND (:product IS NULL OR p.M_Product_ID = :product)
             AND (:fournisseur IS NULL OR att.value like :fournisseur || '%')
             AND NOT (t.movementqty = 0)
             """ + emplacement_condition + internal_transfer_condition + """
@@ -7310,8 +7463,13 @@ def fetch_stock_movement():
         product = request.args.get("product", None)
         fournisseur = request.args.get("fournisseur", None)
         emplacement = request.args.get("emplacement", None)
+        v2_mode = request.args.get("v2_mode", "false").lower() == "true"
 
-        data = fetch_stock_movement_data(start_date, end_date, product, fournisseur, emplacement)
+        # Log the product parameter for debugging
+        if product:
+            logger.info(f"Fetching stock movement data for product ID: {product}")
+        
+        data = fetch_stock_movement_data(start_date, end_date, product, fournisseur, emplacement, v2_mode)
         return jsonify(data)
 
     except Exception as e:
@@ -7326,8 +7484,9 @@ def download_stock_movement_excel():
         product = request.args.get("product", None)
         fournisseur = request.args.get("fournisseur", None)
         emplacement = request.args.get("emplacement", None)
+        v2_mode = request.args.get("v2_mode", "false").lower() == "true"
 
-        data_result = fetch_stock_movement_data(start_date, end_date, product, fournisseur, emplacement)
+        data_result = fetch_stock_movement_data(start_date, end_date, product, fournisseur, emplacement, v2_mode)
         
         if isinstance(data_result, dict) and "error" in data_result:
             return jsonify(data_result), 500
@@ -7394,6 +7553,121 @@ def generate_excel_stock_movement(data):
     return output
 
 
+def get_initial_stock_for_date(target_date, product_id, v2_mode=False):
+    """
+    Calculate the initial stock for a given product at a specific date.
+    Uses the same logic as the existing stock calculation functions.
+    """
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            
+            # Determine the exclusion clause based on V2 mode
+            if v2_mode:
+                exclusion_clause = "WHEN COALESCE(inv.docstatus, m.docstatus, io.docstatus) IN ('RE','VO')"
+            else:
+                exclusion_clause = "WHEN COALESCE(inv.docstatus, m.docstatus, io.docstatus) IN ('RE')"
+            
+            # Query to get the stock before the target date using same logic as stock movement
+            # Note: We do NOT filter by DOCSTATUS here because initial stock calculation 
+            # should include ALL movements before the target date, regardless of document status
+            # This matches the logic used in the working stock movement queries
+            query = f"""
+                 SELECT SUM(
+                    CASE 
+                        {exclusion_clause}
+                        THEN 0
+                        ELSE s.movementqty 
+                    END
+                ) AS initial_stock
+                FROM m_transaction s
+                INNER JOIN m_product p ON (s.m_product_id = p.m_product_id)
+                INNER JOIN m_locator l ON (l.m_locator_id = s.m_locator_id)
+               
+                LEFT OUTER JOIN M_InventoryLine il
+                ON (s.M_InventoryLine_ID=il.M_InventoryLine_ID)
+                
+                LEFT OUTER JOIN M_Inventory inv
+                ON (inv.m_inventory_id = il.m_inventory_id)
+
+                LEFT OUTER JOIN M_MovementLine ml
+                ON (s.M_MovementLine_ID=ml.M_MovementLine_ID)
+
+                LEFT OUTER JOIN M_Movement m
+                ON (m.M_Movement_ID=ml.M_Movement_ID)
+
+                LEFT OUTER JOIN M_InOutLine iol
+                ON (s.M_InOutLine_ID=iol.M_InOutLine_ID)
+
+                LEFT OUTER JOIN M_Inout io
+                ON (iol.M_InOut_ID=io.M_InOut_ID)
+                
+                WHERE s.movementdate < TO_DATE(:target_date, 'YYYY-MM-DD')
+                AND p.m_product_id = :product_id
+                AND (l.value LIKE 'Préparation%' OR l.value LIKE 'HANGAR%')
+                AND s.AD_Client_ID = 1000000
+
+            """
+            
+            cursor.execute(query, {
+                'product_id': product_id,
+                'target_date': target_date
+            })
+            
+            result = cursor.fetchone()
+            initial_stock = float(result[0]) if result and result[0] is not None else 0.0
+            
+            return {
+                'initial_stock': initial_stock,
+                'product_id': product_id,
+                'target_date': target_date,
+                'v2_mode': v2_mode
+            }
+            
+    except Exception as e:
+        logger.error(f"Error in get_initial_stock_for_date: {e}")
+        return {'error': str(e)}
+
+@app.route('/getInitialStock', methods=['GET'])
+def get_initial_stock_endpoint():
+    """
+    API endpoint to get initial stock for a specific date and product.
+    Expected parameters: date (YYYY-MM-DD format), product_id, v2_mode (optional, default false)
+    """
+    try:
+        target_date = request.args.get('date')
+        product_id = request.args.get('product_id')
+        v2_mode = request.args.get('v2_mode', 'false').lower() == 'true'
+        
+        if not target_date or not product_id:
+            return jsonify({'error': 'Both date and product_id parameters are required'}), 400
+        
+        # Validate date format
+        try:
+            datetime.strptime(target_date, '%Y-%m-%d')
+        except ValueError:
+            return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
+        
+        # Validate product_id is numeric
+        try:
+            int(product_id)
+        except ValueError:
+            return jsonify({'error': 'product_id must be numeric'}), 400
+        
+        result = get_initial_stock_for_date(target_date, product_id, v2_mode)
+        
+        if 'error' in result:
+            return jsonify(result), 500
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Error in get_initial_stock_endpoint: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+
+
 
 @app.route('/fetch-emplacements-stock')
 def fetch_emplacements_stock():
@@ -7421,239 +7695,6 @@ def fetch_emplacements_stock():
     
 
 
-def fetch_fournisseur_by_product(product):
-    try:
-        # Acquire a connection from the pool
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-
-            query = """
-                SELECT DISTINCT
-                    CAST(cb.name AS VARCHAR2(300)) AS FOURNISSEUR
-                FROM 
-                    M_InOut xf
-                JOIN M_INOUTLINE mi ON mi.M_INOUT_ID = xf.M_INOUT_ID
-                JOIN C_BPartner cb ON cb.C_BPARTNER_ID = xf.C_BPARTNER_ID
-                JOIN M_PRODUCT m ON m.M_PRODUCT_id = mi.M_PRODUCT_id
-                WHERE 
-                    UPPER(m.name) LIKE UPPER(:product) || '%'
-                    AND xf.AD_Org_ID = 1000000
-                    AND xf.C_DocType_ID IN (1000013, 1000646)
-                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
-                ORDER BY 
-                    FOURNISSEUR
-            """
-
-            params = {
-                'product': product or None
-            }
-
-            # Execute the query with the provided parameters
-            cursor.execute(query, params)
-
-            # Fetch the results
-            rows = cursor.fetchall()
-
-            # Format the results into a simple list of supplier names
-            suppliers = [row[0] for row in rows]
-
-            return suppliers
-    
-    except Exception as e:
-        logger.error(f"Error fetching suppliers by product: {e}")
-        return {"error": "An error occurred while fetching suppliers by product."}
-
-# Flask route to handle the request
-@app.route('/fetchSuppliersByProduct', methods=['GET'])
-def fetch_suppliers_by_product():
-    product = request.args.get('product')
-
-    # Ensure product is provided
-    if not product:
-        return jsonify({"error": "Missing product parameter"}), 400
-
-    # Fetch data from the database
-    suppliers = fetch_fournisseur_by_product(product)
-
-    # Return the result as a JSON response
-    return jsonify(suppliers)
-
-
-
-
-@app.route('/rotation_monthly_achat', methods=['GET'])
-def fetch_rotation_achat():
-    years = request.args.get('years')  # Comma-separated list of years
-    fournisseur_param = request.args.get('fournisseur')  # Can be comma-separated
-    product = request.args.get('product')
-
-    # If years is not provided, use current year
-    if not years:
-        current_year = datetime.now().year
-        years = str(current_year)
-    
-    # Handle multiple suppliers (comma-separated or single)
-    if fournisseur_param:
-        fournisseurs = [f.strip() for f in fournisseur_param.split(',') if f.strip()]
-    else:
-        return jsonify({"error": "At least one supplier is required"}), 400
-
-    try:
-        # Split the years string into a list and convert to integers
-        year_list = [int(year.strip()) for year in years.split(',')]
-    except ValueError:
-        return jsonify({"error": "Invalid years format. Please provide comma-separated years (e.g., 2022,2023,2024)"}), 400
-
-    # Fetch data from the database with the list of suppliers
-    data = fetch_rotation_monthly_achat(year_list, fournisseurs, product)
-
-    # Return the result as a JSON response
-    return jsonify(data)
-
-
-def fetch_rotation_monthly_achat(year_list, fournisseurs, product=None):
-    try:
-        # Acquire a connection from the pool
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-
-            # Build the supplier condition
-            if isinstance(fournisseurs, str):
-                fournisseurs = [fournisseurs]
-
-            supplier_conditions = []
-            for i, f in enumerate(fournisseurs):
-                bind_var = f'fournisseur_{i}'
-                supplier_conditions.append(f"UPPER(cb.name) LIKE UPPER(:{bind_var}) || '%'")
-
-            supplier_condition = ' OR '.join(supplier_conditions) if supplier_conditions else '1=0'
-
-            # Create the years parameter list
-            year_placeholders = ', '.join([f':year_{i}' for i in range(len(year_list))])
-            
-            query = """
-                WITH monthly_data AS (
-                    SELECT 
-                        TO_CHAR(xf.MOVEMENTDATE, 'YYYY') AS year,
-                        TO_CHAR(xf.MOVEMENTDATE, 'MM') AS month_num,
-                        TO_CHAR(xf.MOVEMENTDATE, 'Month') AS month_name,
-                        m.name AS produit,
-                        cb.name AS fournisseur,
-                        SUM(CASE 
-                            WHEN xf.C_DocType_ID = 1000646 THEN -1 * TO_NUMBER(mi.QTYENTERED)
-                            ELSE TO_NUMBER(mi.QTYENTERED)
-                        END) AS qty,
-                        SUM(CASE 
-                            WHEN xf.C_DocType_ID = 1000646 THEN -1 * TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED)
-                            ELSE TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED)
-                        END) AS chiffre
-                    FROM 
-                        M_InOut xf
-                        JOIN M_INOUTLINE mi ON mi.M_INOUT_ID = xf.M_INOUT_ID
-                        JOIN M_ATTRIBUTEINSTANCE ma ON ma.M_ATTRIBUTESETINSTANCE_ID = mi.M_ATTRIBUTESETINSTANCE_ID
-                        JOIN C_BPartner cb ON cb.C_BPARTNER_ID = xf.C_BPARTNER_ID
-                        JOIN M_PRODUCT m ON m.M_PRODUCT_id = mi.M_PRODUCT_id
-                    WHERE 
-                        TO_CHAR(xf.MOVEMENTDATE, 'YYYY') IN (""" + year_placeholders + """)
-                        AND xf.AD_Org_ID = 1000000
-                        AND xf.C_DocType_ID IN (1000013, 1000646)
-                        AND ma.M_Attribute_ID = 1000504
-                        AND xf.DOCSTATUS = 'CO'
-                        AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
-                        AND (""" + supplier_condition + """)
-                        AND (:product IS NULL OR UPPER(m.name) LIKE UPPER(:product) || '%')
-                    GROUP BY 
-                        TO_CHAR(xf.MOVEMENTDATE, 'YYYY'),
-                        TO_CHAR(xf.MOVEMENTDATE, 'MM'),
-                        TO_CHAR(xf.MOVEMENTDATE, 'Month'),
-                        m.name,
-                        cb.name
-                )
-                SELECT * FROM monthly_data
-                ORDER BY year, month_num, produit
-            """
-
-            # Prepare parameters
-            params = {'product': product}
-            
-            # Add supplier parameters
-            for i, f in enumerate(fournisseurs):
-                params[f'fournisseur_{i}'] = f
-
-            # Add year parameters
-            for i, year in enumerate(year_list):
-                params[f'year_{i}'] = str(year)
-
-            # Execute the query with the parameters
-            cursor.execute(query, params)
-
-            # Fetch the results
-            rows = cursor.fetchall()
-
-            # Format the results into a nested dictionary structure
-            result = {}
-            
-            # Process each row and organize by year and month
-            for row in rows:
-                year, month_num, month_name, produit, fournisseur, qty, chiffre = row
-                month_num = month_num.zfill(2)  # Ensure two digits for month number
-                
-                if year not in result:
-                    result[year] = {}
-                
-                if month_num not in result[year]:
-                    result[year][month_num] = {
-                        'month_name': month_name.strip(),
-                        'details': [],
-                        'total': {'QTY': 0, 'CHIFFRE': 0}
-                    }
-                
-                # Add product details with supplier info
-                result[year][month_num]['details'].append({
-                    'PRODUIT': produit,
-                    'FOURNISSEUR': fournisseur,
-                    'QTY': float(qty) if qty is not None else 0,
-                    'CHIFFRE': float(chiffre) if chiffre is not None else 0
-                })
-                
-                # Update monthly totals
-                result[year][month_num]['total']['QTY'] += float(qty) if qty is not None else 0
-                result[year][month_num]['total']['CHIFFRE'] += float(chiffre) if chiffre is not None else 0
-
-            # Sort years and months numerically
-            sorted_result = {
-                str(year): dict(sorted(months.items()))
-                for year, months in sorted(result.items())
-            }
-            return sorted_result
-
-    except Exception as e:
-        logger.error(f"Error fetching product recap achat: {e}")
-        return {"error": "An error occurred while fetching product recap achat."}
-
-
-from flask import make_response
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table as ReportLabTable, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib import colors
-from reportlab.lib.units import inch
-from datetime import datetime
-import io
-
-# Define a color palette for years (can be extended as needed)
-YEAR_COLORS = [
-    colors.HexColor('#4E79A7'),  # Blue
-    colors.HexColor('#F28E2B'),  # Orange
-    colors.HexColor('#E15759'),  # Red
-    colors.HexColor('#76B7B2'),  # Teal
-    colors.HexColor('#59A14F'),  # Green
-    colors.HexColor('#EDC948'),  # Yellow
-    colors.HexColor('#B07AA1'),  # Purple
-    colors.HexColor('#FF9DA7'),  # Pink
-    colors.HexColor('#9C755F'),  # Brown
-    colors.HexColor('#BAB0AC')   # Gray
-]
 
 @app.route('/rotation_monthly_achat_pdf', methods=['GET'])
 def download_product_achat_pdf():
@@ -7661,7 +7702,11 @@ def download_product_achat_pdf():
 
     years = request.args.get('years')
     fournisseur_param = request.args.get('fournisseur')
-    product = request.args.get('product')
+    product_id = request.args.get('product_id')
+    
+    # If product_id is "undefined", set it to None
+    if product_id == "undefined":
+        product_id = None
 
     if not years:
         years = str(datetime.now().year)
@@ -7677,7 +7722,7 @@ def download_product_achat_pdf():
     else:
         return jsonify({"error": "Fournisseur parameter is required"}), 400
 
-    data = fetch_rotation_monthly_achat(year_list, fournisseurs, product)
+    data = fetch_rotation_monthly_achat(year_list, fournisseurs, product_id)
     if 'error' in data:
         return jsonify(data), 500
 
@@ -7701,7 +7746,21 @@ def download_product_achat_pdf():
     
     # Create supplier display text
     supplier_display = ", ".join(fournisseurs) if len(fournisseurs) <= 3 else f"{len(fournisseurs)} suppliers"
-    elements.append(Paragraph(f"Fournisseurs: {supplier_display} | Produit: {product or 'Tous'} | Années: {years}", styles["Heading2"]))
+    
+    # Try to get product name if product_id is provided
+    product_name = "Tous"
+    if product_id:
+        try:
+            with DB_POOL.acquire() as connection:
+                cursor = connection.cursor()
+                cursor.execute("SELECT name FROM M_PRODUCT WHERE M_PRODUCT_ID = :product_id", {'product_id': product_id})
+                result = cursor.fetchone()
+                if result:
+                    product_name = result[0]
+        except Exception as e:
+            logger.error(f"Error fetching product name: {e}")
+    
+    elements.append(Paragraph(f"Fournisseurs: {supplier_display} | Produit: {product_name} | Années: {years}", styles["Heading2"]))
     elements.append(Spacer(1, 0.25 * inch))
 
     for year_idx, (year, months_data) in enumerate(data.items()):
@@ -7826,9 +7885,256 @@ def download_product_achat_pdf():
     return response
 
 
+@app.route('/rotation_monthly_achat', methods=['GET'])
+def fetch_rotation_achat():
+    years = request.args.get('years')  # Comma-separated list of years
+    fournisseur_param = request.args.get('fournisseur')  # Can be comma-separated
+    product_id = request.args.get('product_id')
+    
+    # If product_id is "undefined", set it to None
+    if product_id == "undefined":
+        product_id = None
+
+    # If years is not provided, use current year
+    if not years:
+        current_year = datetime.now().year
+        years = str(current_year)
+    
+    # Handle multiple suppliers (comma-separated or single)
+    if fournisseur_param:
+        fournisseurs = [f.strip() for f in fournisseur_param.split(',') if f.strip()]
+    else:
+        return jsonify({"error": "At least one supplier is required"}), 400
+
+    try:
+        # Split the years string into a list and convert to integers
+        year_list = [int(year.strip()) for year in years.split(',')]
+    except ValueError:
+        return jsonify({"error": "Invalid years format. Please provide comma-separated years (e.g., 2022,2023,2024)"}), 400
+
+    # Fetch data from the database with the list of suppliers
+    data = fetch_rotation_monthly_achat(year_list, fournisseurs, product_id)
+
+    # Return the result as a JSON response
+    return jsonify(data)
 
 
-def rot_mont_vente(year_list, fournisseurs, products=None, clients=None, zones=None):
+def fetch_rotation_monthly_achat(year_list, fournisseurs, product_id=None):
+    try:
+        # Acquire a connection from the pool
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            # Build the supplier condition
+            if isinstance(fournisseurs, str):
+                fournisseurs = [fournisseurs]
+
+            supplier_conditions = []
+            for i, f in enumerate(fournisseurs):
+                bind_var = f'fournisseur_{i}'
+                supplier_conditions.append(f"UPPER(cb.name) LIKE UPPER(:{bind_var}) || '%'")
+
+            supplier_condition = ' OR '.join(supplier_conditions) if supplier_conditions else '1=0'
+
+            # Create the years parameter list
+            year_placeholders = ', '.join([f':year_{i}' for i in range(len(year_list))])
+            
+            query = """
+                WITH monthly_data AS (
+                    SELECT 
+                        TO_CHAR(xf.MOVEMENTDATE, 'YYYY') AS year,
+                        TO_CHAR(xf.MOVEMENTDATE, 'MM') AS month_num,
+                        TO_CHAR(xf.MOVEMENTDATE, 'Month') AS month_name,
+                        m.name AS produit,
+                        cb.name AS fournisseur,
+                        SUM(CASE 
+                            WHEN xf.C_DocType_ID = 1000646 THEN -1 * TO_NUMBER(mi.QTYENTERED)
+                            ELSE TO_NUMBER(mi.QTYENTERED)
+                        END) AS qty,
+                        SUM(CASE 
+                            WHEN xf.C_DocType_ID = 1000646 THEN -1 * TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED)
+                            ELSE TO_NUMBER(ma.valuenumber) * TO_NUMBER(mi.QTYENTERED)
+                        END) AS chiffre
+                    FROM 
+                        M_InOut xf
+                        JOIN M_INOUTLINE mi ON mi.M_INOUT_ID = xf.M_INOUT_ID
+                        JOIN M_ATTRIBUTEINSTANCE ma ON ma.M_ATTRIBUTESETINSTANCE_ID = mi.M_ATTRIBUTESETINSTANCE_ID
+                        JOIN C_BPartner cb ON cb.C_BPARTNER_ID = xf.C_BPARTNER_ID
+                        JOIN M_PRODUCT m ON m.M_PRODUCT_id = mi.M_PRODUCT_id
+                    WHERE 
+                        TO_CHAR(xf.MOVEMENTDATE, 'YYYY') IN (""" + year_placeholders + """)
+                        AND xf.AD_Org_ID = 1000000
+                        AND xf.C_DocType_ID IN (1000013, 1000646)
+                        AND ma.M_Attribute_ID = 1000504
+                        AND xf.DOCSTATUS = 'CO'
+                        AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
+                        AND (""" + supplier_condition + """)
+                        AND (:product_id IS NULL OR m.M_PRODUCT_ID = :product_id)
+                    GROUP BY 
+                        TO_CHAR(xf.MOVEMENTDATE, 'YYYY'),
+                        TO_CHAR(xf.MOVEMENTDATE, 'MM'),
+                        TO_CHAR(xf.MOVEMENTDATE, 'Month'),
+                        m.name,
+                        cb.name
+                )
+                SELECT * FROM monthly_data
+                ORDER BY year, month_num, produit
+            """
+
+            # Prepare parameters
+            params = {'product_id': product_id}
+            
+            # Add supplier parameters
+            for i, f in enumerate(fournisseurs):
+                params[f'fournisseur_{i}'] = f
+
+            # Add year parameters
+            for i, year in enumerate(year_list):
+                params[f'year_{i}'] = str(year)
+
+            # Execute the query with the parameters
+            cursor.execute(query, params)
+
+            # Fetch the results
+            rows = cursor.fetchall()
+
+            # Format the results into a nested dictionary structure
+            result = {}
+            
+            # Process each row and organize by year and month
+            for row in rows:
+                year, month_num, month_name, produit, fournisseur, qty, chiffre = row
+                month_num = month_num.zfill(2)  # Ensure two digits for month number
+                
+                if year not in result:
+                    result[year] = {}
+                
+                if month_num not in result[year]:
+                    result[year][month_num] = {
+                        'month_name': month_name.strip(),
+                        'details': [],
+                        'total': {'QTY': 0, 'CHIFFRE': 0}
+                    }
+                
+                # Add product details with supplier info
+                result[year][month_num]['details'].append({
+                    'PRODUIT': produit,
+                    'FOURNISSEUR': fournisseur,
+                    'QTY': float(qty) if qty is not None else 0,
+                    'CHIFFRE': float(chiffre) if chiffre is not None else 0
+                })
+                
+                # Update monthly totals
+                result[year][month_num]['total']['QTY'] += float(qty) if qty is not None else 0
+                result[year][month_num]['total']['CHIFFRE'] += float(chiffre) if chiffre is not None else 0
+
+            # Sort years and months numerically
+            sorted_result = {
+                str(year): dict(sorted(months.items()))
+                for year, months in sorted(result.items())
+            }
+            return sorted_result
+
+    except Exception as e:
+        logger.error(f"Error fetching product recap achat: {e}")
+        return {"error": "An error occurred while fetching product recap achat."}
+
+def fetch_fournisseur_by_product(product_id):
+    try:
+        # Check if product_id is valid
+        if not product_id or product_id == "undefined":
+            return []
+            
+        # Ensure product_id is a valid number
+        try:
+            product_id = int(product_id)
+        except ValueError:
+            logger.error(f"Invalid product_id format: {product_id}")
+            return []
+            
+        # Acquire a connection from the pool
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+                SELECT DISTINCT
+                    CAST(cb.name AS VARCHAR2(300)) AS FOURNISSEUR
+                FROM 
+                    M_InOut xf
+                JOIN M_INOUTLINE mi ON mi.M_INOUT_ID = xf.M_INOUT_ID
+                JOIN C_BPartner cb ON cb.C_BPARTNER_ID = xf.C_BPARTNER_ID
+                JOIN M_PRODUCT m ON m.M_PRODUCT_id = mi.M_PRODUCT_id
+                WHERE 
+                    m.M_PRODUCT_ID = :product_id
+                    AND xf.AD_Org_ID = 1000000
+                    AND xf.C_DocType_ID IN (1000013, 1000646)
+                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
+                ORDER BY 
+                    FOURNISSEUR
+            """
+
+            params = {
+                'product_id': product_id
+            }
+
+            # Execute the query with the provided parameters
+            cursor.execute(query, params)
+
+            # Fetch the results
+            rows = cursor.fetchall()
+
+            # Format the results into a simple list of supplier names
+            suppliers = [row[0] for row in rows]
+
+            return suppliers
+    
+    except Exception as e:
+        logger.error(f"Error fetching suppliers by product: {e}")
+        return {"error": "An error occurred while fetching suppliers by product."}
+
+# Flask route to handle the request
+@app.route('/fetchSuppliersByProduct', methods=['GET'])
+def fetch_suppliers_by_product():
+    product_id = request.args.get('product_id')
+
+    # Ensure product_id is provided and not "undefined"
+    if not product_id or product_id == "undefined":
+        return jsonify([]), 200  # Return empty list instead of error
+
+    # Fetch data from the database
+    suppliers = fetch_fournisseur_by_product(product_id)
+
+    # Return the result as a JSON response
+    return jsonify(suppliers)
+
+
+
+
+from flask import make_response
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table as ReportLabTable, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from datetime import datetime
+import io
+
+# Define a color palette for years (can be extended as needed)
+YEAR_COLORS = [
+    colors.HexColor('#4E79A7'),  # Blue
+    colors.HexColor('#F28E2B'),  # Orange
+    colors.HexColor('#E15759'),  # Red
+    colors.HexColor('#76B7B2'),  # Teal
+    colors.HexColor('#59A14F'),  # Green
+    colors.HexColor('#EDC948'),  # Yellow
+    colors.HexColor('#B07AA1'),  # Purple
+    colors.HexColor('#FF9DA7'),  # Pink
+    colors.HexColor('#9C755F'),  # Brown
+    colors.HexColor('#BAB0AC')   # Gray
+]
+
+
+def rot_mont_vente(year_list, fournisseurs, products=None, clients=None, zones=None, product_ids=None):
     try:
         # Acquire a connection from the pool
         with DB_POOL.acquire() as connection:
@@ -7847,7 +8153,7 @@ def rot_mont_vente(year_list, fournisseurs, products=None, clients=None, zones=N
 
                 supplier_condition = ' OR '.join(supplier_conditions) if supplier_conditions else '1=0'
 
-            # Build product condition for multiple products
+            # Build product condition for multiple products (by name)
             product_condition = "1=1"
             if products:
                 if isinstance(products, str):
@@ -7857,6 +8163,17 @@ def rot_mont_vente(year_list, fournisseurs, products=None, clients=None, zones=N
                     bind_var = f'product_{i}'
                     product_conditions.append(f"UPPER(xf.product) LIKE UPPER(:{bind_var}) || '%'")
                 product_condition = ' OR '.join(product_conditions) if product_conditions else '1=0'
+            
+            # Build product ID condition
+            product_id_condition = "1=1"
+            if product_ids:
+                if isinstance(product_ids, str):
+                    product_ids = [product_ids]
+                product_id_conditions = []
+                for i, pid in enumerate(product_ids):
+                    bind_var = f'product_id_{i}'
+                    product_id_conditions.append(f"xf.M_PRODUCT_ID = :{bind_var}")
+                product_id_condition = ' OR '.join(product_id_conditions) if product_id_conditions else '1=0'
 
             # Build client condition for multiple clients
             client_condition = "1=1"
@@ -7912,6 +8229,7 @@ def rot_mont_vente(year_list, fournisseurs, products=None, clients=None, zones=N
                         AND xf.DOCSTATUS != 'RE'
                         AND ({supplier_condition})
                         AND ({product_condition})
+                        AND ({product_id_condition})
                         AND ({client_condition})
                         AND ({zone_condition})
                     GROUP BY 
@@ -7938,6 +8256,14 @@ def rot_mont_vente(year_list, fournisseurs, products=None, clients=None, zones=N
             if products:
                 for i, p in enumerate(products):
                     params[f'product_{i}'] = p
+                    
+            # Add product ID parameters
+            if product_ids:
+                for i, pid in enumerate(product_ids):
+                    try:
+                        params[f'product_id_{i}'] = int(pid)
+                    except ValueError:
+                        logger.warning(f"Invalid product ID format: {pid}, skipping")
 
             # Add client parameters
             if clients:
@@ -8008,9 +8334,14 @@ def rot_mont_vente(year_list, fournisseurs, products=None, clients=None, zones=N
 def fetch_rotation_monthly_vente():
     years = request.args.get('years')  # Comma-separated list of years
     fournisseur_param = request.args.get('fournisseur')  # Can be comma-separated
-    product_param = request.args.get('product')  # Can be comma-separated
+    product_param = request.args.get('product')  # Can be comma-separated (legacy)
+    product_id_param = request.args.get('product_id')  # New product_id parameter
     client_param = request.args.get('client')  # Can be comma-separated
     zone_param = request.args.get('zone')  # Can be comma-separated
+
+    # If product_id is "undefined", set it to None
+    if product_id_param == "undefined":
+        product_id_param = None
 
     # If years is not provided, use current year
     if not years:
@@ -8024,7 +8355,12 @@ def fetch_rotation_monthly_vente():
 
     # Handle multiple products (comma-separated or single)
     products = None
-    if product_param:
+    product_ids = None
+    
+    # Prioritize product_id over product name if both are provided
+    if product_id_param:
+        product_ids = [pid.strip() for pid in product_id_param.split(',') if pid.strip()]
+    elif product_param:
         products = [p.strip() for p in product_param.split(',') if p.strip()]
 
     # Handle multiple clients (comma-separated or single)
@@ -8044,7 +8380,7 @@ def fetch_rotation_monthly_vente():
         return jsonify({"error": "Invalid years format. Please provide comma-separated years (e.g., 2022,2023,2024)"}), 400
 
     # Fetch data from the database with the list of parameters
-    data = rot_mont_vente(year_list, fournisseurs, products, clients, zones)
+    data = rot_mont_vente(year_list, fournisseurs, products, clients, zones, product_ids)
 
     # Return the result as a JSON response
     return jsonify(data)
@@ -8057,9 +8393,14 @@ def download_product_vente_pdf():
 
     years = request.args.get('years')
     fournisseur_param = request.args.get('fournisseur')
-    product = request.args.get('product')
+    product_param = request.args.get('product')
+    product_id_param = request.args.get('product_id')
     client_param = request.args.get('client')
     zone_param = request.args.get('zone')
+    
+    # If product_id is "undefined", set it to None
+    if product_id_param == "undefined":
+        product_id_param = None
 
     if not years:
         years = str(datetime.now().year)
@@ -8086,15 +8427,20 @@ def download_product_vente_pdf():
 
     # Handle multiple products (comma-separated or single)
     products = None
-    if product:
-        products = [p.strip() for p in product.split(',') if p.strip()]
+    product_ids = None
+    
+    # Prioritize product_id over product name if both are provided
+    if product_id_param:
+        product_ids = [pid.strip() for pid in product_id_param.split(',') if pid.strip()]
+    elif product_param:
+        products = [p.strip() for p in product_param.split(',') if p.strip()]
 
-    data = rot_mont_vente(year_list, fournisseurs, products, clients, zones)
+    data = rot_mont_vente(year_list, fournisseurs, products, clients, zones, product_ids)
     if 'error' in data:
         return jsonify(data), 500
 
     # Create descriptive filename
-    product_text = product or 'all_products'
+    product_text = product_param or product_id_param or 'all_products'
     filename = f"vente_recap_{years.replace(',', '-')}_{product_text[:20]}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
 
     buffer = io.BytesIO()
@@ -8127,7 +8473,7 @@ def download_product_vente_pdf():
         zone_display = ", ".join(zones) if len(zones) <= 3 else f"{len(zones)} zones"
         filter_parts.append(f"Zones: {zone_display}")
     
-    filter_parts.append(f"Produit: {product or 'Tous'}")
+    filter_parts.append(f"Produit: {product_param or product_id_param or 'Tous'}")
     filter_parts.append(f"Années: {years}")
     
     elements.append(Paragraph(" | ".join(filter_parts), styles["Heading2"]))
@@ -8280,6 +8626,48 @@ def download_product_vente_pdf():
 
     return response
 
+
+@app.route('/fetchZoneClients', methods=['GET'])
+def fetch_zone_clients():
+    zone = request.args.get('zone')
+
+    if not zone:
+        return jsonify({"error": "Missing zone parameter"}), 400
+
+    data = fetch_clients_by_zone(zone)
+    return jsonify(data)
+
+
+def fetch_clients_by_zone(zone):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT DISTINCT
+                    cb.C_BPartner_ID AS "CLIENT_ID",
+                    cb.name AS "CLIENT_NAME",
+                    sr.name AS "ZONE"
+                FROM C_SalesRegion sr
+                JOIN C_BPartner_Location bpl ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                JOIN C_BPartner cb ON cb.C_BPartner_ID = bpl.C_BPartner_ID
+                JOIN xx_ca_fournisseur xf ON bpl.C_BPartner_ID = xf.CLIENTID
+                WHERE UPPER(sr.name) = UPPER(:zone)
+                    AND xf.AD_Org_ID = 1000000
+                    AND xf.DOCSTATUS != 'RE'
+                ORDER BY cb.name
+            """
+            
+            params = {
+                'zone': zone
+            }
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            return [dict(zip(columns, row)) for row in rows]
+    except Exception as e:
+        logger.error(f"Error fetching clients by zone: {e}")
+        return {"error": "An error occurred while fetching clients by zone."}
 
 
 
@@ -8628,6 +9016,789 @@ def sold_initial_etat_cum():
 
 
 
+
+
+def fetch_reversed_voided_stock_movements(product_id):
+    """
+    Fetch stock movements for a specific product where docstatus is 'RE' (Reversed) or 'VO' (Voided)
+    Calculate the difference between entries and exits
+    """
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            
+            query = """
+            SELECT
+                t.MovementDate AS MovementDate,
+                nvl(nvl(io.documentno,inv.documentno),m.documentno) as documentno,
+                nvl(bp.name, nvl(inv.description,m.description)) as name,
+                p.name AS productname,
+                CASE WHEN t.movementqty > 0 then t.movementqty else 0 end as ENTREE,
+                CASE WHEN t.movementqty < 0 then ABS(t.movementqty) else 0 end as SORTIE,
+                asi.lot,
+                l.value AS locator,
+                COALESCE(io.docstatus, m.docstatus, inv.docstatus, 'N/A') AS docstatus
+            FROM M_Transaction t
+            INNER JOIN M_Locator l ON (t.M_Locator_ID=l.M_Locator_ID)
+            INNER JOIN M_Product p ON (t.M_Product_ID=p.M_Product_ID)
+            LEFT OUTER JOIN M_InventoryLine il ON (t.M_InventoryLine_ID=il.M_InventoryLine_ID)
+            LEFT OUTER JOIN M_Inventory inv ON (inv.m_inventory_id = il.m_inventory_id)
+            LEFT OUTER JOIN M_MovementLine ml ON (t.M_MovementLine_ID=ml.M_MovementLine_ID)
+            LEFT OUTER JOIN M_Movement m ON (m.M_Movement_ID=ml.M_Movement_ID)
+            LEFT OUTER JOIN M_InOutLine iol ON (t.M_InOutLine_ID=iol.M_InOutLine_ID)
+            LEFT OUTER JOIN M_Inout io ON (iol.M_InOut_ID=io.M_InOut_ID)
+            LEFT OUTER JOIN C_BPartner bp ON (bp.C_BPartner_ID = io.C_BPartner_ID)
+            INNER JOIN M_attributesetinstance asi on t.m_attributesetinstance_id = asi.m_attributesetinstance_id
+            INNER JOIN M_attributeinstance att on (att.m_attributesetinstance_id = asi.m_attributesetinstance_id)
+            WHERE
+            att.m_attribute_id = 1000508
+            AND p.M_Product_ID = :product_id
+            AND COALESCE(io.docstatus, m.docstatus, inv.docstatus) IN ('RE', 'VO')
+            AND NOT (t.movementqty = 0)
+            AND t.AD_Client_ID = 1000000
+            ORDER BY t.MovementDate DESC
+            """
+            
+            cursor.execute(query, {'product_id': product_id})
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            movements = [dict(zip(columns, row)) for row in rows]
+            
+            # Calculate totals
+            total_entree = sum(float(row.get('ENTREE', 0) or 0) for row in movements)
+            total_sortie = sum(float(row.get('SORTIE', 0) or 0) for row in movements)
+            difference = total_entree - total_sortie
+            
+            return {
+                'movements': movements,
+                'summary': {
+                    'total_entree': total_entree,
+                    'total_sortie': total_sortie,
+                    'difference': difference,
+                    'product_id': product_id,
+                    'total_movements': len(movements)
+                }
+            }
+            
+    except Exception as e:
+        logger.error(f"Database error in fetch_reversed_voided_stock_movements: {e}")
+        return {"error": "An error occurred while fetching reversed/voided stock movements."}
+
+@app.route('/fetch-reversed-voided-stock-movements', methods=['GET'])
+def fetch_reversed_voided_movements():
+    """
+    API endpoint to get stock movements for a product with docstatus 'RE' or 'VO'
+    Expected parameter: product_id
+    """
+    try:
+        product_id = request.args.get("product_id", None)
+        
+        if not product_id:
+            return jsonify({"error": "product_id parameter is required"}), 400
+        
+        try:
+            product_id = int(product_id)
+        except ValueError:
+            return jsonify({"error": "product_id must be a valid integer"}), 400
+        
+        data = fetch_reversed_voided_stock_movements(product_id)
+        return jsonify(data)
+        
+    except Exception as e:
+        logger.error(f"Error in fetch_reversed_voided_movements endpoint: {e}")
+        return jsonify({"error": "An error occurred while processing the request"}), 500
+
+
+
+
+
+@app.route('/inventory-products', methods=['GET'])
+def inventory_products():
+    try:
+        product_id = request.args.get("product_id", None)
+        
+        if not product_id:
+            return jsonify({"error": "Product ID is required"}), 400
+
+        data = fetch_inventory_products_data(product_id)
+        return jsonify(data)
+
+    except Exception as e:
+        logger.error(f"Error fetching inventory products: {e}")
+        return jsonify({"error": "Failed to fetch inventory products"}), 500
+
+
+def fetch_inventory_products_data(product_id):
+    """
+    Fetch inventory product information - returns Product, Lot, PPA, QTY_DISPO, Guarantee Date
+    """
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            
+            query = """
+            SELECT
+                p.name AS PRODUCT,
+                (
+                    SELECT
+                        lot
+                    FROM
+                        m_attributesetinstance
+                    WHERE
+                        m_attributesetinstance_id = mst.m_attributesetinstance_id
+                ) AS LOT,
+                (
+                    SELECT
+                        valuenumber
+                    FROM
+                        m_attributeinstance
+                    WHERE
+                        m_attributesetinstance_id = mst.m_attributesetinstance_id
+                        AND m_attribute_id = 1000503
+                ) AS PPA,
+                (mst.qtyonhand - mst.QTYRESERVED) AS QTY_DISPO,
+                mats.guaranteedate AS GUARANTEEDATE
+            FROM
+                m_product p
+                INNER JOIN m_storage mst ON p.m_product_id = mst.m_product_id
+                INNER JOIN m_attributesetinstance mats ON mst.m_attributesetinstance_id = mats.m_attributesetinstance_id
+            WHERE
+                p.m_product_id = :product_id
+                AND mst.m_locator_id IN (1001135, 1000614, 1001128, 1001136, 1001020)
+                AND mst.qtyonhand != 0
+            ORDER BY
+                p.name, mats.guaranteedate
+            """
+
+            cursor.execute(query, {"product_id": product_id})
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+
+            return data
+
+    except Exception as e:
+        logger.error(f"Error fetching inventory products: {e}")
+        return {"error": "An error occurred while fetching inventory products."}
+
+@app.route('/listproduct_inv', methods=['GET'])
+def listproduct_inv():
+    """
+    Returns list of products with both ID and name for inventory management
+    """
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+            SELECT M_product_id, name FROM M_PRODUCT
+            WHERE AD_Client_ID = 1000000
+            AND AD_Org_ID = 1000000
+            AND ISACTIVE = 'Y'
+            ORDER BY name
+            """
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            # Return array of objects with id and name
+            products = [{"id": row[0], "name": row[1]} for row in rows]
+            return jsonify(products)
+    except Exception as e:
+        logger.error(f"Error fetching product list: {e}")
+        return jsonify({"error": "Could not fetch products list"}), 500
+
+
+
+def fetch_simulation():
+
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT * FROM (
+                    SELECT 
+                        CAST(org.name AS VARCHAR2(300)) AS organisation,
+                        CAST(co.documentno AS VARCHAR2(50)) AS ndocument,
+                        CAST(cb.name AS VARCHAR2(300)) AS tier,
+                        co.dateordered AS datecommande,
+                        CAST(us.name AS VARCHAR2(100)) AS vendeur,
+                        ROUND(((co.totallines / (SELECT SUM(mat.valuenumber * li.qtyentered) 
+                             FROM c_orderline li 
+                             INNER JOIN m_attributeinstance mat ON mat.m_attributesetinstance_id = li.m_attributesetinstance_id
+                             WHERE mat.m_attribute_id = 1000504 
+                               AND li.c_order_id = co.c_order_id 
+                               AND li.qtyentered > 0 
+                             GROUP BY li.c_order_id)) - 1) * 100, 2) AS marge,
+                        ROUND(co.totallines, 2) AS montant,
+                        1 AS sort_order
+                    FROM 
+                        c_order co
+                    INNER JOIN ad_org org ON co.ad_org_id = org.ad_org_id
+                    INNER JOIN c_bpartner cb ON co.c_bpartner_id = cb.c_bpartner_id
+                    INNER JOIN ad_user us ON co.salesrep_id = us.ad_user_id
+                    WHERE 
+                         co.docaction = 'PR'
+                        AND co.ad_org_id = 1000000
+                        AND docstatus = 'IP'
+                        AND issotrx = 'Y'
+                    
+                    UNION ALL
+                    
+                    SELECT 
+                        CAST('Total' AS VARCHAR2(300)) AS organisation,
+                        CAST(NULL AS VARCHAR2(50)) AS ndocument,
+                        CAST(NULL AS VARCHAR2(300)) AS tier,
+                        NULL AS datecommande,
+                        CAST(NULL AS VARCHAR2(100)) AS vendeur,
+                        ROUND(AVG(ROUND(((co.totallines / (SELECT SUM(mat.valuenumber * li.qtyentered) 
+                             FROM c_orderline li 
+                             INNER JOIN m_attributeinstance mat ON mat.m_attributesetinstance_id = li.m_attributesetinstance_id
+                             WHERE mat.m_attribute_id = 1000504 
+                               AND li.c_order_id = co.c_order_id 
+                               AND li.qtyentered > 0 
+                             GROUP BY li.c_order_id)) - 1) * 100, 2)), 2) AS marge,
+                        ROUND(SUM(co.totallines), 2) AS montant,
+                        0 AS sort_order
+                    FROM 
+                        c_order co
+                    INNER JOIN ad_org org ON co.ad_org_id = org.ad_org_id
+                    INNER JOIN c_bpartner cb ON co.c_bpartner_id = cb.c_bpartner_id
+                    INNER JOIN ad_user us ON co.salesrep_id = us.ad_user_id
+                    WHERE 
+                         co.docaction = 'PR'
+                        AND co.ad_org_id = 1000000
+                        AND docstatus = 'IP'
+                        AND issotrx = 'Y'
+                )
+                ORDER BY sort_order, montant DESC
+            """
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            result = [dict(zip(columns, row)) for row in rows]
+            return result
+    except Exception as e:
+        logging.error(f"Error fetching simulation data: {e}")
+        return {"error": "An error occurred while fetching simulation data."}
+
+# New: fetch simulation by ndocument
+def fetch_simulation_by_ndocument(ndocument):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT 
+                    CAST(org.name AS VARCHAR2(300)) AS organisation,
+                    CAST(co.documentno AS VARCHAR2(50)) AS ndocument,
+                    CAST(cb.name AS VARCHAR2(300)) AS tier,
+                    co.dateordered AS datecommande,
+                    CAST(us.name AS VARCHAR2(100)) AS vendeur,
+                    ROUND(((co.totallines / (SELECT SUM(mat.valuenumber * li.qtyentered) 
+                         FROM c_orderline li 
+                         INNER JOIN m_attributeinstance mat ON mat.m_attributesetinstance_id = li.m_attributesetinstance_id
+                         WHERE mat.m_attribute_id = 1000504 
+                           AND li.c_order_id = co.c_order_id 
+                           AND li.qtyentered > 0 
+                         GROUP BY li.c_order_id)) - 1) * 100, 2) AS marge,
+                    ROUND(co.totallines, 2) AS montant
+                FROM 
+                    c_order co
+                INNER JOIN ad_org org ON co.ad_org_id = org.ad_org_id
+                INNER JOIN c_bpartner cb ON co.c_bpartner_id = cb.c_bpartner_id
+                INNER JOIN ad_user us ON co.salesrep_id = us.ad_user_id
+                WHERE 
+                     co.ad_org_id = 1000000
+                    AND issotrx = 'Y'
+                    AND co.documentno = :ndocument
+            """
+            cursor.execute(query, {'ndocument': ndocument})
+            row = cursor.fetchone()
+            if row:
+                columns = [col[0] for col in cursor.description]
+                return dict(zip(columns, row))
+            else:
+                return None
+    except Exception as e:
+        logging.error(f"Error fetching simulation data by ndocument: {e}")
+        return {"error": "An error occurred while fetching simulation data by ndocument."}
+
+@app.route('/simulation', methods=['GET'])
+def get_simulation():
+    result = fetch_simulation()
+    return jsonify(result)
+
+# New endpoint: /simulation_all?ndocument=xxx
+from flask import request
+
+@app.route('/simulation_all', methods=['GET'])
+def get_simulation_all():
+    ndocument = request.args.get('ndocument')
+    if not ndocument:
+        return jsonify({'error': 'Missing ndocument parameter'}), 400
+    result = fetch_simulation_by_ndocument(ndocument)
+    if result:
+        return jsonify(result)
+    else:
+        return jsonify({'error': 'No data found for the given ndocument'}), 404
+
+
+
+
+
+
+
+def fetch_charges_dashboard(date_debut=None, date_fin=None):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            
+            # Set default dates if not provided
+            if not date_debut:
+                date_debut = '2024-01-01'  # Default start date
+            if not date_fin:
+                date_fin = datetime.now().strftime('%Y-%m-%d')  # Default end date (today)
+            
+            # First query to get charge types and charges with totals
+            summary_query = """
+            SELECT 
+                ct.C_ChargeType_ID,
+                ct.name AS type_de_charge,
+                c.C_Charge_ID,
+                c.name AS charge_name,
+                COALESCE(charge_amounts.total_amount, 0) AS montant,
+                CASE 
+                    WHEN type_totals.type_total > 0 THEN 
+                        ROUND((COALESCE(charge_amounts.total_amount, 0) / type_totals.type_total) * 100, 3)
+                    ELSE 0 
+                END AS pourcentage
+            FROM C_ChargeType ct
+            INNER JOIN C_Charge c ON ct.C_ChargeType_ID = c.C_ChargeType_ID
+            LEFT JOIN (
+                SELECT 
+                    c.C_Charge_ID,
+                    SUM(il.LineNetAmt) AS total_amount
+                FROM C_Charge c
+                INNER JOIN C_InvoiceLine il ON c.C_Charge_ID = il.C_Charge_ID
+                INNER JOIN C_Invoice i ON il.C_Invoice_ID = i.C_Invoice_ID
+                WHERE c.IsActive = 'Y' 
+                  AND c.AD_CLIENT_ID = 1000000
+                  AND i.IsActive = 'Y'
+                  AND i.DocStatus IN ('CO', 'CL')
+                  AND i.DateInvoiced >= TO_DATE(:date_debut, 'YYYY-MM-DD')
+                  AND i.DateInvoiced <= TO_DATE(:date_fin, 'YYYY-MM-DD')
+                GROUP BY c.C_Charge_ID
+            ) charge_amounts ON c.C_Charge_ID = charge_amounts.C_Charge_ID
+            LEFT JOIN (
+                SELECT 
+                    ct.C_ChargeType_ID,
+                    SUM(il.LineNetAmt) AS type_total
+                FROM C_ChargeType ct
+                INNER JOIN C_Charge c ON ct.C_ChargeType_ID = c.C_ChargeType_ID
+                INNER JOIN C_InvoiceLine il ON c.C_Charge_ID = il.C_Charge_ID
+                INNER JOIN C_Invoice i ON il.C_Invoice_ID = i.C_Invoice_ID
+                WHERE ct.IsActive = 'Y' 
+                  AND ct.AD_CLIENT_ID = 1000000
+                  AND c.IsActive = 'Y'
+                  AND i.IsActive = 'Y'
+                  AND i.DocStatus IN ('CO', 'CL')
+                  AND i.DateInvoiced >= TO_DATE(:date_debut, 'YYYY-MM-DD')
+                  AND i.DateInvoiced <= TO_DATE(:date_fin, 'YYYY-MM-DD')
+                GROUP BY ct.C_ChargeType_ID
+            ) type_totals ON ct.C_ChargeType_ID = type_totals.C_ChargeType_ID
+            WHERE ct.IsActive = 'Y' 
+              AND ct.AD_CLIENT_ID = 1000000
+              AND c.IsActive = 'Y'
+            ORDER BY ct.name, c.name
+            """
+            
+            cursor.execute(summary_query, {'date_debut': date_debut, 'date_fin': date_fin})
+            summary_rows = cursor.fetchall()
+            summary_columns = [col[0] for col in cursor.description]
+            
+            # Second query to get invoice details for each charge with line details
+            details_query = """
+            SELECT 
+                c.C_Charge_ID,
+                i.C_Invoice_ID,
+                i.DocumentNo AS invoice_number,
+                i.DateInvoiced,
+                bp.name AS bpartner_name,
+                il.LineNetAmt AS line_amount,
+                i.GrandTotal AS invoice_total,
+                il.C_InvoiceLine_ID,
+                il.Description AS line_description,
+                il.PriceEntered AS line_total_amount,
+                il.QtyEntered AS line_qty_entered
+            FROM C_Charge c
+            INNER JOIN C_InvoiceLine il ON c.C_Charge_ID = il.C_Charge_ID
+            INNER JOIN C_Invoice i ON il.C_Invoice_ID = i.C_Invoice_ID
+            INNER JOIN C_BPartner bp ON i.C_BPartner_ID = bp.C_BPartner_ID
+            WHERE c.IsActive = 'Y' 
+              AND c.AD_CLIENT_ID = 1000000
+              AND i.IsActive = 'Y'
+              AND i.DocStatus IN ('CO', 'CL')
+              AND i.DateInvoiced >= TO_DATE(:date_debut, 'YYYY-MM-DD')
+              AND i.DateInvoiced <= TO_DATE(:date_fin, 'YYYY-MM-DD')
+            ORDER BY c.C_Charge_ID, i.DateInvoiced DESC, il.C_InvoiceLine_ID
+            """
+            
+            cursor.execute(details_query, {'date_debut': date_debut, 'date_fin': date_fin})
+            details_rows = cursor.fetchall()
+            details_columns = [col[0] for col in cursor.description]
+            
+            # Organize invoice details by charge ID
+            invoice_details = {}
+            for row in details_rows:
+                detail_data = dict(zip(details_columns, row))
+                charge_id = detail_data['C_CHARGE_ID']
+                invoice_id = detail_data['C_INVOICE_ID']
+                
+                if charge_id not in invoice_details:
+                    invoice_details[charge_id] = {}
+                
+                # Group by invoice ID to avoid duplicating invoice info
+                if invoice_id not in invoice_details[charge_id]:
+                    invoice_details[charge_id][invoice_id] = {
+                        'invoice_id': detail_data['C_INVOICE_ID'],
+                        'invoice_number': detail_data['INVOICE_NUMBER'],
+                        'date_invoiced': detail_data['DATEINVOICED'].strftime('%Y-%m-%d') if detail_data['DATEINVOICED'] else None,
+                        'bpartner_name': detail_data['BPARTNER_NAME'],
+                        'invoice_total': -float(detail_data['INVOICE_TOTAL']) if detail_data['INVOICE_TOTAL'] else 0,  # Make negative
+                        'invoice_lines': []
+                    }
+                
+                # Add line details to the invoice
+                invoice_details[charge_id][invoice_id]['invoice_lines'].append({
+                    'line_id': detail_data['C_INVOICELINE_ID'],
+                    'line_description': detail_data['LINE_DESCRIPTION'] or 'No description',
+                    'line_net_amount': -float(detail_data['LINE_AMOUNT']) if detail_data['LINE_AMOUNT'] else 0,  # Make negative
+                    'line_total_amount': -float(detail_data['LINE_TOTAL_AMOUNT']) if detail_data['LINE_TOTAL_AMOUNT'] else 0,  # Make negative
+                    'line_qty_entered': float(detail_data['LINE_QTY_ENTERED']) if detail_data['LINE_QTY_ENTERED'] else 0
+                })
+            
+            # Convert nested invoice_details structure to a flat list for easier processing
+            flattened_invoice_details = {}
+            for charge_id, invoices in invoice_details.items():
+                flattened_invoice_details[charge_id] = list(invoices.values())
+            
+            # Organize data by charge type
+            charges_data = {}
+            total_all_charges = 0
+            
+            for row in summary_rows:
+                data = dict(zip(summary_columns, row))
+                charge_type_id = data['C_CHARGETYPE_ID']
+                charge_type_name = data['TYPE_DE_CHARGE']
+                charge_id = data['C_CHARGE_ID']
+                
+                if charge_type_id not in charges_data:
+                    charges_data[charge_type_id] = {
+                        'type_name': charge_type_name,
+                        'type_total': 0,
+                        'charges': []
+                    }
+                
+                # Make charge amount negative (expense)
+                charge_amount = -float(data['MONTANT']) if data['MONTANT'] else 0
+                charges_data[charge_type_id]['type_total'] += charge_amount
+                total_all_charges += charge_amount
+                
+                # Get invoice details for this charge
+                charge_invoice_details = flattened_invoice_details.get(charge_id, [])
+                
+                charges_data[charge_type_id]['charges'].append({
+                    'charge_id': charge_id,
+                    'charge_name': data['CHARGE_NAME'],
+                    'montant': charge_amount,
+                    'pourcentage': float(data['POURCENTAGE']) if data['POURCENTAGE'] else 0,
+                    'invoice_details': charge_invoice_details
+                })
+            
+            # Calculate percentage for each charge type
+            for charge_type_id in charges_data:
+                if total_all_charges != 0:  # Changed from > 0 to != 0 since values are negative
+                    charges_data[charge_type_id]['type_percentage'] = round(
+                        (charges_data[charge_type_id]['type_total'] / total_all_charges) * 100, 3
+                    )
+                else:
+                    charges_data[charge_type_id]['type_percentage'] = 0
+            
+            return {
+                'charges_by_type': charges_data,
+                'total_all_charges': total_all_charges,
+                'date_debut': date_debut,
+                'date_fin': date_fin
+            }
+            
+    except Exception as e:
+        logger.error(f"Error fetching charges dashboard: {e}")
+        return {"error": "An error occurred while fetching charges dashboard."}
+
+@app.route('/fetch-charges-dashboard', methods=['GET'])
+def fetch_charges_dashboard_endpoint():
+    if not test_db_connection():
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    # Get date parameters from query string
+    date_debut = request.args.get('date_debut')
+    date_fin = request.args.get('date_fin')
+    
+    data = fetch_charges_dashboard(date_debut, date_fin)
+    return jsonify(data)
+
+@app.route('/download-charges-dashboard-excel', methods=['GET'])
+def download_charges_dashboard_excel():
+    # Get date parameters from query string
+    date_debut = request.args.get('date_debut')
+    date_fin = request.args.get('date_fin')
+    
+    data = fetch_charges_dashboard(date_debut, date_fin)
+    
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 404
+    
+    # Flatten the data for Excel export with invoice and line details
+    excel_data = []
+    for charge_type_id, charge_type_data in data['charges_by_type'].items():
+        # Only add charge type row if total is not zero
+        if charge_type_data['type_total'] != 0:
+            excel_data.append({
+                'Type de Charge': charge_type_data['type_name'],
+                'Charge': 'TOTAL',
+                'Montant': charge_type_data['type_total'],
+                'Pourcentage': charge_type_data['type_percentage'],
+                'Facture N°': '',
+                'Date Facture': '',
+                'Fournisseur': '',
+                'Description Ligne': '',
+                'Montant Net Ligne': '',
+                'Montant Total Ligne': '',
+                'Quantité': ''
+            })
+        
+        # Add individual charges with invoice and line details
+        for charge in charge_type_data['charges']:
+            # Only process charges with non-zero amounts
+            if charge['montant'] != 0:
+                if charge['invoice_details']:
+                    # Add each invoice with its lines
+                    for invoice in charge['invoice_details']:
+                        if invoice['invoice_lines']:
+                            # Add each line as a separate row
+                            for line in invoice['invoice_lines']:
+                                # Only add lines with non-zero amounts
+                                if line['line_net_amount'] != 0:
+                                    excel_data.append({
+                                        'Type de Charge': charge_type_data['type_name'],
+                                        'Charge': charge['charge_name'],
+                                        'Montant': charge['montant'],
+                                        'Pourcentage': charge['pourcentage'],
+                                        'Facture N°': invoice['invoice_number'],
+                                        'Date Facture': invoice['date_invoiced'],
+                                        'Fournisseur': invoice['bpartner_name'],
+                                        'Description Ligne': line['line_description'],
+                                        'Montant Net Ligne': line['line_net_amount'],
+                                        'Montant Total Ligne': line['line_total_amount'],
+                                        'Quantité': line['line_qty_entered']
+                                    })
+                        else:
+                            # Invoice without lines
+                            excel_data.append({
+                                'Type de Charge': charge_type_data['type_name'],
+                                'Charge': charge['charge_name'],
+                                'Montant': charge['montant'],
+                                'Pourcentage': charge['pourcentage'],
+                                'Facture N°': invoice['invoice_number'],
+                                'Date Facture': invoice['date_invoiced'],
+                                'Fournisseur': invoice['bpartner_name'],
+                                'Description Ligne': 'Aucune ligne de détail',
+                                'Montant Net Ligne': '',
+                                'Montant Total Ligne': '',
+                                'Quantité': ''
+                            })
+                else:
+                    # Add charge without invoice details
+                    excel_data.append({
+                        'Type de Charge': charge_type_data['type_name'],
+                        'Charge': charge['charge_name'],
+                        'Montant': charge['montant'],
+                        'Pourcentage': charge['pourcentage'],
+                        'Facture N°': 'Aucune facture',
+                        'Date Facture': '',
+                        'Fournisseur': '',
+                        'Description Ligne': '',
+                        'Montant Net Ligne': '',
+                        'Montant Total Ligne': '',
+                        'Quantité': ''
+                    })
+    
+    # Add "Total des Charges" row at the end
+    if data['total_all_charges'] != 0:
+        excel_data.append({
+            'Type de Charge': 'TOTAL DES CHARGES',
+            'Charge': '',
+            'Montant': data['total_all_charges'],
+            'Pourcentage': 100.0,
+            'Facture N°': '',
+            'Date Facture': '',
+            'Fournisseur': '',
+            'Description Ligne': '',
+            'Montant Net Ligne': '',
+            'Montant Total Ligne': '',
+            'Quantité': ''
+        })
+    
+    # Generate filename with date range
+    filename = f"Charges_Dashboard_Details_{data['date_debut']}_to_{data['date_fin']}.xlsx"
+    
+    return generate_excel_charges_dashboard(excel_data, filename)
+
+def generate_excel_charges_dashboard(data, filename):
+    if not data:
+        return jsonify({"error": "No data to export"}), 404
+
+    df = pd.DataFrame(data)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Charges Dashboard Details"
+
+    # Apply header styles
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+    
+    ws.append(df.columns.tolist())
+    for cell in ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Append data with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+        
+        # Highlight total rows (both charge type totals and total des charges)
+        if row[1] == 'TOTAL' or row[0] == 'TOTAL DES CHARGES':  # Charge column or Type de Charge column
+            for cell in ws[row_idx]:
+                cell.font = Font(bold=True)
+                if row[0] == 'TOTAL DES CHARGES':
+                    # Special highlighting for the grand total
+                    cell.fill = PatternFill(start_color="D9E2F3", end_color="D9E2F3", fill_type="solid")
+                else:
+                    cell.fill = PatternFill(start_color="E6F3FF", end_color="E6F3FF", fill_type="solid")
+        
+        # Highlight rows with no invoice details
+        elif row[4] == 'Aucune facture':  # Facture N° column
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="FFE6E6", end_color="FFE6E6", fill_type="solid")
+        
+        # Highlight rows with no line details
+        elif row[7] == 'Aucune ligne de détail':  # Description Ligne column
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="FFF0E6", end_color="FFF0E6", fill_type="solid")
+
+    # Add table
+    table = Table(displayName="ChargesDashboardDetailsTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Auto-adjust column widths
+    for column in ws.columns:
+        max_length = 0
+        column_letter = column[0].column_letter
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)
+        ws.column_dimensions[column_letter].width = adjusted_width
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, 
+                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+
+
+
+@app.route('/retour_documents', methods=['GET'])
+def retour_documents():
+    """
+    Fetch sales documents with detailed information including margin calculation.
+    Can filter by:
+    - Date range (start_date and end_date, format: YYYY-MM-DD)
+    - Specific document number (ndocument)
+    Returns: JSON list of documents with organization, document no, partner, etc.
+    """
+    from flask import request, jsonify
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    ndocument = request.args.get('ndocument')
+    
+    if not (start_date and end_date) and not ndocument:
+        return jsonify({'error': 'Missing parameters - either start_date/end_date or ndocument required'}), 400
+    
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = '''
+                SELECT 
+                    CAST(org.name AS VARCHAR2(300)) AS organisation,
+                    CAST(co.documentno AS VARCHAR2(50)) AS ndocument,
+                    CAST(cb.name AS VARCHAR2(300)) AS tier,
+                    co.dateordered AS datecommande,
+                    CAST(us.name AS VARCHAR2(100)) AS vendeur,
+                    CAST(co.description AS VARCHAR2(255)) AS description,
+                    ROUND(((co.totallines / (SELECT SUM(mat.valuenumber * li.qtyentered) 
+                         FROM c_orderline li 
+                         INNER JOIN m_attributeinstance mat ON mat.m_attributesetinstance_id = li.m_attributesetinstance_id
+                         WHERE mat.m_attribute_id = 1000504 
+                           AND li.c_order_id = co.c_order_id 
+                           AND li.qtyentered > 0 
+                         GROUP BY li.c_order_id)) - 1) * 100, 2) AS marge,
+                    ROUND(co.totallines, 2) AS montant
+                FROM 
+                    c_order co
+                INNER JOIN ad_org org ON co.ad_org_id = org.ad_org_id
+                INNER JOIN c_bpartner cb ON co.c_bpartner_id = cb.c_bpartner_id
+                INNER JOIN ad_user us ON co.salesrep_id = us.ad_user_id
+                WHERE 
+                    co.ad_org_id = 1000000
+                    AND issotrx = 'Y'
+                    AND C_DOCTYPETARGET_ID = 1001408
+                    AND (
+                        (:ndocument IS NULL AND co.dateordered BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD'))
+                        OR 
+                        (co.documentno = :ndocument)
+                    )
+                ORDER BY co.dateordered DESC, co.documentno
+            '''
+            params = {
+                'start_date': start_date if start_date else '1900-01-01',
+                'end_date': end_date if end_date else '2999-12-31',
+                'ndocument': ndocument
+            }
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+            return jsonify(data)
+    except Exception as e:
+        import logging
+        logging.error(f"Error in retour_documents: {e}")
+        return jsonify({'error': str(e)}), 500
+    
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)

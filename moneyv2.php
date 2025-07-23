@@ -81,6 +81,10 @@ $latestDataJson = json_encode($latestData);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="theme.js"></script>
+        <script src="api_config_money.js"></script>
+
+
     <script>
         tailwind.config = {
             theme: {
@@ -106,18 +110,37 @@ $latestDataJson = json_encode($latestData);
         }
     </script>
     <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #1f2937;
+            --panel-bg: #f8f9fa;
+            --header-bg: #f8f9fa;
+            --border-color: #e5e7eb;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #111827;
+            --text-color: #e0e0e0;
+            --panel-bg: #111827;
+            --header-bg: #111827;
+            --border-color: #333333;
+        }
+
         body {
-            background-color: #121212;
-            color: #e0e0e0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             font-family: 'IBM Plex Mono', monospace;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
         .data-panel {
-            border: 1px solid #333;
-            background-color: #1e1e1e;
+            border: 1px solid var(--border-color);
+            background-color: var(--panel-bg);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
         .data-header {
-            border-bottom: 1px solid #333;
-            background-color: #1a1a1a;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--header-bg);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
         .data-table {
             font-size: 0.875rem;
@@ -130,7 +153,8 @@ $latestDataJson = json_encode($latestData);
         }
         .data-table td, .data-table th {
             padding: 0.5rem 1rem;
-            border-bottom: 1px solid #333333;
+            border-bottom: 1px solid var(--border-color);
+            transition: border-color 0.3s ease;
         }
         .data-value {
             font-family: 'IBM Plex Mono', monospace;
@@ -157,13 +181,15 @@ $latestDataJson = json_encode($latestData);
         }
         .section-divider {
             border: none;
-            border-top: 1px solid #333;
+            border-top: 1px solid var(--border-color);
             margin: 1.5rem 0;
+            transition: border-color 0.3s ease;
         }
         .metric-card {
-            background-color: #252525;
+            background-color: var(--panel-bg);
             border-left: 4px solid;
             padding: 0.75rem 1rem;
+            transition: background-color 0.3s ease;
         }
         .metric-title {
             font-size: 0.75rem;
@@ -183,9 +209,10 @@ $latestDataJson = json_encode($latestData);
         }
         .progress-bar {
             height: 4px;
-            background-color: #333;
+            background-color: var(--border-color);
             border-radius: 2px;
             overflow: hidden;
+            transition: background-color 0.3s ease;
         }
         .progress-value {
             height: 100%;
@@ -229,24 +256,56 @@ $latestDataJson = json_encode($latestData);
             display: none !important;
         }
         .chart-filter {
-            background-color: rgba(51, 51, 51, 0.3);
+            background-color: rgba(var(--border-color-rgb), 0.3);
             transition: all 0.2s ease;
             border: 1px solid transparent;
             opacity: 0.5;
         }
         .chart-filter:hover {
-            background-color: rgba(51, 51, 51, 0.5);
+            background-color: rgba(var(--border-color-rgb), 0.5);
             opacity: 0.8;
         }
         .chart-filter.active {
             border-color: currentColor;
-            background-color: rgba(51, 51, 51, 0.7);
+            background-color: rgba(var(--border-color-rgb), 0.7);
             opacity: 1;
+        }
+        
+        .theme-toggle {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.875rem;
+        }
+        
+        .theme-toggle:hover {
+            opacity: 0.8;
+        }
+        
+        [data-theme="light"] .theme-toggle {
+            background: var(--panel-bg);
+            border-color: var(--border-color);
+        }
+        
+        /* Update input styles for theme support */
+        input[type="date"], select {
+            background-color: var(--bg-color) !important;
+            color: var(--text-color) !important;
+            border-color: var(--border-color) !important;
+            transition: all 0.3s ease;
+        }
+        
+        input[type="date"]:focus, select:focus {
+            border-color: #3b82f6 !important;
         }
     </style>
 </head>
-<body class="bg-lab-dark text-gray-300 font-mono">
-    <header class="border-b border-lab-border bg-lab-dark sticky top-0 z-10">
+<body class="font-mono transition-colors duration-300" style="background-color: var(--bg-color); color: var(--text-color);">
+    <header class="border-b sticky top-0 z-10" style="border-color: var(--border-color); background-color: var(--bg-color);")>
         <div class="container mx-auto px-4 py-3">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2">
@@ -255,7 +314,8 @@ $latestDataJson = json_encode($latestData);
                 </div>
                 <div class="text-xs text-gray-400">
                     <div class="flex items-center space-x-4">
-                        <span>Update in: <span id="refresh-time" class="text-gray-100">5min 00sec</span></span>
+
+                        <span>Update in: <span id="refresh-time" style="color:red" class="text-gray-100">5min 00sec</span></span>
                         <button id="manual-refresh-btn" class="px-2 py-1 bg-lab-accent text-black rounded hover:bg-opacity-80">⟳ Refresh Now</button>
                     </div>
                 </div>
@@ -277,20 +337,20 @@ $latestDataJson = json_encode($latestData);
                     <div class="flex flex-wrap gap-4 mb-3">
                         <div class="flex items-center gap-2">
                             <label class="text-sm">From:</label>
-                            <input type="date" id="kpi-start-date" class="border rounded px-2 py-1 text-sm mb-3 bg-[#121212] text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <input type="date" id="kpi-start-date" class="border rounded px-2 py-1 text-sm mb-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" style="background-color: var(--bg-color); color: var(--text-color); border-color: var(--border-color);">
                         </div>
                         <div class="flex items-center gap-2">
                             <label class="text-sm">To:</label>
-                            <input type="date" id="kpi-end-date" class="border rounded px-2 py-1 text-sm mb-3 bg-[#121212] text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <input type="date" id="kpi-end-date" class="border rounded px-2 py-1 text-sm mb-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" style="background-color: var(--bg-color); color: var(--text-color); border-color: var(--border-color);">
                         </div>
                         <button id="update-kpi-chart" class="bg-lab-accent text-black px-3 py-1 rounded text-sm hover:bg-opacity-80">Update</button>
                     </div>
 
-                    <!-- Metric selector -->
-<select 
+                    <!-- Metric selector -->                    <select 
     id="metric-selector" 
-    class="border rounded px-2 py-1 text-sm mb-3 bg-[#121212] text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
->                        <option value="all">All Metrics</option>
+    class="border rounded px-2 py-1 text-sm mb-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+    style="background-color: var(--bg-color); color: var(--text-color); border-color: var(--border-color);"
+><option value="all">All Metrics</option>
                         <option value="profit">Profit</option>
                         <option value="tresorerie">Trésorerie</option>
                         <option value="dette">Dette</option>
@@ -438,6 +498,82 @@ $latestDataJson = json_encode($latestData);
 
 
     <script>
+        // Theme functionality
+        function initializeTheme() {
+            const themeToggle = document.getElementById('theme-toggle');
+            const themeIcon = document.getElementById('theme-icon');
+            const themeText = document.getElementById('theme-text');
+            
+            // Check current theme from localStorage (same as sidebar)
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            const isDark = currentTheme === 'dark';
+            
+            // Apply theme to page
+            applyTheme(isDark);
+            updateThemeButton(isDark);
+            
+            // Theme toggle click handler
+            if (themeToggle) {
+                themeToggle.addEventListener('click', function() {
+                    const currentTheme = localStorage.getItem('theme') || 'light';
+                    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                    const isDark = newTheme === 'dark';
+                    
+                    // Save to localStorage (this will sync with sidebar)
+                    localStorage.setItem('theme', newTheme);
+                    
+                    // Apply theme
+                    applyTheme(isDark);
+                    updateThemeButton(isDark);
+                    
+                    // Dispatch event for other components
+                    window.dispatchEvent(new CustomEvent('themeChanged', {
+                        detail: { theme: newTheme, isDark: isDark }
+                    }));
+                });
+            }
+            
+            // Listen for theme changes from other components (like sidebar)
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'theme') {
+                    const isDark = e.newValue === 'dark';
+                    applyTheme(isDark);
+                    updateThemeButton(isDark);
+                }
+            });
+            
+            // Listen for same-page theme changes
+            window.addEventListener('themeChanged', function(e) {
+                const isDark = e.detail.isDark;
+                applyTheme(isDark);
+                updateThemeButton(isDark);
+            });
+        }
+        
+        function applyTheme(isDark) {
+            // Apply theme using data-theme attribute for CSS custom properties
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            
+            // Also add/remove classes for compatibility
+            document.documentElement.classList.toggle('dark', isDark);
+            document.body.classList.toggle('dark', isDark);
+        }
+        
+        function updateThemeButton(isDark) {
+            const themeIcon = document.getElementById('theme-icon');
+            const themeText = document.getElementById('theme-text');
+            
+            if (themeIcon && themeText) {
+                if (isDark) {
+                    themeIcon.textContent = '☀️';
+                    themeText.textContent = 'Light';
+                } else {
+                    themeIcon.textContent = '🌙';
+                    themeText.textContent = 'Dark';
+                }
+            }
+        }
+
         // Refresh configuration
         const REFRESH_INTERVAL = 300; // 5 minutes in seconds
         let countdown = REFRESH_INTERVAL;
@@ -520,11 +656,11 @@ $latestDataJson = json_encode($latestData);
                 // Fetch all data in parallel
                 const [stockResponse, creditResponse, traisorieResponse, 
                        bankResponse, detteResponse] = await Promise.all([
-                    fetch("http://192.168.1.94:5000/stock-summary"),
-                    fetch("http://192.168.1.94:5000/credit-client"),
-                    fetch("http://192.168.1.94:5000/total-tresorie"),
-                    fetch("http://192.168.1.94:5000/total-bank"),
-                    fetch("http://192.168.1.94:5000/total-dette"),
+                    fetch(API_CONFIG.getApiUrl("/stock-summary")),
+                    fetch(API_CONFIG.getApiUrl("/credit-client")),
+                    fetch(API_CONFIG.getApiUrl("/total-tresorie")),
+                    fetch(API_CONFIG.getApiUrl("/total-bank")),
+                    fetch(API_CONFIG.getApiUrl("/total-dette")),
                 ]);
 
                 const [stockData, creditData, traisorieData, bankData, detteData] = await Promise.all([
@@ -766,6 +902,9 @@ html += createRow('Baraka Checks', detteData.details.checks_details.Baraka.check
 
         // Initialize everything
         document.addEventListener('DOMContentLoaded', () => {
+            // Initialize theme
+            initializeTheme();
+            
             // Initial data load and start countdown
             refreshAll().then(() => {
                 startCountdown();
@@ -789,6 +928,8 @@ html += createRow('Baraka Checks', detteData.details.checks_details.Baraka.check
                 startCountdown();
             });
 
+            // Set up theme toggle button
+
             // Add toggle functionality for bank details
             document.getElementById('show-more-bank')?.addEventListener('click', function() {
                 const details = document.getElementById('bank-details');
@@ -810,6 +951,23 @@ html += createRow('Baraka Checks', detteData.details.checks_details.Baraka.check
                 updateKPITrendsChart();
             });
         });
+
+
+        function updateChartsForTheme(theme) {
+            const gridColor = theme === 'light' ? 'rgba(229, 231, 235, 0.5)' : 'rgba(51, 51, 51, 0.5)';
+            const textColor = theme === 'light' ? '#1f2937' : '#e0e0e0';
+            
+            // Update market growth chart
+            if (marketGrowthChart) {
+                marketGrowthChart.options.scales.y.grid.color = gridColor;
+                marketGrowthChart.options.scales.y.ticks.color = textColor;
+                marketGrowthChart.options.scales.x.ticks.color = textColor;
+                marketGrowthChart.options.plugins.legend.labels.color = textColor;
+                marketGrowthChart.update();
+            }
+            
+            // Update profit breakdown chart colors don't need updating as they use specific brand colors
+        }
 
         // Market Growth Chart
         const marketGrowthCtx = document.getElementById('marketGrowthChart').getContext('2d');
@@ -851,7 +1009,7 @@ html += createRow('Baraka Checks', detteData.details.checks_details.Baraka.check
                 // Build URL with parameters
                 // Fetch data for selected metrics in parallel
                 const responses = await Promise.all(metricsToFetch.map(metric => {
-                    const url = new URL('http://192.168.1.94:5000/kpi-trends-data');
+                    const url = new URL(API_CONFIG.getApiUrl("/kpi-trends-data"));
                     url.searchParams.append('start_date', startDateInput.value);
                     url.searchParams.append('end_date', endDateInput.value);
                     url.searchParams.append('metric', metric);
@@ -918,7 +1076,7 @@ html += createRow('Baraka Checks', detteData.details.checks_details.Baraka.check
                                 display: selectedMetric === 'all', // Only show legend when showing all metrics
                                 position: 'top',
                                 labels: {
-                                    color: '#e0e0e0',
+                                    color: getThemeAwareColor('text'),
                                     font: {
                                         family: "'IBM Plex Mono', monospace"
                                     },
@@ -943,10 +1101,10 @@ html += createRow('Baraka Checks', detteData.details.checks_details.Baraka.check
                             y: {
                                 beginAtZero: true,
                                 grid: {
-                                    color: 'rgba(51, 51, 51, 0.5)'
+                                    color: getThemeAwareColor('grid')
                                 },
                                 ticks: {
-                                    color: '#e0e0e0',
+                                    color: getThemeAwareColor('text'),
                                     font: {
                                         family: "'IBM Plex Mono', monospace"
                                 },
@@ -962,7 +1120,7 @@ html += createRow('Baraka Checks', detteData.details.checks_details.Baraka.check
                                 ticks: {
                                     maxRotation: 45,
                                     minRotation: 45,
-                                    color: '#e0e0e0',
+                                    color: getThemeAwareColor('text'),
                                     font: {
                                         family: "'IBM Plex Mono', monospace"
                                 }
@@ -997,6 +1155,27 @@ html += createRow('Baraka Checks', detteData.details.checks_details.Baraka.check
                 creance: `rgba(0, 136, 255, ${alpha})`
             };
             return colors[metric] || `rgba(255, 255, 255, ${alpha})`;
+        }
+
+        // Helper function to get theme-aware colors
+        function getThemeAwareColor(type) {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            
+            if (currentTheme === 'light') {
+                switch(type) {
+                    case 'text': return '#1f2937';
+                    case 'grid': return 'rgba(229, 231, 235, 0.5)';
+                    case 'border': return '#e5e7eb';
+                    default: return '#1f2937';
+                }
+            } else {
+                switch(type) {
+                    case 'text': return '#e0e0e0';
+                    case 'grid': return 'rgba(51, 51, 51, 0.5)';
+                    case 'border': return '#333333';
+                    default: return '#e0e0e0';
+                }
+            }
         }
 
         // Profit Breakdown Chart
@@ -1358,7 +1537,7 @@ async function fetchAllFinancialData() {
         if (stockDetailsElement) stockDetailsElement.classList.add("hidden");
 
         // Make single API call
-        const response = await fetch("http://192.168.1.94:5000/total-profit-page");
+        const response = await fetch(API_CONFIG.getApiUrl("/total-profit-page"));
         const data = await response.json();
         
         if ('error' in data) {

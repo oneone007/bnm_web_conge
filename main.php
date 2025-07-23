@@ -1,3 +1,4 @@
+
 <?php
 session_start();
 
@@ -1059,7 +1060,135 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 </script>
+</script>
 
+<!-- Inventory Pending Notification Popup (Admin/Developer) -->
+<div id="invPendingNotification" style="display:none; position:fixed; bottom:30px; right:30px; z-index:9999; min-width:320px; max-width:400px; background:#fff; color:#222; border-radius:10px; box-shadow:0 4px 16px #0002; padding:20px 24px 16px 24px; border-left:6px solid #f59e42;">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <span style="font-weight:bold; color:#f59e42; font-size:18px;">Inventory Alert</span>
+    <button onclick="closeInvPendingNotification()" style="background:none; border:none; font-size:20px; color:#888; cursor:pointer;">&times;</button>
+  </div>
+  <div id="invPendingNotificationBody" onclick="gotoInvAdmin()" style="margin-top:10px; cursor:pointer;">
+    <span>⚠️ You have untreated inventory. Please check it.</span>
+    <div id="invPendingCount" style="font-size:13px; color:#666; margin-top:4px;"></div>
+  </div>
+</div>
+
+<!-- Inventory Saisie Notification Popup (Saisie role) -->
+<div id="invSaisieNotification" style="display:none; position:fixed; bottom:30px; right:30px; z-index:9999; min-width:320px; max-width:400px; background:#fff; color:#222; border-radius:10px; box-shadow:0 4px 16px #0002; padding:20px 24px 16px 24px; border-left:6px solid #3b82f6;">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <span style="font-weight:bold; color:#3b82f6; font-size:18px;">Inventory To Do</span>
+    <button onclick="closeInvSaisieNotification()" style="background:none; border:none; font-size:20px; color:#888; cursor:pointer;">&times;</button>
+  </div>
+  <div id="invSaisieNotificationBody" onclick="gotoInvSaisie()" style="margin-top:10px; cursor:pointer;">
+    <span>📋 You have an inventory to do.</span>
+    <div id="invSaisieCount" style="font-size:13px; color:#666; margin-top:4px;"></div>
+  </div>
+</div>
+
+<?php if (isset($_SESSION['Role']) && (strtolower($_SESSION['Role']) === 'admin' || strtolower($_SESSION['Role']) === 'developer')) : ?>
+<script>
+// Inventory Pending Notification Logic (Admins/Developers)
+function checkPendingInventory() {
+  fetch('http://192.168.1.94:5003/inventory/pending_count')
+    .then(res => res.json())
+    .then(data => {
+      if (data.success && data.pending_count > 0) {
+        showInvPendingNotification(data.pending_count);
+      } else {
+        closeInvPendingNotification();
+      }
+    })
+    .catch(() => { /* ignore errors */ });
+}
+
+function showInvPendingNotification(count) {
+  const notif = document.getElementById('invPendingNotification');
+  notif.style.display = 'block';
+  document.getElementById('invPendingCount').textContent = `Pending inventories: ${count}`;
+}
+
+function closeInvPendingNotification() {
+  document.getElementById('invPendingNotification').style.display = 'none';
+}
+
+function gotoInvAdmin() {
+  // Try to trigger the sidebar button for Manage Inventory
+  const btns = document.querySelectorAll('button');
+  for (let btn of btns) {
+    if (btn.innerText && btn.innerText.replace(/\s+/g, '').toLowerCase().includes('manageinventory')) {
+      btn.click();
+      closeInvPendingNotification();
+      return;
+    }
+  }
+  // Fallback: direct navigation
+  if (typeof navigateTo === 'function') {
+    navigateTo('inv_admin');
+    closeInvPendingNotification();
+  } else {
+    window.location.href = 'inventory/inv_admin';
+  }
+}
+
+// Start polling every 5 minutes
+setInterval(checkPendingInventory, 5 * 60 * 1000);
+// Also check on page load
+checkPendingInventory();
+</script>
+<?php endif; ?>
+
+<?php if (isset($_SESSION['Role']) && strtolower($_SESSION['Role']) === 'saisie') : ?>
+<script>
+// Inventory Saisie Notification Logic (Saisie role)
+function checkSaisieInventory() {
+  fetch('http://192.168.1.94:5003/inventory/confirmed_casse_count')
+    .then(res => res.json())
+    .then(data => {
+      if (data.success && data.confirmed_casse_count > 0) {
+        showInvSaisieNotification(data.confirmed_casse_count);
+      } else {
+        closeInvSaisieNotification();
+      }
+    })
+    .catch(() => { /* ignore errors */ });
+}
+
+function showInvSaisieNotification(count) {
+  const notif = document.getElementById('invSaisieNotification');
+  notif.style.display = 'block';
+  document.getElementById('invSaisieCount').textContent = `Inventories to do: ${count}`;
+}
+
+function closeInvSaisieNotification() {
+  document.getElementById('invSaisieNotification').style.display = 'none';
+}
+
+function gotoInvSaisie() {
+  // Try to trigger the sidebar button for Saisie Inventory
+  const btns = document.querySelectorAll('button');
+  for (let btn of btns) {
+    if (btn.innerText && btn.innerText.replace(/\s+/g, '').toLowerCase().includes('saisieinventory')) {
+      btn.click();
+      closeInvSaisieNotification();
+      return;
+    }
+  }
+  // Fallback: direct navigation
+  if (typeof navigateTo === 'function') {
+    navigateTo('inv_saisie');
+    closeInvSaisieNotification();
+  } else {
+    window.location.href = 'inventory/inv_saisie';
+  }
+}
+
+// Start polling every 5 minutes
+setInterval(checkSaisieInventory, 5 * 60 * 1000);
+// Also check on page load
+checkSaisieInventory();
+</script>
+<?php endif; ?>
 <!-- Session Timeout Handler -->
 <script>
 // Session timeout handling

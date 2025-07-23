@@ -6,14 +6,9 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: BNM");
     exit();
 }
-
-// Define allowed admin usernames
-$allowed_admins = ['admin'];
-
-// Restrict access
-if (!in_array($_SESSION['username'], $allowed_admins)) {
-    header("Location: Acess_Denied");
-    exit();
+// Restrict access for 'vente' and 'achat'
+if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup Vente','admin', 'Comptable'])) {
+    header("Location: Acess_Denied");    exit();
 }
 
 // Handle feedback deletion

@@ -863,16 +863,19 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
 
         // Constants
         const API_ENDPOINTS = {
-            download_pdf: 'http://192.168.1.94:5000/rotation_monthly_vente_pdf',
-            fetchProductData: 'http://192.168.1.94:5000/rot_mont_vente',
-            listFournisseur: 'http://192.168.1.94:5000/listfournisseur',
-            listProduct: 'http://192.168.1.94:5000/listproduct',
-            fetchSuppliersByProduct: 'http://192.168.1.94:5000/fetchSuppliersByProduct',
-            listRegion: 'http://192.168.1.94:5000/listregion',
-            listClient: 'http://192.168.1.94:5000/listclient',
-            fetchZoneClients: 'http://192.168.1.94:5000/fetchZoneClients'
+            download_pdf: 'http://192.168.1.94:5003/rotation_monthly_vente_pdf',
+            fetchProductData: 'http://192.168.1.94:5003/rot_mont_vente',
+            listFournisseur: 'http://192.168.1.94:5003/listfournisseur',
+            listProduct: 'http://192.168.1.94:5003/fetch-rotation-product-data',
+            fetchSuppliersByProduct: 'http://192.168.1.94:5003/fetchSuppliersByProduct',
+            listRegion: 'http://192.168.1.94:5003/listregion',
+            listClient: 'http://192.168.1.94:5003/listclient',
+            fetchZoneClients: 'http://192.168.1.94:5003/fetchZoneClients'
         };
 
+
+        // Store product mapping (name -> id)
+        let productMap = {};
 
         const monthNames = [
             'January', 'February', 'March', 'April', 'May', 'June',
@@ -1213,7 +1216,7 @@ async function loadData() {
     const years = getSelectedYears();
     const fournisseurs = getSelectedSuppliers();
     const clients = getSelectedClients();
-    const product = elements.inputs.product.value;
+    const productName = elements.inputs.product.value;
     const zone = elements.inputs.zone.value;
 
     if (!years.length) {
@@ -1233,8 +1236,13 @@ async function loadData() {
         if (fournisseurs.length > 0) {
             url += `&fournisseur=${fournisseurs.join(',')}`;
         }
-        if (product) {
-            url += `&product=${encodeURIComponent(product)}`;
+        if (productName) {
+            const productId = productMap[productName];
+            if (productId) {
+                url += `&product_id=${encodeURIComponent(productId)}`;
+            } else {
+                console.warn(`No product ID found for: ${productName}, skipping product filter`);
+            }
         }
         if (clients.length > 0) {
             url += `&client=${clients.join(',')}`;
@@ -1715,7 +1723,13 @@ elements.suggestionBoxes.fournisseur.addEventListener('click', function(e) {
             // Load products
             try {
                 const response = await fetch(API_ENDPOINTS.listProduct);
-                allProducts = await response.json();
+                const productsData = await response.json();
+                // Store both product ID and name, but only display names in UI
+                productMap = {};
+                productsData.forEach(product => {
+                    productMap[product.NAME] = product.M_PRODUCT_ID;
+                });
+                allProducts = productsData.map(product => product.NAME);
                 
                 elements.inputs.product.addEventListener('input', () => {
                     const value = elements.inputs.product.value.toLowerCase();
@@ -1726,13 +1740,20 @@ elements.suggestionBoxes.fournisseur.addEventListener('click', function(e) {
                 
                 // Handle product selection to load suppliers
                 elements.inputs.product.addEventListener('change', async function() {
-                    const product = this.value;
-                    if (product) {
+                    const productName = this.value;
+                    if (productName) {
                         try {
+                            const productId = productMap[productName];
+                            if (!productId) {
+                                console.warn(`No product ID found for: ${productName}`);
+                                elements.productSupplierContainer.classList.add('hidden');
+                                return;
+                            }
+                            
                             elements.productSupplierSelect.disabled = true;
                             elements.productSupplierSelect.innerHTML = '<option value="">Loading suppliers...</option>';
                             
-                            const response = await fetch(`${API_ENDPOINTS.fetchSuppliersByProduct}?product=${encodeURIComponent(product)}`);
+                            const response = await fetch(`${API_ENDPOINTS.fetchSuppliersByProduct}?product_id=${encodeURIComponent(productId)}`);
                             const suppliers = await response.json();
                             
                             elements.productSupplierSelect.innerHTML = '<option value="">Select a supplier</option>';
@@ -1793,8 +1814,21 @@ elements.suggestionBoxes.fournisseur.addEventListener('click', function(e) {
                     }
                     
                     if (e.target && e.target.textContent && !e.target.classList.contains('pagination-prev') && !e.target.classList.contains('pagination-next')) {
-                        elements.inputs.product.value = e.target.textContent;
+                        const selectedProductName = e.target.textContent;
+                        const productId = productMap[selectedProductName];
+                        
+                        if (!productId) {
+                            console.warn(`Invalid product selected: ${selectedProductName} - no ID found`);
+                            alert(`Cannot find product ID for "${selectedProductName}". Please select a valid product.`);
+                            return;
+                        }
+                        
+                        elements.inputs.product.value = selectedProductName;
                         elements.suggestionBoxes.product.classList.add('hidden');
+                        
+                        // Show supplier options if product is valid
+                        elements.productSupplierContainer.classList.remove('hidden');
+                        
                         // Trigger the change event to load suppliers
                         const event = new Event('change');
                         elements.inputs.product.dispatchEvent(event);
@@ -2140,7 +2174,7 @@ elements.suggestionBoxes.fournisseur.addEventListener('click', function(e) {
                 const years = getSelectedYears();
                 const fournisseurs = getSelectedSuppliers();
                 const clients = getSelectedClients();
-                const product = elements.inputs.product.value;
+                const productName = elements.inputs.product.value;
                 const zone = elements.inputs.zone.value;
 
                 // Validate required parameters - only years are required, suppliers are optional
@@ -2163,8 +2197,13 @@ elements.suggestionBoxes.fournisseur.addEventListener('click', function(e) {
                 if (fournisseurs.length > 0) {
                     url += `&fournisseur=${fournisseurs.join(',')}`;
                 }
-                if (product) {
-                    url += `&product=${encodeURIComponent(product)}`;
+                if (productName) {
+                    const productId = productMap[productName];
+                    if (productId) {
+                        url += `&product_id=${encodeURIComponent(productId)}`;
+                    } else {
+                        console.warn(`No product ID found for: ${productName}, skipping product filter`);
+                    }
                 }
                 if (zone) {
                     url += `&zone=${encodeURIComponent(zone)}`;

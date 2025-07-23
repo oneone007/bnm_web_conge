@@ -20,16 +20,26 @@ $role_allowed_pages = [
     'DRH' => 'all',   // drh can access all
     'Sup Achat' => [
          'Etatstock', 'Product', 'Rotation', 'Recap_Achat', 'DETTE_F',
-        'Annual_Recap_A', 'Recap_Vente', 'Annual_Recap_V','ETAT_F', 'ETAT_F_CUMULE','rot_men_achat','rot_men_vente'
+        'Annual_Recap_A', 'Recap_Vente', 'Annual_Recap_V','ETAT_F', 'ETAT_F_CUMULE','rot_men_achat','rot_men_vente','inventory/inv'
     ],
     'Sup Vente' => [
      'Etatstock', 'Product', 'Rotation', 'Quota', 
-        'Recap_Achat', 'Annual_Recap_A', 'Recap_Vente', 'Annual_Recap_V','CONFIRMED_ORDERS','rot_men_vente'
+        'Recap_Achat', 'Annual_Recap_A', 'Recap_Vente', 'Annual_Recap_V','CONFIRMED_ORDERS' ,'simuler' ,'rot_men_vente'
     ],
     'Comptable' => [
         'mony', 'bank', 'DETTE_F',
         'recap_achat_facturation', 'Recap_Vente_Facturation'
-        , 'Journal_Vente','ETAT_F', 'ETAT_F_CUMULE'
+        , 'Journal_Vente','ETAT_F', 'ETAT_F_CUMULE','print','charge'
+    ],
+    'gestion stock' => [
+        'inventory/inv'
+    ],
+
+        'stock' => [
+        'inventory/inv'
+    ],
+    'saisie' => [
+        'inventory/inv_saisie','inventory/inv'
     ],
 ];
 
@@ -329,6 +339,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
         .dark .text-xs{
             color: var(--sidebar-text) !important;
         }
+
+        /* Fix mode toggle backgrounds in dark mode */
+        .dark .mode-toggle {
+            background-color: #1f2937;
+            color: var(--sidebar-text) !important;
+        }
+
+        /* Ensure all mode toggle spans use correct color */
+        .mode-toggle span {
+            color: var(--sidebar-text) !important;
+        }
     </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
@@ -373,7 +394,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
                 <input type="radio" id="sidebarModeManual" name="sidebarMode" value="manual" checked>
                 <label for="sidebarModeManual" class="text-xs">Manual</label>
                 <input type="radio" id="sidebarModeAuto" name="sidebarMode" value="auto">
-                <label for="sidebarModeAuto" class="text-xs">Auto</label>
+                <label  for="sidebarModeAuto" class="text-xs ">Auto</label>
             </div>
         </div>
 
@@ -409,6 +430,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
                             </button>
 
                         </li>
+                        
+                        <li>
+                            <?php $page = 'print'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('print')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-print icon text-sm"></i>
+                                <span class="">Print</span>
+                            </button>
+                        </li>                        
                         <li>
                             <?php $page = 'bank'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
                             <button <?php if (!$disabled) {?>onclick="navigateTo('bank')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
@@ -421,6 +450,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
                             <button <?php if (!$disabled) {?>onclick="navigateTo('recouverement')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
                                 <i class="fas fa-money-bill-wave icon text-sm"></i>
                                 <span class="">Recouvrement</span>
+                            </button>
+                        </li>
+                        <li>
+                            <?php $page = 'charge'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('charge')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-credit-card icon text-sm"></i>
+                                <span class="">Charges</span>
                             </button>
                         </li>
                     </ul>
@@ -599,6 +635,57 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
                                 <span class="">rot_men_vente</span>
                             </button>
                         </li>
+                        <li>
+                            <?php $page = 'simulation'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('simuler')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-calculator icon text-sm"></i>
+                                <span class="">Simulation</span>
+                            </button>
+                        </li>
+                        <li>
+                            <?php $page = 'retour ORM'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('retour')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-undo icon text-sm"></i>
+                                <span class="">retour ORM</span>
+                            </button>
+                        </li>
+                    </ul>
+                </li>
+
+                <hr class="my-2 border-gray-200 dark:border-gray-600">
+
+                <!-- INVENTORY Section -->
+                <li>
+                    <button onclick="toggleSubmenu('inventory-submenu')" class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-clipboard-list icon"></i>
+                            <span class="flex-1">INVENTORY</span>
+                        </div>
+                        <i class="fas fa-chevron-right chevron text-xs"></i>
+                    </button>
+                    <ul id="inventory-submenu" class="submenu pl-4">
+                        <li>
+                            <?php $page = 'inventory/inv'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('inv')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-plus-circle icon text-sm"></i>
+                                <span class="">Create Inventory</span>
+                            </button>
+                        </li>
+                        <li>
+                            <?php $page = 'inventory/inv_admin'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('inv_admin')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-cogs icon text-sm"></i>
+                                <span class="">Manage Inventory</span>
+                            </button>
+                        </li>
+                        <li>
+                            <?php $page = 'inventory/inv_saisie'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('inv_saisie')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-edit icon text-sm"></i>
+                                <span class="">Saisie Inventory</span>
+                            </button>
+                        </li>
+
                     </ul>
                 </li>
 
@@ -639,13 +726,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
   
         // Navigation function
         function navigateTo(page) {
-            window.location.href = page;
+            // Map page names to actual file names
+            const pageMap = {
+                'inv': 'inventory/inv.php',
+                'inv_admin': 'inventory/inv_admin.php'
+            };
+            
+            const targetPage = pageMap[page] || page;
+            window.location.href = targetPage;
         }
 
         // Logout function
         function logout() {
             window.location.href = 'db/logout.php';
         }
+
+
 
       
 

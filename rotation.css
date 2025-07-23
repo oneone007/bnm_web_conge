@@ -316,7 +316,7 @@ td {
       }
   
   
-      .products-table-container {
+  .products-table-container {
       display: none;
       position: absolute;
       background: white;
@@ -326,7 +326,11 @@ td {
       z-index: 1000;
       max-height: 400px;
       overflow-y: auto;
-      width: 50%;
+      width: max-content;
+      min-width: 100%;
+      max-width: 90vw;
+      top: 100%;
+      left: 0;
       margin-top: 5px;
   }
 
@@ -347,6 +351,17 @@ td {
       text-align: left;
       border-bottom: 1px solid #ddd;
       color: #000;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 0;
+  }
+
+  .products-table th:last-child, .products-table td:last-child {
+      width: 100%;
+      max-width: none;
+      white-space: normal;
+      word-wrap: break-word;
   }
 
   /* Dark Mode for Products Table */
@@ -794,7 +809,8 @@ html.dark .moon {
 .product-container {
     display: flex;
     flex-direction: column;
-    width: 320px;
+    min-width: 320px;
+    width: 100%;
     margin-top: 10px;
     padding: 16px;
     background: #f9fafb;
@@ -811,7 +827,7 @@ html.dark .moon {
 
 /* Search Input */
 #product-search {
-    padding: 10px;
+    padding: 10px 40px 10px 10px; /* Add right padding for clear button */
     border: 1px solid #3a506b; /* Dark border */
     border-radius: 5px;
     width: 100%;
@@ -1114,4 +1130,225 @@ html.dark body {
 
 .dark .rounded-lg {
     background-color: inherit;
+}
+
+/* Clear Button */
+.clear-btn {
+    position: absolute;
+    right: 20px; /* Adjusted to account for container padding */
+    top: 50%;
+    transform: translateY(-50%);
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    z-index: 10;
+}
+
+.clear-btn:hover {
+    background: #c82333;
+}
+
+.dark .clear-btn {
+    background: #ef4444;
+}
+
+.dark .clear-btn:hover {
+    background: #dc2626;
+}
+
+/* Product Container Relative Positioning */
+.product-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 320px;
+    margin-top: 10px;
+    padding: 16px;
+    background: #f9fafb;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease;
+}
+
+/* Products Suggestions Container */
+.products-suggestions-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 20px;
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.dark .products-suggestions-container {
+    background: #1f2937;
+    border: 2px solid #374151;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.suggestions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.dark .suggestions-header {
+    border-bottom: 2px solid #4b5563;
+}
+
+.suggestions-header h3 {
+    margin: 0;
+    color: #495057;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.dark .suggestions-header h3 {
+    color: #f8f9fa;
+}
+
+.suggestions-count {
+    color: #6c757d;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.dark .suggestions-count {
+    color: #9ca3af;
+}
+
+/* Suggestions Grid */
+.suggestions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.suggestion-item {
+    padding: 12px 16px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.suggestion-item:hover {
+    background: #e9ecef;
+    border-color: #007bff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
+}
+
+.dark .suggestion-item {
+    background: #374151;
+    border: 1px solid #4b5563;
+    color: #f8f9fa;
+}
+
+.dark .suggestion-item:hover {
+    background: #4b5563;
+    border-color: #3b82f6;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+
+.suggestion-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #495057;
+    flex-grow: 1;
+    text-align: left;
+}
+
+.dark .suggestion-text {
+    color: #f8f9fa;
+}
+
+.suggestion-number {
+    font-size: 12px;
+    color: #6c757d;
+    background: #e9ecef;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-right: 8px;
+    min-width: 24px;
+    text-align: center;
+}
+
+.dark .suggestion-number {
+    color: #9ca3af;
+    background: #4b5563;
+}
+
+/* Suggestions Grid Scrollbar */
+.suggestions-grid::-webkit-scrollbar {
+    width: 6px;
+}
+
+.suggestions-grid::-webkit-scrollbar-track {
+    background: #f1f3f4;
+    border-radius: 3px;
+}
+
+.suggestions-grid::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.suggestions-grid::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.dark .suggestions-grid::-webkit-scrollbar-track {
+    background: #374151;
+}
+
+.dark .suggestions-grid::-webkit-scrollbar-thumb {
+    background: #6b7280;
+}
+
+.dark .suggestions-grid::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Empty State */
+.suggestions-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+}
+
+.dark .suggestions-empty {
+    color: #9ca3af;
+}
+
+.suggestions-empty i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+/* Product Search Wrapper */
+.product-search-wrapper {
+    position: relative;
+    display: inline-block;
+    min-width: 320px;
+    max-width: 90vw;
+    width: max-content;
 }

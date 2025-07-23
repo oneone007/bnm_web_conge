@@ -1,0 +1,307 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    background-color: #f4f4f4;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.form-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+input, select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+#amountTextPreview {
+    margin-top: 5px;
+    padding: 5px;
+    font-style: italic;
+    color: #666;
+    font-size: 0.9em;
+    height: 40px;
+    overflow: auto;
+    border-left: 3px solid #ccc;
+    padding-left: 10px;
+}
+
+.canvas-container {
+    position: relative;
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#checkCanvas {
+    position: relative;
+    width: 800px;
+    height: 400px;
+    margin: 0 auto;
+    border: 1px solid #ddd;
+    overflow: hidden;
+    background-color: #fff;
+}
+
+#checkImage {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.editable-element {
+    position: absolute;
+    padding: 5px;
+    font-size: 14px;
+    cursor: move;
+    user-select: none;
+    background-color: rgba(255, 255, 255, 0.7);
+    border: 1px dashed transparent;
+    min-width: 100px;
+    min-height: 20px;
+    z-index: 10;
+}
+
+.editable-element:hover {
+    border-color: #0078d7;
+}
+
+.editable-element.selected {
+    border: 2px solid #0078d7;
+    background-color: rgba(0, 120, 215, 0.1);
+}
+
+#amountTextElement, #amountTextLine2Element {
+    max-width: 600px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1.5;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+/* Initially hide the second line, it will be shown when needed */
+#amountTextLine2Element {
+    opacity: 0;
+    z-index: 11; /* Make sure it's properly layered */
+}
+
+.element-controls {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.selected-element {
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+.position-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    grid-gap: 5px;
+}
+
+.position-controls button {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    border: 1px solid #ddd;
+    background-color: #f8f8f8;
+    cursor: pointer;
+}
+
+.position-controls button:hover {
+    background-color: #e0e0e0;
+}
+
+#moveUp {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+#moveDown {
+    grid-column: 2;
+    grid-row: 2;
+}
+
+#moveLeft {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+#moveRight {
+    grid-column: 3;
+    grid-row: 2;
+}
+
+.action-buttons {
+    text-align: center;
+    margin-top: 20px;
+}
+
+button {
+    padding: 10px 20px;
+    background-color: #0078d7;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 0 5px;
+    font-size: 16px;
+}
+
+button:hover {
+    background-color: #005fa3;
+}
+
+.status-message {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    border-radius: 5px;
+    background-color: #333;
+    color: white;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 0.3s ease-in;
+}
+
+.status-message.success {
+    background-color: #4CAF50;
+}
+
+.status-message.error {
+    background-color: #f44336;
+}
+
+.status-message.warning {
+    background-color: #ff9800;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Print-specific elements */
+#printContainer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 800px;
+    height: 400px;
+}
+
+.print-element {
+    position: absolute;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: black;
+}
+
+@media print {
+    .form-controls, .element-controls, .action-buttons, h1, .status-message {
+        display: none;
+    }
+
+    .container {
+        box-shadow: none;
+        padding: 0;
+        margin: 0;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    #checkCanvas {
+        border: none;
+        width: 100%;
+        height: 400px; /* Fixed height for consistent print layout */
+        page-break-inside: avoid;
+        background-color: white;
+        position: relative;
+        overflow: visible; /* Let content overflow if needed */
+    }
+
+    #checkImage {
+        display: none; /* Hide the background check image when printing */
+    }
+
+    .editable-element {
+        background-color: transparent !important;
+        border: none !important;
+        position: absolute !important; /* Ensure absolute positioning during print */
+        color: black !important; /* Force black text for printing */
+        font-size: 14px !important;
+        visibility: visible !important;
+        display: block !important;
+        opacity: 1 !important;
+        z-index: 999 !important;
+    }
+
+    #amountElement {
+        font-weight: bold !important;
+    }
+
+    #amountTextElement {
+        font-weight: bold !important;
+        max-width: 600px !important;
+        white-space: pre-wrap !important;
+        word-wrap: break-word !important;
+    }
+
+    .editable-element.selected {
+        border: none !important;
+        background-color: transparent !important;
+    }
+
+    body {
+        padding: 0 !important;
+        margin: 0 !important;
+        background-color: white !important;
+    }
+}

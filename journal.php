@@ -114,10 +114,10 @@ document.addEventListener("DOMContentLoaded", function() {
         <br>
         <!-- Date Inputs -->
         <div class="date-container flex space-x-4 items-center">
-    <div class="flex items-center space-x-2">
-        <label for="start-date">Begin Date:</label>
-        <input type="date" id="start-date" class="border rounded px-2 py-1">
-    </div>
+            <div class="flex items-center space-x-2">
+                <label for="start-date">Begin Date:</label>
+                <input type="date" id="start-date" class="border rounded px-2 py-1">
+        </div>
 
     <div class="flex items-center space-x-2">
         <label for="end-date">End Date:</label>

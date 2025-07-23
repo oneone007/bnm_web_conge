@@ -472,6 +472,8 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente'])) {
     </div>
 
     <!-- Scripts -->
+    <!-- API Configuration -->
+    <script src="api_config.js"></script>
     <!-- jsPDF and jsPDF-AutoTable for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -522,7 +524,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente'])) {
                     alert("Veuillez sélectionner un fournisseur.");
                     return;
                 }
-                console.log("Applying filters...");
+                
                 fetchSupplierTransactions();
             });
 
@@ -531,16 +533,19 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente'])) {
             
             setupSupplierSearch();
         }
+        
+
+        
 
         // Load supplier list
         async function loadSupplierList() {
             try {
-                const response = await fetch("http://192.168.1.94:5000/listfournisseur_etat");
+                const response = await fetch(API_CONFIG.getApiUrl("/listfournisseur_etat"));
                 if (!response.ok) throw new Error("Failed to load suppliers");
                 
                 const suppliers = await response.json();
                 supplierList = suppliers || [];
-                console.log(`Loaded ${supplierList.length} suppliers for search`);
+                
             } catch (error) {
                 console.error("Error loading supplier list:", error);
                 supplierList = [];
@@ -599,7 +604,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente'])) {
                     searchInput.value = supplierName;
                     dropdown.style.display = "none";
                     
-                    console.log("Selected supplier:", selectedSupplier);
+                   
                 }
             });
         }
@@ -632,7 +637,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente'])) {
             }
 
             try {
-                const url = new URL("http://192.168.1.94:5000/sold_initial_etat_cum");
+                const url = new URL(API_CONFIG.getApiUrl("/sold_initial_etat_cum"));
                 
                 const startDate = document.getElementById("start-date").value;
                 
@@ -645,7 +650,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente'])) {
                 url.searchParams.append("c_bpartner_id", selectedSupplier.id);
                 url.searchParams.append("start_date", formatDateForAPI(startDate));
 
-                console.log("Fetching opening balance from:", url.toString());
+               
 
                 const response = await fetch(url);
                 if (!response.ok) {
@@ -653,7 +658,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente'])) {
                 }
                 
                 const data = await response.json();
-                console.log("Received opening balance data:", data);
+
                 
                 return parseFloat(data.opening_balance || 0);
                 
@@ -675,9 +680,9 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente'])) {
                 
                 // Fetch opening balance first
                 openingBalance = await fetchOpeningBalance();
-                console.log("Opening balance:", openingBalance);
+
                 
-                const url = new URL("http://192.168.1.94:5000/fetch_etat_fournisseur_cumule");
+                const url = new URL(API_CONFIG.getApiUrl("/fetch_etat_fournisseur_cumule"));
                 
                 const startDate = document.getElementById("start-date").value;
                 const endDate = document.getElementById("end-date").value;
@@ -692,7 +697,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente'])) {
                 url.searchParams.append("start_date", formatDateForAPI(startDate));
                 url.searchParams.append("end_date", formatDateForAPI(endDate));
 
-                console.log("Fetching from:", url.toString());
+             
 
                 const response = await fetch(url);
                 if (!response.ok) {
@@ -700,7 +705,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente'])) {
                 }
                 
                 const data = await response.json();
-                console.log("Received data:", data);
+               
                 
                 allData = Array.isArray(data) ? data : [];
                 

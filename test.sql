@@ -852,3 +852,306 @@ SELECT inv.DATEINVOICED AS DateTrx,
                 ORDER BY DateTrx;
 
 
+
+
+
+
+select name from M_PRODUCT
+WHERE AD_Client_ID = 1000000
+AND AD_Org_ID = 1000000
+  AND ISACTIVE = 'Y'
+  and CREATED >= TO_DATE('01/07/2025', 'DD/MM/YYYY')
+ORDER BY name
+LIMIT 100;
+
+
+
+
+
+
+
+
+
+SELECT cb.name, cb.C_BPartner_ID, cb.description
+                FROM C_BPartner cb
+                WHERE cb.AD_Client_ID = 1000000
+                and ad_org_id = 1000000
+                  AND cb.iscustomer = 'Y'
+                  AND cb.ISACTIVE = 'Y'
+                  AND (XX_RC IS NULL
+                  OR XX_NIF IS NULL
+                  OR XX_AI IS NULL )
+                ORDER BY cb.name;
+
+
+
+
+
+SELECT 
+    cb.name, 
+    cb.C_BPartner_ID, 
+    cb.description,
+    CASE 
+        WHEN cb.XX_RC IS NULL THEN TO_NCHAR('NO RC') 
+        ELSE TO_NCHAR(cb.XX_RC) 
+    END AS RC_Status,
+    CASE 
+        WHEN cb.XX_NIF IS NULL THEN TO_NCHAR('NO NIF') 
+        ELSE TO_NCHAR(cb.XX_NIF) 
+    END AS NIF_Status,
+    CASE 
+        WHEN cb.XX_AI IS NULL THEN TO_NCHAR('NO AI') 
+        ELSE TO_NCHAR(cb.XX_AI) 
+    END AS AI_Status
+FROM C_BPartner cb
+WHERE cb.AD_Client_ID = 1000000
+  AND cb.AD_Org_ID = 1000000
+  AND cb.IsCustomer = 'Y'
+  AND cb.IsActive = 'Y'
+  AND (
+      cb.XX_RC IS NULL
+      OR cb.XX_NIF IS NULL
+      OR cb.XX_AI IS NULL
+  )
+ORDER BY cb.name;
+
+SELECT DISTINCT
+                    cb.C_BPartner_ID AS "CLIENT_ID",
+                    cb.name AS "CLIENT_NAME",
+                    sr.name AS "ZONE"
+                FROM C_SalesRegion sr
+                JOIN C_BPartner_Location bpl ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                JOIN C_BPartner cb ON cb.C_BPartner_ID = bpl.C_BPartner_ID
+                JOIN xx_ca_fournisseur xf ON bpl.C_BPartner_ID = xf.CLIENTID
+                WHERE UPPER(sr.name) = UPPER(:zone)
+                    AND xf.AD_Org_ID = 1000000
+                    AND xf.DOCSTATUS != 'RE'
+                ORDER BY cb.name;
+
+SELECT DISTINCT
+    cb.C_BPartner_ID AS "CLIENT_ID",
+    cb.name AS "CLIENT_NAME",
+    sr.name AS "ZONE"
+FROM C_SalesRegion sr
+JOIN C_BPartner_Location bpl ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+JOIN C_BPartner cb ON cb.C_BPartner_ID = bpl.C_BPartner_ID
+JOIN xx_ca_fournisseur xf ON bpl.C_BPartner_ID = xf.CLIENTID
+WHERE UPPER(sr.name) IN (
+    'CNE 1 (SMK/DJBEL WAHECHE/BOUSSOUF)',
+    'TIZI OUZOU',
+    'BATNA',
+    'BEJAIA',
+    'EL OUED',
+    'SKIKDA',
+    'SETIF',
+    'EL BORDJ /MSILA',
+    'TEBESSA / KHENCHELA',
+    'JIJEL/ MILA',
+    'GUELMA',
+    'ANNABA',
+    '<AUCUNE>',
+    'OUARGLA',
+    'CHELGHOUM',
+    'CNE 3 (AIN SMARA/ZOUAGHI)',
+    'CNE 2 (NOUVELLE/KHROUB)',
+    'EL KALA',
+    'BISKRA'
+)
+AND xf.AD_Org_ID = 1000000
+AND xf.DOCSTATUS != 'RE'
+ORDER BY sr.name;
+
+
+
+
+
+SELECT
+
+                t.MovementDate AS MovementDate,
+                nvl(nvl(io.documentno,inv.documentno),m.documentno) as documentno,
+                nvl(bp.name, nvl(inv.description,m.description)) as name,
+                p.name AS productname,
+                CASE WHEN t.movementqty > 0 then t.movementqty else 0 end as ENTREE,
+                CASE WHEN t.movementqty < 0 then ABS(t.movementqty) else 0 end as SORTIE,
+                asi.lot,
+                l.value AS locator,
+                COALESCE(io.docstatus, m.docstatus, inv.docstatus, 'N/A') AS docstatus
+            FROM M_Transaction t
+            INNER JOIN M_Locator l ON (t.M_Locator_ID=l.M_Locator_ID)
+            INNER JOIN M_Product p ON (t.M_Product_ID=p.M_Product_ID)
+            LEFT OUTER JOIN M_InventoryLine il ON (t.M_InventoryLine_ID=il.M_InventoryLine_ID)
+            LEFT OUTER JOIN M_Inventory inv ON (inv.m_inventory_id = il.m_inventory_id)
+            LEFT OUTER JOIN M_MovementLine ml ON (t.M_MovementLine_ID=ml.M_MovementLine_ID)
+            LEFT OUTER JOIN M_Movement m ON (m.M_Movement_ID=ml.M_Movement_ID)
+            LEFT OUTER JOIN M_InOutLine iol ON (t.M_InOutLine_ID=iol.M_InOutLine_ID)
+            LEFT OUTER JOIN M_Inout io ON (iol.M_InOut_ID=io.M_InOut_ID)
+            LEFT OUTER JOIN C_BPartner bp ON (bp.C_BPartner_ID = io.C_BPartner_ID)
+            INNER JOIN M_attributesetinstance asi on t.m_attributesetinstance_id = asi.m_attributesetinstance_id
+            INNER JOIN M_attributeinstance att on (att.m_attributesetinstance_id = asi.m_attributesetinstance_id)
+            WHERE
+            att.m_attribute_id = 1000508
+            AND COALESCE(io.docstatus, m.docstatus, inv.docstatus) IN ('VO')
+            AND NOT (t.movementqty = 0)
+            AND t.AD_Client_ID = 1000000
+            AND (inv.description IS NULL and m.description IS NULL and io.description IS NULL)
+            ORDER BY t.MovementDate DESC;
+
+
+
+select  description , docstatus from M_InOut
+WHERE M_InOut_ID in(3114317, 3114338);
+
+
+update M_InOut
+SET docstatus = 'VO'
+WHERE M_InOut_ID =3021394;
+
+
+
+
+
+
+
+
+
+SELECT * FROM (
+                    SELECT 
+                        CAST(org.name AS VARCHAR2(300)) AS organisation,
+                        CAST(co.documentno AS VARCHAR2(50)) AS ndocument,
+                        CAST(cb.name AS VARCHAR2(300)) AS tier,
+                        co.dateordered AS datecommande,
+                        CAST(us.name AS VARCHAR2(100)) AS vendeur,
+                        ROUND(((co.totallines / (SELECT SUM(mat.valuenumber * li.qtyentered) 
+                             FROM c_orderline li 
+                             INNER JOIN m_attributeinstance mat ON mat.m_attributesetinstance_id = li.m_attributesetinstance_id
+                             WHERE mat.m_attribute_id = 1000504 
+                               AND li.c_order_id = co.c_order_id 
+                               AND li.qtyentered > 0 
+                             GROUP BY li.c_order_id)) - 1) * 100, 2) AS marge,
+                        ROUND(co.totallines, 2) AS montant,
+                        1 AS sort_order
+                    FROM 
+                        c_order co
+                    INNER JOIN ad_org org ON co.ad_org_id = org.ad_org_id
+                    INNER JOIN c_bpartner cb ON co.c_bpartner_id = cb.c_bpartner_id
+                    INNER JOIN ad_user us ON co.salesrep_id = us.ad_user_id
+                    WHERE 
+                         co.docaction  ='PR'
+                        AND co.ad_org_id = 1000000
+                        and docstatus = 'IP'
+                        and issotrx = 'Y'
+
+
+                    
+                    UNION ALL
+                    
+                    SELECT 
+                        CAST('Total' AS VARCHAR2(300)) AS organisation,
+                        CAST(NULL AS VARCHAR2(50)) AS ndocument,
+                        CAST(NULL AS VARCHAR2(300)) AS tier,
+                        NULL AS datecommande,
+                        CAST(NULL AS VARCHAR2(100)) AS vendeur,
+                        ROUND(AVG(ROUND(((co.totallines / (SELECT SUM(mat.valuenumber * li.qtyentered) 
+                             FROM c_orderline li 
+                             INNER JOIN m_attributeinstance mat ON mat.m_attributesetinstance_id = li.m_attributesetinstance_id
+                             WHERE mat.m_attribute_id = 1000504 
+                               AND li.c_order_id = co.c_order_id 
+                               AND li.qtyentered > 0 
+                             GROUP BY li.c_order_id)) - 1) * 100, 2)), 2) AS marge,
+                        ROUND(SUM(co.totallines), 2) AS montant,
+                        0 AS sort_order
+                    FROM 
+                        c_order co
+                    INNER JOIN ad_org org ON co.ad_org_id = org.ad_org_id
+                    INNER JOIN c_bpartner cb ON co.c_bpartner_id = cb.c_bpartner_id
+                    INNER JOIN ad_user us ON co.salesrep_id = us.ad_user_id
+                    WHERE 
+                         co.docaction  ='PR'
+                        AND co.ad_org_id = 1000000
+                        and docstatus = 'IP'
+                        and issotrx = 'Y'
+                        
+                )
+                ORDER BY sort_order, montant DESC;
+
+
+
+
+                select * from c_order where c_order_id in (3258167,3222958);
+
+
+
+
+
+
+                SELECT ml.value AS EMPLACEMENT, ml.m_locator_id
+                FROM M_Locator ml
+                JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
+                WHERE m.ISACTIVE = 'Y'
+                  AND m.AD_Client_ID = 1000000
+                  AND ml.ISACTIVE = 'Y'
+                  AND ml.AD_Client_ID = 1000000;
+
+
+
+                  SELECT DISTINCT m.value AS MAGASIN, ml.m_locator_id
+                FROM M_Locator ml
+                JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
+                WHERE m.ISACTIVE = 'Y'
+                  AND m.AD_Client_ID = 1000000
+                  AND ml.ISACTIVE = 'Y'
+                  AND ml.AD_Client_ID = 1000000;
+----------------------------------------------------------------
+--- ORM--------------
+SELECT 
+                    CAST(org.name AS VARCHAR2(300)) AS organisation,
+                    CAST(co.documentno AS VARCHAR2(50)) AS ndocument,
+                    CAST(cb.name AS VARCHAR2(300)) AS tier,
+                    co.dateordered AS datecommande,
+                    CAST(us.name AS VARCHAR2(100)) AS vendeur,
+                    ROUND(((co.totallines / (SELECT SUM(mat.valuenumber * li.qtyentered) 
+                         FROM c_orderline li 
+                         INNER JOIN m_attributeinstance mat ON mat.m_attributesetinstance_id = li.m_attributesetinstance_id
+                         WHERE mat.m_attribute_id = 1000504 
+                           AND li.c_order_id = co.c_order_id 
+                           AND li.qtyentered > 0 
+                         GROUP BY li.c_order_id)) - 1) * 100, 2) AS marge,
+                    ROUND(co.totallines, 2) AS montant
+                FROM 
+                    c_order co
+                INNER JOIN ad_org org ON co.ad_org_id = org.ad_org_id
+                INNER JOIN c_bpartner cb ON co.c_bpartner_id = cb.c_bpartner_id
+                INNER JOIN ad_user us ON co.salesrep_id = us.ad_user_id
+                WHERE 
+    co.ad_org_id = 1000000
+    AND issotrx = 'Y'
+    AND C_DOCTYPETARGET_ID=1001408;
+
+    ---------------------------------
+   select * from C_DocType where C_DocType_ID = 1001408;
+   ------------
+SELECT 
+    CAST(org.name AS VARCHAR2(300)) AS organisation,
+    CAST(co.documentno AS VARCHAR2(50)) AS ndocument,
+    CAST(cb.name AS VARCHAR2(300)) AS tier,
+    co.dateordered AS datecommande,
+    CAST(us.name AS VARCHAR2(100)) AS vendeur,
+    ROUND(((co.totallines / (SELECT SUM(mat.valuenumber * li.qtyentered) 
+         FROM c_orderline li 
+         INNER JOIN m_attributeinstance mat ON mat.m_attributesetinstance_id = li.m_attributesetinstance_id
+         WHERE mat.m_attribute_id = 1000504 
+           AND li.c_order_id = co.c_order_id 
+           AND li.qtyentered > 0 
+         GROUP BY li.c_order_id)) - 1) * 100, 2) AS marge,
+    ROUND(co.totallines, 2) AS montant
+FROM 
+    c_order co
+INNER JOIN ad_org org ON co.ad_org_id = org.ad_org_id
+INNER JOIN c_bpartner cb ON co.c_bpartner_id = cb.c_bpartner_id
+INNER JOIN ad_user us ON co.salesrep_id = us.ad_user_id
+WHERE 
+    co.ad_org_id = 1000000
+    AND issotrx = 'Y'
+    AND C_DOCTYPETARGET_ID = 1001408
+    AND co.dateordered >= TO_DATE(:start_date, 'YYYY-MM-DD')
+    AND co.dateordered <= TO_DATE(:end_date, 'YYYY-MM-DD')

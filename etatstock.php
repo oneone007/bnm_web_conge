@@ -223,6 +223,15 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
         .product-details-table th[data-column="PRODUCT"] {
             width: 120px;
         }
+        
+        /* Inactive lot styling */
+        .lot-inactive {
+            background-color: #fed7aa !important; /* Light orange background */
+        }
+        .dark .lot-inactive {
+            background-color: #c2410c !important; /* Darker orange for dark mode */
+            color: #fef3f2 !important; /* Light text for better contrast */
+        }
         </style>
         <table class="product-details-table min-w-full border-collapse text-sm text-left dark:text-white">
             <thead>
@@ -368,7 +377,8 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("refreshButton").addEventListener("click", () => {
         console.log("Refreshing data...");
         const fournisseur = document.getElementById("recap_fournisseur").value.trim();
-        fetchData(fournisseur, selectedMagasin, selectedEmplacement);
+        const product = document.getElementById("recap_product").value.trim();
+        fetchData(fournisseur, selectedMagasin, selectedEmplacement, product || null);
     });
 
     document.getElementById('stock_excel').addEventListener('click', exportToExcel);
@@ -829,6 +839,11 @@ function displayProductDetails(productName, data) {
         data.forEach(row => {
             const tr = document.createElement("tr");
             tr.classList.add('table-row', 'dark:bg-gray-700', 'hover:bg-gray-100', 'dark:hover:bg-gray-600');
+            
+            // Check if lot is inactive and apply orange styling
+            if (row.LOT_ACTIVE === "N") {
+                tr.classList.add('lot-inactive');
+            }
             
             tr.innerHTML = `
                 <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || ''}</td>
