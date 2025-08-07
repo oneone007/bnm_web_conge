@@ -1,22 +1,19 @@
 <?php
 session_start();
+$page_identifier = 'Etatstock';
 
-
-
-// Check if the user is logged in and session is valid
-if (!isset($_SESSION['user_id'])) {
-    header("Location: BNM"); // Redirect to login if not logged in
-    exit();
-}
+// Include permission system - this will handle both login check and role permissions
+require_once 'check_permission.php';
 
 // Call the function to check session timeout
 
 
 
-// Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
-    header("Location: Acess_Denied");    exit();
-}
+
+// // Restrict access for 'vente' and 'achat'
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
+//     header("Location: Acess_Denied");    exit();
+// }
 ?>
 
 <!DOCTYPE html>
@@ -29,6 +26,8 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="etatstock.css">
     <script src="theme.js" defer></script>
+        <script src="api_config.js"></script>
+
     <style>
         
     </style>
@@ -104,10 +103,13 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
 
 
         <br>
+            <div class="flex flex-wrap gap-2 mb-4">
             <button id="refreshButton" class="p-2 bg-gray-200 text-gray-900 rounded hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600">
                 🔄 Refresh
             </button>
-            
+            <button id="showDesactivatedLotBtn" class="p-2 bg-orange-200 text-orange-900 rounded hover:bg-orange-300 dark:bg-orange-700 dark:text-white dark:hover:bg-orange-600">
+                🟧 Show Desactivated Lot
+            </button>
             <div >
   <button class="Btn center-btn" id="stock_excel">
     <div class="svgWrapper">
@@ -166,12 +168,14 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
 
     </div>
 </div>
-<div id="pagination" class="mt-4 flex justify-center items-center gap-4 text-sm dark:text-white">
-    <button id="firstPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">First</button>
-    <button id="prevPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Previous</button>
-    <span id="pageIndicator"></span>
-    <button id="nextPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Next</button>
-    <button id="lastPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Last</button>
+<div class="w-full flex justify-center">
+    <div id="pagination" class="mt-4 flex justify-center items-center gap-4 text-sm dark:text-white">
+        <button id="firstPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">First</button>
+        <button id="prevPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Previous</button>
+        <span id="pageIndicator"></span>
+        <button id="nextPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Next</button>
+        <button id="lastPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Last</button>
+    </div>
 </div>
 
 
@@ -356,8 +360,18 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
   let allData = [];
 let selectedMagasin = null;
 let selectedEmplacement = null;
+let useDesactivatedLotEndpoint = false;
 
-
+function updateDesactivatedLotBtn() {
+    const btn = document.getElementById("showDesactivatedLotBtn");
+    if (useDesactivatedLotEndpoint) {
+        btn.classList.add("ring", "ring-orange-500", "font-bold");
+        btn.textContent = "✅ Showing Desactivated Lot";
+    } else {
+        btn.classList.remove("ring", "ring-orange-500", "font-bold");
+        btn.textContent = "🟧 Show Desactivated Lot";
+    }
+}
 
 // Debounce function to limit API calls
 function debounce(func, delay) {
@@ -372,10 +386,20 @@ function debounce(func, delay) {
 document.addEventListener("DOMContentLoaded", () => {
     initializeDropdowns();
     fetchData(); // Initial fetch without any filters
-    
+    updateDesactivatedLotBtn();
+
     // Set up other event listeners
     document.getElementById("refreshButton").addEventListener("click", () => {
-        console.log("Refreshing data...");
+        useDesactivatedLotEndpoint = false;
+        updateDesactivatedLotBtn();
+        const fournisseur = document.getElementById("recap_fournisseur").value.trim();
+        const product = document.getElementById("recap_product").value.trim();
+        fetchData(fournisseur, selectedMagasin, selectedEmplacement, product || null);
+    });
+
+    document.getElementById("showDesactivatedLotBtn").addEventListener("click", () => {
+        useDesactivatedLotEndpoint = !useDesactivatedLotEndpoint;
+        updateDesactivatedLotBtn();
         const fournisseur = document.getElementById("recap_fournisseur").value.trim();
         const product = document.getElementById("recap_product").value.trim();
         fetchData(fournisseur, selectedMagasin, selectedEmplacement, product || null);
@@ -421,7 +445,7 @@ function initializeDropdowns() {
 async function loadMagasinsDropdown() {
     const dropdown = document.getElementById("magasinDropdown");
     try {
-        const response = await fetch("http://192.168.1.94:5000/fetch-magasins");
+        const response = await fetch(API_CONFIG.getApiUrl('/fetch-magasins'));
         if (!response.ok) throw new Error("Failed to load magasins");
         
         const data = await response.json();
@@ -453,7 +477,7 @@ async function updateEmplacementDropdown() {
     dropdown.disabled = false;
     
     try {
-        const url = new URL("http://192.168.1.94:5000/fetch-emplacements");
+        const url = new URL(API_CONFIG.getApiUrl('/fetch-emplacements'));
         url.searchParams.append("magasin", selectedMagasin);
         
         const response = await fetch(url);
@@ -477,7 +501,10 @@ async function updateEmplacementDropdown() {
 // Fetch data with current filters
 async function fetchData(fournisseur = "", magasin = null, emplacement = null, name = null) {
     try {
-        const url = new URL("http://192.168.1.94:5000/fetch-stock-data");
+        let endpoint = useDesactivatedLotEndpoint
+            ? "fetch_desactivated_lot_data"
+            : "fetch-stock-data";
+        const url = new URL(API_CONFIG.getApiUrl(`/${endpoint}`));
         if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
         if (magasin) url.searchParams.append("magasin", magasin);
         if (emplacement) url.searchParams.append("emplacement", emplacement);
@@ -563,7 +590,6 @@ function updatePagination(totalItems) {
 }
 
 
-
 // Alias for fetchData to maintain compatibility
 
 // Export to Excel function
@@ -572,7 +598,7 @@ function exportToExcel() {
     const magasin = selectedMagasin;
     const emplacement = selectedEmplacement;
 
-    let url = 'http://192.168.1.94:5000/download-stock-excel?';
+    let url = API_CONFIG.getApiUrl('/download-stock-excel?');
     if (fournisseur) url += `fournisseur=${fournisseur}&`;
     if (magasin) url += `magasin=${magasin}&`;
     if (emplacement) url += `emplacement=${emplacement}&`;
@@ -776,7 +802,7 @@ function filterByProduct(product) {
 // Fetch and display product details
 async function fetchProductDetails(productName) {
     try {
-        const url = `http://192.168.1.94:5000/fetch-product-details?product_name=${encodeURIComponent(productName)}`;
+        const url = API_CONFIG.getApiUrl(`/fetch-product-details?product_name=${encodeURIComponent(productName)}`);
         const response = await fetch(url);
         
         if (!response.ok) {
@@ -907,7 +933,7 @@ function closeProductDetails() {
 function downloadProductDetailsExcel() {
     const productName = document.getElementById("productDetailsTitle").textContent.replace("Product Details - ", "");
     if (productName && productName !== "Product Details") {
-        const url = `http://192.168.1.94:5000/download-product-details-excel?product_name=${encodeURIComponent(productName)}`;
+        const url = API_CONFIG.getApiUrl(`/download-product-details-excel?product_name=${encodeURIComponent(productName)}`);
         window.location.href = url;
     }
 }

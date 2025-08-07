@@ -10,14 +10,10 @@ if (!isset($_SESSION['user_id'])) {
 
 
 
+$page_identifier = 'Journal_Vente';
 
 
-// Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup Vente'])) {
-    header("Location: Acess_Denied");    exit();
-}
-
-
+require_once 'check_permission.php';
 
 ?>
 
@@ -33,7 +29,8 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup V
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <script src="theme.js"></script>
-    
+            <script src="api_config.js"></script>
+
     <link rel="stylesheet" href="journal.css">
 
 
@@ -355,17 +352,14 @@ function formatDate(dateString) {
 async function fetchAndDisplayTotalJournal() {
     const startDate = document.getElementById("start-date").value;
     const endDate = document.getElementById("end-date").value;
-    
     try {
         // Fetch data from the API endpoint
-        const response = await fetch(`http://192.168.1.94:5000/totalJournal?start_date=${startDate}&end_date=${endDate}`);
-        
+        const url = API_CONFIG.getApiUrl(`/totalJournal?start_date=${startDate}&end_date=${endDate}`);
+        const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
         const data = await response.json();
-        
         // Format numbers with thousands separators and 2 decimal places
         const formatNumber = (num) => {
             return new Intl.NumberFormat('fr-FR', {
@@ -373,11 +367,9 @@ async function fetchAndDisplayTotalJournal() {
                 maximumFractionDigits: 2
             }).format(num);
         };
-        
         // Create the table row with the data
         const tableBody = document.getElementById('totaljournal-vente-table');
         const isDarkMode = document.body.classList.contains('dark-mode');
-        
         tableBody.innerHTML = `
             <tr class="${isDarkMode ? 'dark-mode-row' : ''}">
                 <td class="border px-4 py-2">${formatNumber(data.TotalHT)}</td>
@@ -387,7 +379,6 @@ async function fetchAndDisplayTotalJournal() {
                 <td class="border px-4 py-2">${formatNumber(data.NETAPAYER)}</td>
             </tr>
         `;
-        
     } catch (error) {
         console.error('Error fetching total journal data:', error);
         // Display error message in the table
@@ -464,7 +455,7 @@ async function fetchJournalVente() {
     if (!startDate || !endDate) return;
 
     // Construct URL with query parameters
-    const url = `http://192.168.1.94:5000/journalVente?start_date=${startDate}&end_date=${endDate}&client=${client}`;
+    const url = API_CONFIG.getApiUrl(`/journalVente?start_date=${startDate}&end_date=${endDate}&client=${client}`);
 
     try {
         showJournalVenteLoader(); // Show loading animation
@@ -607,7 +598,7 @@ function downloadJournalExcel() {
         return;
     }
 
-    const url = `http://192.168.1.94:5000/download-journal-vente-excel?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}&client=${encodeURIComponent(clientName || "")}`;
+    const url = API_CONFIG.getApiUrl(`/download-journal-vente-excel?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}&client=${encodeURIComponent(clientName || "")}`);
     console.log("🔗 Download URL:", url); // ✅ Debugging
 
     // Create a hidden link and trigger download

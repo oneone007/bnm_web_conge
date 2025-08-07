@@ -58,8 +58,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Add created_by from session
         $data['created_by'] = $_SESSION['username'];
         
+        // Determine API base URL based on hostname
+        $hostname = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'localhost';
+        $baseUrl = 'http://192.168.1.94:5003';
+        
+        // If accessing via localhost or local IP, use local Flask server
+        if ($hostname === 'localhost' || $hostname === '127.0.0.1' || strpos($hostname, '192.168.') === 0) {
+            $baseUrl = 'http://192.168.1.94:5003';
+        }
+        // If accessing via DDNS domain, use external Flask server
+        elseif (strpos($hostname, 'ddns.net') !== false) {
+            $baseUrl = "http://{$hostname}:5003";
+        }
+        
         // Call Python Flask API to save inventory
-        $pythonApiUrl = 'http://localhost:5003/inventory/save';
+        $pythonApiUrl = $baseUrl . '/inventory/save';
         
         // Prepare cURL request
         $ch = curl_init();
@@ -697,6 +710,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             cursor: not-allowed;
         }
         
+        /* Specifically style disabled QTY_DISPO fields */
+        .input-field[name="qty_dispo"][readonly],
+        .input-field[name="qty_dispo"][disabled] {
+            background-color: #f3f4f6 !important;
+            color: #6b7280 !important;
+            cursor: not-allowed !important;
+            border-color: #d1d5db !important;
+        }
+        
+        .dark .input-field[name="qty_dispo"][readonly],
+        .dark .input-field[name="qty_dispo"][disabled] {
+            background-color: #374151 !important;
+            color: #9ca3af !important;
+            border-color: #4b5563 !important;
+        }
+        
         /* Lot warning styling */
         .lot-warning {
             position: absolute;
@@ -1006,7 +1035,158 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .loading-indicator.hidden {
             display: none !important;
         }
+        
+        /* Enhanced table row styling */
+        .inventory-row {
+            border-left: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+        
+        .inventory-row.manual-entry-row {
+            border-left-color: #f59e0b;
+            background-color: #fef3c7 !important;
+        }
+        
+        .dark .inventory-row.manual-entry-row {
+            background-color: #451a03 !important;
+        }
+        
+        /* Enhanced empty state styling */
+        #entry-empty-state, #sortie-empty-state {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        }
+        
+        .dark #entry-empty-state, .dark #sortie-empty-state {
+            background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+        }
+        
+        /* Summary section enhancements */
+        .inventory-summary-separator {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 50%, #f0f9ff 100%);
+            border: 1px solid #e0e7ff;
+        }
+        
+        .dark .inventory-summary-separator {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+            border: 1px solid #475569;
+        }
+        
+        /* Enhanced button styling */
+        .btn-remove {
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-remove:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Improved input field styling */
+        .input-field {
+            transition: all 0.2s ease;
+            border: 2px solid #e5e7eb;
+        }
+        
+        .input-field:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            transform: scale(1.02);
+        }
+        
+        /* Enhanced qty input styling */
+        .qty-editable {
+            font-weight: 700;
+            background: linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%);
+            border-color: #f59e0b !important;
+            color: #92400e !important;
+        }
+        
+        .qty-editable:focus {
+            background: linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%);
+            border-color: #d97706 !important;
+            box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.2) !important;
+        }
+        
+        .dark .qty-editable {
+            background: linear-gradient(135deg, #451a03 0%, #422006 100%);
+            border-color: #f59e0b !important;
+            color: #fbbf24 !important;
+        }
+        
+        /* Header section improvements */
+        .entry-header-section, .sortie-header-section {
+            border-bottom: 3px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        /* Table header improvements with better icons and spacing */
+        .inventory-table th {
+            padding: 12px 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.75rem;
+        }
+        
+        /* Enhanced responsive design */
+        @media (max-width: 768px) {
+            .inventory-table th,
+            .inventory-table td {
+                padding: 8px 4px;
+                font-size: 0.75rem;
+            }
+            
+            .input-field {
+                padding: 0.375rem 0.25rem;
+                font-size: 0.75rem;
+            }
+            
+            .btn-remove {
+                padding: 0.25rem 0.375rem;
+                font-size: 0.75rem;
+            }
+        }
+        
+        /* Animation for adding new rows */
+        @keyframes slideInFromTop {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .inventory-row {
+            animation: slideInFromTop 0.3s ease-out;
+        }
+        
+        /* Enhanced visual feedback for validation */
+        .input-field.error {
+            border-color: #ef4444 !important;
+            background-color: #fef2f2 !important;
+            animation: shake 0.3s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        /* Success state for inputs */
+        .input-field.success {
+            border-color: #10b981 !important;
+            background-color: #f0fdf4 !important;
+        }
+        
+        .dark .input-field.success {
+            background-color: #064e3b !important;
+        }
     </style>
+    <script src="api_config_inv.js"></script>
     <script src="theme.js" defer></script>
 </head>
 <body class="bg-gray-100 min-h-screen w-full">
@@ -1125,58 +1305,223 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <!-- Inventory Tables -->
         <div class="flex flex-col gap-8">
-            <!-- ENTRY Table -->
-            <div class="table-container entry-table rounded-lg bg-white shadow-md dark:bg-gray-800">
+            <!-- ENTRY Table (Stock Additions) -->
+            <div class="table-container entry-table rounded-lg bg-white shadow-lg dark:bg-gray-800 border-l-4 border-green-500">
+                <div class="entry-header-section bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 p-4 rounded-t-lg">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                                <span class="text-white font-bold text-lg">+</span>
+                            </div>
+                            <h2 class="text-xl font-bold text-green-800 dark:text-green-200">ENTRY (Stock Additions)</h2>
+                        </div>
+                        <div class="flex items-center space-x-4 text-sm">
+                            <div class="bg-white dark:bg-gray-700 px-3 py-1 rounded-full shadow">
+                                <span class="text-gray-600 dark:text-gray-300">Total Items: </span>
+                                <span id="entry-count" class="font-bold text-green-600 dark:text-green-400">0</span>
+                            </div>
+                            <div class="bg-white dark:bg-gray-700 px-3 py-1 rounded-full shadow">
+                                <span class="text-gray-600 dark:text-gray-300">Total QTY: </span>
+                                <span id="entry-total-qty" class="font-bold text-green-600 dark:text-green-400">0</span>
+                            </div>
+                            <button id="clear-entry-table" class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors duration-200" title="Clear all entry rows">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H8a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="overflow-x-auto">
-                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center section-header">ENTRY</h2>
                     <table class="min-w-full border-collapse text-sm text-left inventory-table dark:text-white">
                         <thead>
-                            <tr class="table-header dark:bg-gray-700">
-                                <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">Product</th>
-                                <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">QTY</th>
-                                <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">Date</th>
-                                <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">Lot</th>
-                                <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">PPA</th>
-                                <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">P_REVIENT</th>
-                                <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">QTY_DISPO</th>
-                                <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">Action</th>
+                            <tr class="bg-green-500 dark:bg-green-700 text-white">
+                                <th class="border border-green-300 px-3 py-3 font-semibold text-center dark:border-green-600" style="width: 25%;">
+                                    <div class="flex items-center justify-center space-x-1">
+                                        <span>📦</span>
+                                        <span>Product</span>
+                                    </div>
+                                </th>
+                                <th class="border border-green-300 px-3 py-3 font-semibold text-center dark:border-green-600" style="width: 10%;">
+                                    <div class="flex items-center justify-center space-x-1">
+                                        <span>📊</span>
+                                        <span>QTY</span>
+                                    </div>
+                                </th>
+                                <th class="border border-green-300 px-3 py-3 font-semibold text-center dark:border-green-600" style="width: 12%;">
+                                    <div class="flex items-center justify-center space-x-1">
+                                        <span>📅</span>
+                                        <span>Date</span>
+                                    </div>
+                                </th>
+                                <th class="border border-green-300 px-3 py-3 font-semibold text-center dark:border-green-600" style="width: 15%;">
+                                    <div class="flex items-center justify-center space-x-1">
+                                        <span>🏷️</span>
+                                        <span>Lot</span>
+                                    </div>
+                                </th>
+                                <th class="border border-green-300 px-3 py-3 font-semibold text-center dark:border-green-600" style="width: 12%;">
+                                    <div class="flex items-center justify-center space-x-1">
+                                        <span>💰</span>
+                                        <span>PPA</span>
+                                    </div>
+                                </th>
+                                <th class="border border-green-300 px-3 py-3 font-semibold text-center dark:border-green-600" style="width: 12%;">
+                                    <div class="flex items-center justify-center space-x-1">
+                                        <span>💵</span>
+                                        <span>P_REVIENT</span>
+                                    </div>
+                                </th>
+                                <th class="border border-green-300 px-3 py-3 font-semibold text-center dark:border-green-600" style="width: 10%;">
+                                    <div class="flex items-center justify-center space-x-1">
+                                        <span>📈</span>
+                                        <span>QTY_DISPO</span>
+                                    </div>
+                                </th>
+                                <th class="border border-green-300 px-3 py-3 font-semibold text-center dark:border-green-600" style="width: 4%;">
+                                    <span>⚡</span>
+                                </th>
                             </tr>
                         </thead>
                         <tbody id="entry-table-body" class="dark:bg-gray-800">
-                            <!-- Entry rows will be added here -->
+                            <tr id="entry-empty-state" class="bg-gray-50 dark:bg-gray-700">
+                                <td colspan="8" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                                    <div class="flex flex-col items-center space-y-2">
+                                        <div class="text-4xl opacity-50">📦</div>
+                                        <div class="font-medium">No entry items added yet</div>
+                                        <div class="text-sm">Use "Add to Entry" button to add products</div>
+                                    </div>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
             
-            <!-- Visual separator -->
-            <div class="flex items-center justify-center py-4">
-                <div class="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
-                <div class="px-4 text-sm font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-full py-2">
-                    ⇅ INVENTORY FLOW ⇅
+            <!-- Enhanced Visual separator with summary -->
+            <div class="inventory-summary-separator bg-gradient-to-r from-blue-50 via-purple-50 to-blue-50 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 rounded-xl p-6 shadow-md">
+                <div class="flex items-center justify-center mb-4">
+                    <div class="flex-1 border-t-2 border-gradient-to-r from-transparent via-blue-300 to-transparent dark:via-blue-600"></div>
+                    <div class="px-6 text-center">
+                        <div class="text-lg font-bold text-blue-800 dark:text-blue-200 mb-1">
+                            📊 INVENTORY FLOW SUMMARY
+                        </div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400">
+                            Track your stock movements
+                        </div>
+                    </div>
+                    <div class="flex-1 border-t-2 border-gradient-to-r from-transparent via-blue-300 to-transparent dark:via-blue-600"></div>
                 </div>
-                <div class="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+                        <div class="text-2xl font-bold text-green-600 dark:text-green-400" id="summary-entry-qty">0</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400">Entry Quantity</div>
+                        <div class="text-xs text-green-500 dark:text-green-400">Stock Added</div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+                        <div class="text-2xl font-bold text-red-600 dark:text-red-400" id="summary-sortie-qty">0</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400">Sortie Quantity</div>
+                        <div class="text-xs text-red-500 dark:text-red-400">Stock Removed</div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+                        <div class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="summary-net-qty">0</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400">Net Difference</div>
+                        <div class="text-xs text-blue-500 dark:text-blue-400">Final Impact</div>
+                    </div>
+                </div>
             </div>
             
-            <!-- SORTIE Table -->
-            <div class="table-container sortie-table rounded-lg bg-white shadow-md dark:bg-gray-800">
+            <!-- SORTIE Table (Stock Removals) -->
+            <div class="table-container sortie-table rounded-lg bg-white shadow-lg dark:bg-gray-800 border-l-4 border-red-500">
+                <div class="sortie-header-section bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900 dark:to-red-800 p-4 rounded-t-lg">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                                <span class="text-white font-bold text-lg">−</span>
+                            </div>
+                            <h2 class="text-xl font-bold text-red-800 dark:text-red-200">SORTIE (Stock Removals)</h2>
+                        </div>
+                        <div class="flex items-center space-x-4 text-sm">
+                            <div class="bg-white dark:bg-gray-700 px-3 py-1 rounded-full shadow">
+                                <span class="text-gray-600 dark:text-gray-300">Total Items: </span>
+                                <span id="sortie-count" class="font-bold text-red-600 dark:text-red-400">0</span>
+                            </div>
+                            <div class="bg-white dark:bg-gray-700 px-3 py-1 rounded-full shadow">
+                                <span class="text-gray-600 dark:text-gray-300">Total QTY: </span>
+                                <span id="sortie-total-qty" class="font-bold text-red-600 dark:text-red-400">0</span>
+                            </div>
+                            <button id="clear-sortie-table" class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors duration-200" title="Clear all sortie rows">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H8a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="overflow-x-auto">
-                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center section-header">SORTIE</h2>
                     <table class="min-w-full border-collapse text-sm text-left inventory-table dark:text-white">
                         <thead>
-                            <tr class="table-header dark:bg-gray-700">
-                                <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">Product</th>
-                                <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">QTY</th>
-                                <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">Date</th>
-                                <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">Lot</th>
-                                <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">PPA</th>
-                                <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">P_REVIENT</th>
-                                <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">QTY_DISPO</th>
-                                <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">Action</th>
+                            <tr class="bg-red-500 dark:bg-red-700 text-white">
+                                <th class="border border-red-300 px-3 py-3 font-semibold text-center dark:border-red-600" style="width: 25%;">
+                                    <div class="flex items-center justify-center space-x-1">
+                                        <span>📦</span>
+                                        <span>Product</span>
+                                    </div>
+                                </th>
+                                <th class="border border-red-300 px-3 py-3 font-semibold text-center dark:border-red-600" style="width: 10%;">
+                                    <div class="flex items-center justify-center space-x-1">
+                                        <span>📊</span>
+                                        <span>QTY</span>
+                                    </div>
+                                </th>
+                                <th class="border border-red-300 px-3 py-3 font-semibold text-center dark:border-red-600" style="width: 12%;">
+                                    <div class="flex items-center justify-center space-x-1">
+                                        <span>📅</span>
+                                        <span>Date</span>
+                                    </div>
+                                </th>
+                                <th class="border border-red-300 px-3 py-3 font-semibold text-center dark:border-red-600" style="width: 15%;">
+                                    <div class="flex items-center justify-center space-x-1">
+                                        <span>🏷️</span>
+                                        <span>Lot</span>
+                                    </div>
+                                </th>
+                                <th class="border border-red-300 px-3 py-3 font-semibold text-center dark:border-red-600" style="width: 12%;">
+                                    <div class="flex items-center justify-center space-x-1">
+                                        <span>💰</span>
+                                        <span>PPA</span>
+                                    </div>
+                                </th>
+                                <th class="border border-red-300 px-3 py-3 font-semibold text-center dark:border-red-600" style="width: 12%;">
+                                    <div class="flex items-center justify-center space-x-1">
+                                        <span>💵</span>
+                                        <span>P_REVIENT</span>
+                                    </div>
+                                </th>
+                                <th class="border border-red-300 px-3 py-3 font-semibold text-center dark:border-red-600" style="width: 10%;">
+                                    <div class="flex items-center justify-center space-x-1">
+                                        <span>📈</span>
+                                        <span>Available</span>
+                                    </div>
+                                </th>
+                                <th class="border border-red-300 px-3 py-3 font-semibold text-center dark:border-red-600" style="width: 4%;">
+                                    <span>⚡</span>
+                                </th>
                             </tr>
                         </thead>
                         <tbody id="sortie-table-body" class="dark:bg-gray-800">
-                            <!-- Sortie rows will be added here -->
+                            <tr id="sortie-empty-state" class="bg-gray-50 dark:bg-gray-700">
+                                <td colspan="8" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                                    <div class="flex flex-col items-center space-y-2">
+                                        <div class="text-4xl opacity-50">📤</div>
+                                        <div class="font-medium">No sortie items added yet</div>
+                                        <div class="text-sm">Use "Add to Sortie" button to remove products from stock</div>
+                                    </div>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -1184,17 +1529,377 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         
         <!-- Action Buttons -->
-        <div class="flex flex-wrap justify-center mt-8 gap-4">
-            <button id="save-draft" class="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors min-w-[200px]">
-                💾 Save as Pending
+        <div class="flex flex-wrap justify-center mt-8 gap-4 items-center">
+            <!-- Uiverse.io Save as Pending Button -->
+            <button id="save-draft" type="button">Save</button>
+            <style>
+            /* From Uiverse.io by barisdogansutcu */
+            #save-draft {
+              font-family: inherit;
+              border: none;
+              outline: 1px dotted rgb(37, 37, 37);
+              outline-offset: -4px;
+              cursor: pointer;
+              background: hsl(0deg 0% 75%);
+              box-shadow:
+                inset -1px -1px #292929,
+                inset 1px 1px #fff,
+                inset -2px -2px rgb(158, 158, 158),
+                inset 2px 2px #ffffff;
+              font-size: 14px;
+              text-transform: uppercase;
+              letter-spacing: 2px;
+              padding: 5px 30px;
+              transition: box-shadow 0.2s;
+            }
+            #save-draft:active {
+              box-shadow:
+                inset -1px -1px #fff,
+                inset 1px 1px #292929,
+                inset -2px -2px #ffffff,
+                inset 2px 2px rgb(158, 158, 158);
+            }
+            </style>
+            <button id="save-inventory" class="download-btn pixel-corners" type="button">
+              <div class="button-content">
+                <div class="svg-container">
+                  <svg class="download-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <path d="M19.479 10.092c-.212-3.951-3.473-7.092-7.479-7.092-4.005 0-7.267 3.141-7.479 7.092-2.57.463-4.521 2.706-4.521 5.408 0 3.037 2.463 5.5 5.5 5.5h13c3.037 0 5.5-2.463 5.5-5.5 0-2.702-1.951-4.945-4.521-5.408zm-7.479 6.908l-4-4h3v-4h2v4h3l-4 4z"></path>
+                  </svg>
+                </div>
+                <div class="text-container">
+                  <div class="text">Download</div>
+                </div>
+              </div>
             </button>
-            <button id="save-inventory" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors min-w-[200px]">
-                📄 Save as PDF
+
+    <style>
+    /* From Uiverse.io by d3uceY */
+    .download-btn {
+      height: 45px;
+      width: 120px;
+      cursor: pointer;
+      background: #ff0021;
+      border: none;
+      border-radius: 30px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      position: relative;
+    }
+    .button-content {
+      transform: translateY(-45px);
+      transition: all 250ms ease-in-out;
+      width: 100%;
+      height: 90px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    .svg-container,
+    .text-container {
+      height: 45px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .text-container {
+      height: 45px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .text-container .text {
+      font-size: 16px;
+      color: #fff;
+      font-weight: 600;
+      opacity: 1;
+      transition: opacity ease-in-out 250ms;
+      width: 100%;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 45px;
+      line-height: 45px;
+    }
+    .download-icon {
+      height: 25px;
+      width: 25px;
+      fill: #fff;
+      opacity: 0;
+      transition: opacity ease-in-out 250ms;
+    }
+    .download-btn:hover .button-content {
+      transform: translateY(0px);
+    }
+    .download-btn:hover .text {
+      opacity: 0;
+    }
+    .download-btn:hover .download-icon {
+      opacity: 1;
+    }
+    .download-btn:focus .download-icon {
+      -webkit-animation: heartbeat 1.5s ease-in-out infinite both;
+      animation: heartbeat 1.5s ease-in-out infinite both;
+    }
+    @-webkit-keyframes heartbeat {
+      from {
+        -webkit-transform: scale(1);
+        transform: scale(1);
+        -webkit-transform-origin: center center;
+        transform-origin: center center;
+        -webkit-animation-timing-function: ease-out;
+        animation-timing-function: ease-out;
+      }
+      10% {
+        -webkit-transform: scale(0.91);
+        transform: scale(0.91);
+        -webkit-animation-timing-function: ease-in;
+        animation-timing-function: ease-in;
+      }
+      17% {
+        -webkit-transform: scale(0.98);
+        transform: scale(0.98);
+        -webkit-animation-timing-function: ease-out;
+        animation-timing-function: ease-out;
+      }
+      33% {
+        -webkit-transform: scale(0.87);
+        transform: scale(0.87);
+        -webkit-animation-timing-function: ease-in;
+        animation-timing-function: ease-in;
+      }
+      45% {
+        -webkit-transform: scale(1);
+        transform: scale(1);
+        -webkit-animation-timing-function: ease-out;
+        animation-timing-function: ease-out;
+      }
+    }
+    @keyframes heartbeat {
+      from {
+        -webkit-transform: scale(1);
+        transform: scale(1);
+        -webkit-transform-origin: center center;
+        transform-origin: center center;
+        -webkit-animation-timing-function: ease-out;
+        animation-timing-function: ease-out;
+      }
+      10% {
+        -webkit-transform: scale(0.91);
+        transform: scale(0.91);
+        -webkit-animation-timing-function: ease-in;
+        animation-timing-function: ease-in;
+      }
+      17% {
+        -webkit-transform: scale(0.98);
+        transform: scale(0.98);
+        -webkit-animation-timing-function: ease-out;
+        animation-timing-function: ease-out;
+      }
+      33% {
+        -webkit-transform: scale(0.87);
+        transform: scale(0.87);
+        -webkit-animation-timing-function: ease-in;
+        animation-timing-function: ease-in;
+      }
+      45% {
+        -webkit-transform: scale(1);
+        transform: scale(1);
+        -webkit-animation-timing-function: ease-out;
+        animation-timing-function: ease-out;
+      }
+    }
+    </style>
+            <button id="print-inventory" class="printer" title="Print PDF">
+                <div class="paper">
+                    <svg viewBox="0 0 16 16" class="svg">
+                        <path fill="#0077FF" d="M12.579 2.7734C13.8258 1.6196 14.0168 0 14.0168 0C14.0168 0 12.9049 1.20422 11.0865 1.20422C9.6501 1.20422 8.5531 1.19357 8.15406 1.19002L7.99288 1.1886C3.89808 1.1886 0.580078 4.50448 0.580078 8.5943C0.580078 12.6841 3.8995 16 7.99288 16C12.0862 16 15.4057 12.6841 15.4057 8.5943C15.4069 7.47324 15.1529 6.36662 14.6629 5.35832C14.1729 4.35004 13.4598 3.46654 12.5776 2.77482L12.579 2.7734ZM7.99358 13.064C5.52266 13.064 3.5175 11.0617 3.5175 8.59218C3.5175 6.12266 5.52194 4.12036 7.99358 4.12036C8.12846 4.12028 8.26326 4.12622 8.3976 4.1381L8.4828 4.14734C8.50056 4.14876 8.52114 4.1516 8.54812 4.15302C9.63066 4.2872 10.6268 4.81232 11.3493 5.62958C12.0718 6.44684 12.4707 7.49994 12.4711 8.59076C12.4711 11.0617 10.4688 13.064 7.995 13.064H7.99358Z"></path>
+                        <path fill="#0055BB" d="M13.512 3.64772C12.3859 4.18 11.1672 4.4889 9.92346 4.55728C9.49026 4.34906 9.02592 4.21306 8.54882 4.15468C8.9436 4.1845 10.3381 4.15894 11.8178 3.32748C12.0928 3.17344 12.3486 2.98728 12.5797 2.77294C12.915 3.03698 13.2269 3.3294 13.512 3.647C13.512 3.64772 13.512 3.64772 13.512 3.64772Z"></path>
+                    </svg>
+                </div>
+                <div class="dot"></div>
+                <div class="output">
+                    <div class="paper-out"></div>
+                </div>
             </button>
-            <button id="print-inventory" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors min-w-[200px]">
-                🖨️ Print PDF
-            </button>
-        </div>
+<style>
+    .printer {
+  --border: #00104b;
+  --background: #fff;
+  cursor: pointer;
+  width: 56px;
+  height: 44px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 0.2s, background 0.2s;
+  box-shadow: 0 2px 8px 0 rgba(0,0,0,0.04);
+  border-radius: 14px;
+}
+
+.printer:before, .printer:after {
+  content: "";
+  position: absolute;
+  box-shadow: inset 0 0 0 2px var(--border);
+  background: var(--background);
+}
+
+    .printer:before {
+  left: 4px;
+  right: 4px;
+  bottom: 6px;
+  height: 20px;
+  border-radius: 5px;
+  z-index: 2;
+}
+
+    .printer:after {
+  width: 38px;
+  height: 10px;
+  top: 4px;
+  left: 9px;
+  border-radius: 5px 5px 0 0;
+}
+
+    .printer .dot {
+  width: 36px;
+  height: 3px;
+  border-radius: 2px;
+  left: 10px;
+  bottom: 12px;
+  z-index: 4;
+  position: absolute;
+  background: var(--border);
+}
+
+.printer .dot:before, .printer .dot:after {
+  content: "";
+  position: absolute;
+  background: var(--border);
+  border-radius: 1px;
+  height: 2px;
+}
+
+    .printer .dot:before {
+  width: 3px;
+  right: 0;
+  top: -7px;
+}
+
+    .printer .dot:after {
+  width: 7px;
+  right: 5px;
+  top: -7px;
+}
+
+    .printer .paper {
+  position: absolute;
+  z-index: 1;
+  width: 28px;
+  height: 32px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 2px var(--border);
+  background: var(--background);
+  left: 14px;
+  bottom: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  transform: perspective(40px) translateY(0) rotateX(4deg) translateZ(0);
+  -webkit-animation: paper 1.2s ease infinite;
+  animation: paper 1.2s ease infinite;
+  -webkit-animation-play-state: var(--state, running);
+  animation-play-state: var(--state, running);
+}
+
+    .printer .paper .svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  margin-top: 8px;
+}
+
+    .printer .output {
+  width: 40px;
+  height: 32px;
+  pointer-events: none;
+  top: 24px;
+  left: 8px;
+  z-index: 3;
+  overflow: hidden;
+  position: absolute;
+}
+
+    .printer .output .paper-out {
+  position: absolute;
+  z-index: 1;
+  width: 28px;
+  height: 32px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 2px var(--border);
+  background: var(--background);
+  left: 6px;
+  bottom: 0;
+  transform: perspective(40px) rotateX(40deg) translateY(-12px) translateZ(6px);
+  -webkit-animation: paper-out 1.2s ease infinite;
+  animation: paper-out 1.2s ease infinite;
+  -webkit-animation-play-state: var(--state, running);
+  animation-play-state: var(--state, running);
+}
+
+.printer .output .paper-out:before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 4px;
+  right: 3px;
+  height: 2px;
+  border-radius: 1px;
+  opacity: 0.5;
+  background: var(--border);
+  box-shadow: 0 3px 0 var(--border), 0 6px 0 var(--border);
+}
+
+.printer:not(:hover) {
+  --state: paused;
+}
+
+@-webkit-keyframes paper {
+  50% {
+    transform: translateY(10px) translateZ(0);
+  }
+}
+
+@keyframes paper {
+  50% {
+    transform: translateY(10px) translateZ(0);
+  }
+}
+
+@-webkit-keyframes paper-out {
+  50% {
+    transform: perspective(40px) rotateX(30deg) translateY(-4px) translateZ(6px);
+  }
+}
+
+@keyframes paper-out {
+  50% {
+    transform: perspective(40px) rotateX(30deg) translateY(-4px) translateZ(6px);
+  }
+}
+
+</style>        </div>
     </div>
 
     <script>
@@ -1217,7 +1922,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Load product list from API
         async function loadProductList() {
             try {
-                const response = await fetch("http://192.168.1.94:5003/listproduct_inv");
+                const response = await fetch(API_CONFIGinv.getApiUrl("/listproduct_inv"));
                 if (!response.ok) throw new Error("Failed to load products");
                 
                 const products = await response.json();
@@ -1713,7 +2418,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
                 
-                const response = await fetch(`http://192.168.1.94:5003/inventory-products?product_id=${encodeURIComponent(product.id)}&category=${encodeURIComponent(categoryFilter)}`);
+                const response = await fetch(API_CONFIGinv.getApiUrl(`/inventory-products-updated?product_id=${encodeURIComponent(product.id)}&category=${encodeURIComponent(categoryFilter)}`));
                 
                 // Hide loading indicator
                 hideLoadingIndicator();
@@ -1888,18 +2593,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Select specific product detail
         function selectProductDetail(index, details) {
             selectedProductDetails = details[index];
+            // Store M_ATTRIBUTESSETINSTANCE_ID in a normalized property for later use
+            if (details[index] && details[index].M_ATTRIBUTESSETINSTANCE_ID) {
+                selectedProductDetails.m_attributesetinstance_id = details[index].M_ATTRIBUTESSETINSTANCE_ID;
+            }
             document.getElementById('add-to-entry').disabled = false;
             document.getElementById('add-to-sortie').disabled = false;
+            
         }
         
         // Add entry row
         function addEntryRow(productDetails) {
             if (!productDetails) return; // Only allow adding rows with product details
             
+            // Debug: Log the product details being passed
+            console.log('addEntryRow called with productDetails:', productDetails);
+            
             entryRowCounter++;
             const tableBody = document.getElementById('entry-table-body');
+            
+            // Hide empty state
+            const emptyState = document.getElementById('entry-empty-state');
+            if (emptyState) {
+                emptyState.style.display = 'none';
+            }
+            
             const row = document.createElement('tr');
             row.id = `entry-row-${entryRowCounter}`;
+            row.className = 'inventory-row hover:bg-green-50 dark:hover:bg-green-900 transition-colors duration-200';
+            
+            // Store m_attributesetinstance_id as a data attribute if present (after row is created)
+            let maid = '';
+            if (productDetails.m_attributesetinstance_id) {
+                maid = productDetails.m_attributesetinstance_id;
+            } else if (productDetails.M_ATTRIBUTESSETINSTANCE_ID) {
+                maid = productDetails.M_ATTRIBUTESSETINSTANCE_ID;
+            }
+            if (maid) {
+                row.setAttribute('data-m_attributesetinstance_id', maid);
+            }
 
             // Check if this is a manual entry product
             const isManualEntry = productDetails && productDetails.isManualEntry;
@@ -1907,6 +2639,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Use provided product details
             // Handle different possible property names from API
             const product = productDetails.PRODUCT_NAME || productDetails.PRODUCT || productDetails.NAME || productDetails.name || '';
+            
+            // Debug: Log the extracted product name for ENTRY
+            console.log('ENTRY - Extracted product name:', product);
+            console.log('ENTRY - Product details keys:', Object.keys(productDetails || {}));
+            console.log('ENTRY - Full productDetails object:', productDetails);
             const lot = productDetails && !isManualEntry ? 
                 (productDetails.LOT || productDetails.lot || '') : '';
             const ppa = productDetails && !isManualEntry && (productDetails.PPA || productDetails.ppa) ? 
@@ -1924,40 +2661,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (isManualEntry) {
                 // Manual entry with editable fields
+                row.className += ' manual-entry-row';
                 row.innerHTML = `
-                    <td>
-                        <span class="font-medium text-red-600 dark:text-red-400">${product}</span>
-                        <input type="hidden" name="product" value="${product}">
-                        <div class="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                            ⚠️ No Qty Found in The System
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <div class="flex flex-col">
+                            <span class="font-medium text-orange-600 dark:text-orange-400">${product || 'Manual Product Entry'}</span>
+                            <input type="hidden" name="product" value="${product}">
+                            <div class="text-xs text-orange-500 dark:text-orange-400 mt-1 flex items-center">
+                                <span class="mr-1">⚠️</span>
+                                <span>Manual Entry - No System Data</span>
+                            </div>
                         </div>
                     </td>
-                    <td>
-                        <input type="number" class="input-field qty-editable" name="qty"
-                               placeholder="0" min="0" step="1">
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <input type="number" class="input-field qty-editable w-full text-center font-bold" name="qty"
+                               placeholder="0" min="0" step="1" onchange="updateTableSummary()">
                     </td>
-                    <td>
-                        <input type="date" class="input-field manual-editable" name="date" 
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <input type="date" class="input-field manual-editable w-full" name="date" 
                                value="${guaranteeDate}" required>
                     </td>
-                    <td>
-                        <input type="text" class="input-field manual-editable" name="lot" 
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <input type="text" class="input-field manual-editable w-full" name="lot" 
                                placeholder="Enter lot number" required>
                     </td>
-                    <td>
-                        <input type="number" class="input-field manual-editable" name="ppa" 
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <input type="number" class="input-field manual-editable w-full text-right" name="ppa" 
                                placeholder="0.00" min="0" step="0.01">
                     </td>
-                    <td>
-                        <input type="number" class="input-field manual-editable" name="p_revient" 
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <input type="number" class="input-field manual-editable w-full text-right" name="p_revient" 
                                placeholder="0.00" min="0" step="0.01">
                     </td>
-                    <td>
-                        <input type="number" class="input-field manual-editable" name="qty_dispo" 
-                               placeholder="0" min="0" step="1">
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <input type="number" class="input-field w-full text-center" name="qty_dispo" 
+                               placeholder="0" min="0" step="1" readonly style="background-color: #f3f4f6; cursor: not-allowed;" 
+                               title="Quantity available - calculated automatically">
                     </td>
-                    <td>
-                        <button class="btn-remove" onclick="removeRow('entry-row-${entryRowCounter}')" title="Remove this row">
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600 text-center">
+                        <button class="btn-remove bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition-colors duration-200" 
+                                onclick="removeEntryRow('entry-row-${entryRowCounter}')" title="Remove this row">
                             ✕
                         </button>
                     </td>
@@ -1965,36 +2708,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 // Regular entry with display-only fields (except QTY)
                 row.innerHTML = `
-                    <td>
-                        <span table-text>${product}</span>
-                        <input type="hidden" name="product" value="${product}">
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <div class="flex flex-col">
+                            <span class="font-bold text-lg text-black dark:text-white" style="min-height: 20px; display: block; color: #000 !important; background-color: yellow; padding: 2px; border: 2px solid red;">${product || 'Product Name Not Available'}</span>
+                            <input type="hidden" name="product" value="${product}">
+                            <div class="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center">
+                                <span class="mr-1">✓</span>
+                                <span>System Data Available</span>
+                            </div>
+                        </div>
                     </td>
-                    <td>
-                        <input type="number" class="input-field qty-editable" name="qty"
-                               placeholder="0" min="0" step="1">
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <input type="number" class="input-field qty-editable w-full text-center font-bold" name="qty"
+                               placeholder="0" min="0" step="1" onchange="updateTableSummary()">
                     </td>
-                    <td>
-                        <span class="table-text">${displayDate}</span>
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <span class="table-text text-center block">${displayDate}</span>
                         <input type="hidden" name="date" value="${guaranteeDate}">
                     </td>
-                    <td>
-                        <span class="table-text">${lot}</span>
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <span class="table-text text-center block">${lot}</span>
                         <input type="hidden" name="lot" value="${lot}">
                     </td>
-                    <td>
-                        <span class="table-text">${ppa || '0.00'}</span>
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <span class="table-text text-right block">${ppa || '0.00'}</span>
                         <input type="hidden" name="ppa" value="${ppa || '0.00'}">
                     </td>
-                    <td>
-                        <span class="table-text">${pRevient || '0.00'}</span>
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <span class="table-text text-right block">${pRevient || '0.00'}</span>
                         <input type="hidden" name="p_revient" value="${pRevient || '0.00'}">
                     </td>
-                    <td>
-                        <span class="table-text font-medium text-green-700 dark:text-green-400">${qtyDispo || 0}</span>
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <span class="table-text font-medium text-green-700 dark:text-green-400 text-center block">${qtyDispo || 0}</span>
                         <input type="hidden" name="qty_dispo" value="${qtyDispo || 0}">
                     </td>
-                    <td>
-                        <button class="btn-remove" onclick="removeRow('entry-row-${entryRowCounter}')" title="Remove this row">
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600 text-center">
+                        <button class="btn-remove bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition-colors duration-200" 
+                                onclick="removeEntryRow('entry-row-${entryRowCounter}')" title="Remove this row">
                             ✕
                         </button>
                     </td>
@@ -2003,19 +2753,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             tableBody.appendChild(row);
 
+            // Debug: Confirm ENTRY row was added
+            console.log('ENTRY row added successfully with product:', product);
+            
             // Focus on QTY field
             const qtyInput = row.querySelector('.qty-editable');
             qtyInput.focus();
+            
+            // Update table summary
+            updateTableSummary();
         }
         
         // Add sortie row
         function addSortieRow(productDetails) {
             if (!productDetails) return; // Only allow adding rows with product details
             
+            // Debug: Log the product details being passed
+            console.log('addSortieRow called with productDetails:', productDetails);
+            
             sortieRowCounter++;
             const tableBody = document.getElementById('sortie-table-body');
+            
+            // Hide empty state
+            const emptyState = document.getElementById('sortie-empty-state');
+            if (emptyState) {
+                emptyState.style.display = 'none';
+            }
+            
             const row = document.createElement('tr');
             row.id = `sortie-row-${sortieRowCounter}`;
+            row.className = 'inventory-row hover:bg-red-50 dark:hover:bg-red-900 transition-colors duration-200';
+
+            // Store m_attributesetinstance_id as a data attribute if present
+            let maid = '';
+            if (productDetails.m_attributesetinstance_id) {
+                maid = productDetails.m_attributesetinstance_id;
+            } else if (productDetails.M_ATTRIBUTESSETINSTANCE_ID) {
+                maid = productDetails.M_ATTRIBUTESSETINSTANCE_ID;
+            }
+            if (maid) {
+                row.setAttribute('data-m_attributesetinstance_id', maid);
+            }
 
             // Check if this is a manual entry product
             const isManualEntry = productDetails && productDetails.isManualEntry;
@@ -2023,6 +2801,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Use provided product details
             // Handle different possible property names from API
             const product = productDetails.PRODUCT_NAME || productDetails.PRODUCT || productDetails.NAME || productDetails.name || '';
+            
+            // Debug: Log the extracted product name for SORTIE
+            console.log('SORTIE - Extracted product name:', product);
+            console.log('SORTIE - Product details keys:', Object.keys(productDetails || {}));
+            console.log('SORTIE - Full productDetails object:', productDetails);
             const lot = productDetails && !isManualEntry ? 
                 (productDetails.LOT || productDetails.lot || '') : '';
             const ppa = productDetails && !isManualEntry && (productDetails.PPA || productDetails.ppa) ? 
@@ -2040,41 +2823,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (isManualEntry) {
                 // Manual entry with editable fields
+                row.className += ' manual-entry-row';
                 row.innerHTML = `
-                    <td>
-                        <span table-text>${product}</span>
-                        <input type="hidden" name="product" value="${product}">
-                        <div class="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                            ⚠️ No Qty Found in The System
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <div class="flex flex-col">
+                            <span class="font-medium text-orange-600 dark:text-orange-400">${product || 'Manual Product Entry'}</span>
+                            <input type="hidden" name="product" value="${product}">
+                            <div class="text-xs text-orange-500 dark:text-orange-400 mt-1 flex items-center">
+                                <span class="mr-1">⚠️</span>
+                                <span>Manual Entry - No System Data</span>
+                            </div>
                         </div>
                     </td>
-                    <td>
-                        <input type="number" class="input-field qty-editable" name="qty"
-                               placeholder="0" min="0" step="1">
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <input type="number" class="input-field qty-editable w-full text-center font-bold" name="qty"
+                               placeholder="0" min="0" step="1" onchange="updateTableSummary()">
                     </td>
-                    <td>
-                        <input type="date" class="input-field manual-editable" name="date" 
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <input type="date" class="input-field manual-editable w-full" name="date" 
                                value="${guaranteeDate}" required>
                     </td>
-                    <td>
-                        <input type="text" class="input-field manual-editable" name="lot" 
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <input type="text" class="input-field manual-editable w-full" name="lot" 
                                placeholder="Enter lot number" required>
                     </td>
-                    <td>
-                        <input type="number" class="input-field manual-editable" name="ppa" 
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <input type="number" class="input-field manual-editable w-full text-right" name="ppa" 
                                placeholder="0.00" min="0" step="0.01">
                     </td>
-                    <td>
-                        <input type="number" class="input-field manual-editable" name="p_revient" 
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <input type="number" class="input-field manual-editable w-full text-right" name="p_revient" 
                                placeholder="0.00" min="0" step="0.01">
                     </td>
-                    <td>
-                        <input type="number" class="input-field manual-editable" name="qty_dispo" 
-                               placeholder="0" min="0" step="1" readonly style="background-color: #f9f9f9; cursor: not-allowed;" 
-                               title="QTY_DISPO is calculated automatically in manual entries">
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <input type="number" class="input-field w-full text-center" name="qty_dispo" 
+                               placeholder="0" min="0" step="1" readonly style="background-color: #f3f4f6; cursor: not-allowed;" 
+                               title="Quantity available - calculated automatically">
                     </td>
-                    <td>
-                        <button class="btn-remove" onclick="removeRow('sortie-row-${sortieRowCounter}')" title="Remove this row">
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600 text-center">
+                        <button class="btn-remove bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition-colors duration-200" 
+                                onclick="removeSortieRow('sortie-row-${sortieRowCounter}')" title="Remove this row">
                             ✕
                         </button>
                     </td>
@@ -2082,36 +2870,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 // Regular entry with display-only fields (except QTY)
                 row.innerHTML = `
-                    <td>
-                        <span table-text>${product}</span>
-                        <input type="hidden" name="product" value="${product}">
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <div class="flex flex-col">
+                            <span class="font-bold text-lg text-black dark:text-white" style="min-height: 20px; display: block; color: #000 !important; background-color: yellow; padding: 2px; border: 2px solid red;">${product || 'Product Name Not Available'}</span>
+                            <input type="hidden" name="product" value="${product}">
+                            <div class="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center">
+                                <span class="mr-1">✓</span>
+                                <span>System Data Available</span>
+                            </div>
+                        </div>
                     </td>
-                    <td>
-                        <input type="number" class="input-field qty-editable" name="qty"
-                               placeholder="0" min="0" max="${qtyDispo || 0}" step="1" title="Maximum available: ${qtyDispo || 0}">
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <input type="number" class="input-field qty-editable w-full text-center font-bold" name="qty"
+                               placeholder="0" min="0" max="${qtyDispo || 0}" step="1" title="Maximum available: ${qtyDispo || 0}" onchange="updateTableSummary()">
                     </td>
-                    <td>
-                        <span class="table-text">${displayDate}</span>
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <span class="table-text text-center block">${displayDate}</span>
                         <input type="hidden" name="date" value="${guaranteeDate}">
                     </td>
-                    <td>
-                        <span class="table-text">${lot}</span>
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <span class="table-text text-center block">${lot}</span>
                         <input type="hidden" name="lot" value="${lot}">
                     </td>
-                    <td>
-                        <span class="table-text">${ppa || '0.00'}</span>
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <span class="table-text text-right block">${ppa || '0.00'}</span>
                         <input type="hidden" name="ppa" value="${ppa || '0.00'}">
                     </td>
-                    <td>
-                        <span class="table-text">${pRevient || '0.00'}</span>
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <span class="table-text text-right block">${pRevient || '0.00'}</span>
                         <input type="hidden" name="p_revient" value="${pRevient || '0.00'}">
                     </td>
-                    <td>
-                        <span class="table-text font-medium text-amber-700 dark:text-amber-400">${qtyDispo}</span>
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                        <span class="table-text font-medium text-amber-700 dark:text-amber-400 text-center block">${qtyDispo}</span>
                         <input type="hidden" name="qty_dispo" value="${qtyDispo}">
                     </td>
-                    <td>
-                        <button class="btn-remove" onclick="removeRow('sortie-row-${sortieRowCounter}')" title="Remove this row">
+                    <td class="border border-gray-300 px-3 py-2 dark:border-gray-600 text-center">
+                        <button class="btn-remove bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition-colors duration-200" 
+                                onclick="removeSortieRow('sortie-row-${sortieRowCounter}')" title="Remove this row">
                             ✕
                         </button>
                     </td>
@@ -2203,15 +2998,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     });
                 }
             }
+            
+            // Update table summary
+            updateTableSummary();
         }
         
         // Add manual entry row for ENTRY table only
         function addManualEntryRow() {
             entryRowCounter++;
             const tableBody = document.getElementById('entry-table-body');
+            
+            // Hide empty state
+            const emptyState = document.getElementById('entry-empty-state');
+            if (emptyState) {
+                emptyState.style.display = 'none';
+            }
+            
             const row = document.createElement('tr');
             row.id = `entry-row-${entryRowCounter}`;
-            row.className = 'manual-entry-row';
+            row.className = 'manual-entry-row inventory-row hover:bg-orange-50 dark:hover:bg-orange-900 transition-colors duration-200';
             
             // Get current date for default
             const currentDate = new Date().toISOString().split('T')[0];
@@ -2222,36 +3027,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Create fully manual entry row with all fields editable
             row.innerHTML = `
-                <td>
-                    <input type="text" class="input-field manual-editable" name="product" 
-                           value="${selectedProductName}" placeholder="Enter product name" required>
-                    <div class="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                        📝 Manual Entry
+                <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                    <div class="flex flex-col">
+                        <input type="text" class="input-field manual-editable font-medium" name="product" 
+                               value="${selectedProductName}" placeholder="Enter product name" required>
+                        <div class="text-xs text-orange-500 dark:text-orange-400 mt-1 flex items-center">
+                            <span class="mr-1">📝</span>
+                            <span>Full Manual Entry</span>
+                        </div>
                     </div>
                 </td>
-                <td>
-                    <input type="number" class="input-field qty-editable" name="qty"
-                           placeholder="0" min="0" step="1" required>
+                <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                    <input type="number" class="input-field qty-editable w-full text-center font-bold" name="qty"
+                           placeholder="0" min="0" step="1" required onchange="updateTableSummary()">
                 </td>
-                <td>
-                    <input type="date" class="input-field manual-editable" name="date" 
+                <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                    <input type="date" class="input-field manual-editable w-full" name="date" 
                            value="${currentDate}" required>
                 </td>
-                <td>
-                    <input type="text" class="input-field manual-editable" name="lot" 
+                <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                    <input type="text" class="input-field manual-editable w-full" name="lot" 
                            placeholder="Enter lot number" required>
                 </td>
-                <td>
-                    <input type="number" class="input-field manual-editable" name="ppa" 
+                <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                    <input type="number" class="input-field manual-editable w-full text-right" name="ppa" 
                            placeholder="0.00" min="0" step="0.01" required>
                 </td>
-                <td>
-                    <input type="number" class="input-field manual-editable" name="qty_dispo" 
-                           placeholder="0" min="0" step="1" readonly style="background-color: #f9f9f9; cursor: not-allowed;" 
-                           title="QTY_DISPO is calculated automatically in manual entries" required>
+                <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                    <input type="number" class="input-field manual-editable w-full text-right" name="p_revient" 
+                           placeholder="0.00" min="0" step="0.01" required>
                 </td>
-                <td>
-                    <button class="btn-remove" onclick="removeRow('entry-row-${entryRowCounter}')" title="Remove this row">
+                <td class="border border-gray-300 px-3 py-2 dark:border-gray-600">
+                    <input type="number" class="input-field w-full text-center" name="qty_dispo" 
+                           placeholder="0" min="0" step="1" readonly disabled style="background-color: #f3f4f6; cursor: not-allowed;" 
+                           title="Quantity available - calculated automatically">
+                </td>
+                <td class="border border-gray-300 px-3 py-2 dark:border-gray-600 text-center">
+                    <button class="btn-remove bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition-colors duration-200" 
+                            onclick="removeEntryRow('entry-row-${entryRowCounter}')" title="Remove this row">
                         ✕
                     </button>
                 </td>
@@ -2269,6 +3082,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 const productInput = row.querySelector('input[name="product"]');
                 productInput.focus();
             }
+            
+            // Update table summary
+            updateTableSummary();
         }
         
         // Remove row
@@ -2276,6 +3092,145 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const row = document.getElementById(rowId);
             if (row) {
                 row.remove();
+                updateTableSummary();
+            }
+        }
+        
+        // Remove entry row with specific handling
+        function removeEntryRow(rowId) {
+            const row = document.getElementById(rowId);
+            if (row) {
+                row.remove();
+                updateTableSummary();
+                
+                // Show empty state if no more rows
+                const entryTableBody = document.getElementById('entry-table-body');
+                const remainingRows = entryTableBody.querySelectorAll('tr:not(#entry-empty-state)');
+                if (remainingRows.length === 0) {
+                    const emptyState = document.getElementById('entry-empty-state');
+                    if (emptyState) {
+                        emptyState.style.display = '';
+                    }
+                }
+            }
+        }
+        
+        // Remove sortie row with specific handling
+        function removeSortieRow(rowId) {
+            const row = document.getElementById(rowId);
+            if (row) {
+                row.remove();
+                updateTableSummary();
+                
+                // Show empty state if no more rows
+                const sortieTableBody = document.getElementById('sortie-table-body');
+                const remainingRows = sortieTableBody.querySelectorAll('tr:not(#sortie-empty-state)');
+                if (remainingRows.length === 0) {
+                    const emptyState = document.getElementById('sortie-empty-state');
+                    if (emptyState) {
+                        emptyState.style.display = '';
+                    }
+                }
+            }
+        }
+        
+        // Clear all entry table rows
+        function clearEntryTable() {
+            if (confirm('Are you sure you want to clear all entry items?')) {
+                const entryTableBody = document.getElementById('entry-table-body');
+                const rows = entryTableBody.querySelectorAll('tr:not(#entry-empty-state)');
+                rows.forEach(row => row.remove());
+                
+                // Show empty state
+                const emptyState = document.getElementById('entry-empty-state');
+                if (emptyState) {
+                    emptyState.style.display = '';
+                }
+                
+                updateTableSummary();
+            }
+        }
+        
+        // Clear all sortie table rows
+        function clearSortieTable() {
+            if (confirm('Are you sure you want to clear all sortie items?')) {
+                const sortieTableBody = document.getElementById('sortie-table-body');
+                const rows = sortieTableBody.querySelectorAll('tr:not(#sortie-empty-state)');
+                rows.forEach(row => row.remove());
+                
+                // Show empty state
+                const emptyState = document.getElementById('sortie-empty-state');
+                if (emptyState) {
+                    emptyState.style.display = '';
+                }
+                
+                updateTableSummary();
+            }
+        }
+        
+        // Update table summary counters and calculations
+        function updateTableSummary() {
+            // Entry table calculations
+            const entryRows = document.querySelectorAll('#entry-table-body tr:not(#entry-empty-state)');
+            let entryCount = 0;
+            let entryTotalQty = 0;
+            
+            entryRows.forEach(row => {
+                const qtyInput = row.querySelector('input[name="qty"]');
+                if (qtyInput && qtyInput.value) {
+                    const qty = parseInt(qtyInput.value) || 0;
+                    if (qty > 0) {
+                        entryCount++;
+                        entryTotalQty += qty;
+                    }
+                }
+            });
+            
+            // Sortie table calculations
+            const sortieRows = document.querySelectorAll('#sortie-table-body tr:not(#sortie-empty-state)');
+            let sortieCount = 0;
+            let sortieTotalQty = 0;
+            
+            sortieRows.forEach(row => {
+                const qtyInput = row.querySelector('input[name="qty"]');
+                if (qtyInput && qtyInput.value) {
+                    const qty = parseInt(qtyInput.value) || 0;
+                    if (qty > 0) {
+                        sortieCount++;
+                        sortieTotalQty += qty;
+                    }
+                }
+            });
+            
+            // Update entry counters
+            const entryCountElement = document.getElementById('entry-count');
+            const entryTotalQtyElement = document.getElementById('entry-total-qty');
+            if (entryCountElement) entryCountElement.textContent = entryCount;
+            if (entryTotalQtyElement) entryTotalQtyElement.textContent = entryTotalQty;
+            
+            // Update sortie counters
+            const sortieCountElement = document.getElementById('sortie-count');
+            const sortieTotalQtyElement = document.getElementById('sortie-total-qty');
+            if (sortieCountElement) sortieCountElement.textContent = sortieCount;
+            if (sortieTotalQtyElement) sortieTotalQtyElement.textContent = sortieTotalQty;
+            
+            // Update summary section
+            const summaryEntryQty = document.getElementById('summary-entry-qty');
+            const summarySortieQty = document.getElementById('summary-sortie-qty');
+            const summaryNetQty = document.getElementById('summary-net-qty');
+            
+            if (summaryEntryQty) summaryEntryQty.textContent = entryTotalQty;
+            if (summarySortieQty) summarySortieQty.textContent = sortieTotalQty;
+            
+            const netQty = entryTotalQty - sortieTotalQty;
+            if (summaryNetQty) {
+                summaryNetQty.textContent = netQty >= 0 ? `+${netQty}` : netQty;
+                // Update color based on net quantity
+                summaryNetQty.className = `text-2xl font-bold ${
+                    netQty > 0 ? 'text-green-600 dark:text-green-400' :
+                    netQty < 0 ? 'text-red-600 dark:text-red-400' :
+                    'text-gray-600 dark:text-gray-400'
+                }`;
             }
         }
         
@@ -2300,6 +3255,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             document.getElementById('manual-entry').addEventListener('click', function() {
                 addManualEntryRow();
             });
+            
+            // Clear table buttons
+            document.getElementById('clear-entry-table').addEventListener('click', clearEntryTable);
+            document.getElementById('clear-sortie-table').addEventListener('click', clearSortieTable);
             
             // Save inventory button
             document.getElementById('save-inventory').addEventListener('click', saveInventory);
@@ -2569,7 +3528,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 entryRows.forEach(row => {
                     const qtyInput = row.querySelector('input.qty-editable');
                     const qty = qtyInput ? parseInt(qtyInput.value) : 0;
-                    
+
                     if (qty > 0) {
                         // Get values from inputs
                         const productInput = row.querySelector('input[name="product"]');
@@ -2577,19 +3536,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         const lotInput = row.querySelector('input[name="lot"]');
                         const ppaInput = row.querySelector('input[name="ppa"]');
                         const qtyDispoInput = row.querySelector('input[name="qty_dispo"]');
-                        
+
                         const product = productInput ? productInput.value.trim() : '';
-                        
+                        const date = dateInput ? dateInput.value : null;
+                        const lot = lotInput ? lotInput.value : null;
+                        const ppa = ppaInput ? parseFloat(ppaInput.value) || 0 : 0;
+                        const qtyDispo = qtyDispoInput ? parseInt(qtyDispoInput.value) || 0 : 0;
+                        // Get m_attributesetinstance_id from data attribute if present
+                        let maid = row.getAttribute('data-m_attributesetinstance_id');
+
                         if (product) {
                             items.push({
                                 product: product,
                                 qty: qty,
-                                date: dateInput ? dateInput.value : null,
-                                lot: lotInput ? lotInput.value : null,
-                                ppa: ppaInput ? parseFloat(ppaInput.value) || 0 : 0,
-                                qty_dispo: qtyDispoInput ? parseInt(qtyDispoInput.value) || 0 : 0,
+                                date: date,
+                                lot: lot,
+                                ppa: ppa,
+                                qty_dispo: qtyDispo,
                                 type: 'entry',
-                                is_manual_entry: row.classList.contains('manual-entry-row')
+                                is_manual_entry: row.classList.contains('manual-entry-row'),
+                                m_attributesetinstance_id: maid ? parseInt(maid) : undefined
                             });
                         }
                     }
@@ -2598,11 +3564,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Collect sortie data
                 const sortieRows = document.querySelectorAll('#sortie-table-body tr');
                 const validationErrors = [];
-                
+
                 sortieRows.forEach((row, index) => {
                     const qtyInput = row.querySelector('input.qty-editable');
                     const qty = qtyInput ? parseInt(qtyInput.value) : 0;
-                    
+
                     if (qty > 0) {
                         // Get values from inputs
                         const productInput = row.querySelector('input[name="product"]');
@@ -2610,10 +3576,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         const lotInput = row.querySelector('input[name="lot"]');
                         const ppaInput = row.querySelector('input[name="ppa"]');
                         const qtyDispoInput = row.querySelector('input[name="qty_dispo"]');
-                        
+
                         const product = productInput ? productInput.value.trim() : '';
+                        const date = dateInput ? dateInput.value : null;
+                        const lot = lotInput ? lotInput.value : null;
+                        const ppa = ppaInput ? parseFloat(ppaInput.value) || 0 : 0;
                         const qtyDispo = qtyDispoInput ? parseInt(qtyDispoInput.value) || 0 : 0;
-                        
+                        // Get m_attributesetinstance_id from data attribute if present
+                        let maid = row.getAttribute('data-m_attributesetinstance_id');
+
                         // Validate QTY <= QTY_DISPO for manual entries in SORTIE
                         if (row.classList && row.classList.contains('manual-entry-row')) {
                             // For manual entries, check if qty > qty_dispo
@@ -2627,17 +3598,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 validationErrors.push(`Row ${index + 1}: Quantity (${qty}) cannot exceed available quantity (${maxQty}) for product "${product}"`);
                             }
                         }
-                        
+
                         if (product) {
                             items.push({
                                 product: product,
                                 qty: qty,
-                                date: dateInput ? dateInput.value : null,
-                                lot: lotInput ? lotInput.value : null,
-                                ppa: ppaInput ? parseFloat(ppaInput.value) || 0 : 0,
+                                date: date,
+                                lot: lot,
+                                ppa: ppa,
                                 qty_dispo: qtyDispo,
                                 type: 'sortie',
-                                is_manual_entry: row.classList.contains('manual-entry-row')
+                                is_manual_entry: row.classList.contains('manual-entry-row'),
+                                m_attributesetinstance_id: maid ? parseInt(maid) : undefined
                             });
                         }
                     }
@@ -2678,7 +3650,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 console.log('Sending data:', dataToSend);
                 
                 // Send data to Python API
-                const response = await fetch('http://192.168.1.94:5003/inventory/save', {
+                const response = await fetch(API_CONFIGinv.getApiUrl('/inventory/save'), {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

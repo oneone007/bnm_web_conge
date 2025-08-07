@@ -2,6 +2,9 @@
 <?php
 session_start();
 
+// Check for force logout by admin
+include_once 'session_check.php';
+
 // Set session timeout to 1 hour (3600 seconds)
 $inactive_time = 3600;
 
@@ -729,12 +732,162 @@ body {
     /* Chatbot styles from your original code go here */
     .chatbot-container {
       position: fixed; bottom: 20px; right: 20px; z-index: 1000;
+      display: flex; flex-direction: column; align-items: flex-end;
     }
-    .chatbot-button {
-      background-color: #4CAF50; color: white; border: none; padding: 10px 15px;
-      border-radius: 25px; cursor: pointer; font-size: 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    .eva-chatbot-btn {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: transparent;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      margin-bottom: 10px;
+      transition: box-shadow 0.2s;
     }
-    .chatbot-button:hover { background-color: #45a049; }
+    .eva-chatbot-btn:hover {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+      background: #f3f4f6;
+    }
+    .loader {
+      width: 80px;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modelViewPort {
+      perspective: 1000px;
+      width: 4.5rem;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #000;
+      overflow: hidden;
+    }
+    .eva {
+      --EVA-ROTATION-DURATION: 4s;
+      transform-style: preserve-3d;
+      animation: rotateRight var(--EVA-ROTATION-DURATION) linear infinite alternate;
+    }
+    .head {
+      position: relative;
+      width: 2.2rem;
+      height: 1.5rem;
+      border-radius: 48% 53% 45% 55% / 79% 79% 20% 22%;
+      background: linear-gradient(to right, white 45%, gray);
+    }
+    .eyeChamber {
+      width: 1.6rem;
+      height: 1rem;
+      position: relative;
+      left: 50%;
+      top: 55%;
+      border-radius: 45% 53% 45% 48% / 62% 59% 35% 34%;
+      background-color: #0c203c;
+      box-shadow: 0px 0px 2px 2px white, inset 0px 0px 0px 2px black;
+      transform: translate(-50%, -50%);
+      animation: moveRight var(--EVA-ROTATION-DURATION) linear infinite alternate;
+    }
+    .eye {
+      width: 0.45rem;
+      height: 0.6rem;
+      position: absolute;
+      border-radius: 50%;
+    }
+    .eye:first-child {
+      left: 7px;
+      top: 50%;
+      background: repeating-linear-gradient(65deg, #9bdaeb 0px, #9bdaeb 1px, white 2px);
+      box-shadow: inset 0px 0px 5px #04b8d5, 0px 0px 15px 1px #0bdaeb;
+      transform: translate(0, -50%) rotate(-65deg);
+    }
+    .eye:nth-child(2) {
+      right: 7px;
+      top: 50%;
+      background: repeating-linear-gradient(-65deg, #9bdaeb 0px, #9bdaeb 1px, white 2px);
+      box-shadow: inset 0px 0px 5px #04b8d5, 0px 0px 15px 1px #0bdaeb;
+      transform: translate(0, -50%) rotate(65deg);
+    }
+    .body {
+      width: 2.2rem;
+      height: 3rem;
+      position: relative;
+      margin-block-start: 0.25rem;
+      border-radius: 47% 53% 45% 55% / 12% 9% 90% 88%;
+      background: linear-gradient(to right, white 35%, gray);
+    }
+    .hand {
+      position: absolute;
+      left: -0.6rem;
+      top: 0.3rem;
+      width: 0.8rem;
+      height: 2.2rem;
+      border-radius: 40%;
+      background: linear-gradient(to left, white 15%, gray);
+      box-shadow: 2px 0px 5px rgba(0, 0, 0, 0.18);
+      transform: rotateY(55deg) rotateZ(10deg);
+    }
+    .hand:first-child {
+      animation: compensateRotation var(--EVA-ROTATION-DURATION) linear infinite alternate;
+    }
+    .hand:nth-child(2) {
+      left: 82%;
+      background: linear-gradient(to right, white 15%, gray);
+      transform: rotateY(55deg) rotateZ(-10deg);
+      animation: compensateRotationRight var(--EVA-ROTATION-DURATION) linear infinite alternate;
+    }
+    .scannerThing {
+      width: 0;
+      height: 0;
+      position: absolute;
+      left: 60%;
+      top: 10%;
+      border-top: 60px solid #9bdaeb;
+      border-left: 80px solid transparent;
+      border-right: 80px solid transparent;
+      transform-origin: top left;
+      mask: linear-gradient(to right, white, transparent 35%);
+      animation: glow 2s cubic-bezier(0.86, 0, 0.07, 1) infinite;
+    }
+    .scannerOrigin {
+      position: absolute;
+      width: 8px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      left: 60%;
+      top: 10%;
+      background: #9bdaeb;
+      box-shadow: inset 0px 0px 5px rgba(0, 0, 0, 0.5);
+      animation: moveRight var(--EVA-ROTATION-DURATION) linear infinite;
+    }
+    @keyframes rotateRight {
+      from { transform: rotateY(0deg); }
+      to { transform: rotateY(25deg); }
+    }
+    @keyframes moveRight {
+      from { transform: translate(-50%, -50%); }
+      to { transform: translate(-40%, -50%); }
+    }
+    @keyframes compensateRotation {
+      from { transform: rotateY(55deg) rotateZ(10deg); }
+      to { transform: rotatey(30deg) rotateZ(10deg); }
+    }
+    @keyframes compensateRotationRight {
+      from { transform: rotateY(55deg) rotateZ(-10deg); }
+      to { transform: rotateY(70deg) rotateZ(-10deg); }
+    }
+    @keyframes glow {
+      from { opacity: 0; }
+      20% { opacity: 1; }
+      45% { transform: rotate(-25deg); }
+      75% { transform: rotate(5deg); }
+      100% { opacity: 0; }
+    }
     .chatbot-window {
       display: flex; flex-direction: column; width: 300px; height: 700px; max-height: 90vh;
       background-color: white; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); overflow: hidden;
@@ -802,7 +955,26 @@ body {
 
 
 <div class="chatbot-container">
-  <button class="chatbot-button" onclick="toggleChatbot()">💬 Need Help?</button>
+  <div class="eva-chatbot-btn" onclick="toggleChatbot()">
+    <div class="loader">
+      <div class="modelViewPort">
+        <div class="eva">
+          <div class="head">
+            <div class="eyeChamber">
+              <div class="eye"></div>
+              <div class="eye"></div>
+            </div>
+          </div>
+          <div class="body">
+            <div class="hand"></div>
+            <div class="hand"></div>
+            <div class="scannerThing"></div>
+            <div class="scannerOrigin"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
   <div class="chatbot-window" id="chatbotWindow" style="display: none;">
     <div class="chatbot-header">
       <span>BNM Parapharm Bot</span>
@@ -1086,7 +1258,9 @@ document.addEventListener('DOMContentLoaded', () => {
   </div>
 </div>
 
-<?php if (isset($_SESSION['Role']) && (strtolower($_SESSION['Role']) === 'admin' || strtolower($_SESSION['Role']) === 'developer')) : ?>
+<?php
+if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Admin', 'Developer', 'DRH'])) :
+?>
 <script>
 // Inventory Pending Notification Logic (Admins/Developers)
 function checkPendingInventory() {

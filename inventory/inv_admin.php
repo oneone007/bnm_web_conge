@@ -24,7 +24,7 @@ if (!isset($_SESSION['username'])) {
 }
 
 // Check admin privileges - only allow specific admin roles
-if (!isset($_SESSION['Role']) || !in_array($_SESSION['Role'], ['Admin', 'Developer'])) {
+if (!isset($_SESSION['Role']) || !in_array($_SESSION['Role'], ['Admin', 'Developer', 'DRH'])) {
     header("Location: Access_Denied");    
     exit();
 }
@@ -48,6 +48,7 @@ $inventories = [];
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="theme.js" defer></script>
+
     <style>
         .status-pending { background-color: #fef3c7; color: #92400e; }
         .status-confirmed { background-color: #dbeafe; color: #1e40af; }
@@ -232,6 +233,8 @@ $inventories = [];
             color: #e5e7eb !important;
         }
     </style>
+        <script src="api_config_inv.js"></script>
+
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto px-4 py-6">
@@ -360,6 +363,80 @@ $inventories = [];
         </div>
     </div>
 
+    <!-- Popu Button -->
+    <div class="fixed bottom-6 left-6 z-50">
+        <button id="popuBtn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full shadow-lg font-medium">
+            ➕ Popup
+        </button>
+    </div>
+
+    <!-- Popu Modal -->
+    <div id="popuModal" class="fixed inset-0 bg-black bg-opacity-40 hidden z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg w-full max-w-lg p-6 relative border-2 border-green-200">
+            <button id="closePopuModal" class="absolute top-2 right-2 text-gray-400 hover:text-red-600 text-2xl font-bold">&times;</button>
+            <h2 class="text-xl font-bold mb-4 text-green-700">Lot</h2>
+            <form id="popuForm" class="space-y-3">
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="col-span-2 text-sm text-gray-700 font-semibold">TVA : MARCH EXO 0%</div>
+                    <div class="col-span-2 flex items-center gap-2">
+                        <input type="checkbox" id="editEnreg" class="mr-2">
+                        <label for="editEnreg" class="text-sm">Editer enregistrement</label>
+                        <button type="button" class="ml-2 px-2 py-1 bg-gray-200 rounded text-xs">Sélectionner un enregistrement existant</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="text-sm">Prix Achat</label>
+                    <input type="number" step="0.01" class="border rounded px-2 py-1" name="prix_achat">
+                    <label class="text-sm">Remise Supp</label>
+                    <input type="number" step="0.01" class="border rounded px-2 py-1" name="remise_supp">
+                    <label class="text-sm">Prix Revient</label>
+                    <input type="number" step="0.01" class="border rounded px-2 py-1" name="prix_revient">
+                    <label class="text-sm">Prix Vente</label>
+                    <input type="number" step="0.01" class="border rounded px-2 py-1" name="prix_vente">
+                    <label class="text-sm">PPA</label>
+                    <input type="number" step="0.01" class="border rounded px-2 py-1" name="ppa">
+                    <label class="text-sm">Bonus Vente</label>
+                    <input type="number" step="0.01" class="border rounded px-2 py-1" name="bonus_vente">
+                    <label class="text-sm">Remise Vente</label>
+                    <input type="number" step="0.01" class="border rounded px-2 py-1" name="remise_vente">
+                    <label class="text-sm">Colisage</label>
+                    <input type="number" step="0.01" class="border rounded px-2 py-1" name="colisage">
+                    <label class="text-sm">Fournisseur</label>
+                    <input type="text" class="border rounded px-2 py-1" name="fournisseur">
+                    <label class="text-sm">Lot</label>
+                    <input type="text" class="border rounded px-2 py-1" name="lot">
+                    <label class="text-sm">Date d'expiration</label>
+                    <input type="date" class="border rounded px-2 py-1" name="date_expiration">
+                    <label class="text-sm">Bonus</label>
+                    <input type="number" step="0.01" class="border rounded px-2 py-1" name="bonus">
+                </div>
+                <div class="mb-4">
+                    <label for="attributeType" class="block text-sm font-medium text-gray-700 mb-2">Type d'attribut</label>
+                    <select id="attributeType" name="attributeType" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        <option value="">-- Sélectionner --</option>
+                        <option value="Prix Achat">Prix Achat</option>
+                        <option value="Colisage">Colisage</option>
+                        <option value="PPA">PPA</option>
+                        <option value="Prix Vente">Prix Vente</option>
+                        <option value="Prix Revient">Prix Revient</option>
+                        <option value="Fournisseur">Fournisseur</option>
+                        <option value="Bonus">Bonus</option>
+                        <option value="Bonus Vente">Bonus Vente</option>
+                        <option value="Remise Supp">Remise Supp</option>
+                        <option value="Remise Vente">Remise Vente</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label for="attributeValue" class="block text-sm font-medium text-gray-700 mb-2">Valeur</label>
+                    <input type="number" step="any" id="attributeValue" name="attributeValue" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Entrer la valeur">
+                </div>
+                <div class="flex justify-end mt-4">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md">Valider</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         // Get user info from PHP session (username is always from session)
         const currentUser = '<?= isset($_SESSION['username']) ? $_SESSION['username'] : '' ?>';
@@ -413,7 +490,7 @@ $inventories = [];
                 const queryString = queryParams.length > 0 ? '?' + queryParams.join('&') : '';
                 
                 // Call Python API to get inventory list
-                const response = await fetch(`http://192.168.1.94:5003/inventory/list${queryString}`);
+                const response = await fetch(`${API_CONFIGinv.getApiUrl()}/inventory/list${queryString}`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -487,10 +564,12 @@ $inventories = [];
             const card = document.createElement('div');
             card.className = 'card inventory-card';
             card.setAttribute('data-id', inventory.id);
-            
             const createdDate = new Date(inventory.created_at);
             const updatedDate = new Date(inventory.updated_at);
-            
+
+            // Vérifier s'il y a une ligne manuelle dans l'inventaire
+            const hasManualItem = (inventory.manual_entries_count && inventory.manual_entries_count > 0) || (inventory.items && inventory.items.some && inventory.items.some(item => item.is_manual_entry == 1));
+
             card.innerHTML = `
                 <div class="card-header">
                     <div class="flex justify-between items-start">
@@ -514,6 +593,10 @@ $inventories = [];
                         <!-- Action Buttons -->
                         <div class="flex gap-2">
                             ${generateActionButtons(inventory)}
+                            <button onclick="handleInsert(${inventory.id})" 
+                                class="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm">
+                                Insert
+                            </button>   
                         </div>
                     </div>
                 </div>
@@ -552,13 +635,185 @@ $inventories = [];
             
             container.appendChild(card);
         }
+
+
+    // Modify the handleInsert function
+async function handleInsert(inventoryId) {
+    try {
+        // 1. Get inventory details
+        const response = await fetch(`${API_CONFIGinv.getApiUrl()}/inventory/details/${inventoryId}`);
+        const data = await response.json();
+        
+        if (!data.success || !data.items || data.items.length === 0) {
+            throw new Error('No items found in inventory');
+        }
+
+        // 2. Show modal for each item that needs attribute instance creation
+        for (const item of data.items) {
+            let itemData = {
+                inventory_id: inventoryId,
+                product_name: item.product_name,
+                quantity: item.quantity,
+                qty_dispo: item.qty_dispo,
+                m_attributesetinstance_id: item.m_attributesetinstance_id
+            };
+            if (!item.m_attributesetinstance_id) {
+                // Show modal to collect attribute information
+                const attributeData = await showAttributeModal(item);
+                
+                // Merge the collected data with our item data
+                itemData = {
+                    ...itemData,
+                    lot: attributeData.lot,
+                    date_expiration: attributeData.date_expiration,
+                    attributes: attributeData.attributes  // This is the crucial change
+                };
+            }
+                console.log('Collected attribute data:', itemData);
+
+            // Proceed with insertion
+            const insertionResponse = await fetch(`${API_CONFIGinv.getApiUrl()}/inventory/insert_inventory`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(itemData)  // Send the complete item data
+            });
+
+            if (!insertionResponse.ok) {
+                const errorData = await insertionResponse.json();
+                console.error(`Failed to insert item: ${item.product_name}`, errorData);
+                throw new Error(`Failed to insert ${item.product_name}: ${errorData.error || 'Unknown error'}`);
+            }
+        }
+        
+        alert('All items inserted successfully!');
+        
+    } catch (error) {
+        console.error('Error during insertion:', error);
+        alert(`Insertion failed: ${error.message}`);
+    }
+}
+
+// New function to show attribute collection modal
+// Update the showAttributeModal function
+function showAttributeModal(item) {
+    return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        modal.innerHTML = `
+            <div class="bg-white rounded-lg p-6 w-full max-w-2xl dark:bg-gray-800">
+                <h3 class="text-xl font-bold mb-4 dark:text-white">Attribute Information for ${item.product_name}</h3>
+                <form id="attributeForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Basic Information -->
+                    <div class="md:col-span-2">
+                        <h4 class="font-medium text-lg mb-2 dark:text-gray-200">Basic Information</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Lot Number</label>
+                                <input type="text" name="lot" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Expiration Date</label>
+                                <input type="date" name="date_expiration" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Attribute Values -->
+                    <div class="md:col-span-2">
+                        <h4 class="font-medium text-lg mb-2 dark:text-gray-200">Attribute Values</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Prix Achat</label>
+                                <input type="number" step="0.01" name="Prix Achat" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Colisage</label>
+                                <input type="number" step="0.01" name="Colisage" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">PPA</label>
+                                <input type="number" step="0.01" name="PPA" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Prix Vente</label>
+                                <input type="number" step="0.01" name="Prix Vente" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Prix Revient</label>
+                                <input type="number" step="0.01" name="Prix Revient" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Fournisseur</label>
+                                <input type="text" name="Fournisseur" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Bonus</label>
+                                <input type="number" step="0.01" name="Bonus" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Bonus Vente</label>
+                                <input type="number" step="0.01" name="Bonus Vente" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Remise Supp</label>
+                                <input type="number" step="0.01" name="Remise Supp" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Remise Vente</label>
+                                <input type="number" step="0.01" name="Remise Vente" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="md:col-span-2 flex justify-end space-x-3 mt-4">
+                        <button type="button" onclick="this.closest('div[class*=\\'fixed\\']').remove();" class="px-4 py-2 bg-gray-300 rounded-md dark:bg-gray-600 dark:text-white">Cancel</button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md">Submit</button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        modal.querySelector('#attributeForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+    
+            // Filter out empty values and prepare for backend
+            const attributes = {};
+            for (const [key, value] of Object.entries(data)) {
+                if (value && key !== 'lot' && key !== 'date_expiration') {
+                    attributes[key] = value;
+                }
+            }
+
+            let date = data.date_expiration;
+            if (date) {
+                const [year, month, day] = date.split("-");
+                const formattedDate = `${day}/${month}/${year.slice(-2)}`; // dd/mm/yy
+                data.date_expiration = formattedDate;
+            }
+
+            resolve({
+                lot: data.lot,
+                date_expiration: data.date_expiration,
+                attributes: attributes
+            });
+
+            modal.remove();
+});
+
+
+        document.body.appendChild(modal);
+    });
+}
         
         // Generate action buttons based on inventory status and workflow
         function generateActionButtons(inventory) {
-            // Confirm/Cancel/Done/Reopen buttons only visible for 'hichem', others see nothing
+            // Confirm/Cancel/Done/Reopen buttons visible for 'hichem', 'admin', or 'mohamed', others see nothing
             switch (inventory.status) {
                 case 'pending':
-                    if (currentUser === 'hichem') {
+                    if (currentUser === 'hichem' || currentUser === 'admin' || currentUser === 'mohamed') {
                         return `
                             <button onclick="updateStatus(${inventory.id}, 'confirmed')" class="btn btn-confirm" title="Confirm this inventory">✅ Confirm</button>
                             <button onclick="updateStatus(${inventory.id}, 'canceled')" class="btn btn-cancel" title="Cancel this inventory">❌ Cancel</button>
@@ -567,16 +822,16 @@ $inventories = [];
                         return '';
                     }
                 case 'confirmed':
-                    if (currentUser === 'hichem' || currentUser === 'admin') {
+                    if (currentUser === 'hichem' || currentUser === 'admin' || currentUser === 'mohamed') {
                         return `
                             <button onclick="updateStatus(${inventory.id}, 'done')" class="btn btn-done" title="Mark as done - final state">✅ Mark as Done</button>
-                            ${currentUser === 'hichem' ? `<button onclick=\"updateStatus(${inventory.id}, 'canceled')\" class=\"btn btn-cancel\" title=\"Cancel this inventory\">❌ Cancel</button>` : ''}
+                            <button onclick="updateStatus(${inventory.id}, 'canceled')" class="btn btn-cancel" title="Cancel this inventory">❌ Cancel</button>
                         `;
                     } else {
                         return '';
                     }
                 case 'canceled':
-                    if (currentUser === 'hichem') {
+                    if (currentUser === 'hichem' || currentUser === 'admin' || currentUser === 'mohamed') {
                         return `
                             <button onclick="updateStatus(${inventory.id}, 'pending')" class="btn btn-confirm" title="Reopen this inventory">🔄 Reopen</button>
                             <span class="text-red-600 font-medium">❌ Canceled</span>
@@ -614,7 +869,7 @@ $inventories = [];
             
             try {
                 // Call Python API to update status - all statuses are now supported
-                const response = await fetch(`http://192.168.1.94:5003/inventory/update_status/${inventoryId}`, {
+                const response = await fetch(`${API_CONFIGinv.getApiUrl()}/inventory/update_status/${inventoryId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -644,7 +899,7 @@ $inventories = [];
                     if (card) {
                         if (card.innerHTML.includes('🏪 from casse')) {
                             // Call the Flask endpoint to send saisie mail
-                            fetch('http://192.168.1.94:5003/send_saisie_mail', { method: 'GET' })
+                            fetch(`${API_CONFIGinv.getApiUrl()}/send_saisie_mail`, { method: 'GET' })
                                 .then(r => r.json())
                                 .then(data => {
                                     if (data && data.results) {
@@ -656,8 +911,8 @@ $inventories = [];
                                 });
                         } else {
                             // Not from casse: Call the Flask endpoint to send info mail
-                            fetch('http://192.168.1.94:5003/send_info_mail', { method: 'GET' })
-                                .then(r => r.json())
+                            fetch(`${API_CONFIGinv.getApiUrl()}/send_info_mail`, { method: 'GET' })
+                                .then (r => r.json())
                                 .then(data => {
                                     if (data && data.results) {
                                         console.log('Info mail sent:', data);
@@ -716,7 +971,7 @@ $inventories = [];
             modal.classList.remove('hidden');
             
             try {
-                const response = await fetch(`http://192.168.1.94:5003/inventory/details/${inventoryId}`);
+                const response = await fetch(`${API_CONFIGinv.getApiUrl()}/inventory/details/${inventoryId}`);
                 const data = await response.json();
                 
                 if (data.success) {
@@ -828,6 +1083,54 @@ $inventories = [];
         document.getElementById('detailsModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeModal();
+            }
+        });
+        
+        // Popu modal logic (fix: ensure DOM is loaded before attaching event listeners)
+        document.addEventListener('DOMContentLoaded', function() {
+            var popuBtn = document.getElementById('popuBtn');
+            var popuModal = document.getElementById('popuModal');
+            var closePopuModal = document.getElementById('closePopuModal');
+            var closePopuModal2 = document.getElementById('closePopuModal2');
+            var popuForm = document.getElementById('popuForm');
+            if (popuBtn && popuModal && closePopuModal && closePopuModal2 && popuForm) {
+                popuBtn.addEventListener('click', function() {
+                    popuModal.classList.remove('hidden');
+                });
+                closePopuModal.addEventListener('click', function() {
+                    popuModal.classList.add('hidden');
+                });
+                closePopuModal2.addEventListener('click', function() {
+                    popuModal.classList.add('hidden');
+                });
+                popuForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const attributeType = document.getElementById('attributeType').value;
+                    const attributeValue = document.getElementById('attributeValue').value;
+                    const inventoryId = 123; // À remplacer dynamiquement si besoin
+                    const payload = {
+                        inventory_id: inventoryId,
+                        attribute_type: attributeType,
+                        attribute_value: attributeValue
+                    };
+                    fetch(`${API_CONFIGinv.getApiUrl()}/api/inventory/insert`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            alert('Insertion réussie !');
+                            popuModal.classList.add('hidden');
+                        } else {
+                            alert('Erreur : ' + (result.error || 'Insertion échouée'));
+                        }
+                    })
+                    .catch(error => {
+                        alert('Erreur réseau : ' + error);
+                    });
+                });
             }
         });
     </script>

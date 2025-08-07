@@ -9,9 +9,10 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 
-// Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup Vente'])) {
-    header("Location: Acess_Denied");    exit();
+// Allow access only for 'Admin', 'Developer', and 'Comptable'
+if (!isset($_SESSION['Role']) || !in_array($_SESSION['Role'], ['Admin', 'Developer', 'Comptable'])) {
+  header("Location: Acess_Denied");
+  exit();
 }
 
 

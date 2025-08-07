@@ -10,9 +10,12 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup Vente'])) {
-    header("Location: Acess_Denied");    exit();
-}
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup Vente'])) {
+//     header("Location: Acess_Denied");    exit();
+// }
+$page_identifier = 'bank';
+ 
+require_once 'check_permission.php';
 
 
 // Include database connection

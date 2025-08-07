@@ -9,10 +9,14 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable','Sup Achat'])) {
-    header("Location: Acess_Denied");    exit();
-}
+// // Restrict access for 'vente' and 'achat'
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable','Sup Achat'])) {
+//     header("Location: Acess_Denied");    exit();
+// }
+$page_identifier = 'Quota';
+
+require_once 'check_permission.php';
+
 
 ?>
 <!DOCTYPE html>
@@ -30,6 +34,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable','Sup Ac
     <link rel="stylesheet" href="product.css">
     <link rel="stylesheet" href="prdct.css">
     <script src="theme.js"></script>
+            <script src="api_config.js"></script>
 
 
  
@@ -350,7 +355,7 @@ let selectedProductName = null; // Track selected product
 // Load product quota data
 async function loadQuotaProducts() {
     try {
-        const response = await fetch('http://192.168.1.94:5000/quota-product');
+        const response = await fetch(API_CONFIG.getApiUrl('/quota-product'));
         const data = await response.json();
         if (Array.isArray(data)) {
             originalData = data;
@@ -449,7 +454,7 @@ function sortTable(column) {
 // Load Operator Quota Data
 async function loadOperatorQuotaData(productName) {
     try {
-        const response = await fetch(`http://192.168.1.94:5000/quota-operator?produit=${encodeURIComponent(productName)}`);
+        const response = await fetch(API_CONFIG.getApiUrl(`/quota-operator?produit=${encodeURIComponent(productName)}`));
         const data = await response.json();
         if (Array.isArray(data)) {
             operatorData = data;

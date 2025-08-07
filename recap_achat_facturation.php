@@ -10,9 +10,14 @@ if (!isset($_SESSION['user_id'])) {
 
 
 
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup Vente'])) {
-    header("Location: Acess_Denied");    exit();
-}
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup Vente'])) {
+//     header("Location: Acess_Denied");    exit();
+// }
+
+
+$page_identifier = 'recap_achat_facturation';
+
+require_once 'check_permission.php';
 
 ?>
 
@@ -31,6 +36,7 @@ R Achat Facturation
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <link rel="stylesheet" href="recap_achat.css">
     <script src="theme.js"></script>
+            <script src="api_config.js"></script>
 
   
 </head>
@@ -452,7 +458,7 @@ tables.forEach((table) => makeTableColumnsResizable(table));
   document.getElementById("recap-text").classList.add("hidden");
 
   try {
-    const response = await fetch(`http://192.168.1.94:5000/fetchTotalRecapAchat_fact?start_date=${startDate}&end_date=${endDate}`);
+    const response = await fetch(API_CONFIG.getApiUrl(`/fetchTotalRecapAchat_fact?start_date=${startDate}&end_date=${endDate}`));
 
     if (!response.ok) throw new Error("Network response was not ok");
 
@@ -520,7 +526,7 @@ async function fetchFournisseurRecapAchat() {
     if (!startDate || !endDate) return;
 
     // Construct URL with query parameters
-    const url = `http://192.168.1.94:5000/fetchfourisseurRecapAchat_fact?start_date=${startDate}&end_date=${endDate}&fournisseur=${fournisseur}&product=${product}`;
+    const url = API_CONFIG.getApiUrl(`/fetchfourisseurRecapAchat_fact?start_date=${startDate}&end_date=${endDate}&fournisseur=${fournisseur}&product=${product}`);
 
     try {
         showLoader(); // Show loading animation
@@ -678,7 +684,7 @@ async function fetchProductRecapAchat() {
     if (!startDate || !endDate) return;
 
     // Construct URL with query parameters
-    const url = `http://192.168.1.94:5000/fetchProductRecapAchat_fact?start_date=${startDate}&end_date=${endDate}&fournisseur=${fournisseur}&product=${product}`;
+    const url = API_CONFIG.getApiUrl(`/fetchProductRecapAchat_fact?start_date=${startDate}&end_date=${endDate}&fournisseur=${fournisseur}&product=${product}`);
 
     try {
         showLoader(); // Show loading animation
@@ -838,7 +844,7 @@ document.getElementById("download-recap-product-achat-excel").addEventListener("
     }
 
     // Construct the URL with query parameters
-    const url = new URL("http://192.168.1.94:5000/download-recap-product-achat_facturation-excel");
+    const url = API_CONFIG.getApiUrl('/download-recap-product-achat_facturation-excel');
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
@@ -869,7 +875,7 @@ document.getElementById("download-recap-fournisseur-achat_facturation-excel").ad
     }
 
     // Construct the URL with query parameters
-    const url = new URL("http://192.168.1.94:5000/download-recap-fournisseur-achat_facturation-excel");
+    const url = API_CONFIG.getApiUrl('/download-recap-fournisseur-achat_facturation-excel');
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);

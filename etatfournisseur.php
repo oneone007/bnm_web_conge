@@ -10,10 +10,14 @@ if (!isset($_SESSION['user_id'])) {
 
 
 
-// Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], [ 'Sup Vente'])) {
-    header("Location: Acess_Denied");    exit();
-}
+// // Restrict access for 'vente' and 'achat'
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], [ 'Sup Vente'])) {
+//     header("Location: Acess_Denied");    exit();
+// }
+$page_identifier = 'DETTE_F';
+
+
+require_once 'check_permission.php';
 
 
 
@@ -32,6 +36,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], [ 'Sup Vente'])) {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="theme.js"></script>
+    <script src="api_config.js"></script>
 
     <link rel="stylesheet" href="etatfournisseur.css">
 
@@ -227,7 +232,7 @@ tableBody.innerHTML = `
 </tr>`;
 
     try {
-        const response = await fetch("http://192.168.1.94:5000/etat_fournisseur");
+    const response = await fetch(API_CONFIG.getApiUrl('/etat_fournisseur'));
         if (!response.ok) throw new Error("Network response was not ok");
 
         const data = await response.json();
@@ -294,7 +299,7 @@ async function loadFournisseurData(sortColumn = '', sortOrder = 'desc') {
     </tr>`;
 
     // Fetch data from server
-    const url = `http://192.168.1.94:5000/fetchFournisseurDette`;
+    const url = API_CONFIG.getApiUrl('/fetchFournisseurDette');
     const response = await fetch(url);
     const data = await response.json();
 

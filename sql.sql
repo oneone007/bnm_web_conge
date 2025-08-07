@@ -869,3 +869,8 @@ SELECT
                 AND (c.StatementDATE >= TO_DATE(:date1, 'YYYY-MM-DD')
                 AND c.StatementDATE <= TO_DATE(:date2, 'YYYY-MM-DD'))
                 ORDER BY DateTrx;
+                
+SELECT cb.value,cb.name, cbl.name
+FROM c_bpartner cb
+JOIN c_bpartner_location cbl ON cb.c_bpartner_id = cbl.c_bpartner_id
+WHERE cbl.name LIKE '%Eulma%';

@@ -14,6 +14,7 @@ import mysql.connector
 import schedule
 import time
 from threading import Thread
+import calendar
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -549,6 +550,97 @@ def total_dette():
         return jsonify({"error": "Failed to get total dette"}), 500
 
 
+
+
+def fetch_credit_client_this_month():
+    try:
+        # Get current month date range
+        today = datetime.now()
+        year = today.year
+        month = today.month
+        
+        start_date = f"{year}-{month:02d}-01"
+        last_day = calendar.monthrange(year, month)[1]
+        end_date = f"{year}-{month:02d}-{last_day}"
+        
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+                SELECT 
+                    ROUND(SUM(SoldeFact + SoldeBL), 2) AS credit_client
+                FROM (
+                    SELECT 
+                        bp.c_bpartner_id, 
+                        (
+                            SELECT COALESCE(SUM(invoiceOpen(inv.C_Invoice_ID, 0)), 0) 
+                            FROM C_Invoice inv 
+                            INNER JOIN C_PaymentTerm pt ON inv.C_PaymentTerm_ID = pt.C_PaymentTerm_ID
+                            WHERE bp.c_bpartner_id = inv.c_bpartner_id 
+                            AND paymentTermDueDays(inv.C_PAYMENTTERM_ID, inv.DATEINVOICED, TO_DATE('01/01/3000', 'DD/MM/YYYY')) >= 0
+                            AND inv.docstatus IN ('CO', 'CL') 
+                            AND inv.AD_ORGTRX_ID = inv.ad_org_id 
+                            AND inv.ad_client_id = 1000000
+                            AND inv.C_PaymentTerm_ID != 1000000
+                            
+                            AND (inv.dateinvoiced + pt.netdays) <= TO_DATE(:end_date, 'YYYY-MM-DD')
+                        ) AS SoldeFact,
+                        (
+                            SELECT COALESCE(SUM(invoiceOpen(inv.C_Invoice_ID, 0)), 0) 
+                            FROM C_Invoice inv 
+                            INNER JOIN C_PaymentTerm pt ON inv.C_PaymentTerm_ID = pt.C_PaymentTerm_ID
+                            WHERE bp.c_bpartner_id = inv.c_bpartner_id 
+                            AND paymentTermDueDays(inv.C_PAYMENTTERM_ID, inv.DATEINVOICED, TO_DATE('01/01/3000', 'DD/MM/YYYY')) >= 0
+                            AND inv.docstatus IN ('CO', 'CL') 
+                            AND inv.AD_ORGTRX_ID <> inv.ad_org_id 
+                            AND inv.ad_client_id = 1000000
+                            AND inv.C_PaymentTerm_ID != 1000000
+                           
+                            AND (inv.dateinvoiced + pt.netdays) <= TO_DATE(:end_date, 'YYYY-MM-DD')
+                        ) AS SoldeBL
+                    FROM 
+                        c_bpartner bp 
+                        INNER JOIN C_BPartner_Location bpl ON bp.C_BPartner_id = bpl.C_BPartner_id
+                        INNER JOIN ad_user u ON bp.salesrep_id = u.ad_user_id
+                        LEFT OUTER JOIN AD_User u2 ON u2.AD_User_ID = bp.XX_TempSalesRep_ID
+                        LEFT OUTER JOIN C_SalesRegion sr ON sr.C_SalesRegion_id = bpl.C_SalesRegion_id
+                        LEFT OUTER JOIN C_City sr2 ON sr2.C_City_id = bpl.C_City_id
+                    WHERE 
+                        bp.iscustomer = 'Y' 
+                        AND bp.C_BP_Group_ID IN (1000003, 1000926, 1001330)
+                        AND bp.isactive = 'Y' 
+                        AND bp.NAME not like '%MBN%'
+
+                        AND sr.isactive = 'Y'
+                        AND bp.C_PaymentTerm_ID != 1000000
+                        AND bpl.c_salesregion_id IN (
+                            101, 102, 1000032, 1001776, 1001777, 1001778, 1001779, 1001780, 1001781,
+                            1001782, 1001783, 1001784, 1001785, 1001786, 1001787, 1001788, 1001789,
+                            1001790, 1001791, 1001792, 1001793, 1001794, 1002076, 1002077, 1002078,
+                            1002079, 1002080, 1002176, 1002177, 1002178, 1002179, 1002180, 1002181,
+                            1002283, 1002285, 1002286, 1002287, 1002288
+                        )
+                ) subquery
+            """
+
+            cursor.execute(query, {
+                'end_date': end_date
+            })
+            
+            row = cursor.fetchone()
+            credit_client = row[0] if row else 0.0
+            return {"credit_client": credit_client}
+
+    except Exception as e:
+        logger.error(f"Error in credit client processing: {e}")
+        return {"error": "An error occurred while processing credit client data."}
+
+
+
+
+
+
+
 def fetch_credit_client():
     try:
         with DB_POOL.acquire() as connection:
@@ -840,7 +932,7 @@ def run_scheduler():
         """Monthly job to fetch credit client data and store in recouvrement table"""
         try:
             # Fetch credit client data
-            credit_data = fetch_credit_client()
+            credit_data = fetch_credit_client_this_month()
             if 'error' in credit_data:
                 logger.error(f"Monthly recouvrement job failed: {credit_data['error']}")
                 return

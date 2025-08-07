@@ -1,4 +1,3 @@
-
 import oracledb
 from flask import Flask, jsonify, request, send_file, make_response
 from flask_cors import CORS
@@ -35,25 +34,28 @@ logger = logging.getLogger(__name__)
 DB_POOL = oracledb.create_pool(
     user="compiere",
     password="compiere",
-    dsn="192.168.1.213/compiere",
+    dsn="192.168.1.241/compiere",
     min=2,
     max=10,
     increment=1
 )
 
-# Email sending utility
 def send_email(subject, body, to_email,
-               from_email='benmalek.abderrahmane@bnmparapharm.com',
-               from_password='********',
+               from_email='inventory.system.bnm@bnmparapharm.com',
+               from_password='bnmparapharminv',
                smtp_server='mail.bnmparapharm.com',
                smtp_port=465):
-    """Send an email using your company SMTP server."""
+    """Send an email using your company SMTP server and ensure it appears in Sent folder."""
     try:
+        # Create message container
         msg = MIMEMultipart()
         msg['From'] = from_email
         msg['To'] = to_email
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain'))
+        
+        # Add a copy to the Sent folder by CC'ing yourself
+        msg['Cc'] = from_email
 
         # Use SSL if port 465, else TLS
         if smtp_port == 465:
@@ -68,16 +70,22 @@ def send_email(subject, body, to_email,
         if from_password is None:
             logger.error("No password provided for email sending.")
             raise Exception("No password provided for email sending.")
+            
         server.login(from_email, from_password)
         logger.info(f"Logged in as {from_email}, sending email to {to_email}...")
-        server.send_message(msg)
+        
+        # Send to both recipient and your own address (for Sent folder)
+        server.sendmail(from_email, [to_email, from_email], msg.as_string())
         server.quit()
+        
         logger.info(f"Email sent successfully to {to_email} with subject '{subject}'")
         return {"success": True, "message": "Email sent successfully"}
     except Exception as e:
         logger.error(f"Failed to send email to {to_email}: {e}")
         return {"success": False, "error": str(e)}
+    
 
+    
 # MySQL connection for bank data
 def get_localdb_connection():
     try:
@@ -126,7 +134,7 @@ def setup_inventory_tables():
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci
         """
         
-        # Create inventory_items table
+        # Create inventory_items table (add m_attributesetinstance_id INT DEFAULT NULL)
         create_inventory_items_table = """
         CREATE TABLE IF NOT EXISTS inventory_items (
             id INT(11) NOT NULL AUTO_INCREMENT,
@@ -135,6 +143,7 @@ def setup_inventory_tables():
             quantity INT(11) NOT NULL,
             date DATE DEFAULT NULL,
             lot VARCHAR(100) DEFAULT NULL,
+            m_attributesetinstance_id INT DEFAULT NULL,
             ppa DECIMAL(10,2) DEFAULT 0.00 COMMENT 'Prix Produit Achat (Purchase Price)',
             qty_dispo INT(11) DEFAULT 0 COMMENT 'Quantity Available',
             type ENUM('entry','sortie') NOT NULL DEFAULT 'entry',
@@ -169,6 +178,20 @@ def setup_inventory_tables():
             else:
                 logger.warning(f"Could not add casse column: {e}")
         
+        # Add m_attributesetinstance_id column if it doesn't exist
+        try:
+            alter_maid_query = """
+                ALTER TABLE inventory_items 
+                ADD COLUMN m_attributesetinstance_id INT DEFAULT NULL
+            """
+            cursor.execute(alter_maid_query)
+            logger.info("Added m_attributesetinstance_id column to inventory_items table")
+        except mysql.connector.Error as e:
+            if "Duplicate column name" in str(e):
+                logger.info("m_attributesetinstance_id column already exists")
+            else:
+                logger.warning(f"Could not add m_attributesetinstance_id column: {e}")
+
         connection.commit()
         
         logger.info("Inventory tables created/verified successfully")
@@ -222,8 +245,8 @@ def save_inventory_data(data):
         # Insert items into inventory_items table
         item_query = """
             INSERT INTO inventory_items 
-            (inventory_id, product_name, quantity, date, lot, ppa, qty_dispo, type, is_manual_entry) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            (inventory_id, product_name, quantity, date, lot, m_attributesetinstance_id, ppa, qty_dispo, type, is_manual_entry) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         
         item_count = 0
@@ -231,32 +254,34 @@ def save_inventory_data(data):
             # Validate item data
             if not item.get('product') or not item.get('qty') or not item.get('type'):
                 continue
-            
+
             product_name = item.get('product', '').strip()
             quantity = int(item.get('qty', 0))
             date = item.get('date') if item.get('date') else None
             lot = item.get('lot', '').strip() if item.get('lot') else None
+            m_attributesetinstance_id = item.get('m_attributesetinstance_id', None)
             ppa = float(item.get('ppa', 0.0))
             qty_dispo = int(item.get('qty_dispo', 0))
             item_type = item.get('type', '').strip()
             is_manual_entry = bool(item.get('is_manual_entry', False))
-            
+
             # Skip invalid items
             if quantity <= 0 or not product_name or item_type not in ['entry', 'sortie']:
                 continue
-            
+
             cursor.execute(item_query, (
                 inventory_id,
                 product_name,
                 quantity,
                 date,
                 lot,
+                m_attributesetinstance_id,
                 ppa,
                 qty_dispo,
                 item_type,
                 is_manual_entry
             ))
-            
+
             item_count += 1
         
         if item_count == 0:
@@ -536,11 +561,17 @@ def save_inventory_route():
             body = f"Inventory creation failed. Error: {result.get('error','Unknown error')}"
 
         # Send email after saving inventory (regardless of success)
-        email_result = send_email(
+        email_result_1 = send_email(
             subject="INVENTORY CREATED",
             body=body,
             to_email="benmalek.abderrahmane@bnmparapharm.com"
         )
+        email_result_2 = send_email(
+            subject="INVENTORY CREATED",
+            body=body,
+            to_email="mahroug.nazim@bnmparapharm.com"
+        )
+        email_result = {"benmalek": email_result_1, "bedjghit": email_result_2}
         logger.info(f"Email send result: {email_result}")
 
         if result['success']:
@@ -673,7 +704,7 @@ def listproduct_inv():
     """
     Returns list of products with both ID and name for inventory management
     """
-    try:
+    try: 
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
             query = """
@@ -851,6 +882,109 @@ def fetch_inventory_products_data(product_id, category="all"):
         return {"error": "An error occurred while fetching inventory products."}
 
  
+
+@app.route('/inventory-products-updated', methods=['GET'])
+def inventory_products_updated():
+    try:
+        product_id = request.args.get("product_id", None)
+        category = request.args.get("category", "all")  # Default to "all" if no category provided
+        
+        if not product_id:
+            return jsonify({"error": "Product ID is required"}), 400
+
+        data = fetch_inventory_products_data_updated(product_id, category)
+        return jsonify(data)
+
+    except Exception as e:
+        logger.error(f"Error fetching updated inventory products: {e}")
+        return jsonify({"error": "Failed to fetch updated inventory products"}), 500
+    
+
+
+
+def fetch_inventory_products_data_updated(product_id, category="all"):
+    """
+    Fetch inventory product data where:
+    - ANY of these is non-zero: QTY_ONHAND, QTY_RESERVED, QTY_DISPO, QTYORDERED
+    - AND GUARANTEEDATE is NOT NULL
+    """
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            
+            # Define locator IDs for different categories
+            locator_groups = {
+                "all": "(1001135, 1000614, 1001128, 1001136, 1001020, 1000314, 1000210, 1000211, 1000109, 1000209, 1000213, 1000214, 1000414, 1000817, 1001129)",
+                "preparation": "(1001135, 1000614, 1001128, 1001136, 1001020)",
+                "tempo": "(1000314, 1000210, 1000211, 1000109, 1000209, 1000213, 1000214, 1000414, 1000817, 1001129)"
+            }
+            
+            locator_list = locator_groups.get(category, locator_groups["all"])
+            
+            logger.info(f"Fetching inventory data for product_id: {product_id}, category: {category}")
+            
+            query = f"""
+            SELECT
+                p.name AS PRODUCT,
+                (SELECT lot FROM m_attributesetinstance WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id) AS LOT,
+                (SELECT valuenumber FROM m_attributeinstance WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id AND m_attribute_id = 1000503) AS PPA,
+                (mst.qtyonhand - mst.QTYRESERVED) AS QTY_DISPO,
+                mst.m_attributesetinstance_id as M_ATTRIBUTESSETINSTANCE_ID,
+                mst.qtyonhand AS QTY_ONHAND,
+                mst.QTYRESERVED AS QTY_RESERVED,
+                mst.QTYORDERED AS QTYORDERED,
+                mats.guaranteedate AS GUARANTEEDATE,
+                ROUND(
+                    (
+                        (
+                            (SELECT valuenumber FROM m_attributeinstance WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id AND m_attribute_id = 1000501)
+                            - 
+                            ((SELECT valuenumber FROM m_attributeinstance WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id AND m_attribute_id = 1000501) 
+                             * 
+                             (SELECT NVL(valuenumber, 0) FROM m_attributeinstance WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id AND m_attribute_id = 1001009) / 100)
+                        ) 
+                        / 
+                        (1 + (SELECT NVL(valuenumber, 0) FROM m_attributeinstance WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id AND m_attribute_id = 1000808) / 100)
+                    ), 2
+                ) AS P_REVIENT,
+                (
+                    SELECT mt.movementtype 
+                    FROM m_transaction mt 
+                    WHERE mt.m_product_id = mst.m_product_id 
+                    AND mt.m_attributesetinstance_id = mst.m_attributesetinstance_id 
+                    AND mt.m_locator_id = mst.m_locator_id
+                    ORDER BY mt.created DESC 
+                    FETCH FIRST 1 ROW ONLY
+                ) AS LTS
+            FROM
+                m_product p
+                INNER JOIN m_storage mst ON p.m_product_id = mst.m_product_id
+                INNER JOIN m_attributesetinstance mats ON mst.m_attributesetinstance_id = mats.m_attributesetinstance_id
+            WHERE
+                p.m_product_id = :product_id
+                AND mst.m_locator_id IN {locator_list}
+                AND (
+                    mst.qtyonhand != 0 
+                    OR mst.QTYRESERVED != 0 
+                    OR (mst.qtyonhand - mst.QTYRESERVED) != 0
+                    OR mst.QTYORDERED != 0
+                )
+                AND mats.guaranteedate IS NOT NULL  -- NEW: Exclude NULL guarantee dates
+            ORDER BY
+                p.name, mats.guaranteedate
+            """
+            
+            cursor.execute(query, {"product_id": product_id})
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+
+            return data
+
+    except Exception as e:
+        logger.error(f"Error fetching inventory products: {e}")
+        return {"error": "An error occurred while fetching inventory products."}
+
 def fetch_product_details_data(product_name):
     """
     Fetch detailed product information similar to the marge data structure
@@ -1166,7 +1300,8 @@ def get_confirmed_casse_count():
 def send_saisie_mail_route():
     recipients = [
         "guend.hamza@bnmparapharm.com",
-        "seifeddine.nemdili@bnmparapharm.com"
+        "seifeddine.nemdili@bnmparapharm.com",
+        "belhanachi.abdenour@bnmparapharm.com"
     ]
     subject = "Inventory system notification: Please do the inventory and mark it as done"
     body = (
@@ -1208,8 +1343,358 @@ def send_info_mail_route():
     return jsonify({"results": results}), 200 if all(r["success"] for r in results) else 500
 
 
+@app.route('/inventory/insert_inventory', methods=['POST', 'OPTIONS'])
+def insert_inventory():
+    if request.method == 'OPTIONS':
+        return jsonify({'status': 'ok'}), 200
+    
+    try:
+        # Debug the raw request data
+        print("Raw request data:", request.data)
+        
+        data = request.get_json()
+        print("Parsed JSON data:", data)
+        
+        # Handle both single item and items array
+        if 'items' in data:
+            # New format with items array
+            items = data['items']
+        else:
+            # Old format - single item, wrap in array
+            items = [data]
+        print("Items extracted:", items)
+        
+        if not items:
+            print("No items found in request")
+            return jsonify({"error": "No items provided"}), 400
 
+        if not items:
+            return jsonify({"error": "No items provided"}), 400
 
+        # Validate all items have required fields
+        for item in items:
+            if not all(key in item for key in ['product_name', 'quantity']):
+                return jsonify({"error": "Missing required fields in one or more items"}), 400
+
+        
+        print("------------------------------------------.", item['attributes'].items())
+        
+        
+        # Get connection from pool
+        connection = DB_POOL.acquire()
+        cursor = connection.cursor()
+
+        # Begin transaction
+        connection.autocommit = False
+
+        # 1. Insert inventory header (only once per request)
+        cursor.execute("""
+            INSERT INTO m_inventory (
+                m_inventory_id, ad_client_id, ad_org_id, isactive, 
+                created, createdby, updated, updatedby,
+                documentno, description, m_warehouse_id, movementdate,
+                posted, PROCESSED, PROCESSING, updateqty, generatelist,
+                m_perpetualinv_id, ad_orgtrx_id, c_project_id, c_campaign_id,
+                c_activity_id, user1_id, user2_id, isapproved,
+                docstatus, docaction, approvalamt, c_doctype_id,
+                c_bpartner_id, isarchived, xx_inversercompta, dateacct, barcodescanner
+            ) SELECT 
+                (select NVL(MAX(m_inventory_id),0) + 1 from m_inventory where ad_client_id = 1000000),
+                1000000, 1000000, 'Y', 
+                sysdate, 100, sysdate, 100,
+                (SELECT Prefix || CurrentNext || Suffix 
+                 FROM AD_Sequence s
+                 JOIN C_DocType dt ON s.AD_Sequence_ID = dt.DocNoSequence_ID
+                 WHERE dt.C_DocType_ID = 1000021),
+                'Inventory for product adjustment', 
+                1000000, sysdate, 
+                'N', 'N', 'N', 'N', 'N', 
+                null, null, null, null, 
+                null, null, null, 'N', 
+                'DR', 'CO', 0.00, 1000021,
+                null, 'N', 'N', null, null
+            FROM dual
+        """)
+
+        # Update document sequence
+        cursor.execute("""
+            UPDATE AD_Sequence 
+            SET CurrentNext = CurrentNext + 1
+            WHERE AD_Sequence_ID = (
+                SELECT DocNoSequence_ID 
+                FROM C_DocType 
+                WHERE C_DocType_ID = 1000021
+                AND AD_Client_ID = 1000000
+            )
+        """)
+
+        # Get the newly created inventory ID
+        cursor.execute("SELECT MAX(m_inventory_id) FROM m_inventory WHERE ad_client_id = 1000000")
+        new_inventory_id = cursor.fetchone()[0]
+
+        # Attribute mapping
+        attribute_map = {
+            "Prix Achat": 1000501,
+            "Colisage": 1000507,
+            "PPA": 1000503,
+            "Prix Vente": 1000502,
+            "Prix Revient": 1000504,
+            "Fournisseur": 1000508,
+            "Bonus": 1000808,
+            "Bonus Vente": 1000908,
+            "Remise Supp": 1001009,
+            "Remise Vente": 1001408
+        }
+
+        line_number = 10  # Starting line number
+        inserted_items = []
+        
+        for item in items:
+            # Get product ID for each item
+            cursor.execute("""
+                SELECT M_Product_ID 
+                FROM M_Product 
+                WHERE Name = :name 
+                AND AD_Client_ID = 1000000
+                AND AD_Org_ID = 1000000
+                AND IsActive='Y'
+            """, {'name': item['product_name']})
+            product_row = cursor.fetchone()
+           
+            if not product_row:
+                raise Exception(f"Product not found: {item['product_name']}")
+            
+            product_id = product_row[0]
+            m_attributesetinstance_id = item.get('m_attributesetinstance_id')
+            
+            # Handle attributes if needed
+            if not m_attributesetinstance_id and ('lot' in item or 'date_expiration' in item or 'attributes' in item):
+                guaranteedate = None
+                if 'date_expiration' in item:
+                    try:
+                        guaranteedate = datetime.strptime(item['date_expiration'], '%d/%m/%y')
+                    except ValueError:
+                        continue  # or handle error
+                
+                cursor.execute("""
+                    INSERT INTO M_ATTRIBUTESETINSTANCE (
+                        m_attributesetinstance_id, ad_client_id, ad_org_id, isactive, 
+                        created, createdby, updated, updatedby,
+                        m_attributeset_id, serno, lot, guaranteedate, 
+                        description, m_lot_id, motif_activ_instance
+                    ) VALUES (
+                        (SELECT NVL(MAX(m_attributesetinstance_id),0) + 1 
+                         FROM M_ATTRIBUTESETINSTANCE 
+                         WHERE ad_client_id = 1000000),
+                        1000000, 1000000, 'Y', 
+                        SYSDATE, 100, SYSDATE, 100,
+                        1000405, NULL, :lot, :guaranteedate, 
+                        NULL, NULL, NULL
+                    )
+                """, {
+                    'lot': item.get('lot'),
+                    'guaranteedate': guaranteedate
+                })
+
+                cursor.execute("SELECT MAX(m_attributesetinstance_id) FROM M_ATTRIBUTESETINSTANCE WHERE ad_client_id = 1000000")
+                m_attributesetinstance_id = cursor.fetchone()[0]
+
+                if 'attributes' in item and isinstance(item['attributes'], dict):
+                    for attr_name, attr_value in item['attributes'].items():
+                        if attr_name in attribute_map:
+                            try:
+                                cursor.execute("""
+                                    INSERT INTO M_ATTRIBUTEINSTANCE (
+                                        m_attributesetinstance_id, m_attribute_id, ad_client_id, ad_org_id, 
+                                        isactive, created, createdby, updated, updatedby, 
+                                        m_attributevalue_id, value, valuenumber, valuedate
+                                    ) VALUES (
+                                        :asi_id, :m_attribute_id, 1000000, 1000000, 'Y', 
+                                        SYSDATE, 100, SYSDATE, 100,
+                                        NULL, :value, :valuenumber, NULL
+                                    )
+                                """, {
+                                    'asi_id': m_attributesetinstance_id,
+                                    'm_attribute_id': attribute_map[attr_name],
+                                    'value': str(attr_value),
+                                    'valuenumber': float(attr_value)
+                                })
+                            except Exception as e:
+                                logger.error(f"Error inserting attribute {attr_name}: {str(e)}")
+                                continue
+
+            # Insert inventory line
+            cursor.execute("""
+                INSERT INTO m_inventoryline (
+                    m_inventoryline_id, ad_client_id, ad_org_id, isactive, 
+                    created, createdby, updated, updatedby, 
+                    m_inventory_id, m_locator_id, m_product_id, line, 
+                    qtybook, qtycount, description, m_attributesetinstance_id, 
+                    c_charge_id, inventorytype, processed, qtyinternaluse, isinternaluse,
+                    ad_orgtrx_id, c_activity_id, qtyentered, c_uom_id, 
+                    priceactual, a_asset_id, zchargechange, xx_inverserecriturecompta
+                ) VALUES (
+                    (select NVL(MAX(m_inventoryline_id),0) + 1 from m_inventoryline where ad_client_id = 1000000),
+                    1000000, 1000000, 'Y', 
+                    sysdate, 100, sysdate, 100,
+                    :new_inventory_id, 1000614, :product_id, :line_number, 
+                    :qty_dispo, :quantity, :description, :m_attributesetinstance_id, 
+                    1000028, 'C', 'N', 0, 
+                    'N', null, null, :quantity, 100,
+                    null, null, 'N', 'N'
+                )
+            """, {
+                'new_inventory_id': new_inventory_id,
+                'product_id': product_id,
+                'line_number': line_number,
+                'quantity': item['quantity'],
+                'qty_dispo': item.get('qty_dispo', 0),
+                'm_attributesetinstance_id': m_attributesetinstance_id,
+                'description': item.get('description', 'Adjustment for product')
+            })
+            
+            line_number += 10
+            inserted_items.append({
+                'product_id': product_id,
+                'product_name': item['product_name'],
+                'quantity': item['quantity']
+            })
+
+        
+
+        # 7. Insert inventory line MA
+        # 5. Get the new inventory line ID
+        cursor.execute("SELECT MAX(m_inventoryline_id) FROM m_inventoryline where ad_client_id = 1000000")
+        inventoryline_id = cursor.fetchone()[0]
+
+        # 6. Handle M_INVENTORYLINEMA carefully to avoid duplicates
+        if m_attributesetinstance_id:
+            # First check if the record already exists
+            cursor.execute("""
+                SELECT COUNT(*) FROM M_INVENTORYLINEMA
+                WHERE m_inventoryline_id = :line_id
+                AND m_attributesetinstance_id = :asi_id
+            """, 
+                line_id =  inventoryline_id,
+                asi_id = m_attributesetinstance_id
+            )
+            exists = cursor.fetchone()[0] > 0
+            
+            if not exists:
+                cursor.execute("""
+                    INSERT INTO M_InventoryLineMA (
+                m_inventoryline_id, m_attributesetinstance_id,
+                ad_client_id, ad_org_id, isactive, created,
+                createdby, updated, updatedby, movementqty
+            )
+            SELECT 
+                il.m_inventoryline_id,
+                ms.m_attributesetinstance_id,
+                il.ad_client_id,
+                il.ad_org_id,
+                'Y',
+                il.created,
+                il.createdby,
+                il.updated,
+                il.updatedby,
+                ms.qtyonhand
+            FROM m_inventoryline il
+            JOIN m_inventory i ON il.m_inventory_id = i.m_inventory_id
+            JOIN m_storage ms ON (il.m_product_id = ms.m_product_id)
+            WHERE i.m_inventory_id = :new_inventory_id
+            AND il.m_attributesetinstance_id IS NOT NULL
+            AND i.ad_client_id = 1000000
+            AND ms.qtyonhand > 0
+                """,{
+                    'new_inventory_id': new_inventory_id
+                })
+
+        # 8. Update inventory status
+        cursor.execute(f"""
+            UPDATE m_inventory 
+            SET processed = 'Y', isapproved = 'Y', docstatus = 'CO', docaction = 'CL' 
+            WHERE m_inventory_id = :new_inventory_id
+        """, new_inventory_id=new_inventory_id)
+
+        # 9. Update inventory line status
+        cursor.execute(f"""
+            UPDATE m_inventoryline 
+            SET processed = 'Y' 
+            WHERE m_inventory_id = :new_inventory_id
+        """, new_inventory_id=new_inventory_id)
+
+        # 10. Update storage
+        cursor.execute(f"""
+            MERGE INTO m_storage s
+            USING (
+                SELECT 
+                    il.m_product_id,
+                    il.m_attributesetinstance_id,
+                    il.qtycount
+                FROM m_inventoryline il
+                WHERE il.m_inventory_id = :new_inventory_id
+            ) il
+            ON (
+                s.m_product_id = il.m_product_id
+                AND s.m_locator_id = 1000614
+                AND (s.m_attributesetinstance_id = il.m_attributesetinstance_id
+                     OR (s.m_attributesetinstance_id IS NULL AND il.m_attributesetinstance_id IS NULL))
+            )
+            WHEN MATCHED THEN
+            UPDATE SET s.qtyonhand = il.qtycount
+        """, new_inventory_id=new_inventory_id)
+
+        # 11. Insert transaction records
+        cursor.execute(f"""
+            INSERT INTO M_Transaction (
+                m_transaction_id, ad_client_id, ad_org_id, isactive, 
+                created, createdby, updated, updatedby, 
+                movementtype, m_locator_id, m_product_id, 
+                movementdate, movementqty, m_inventoryline_id, 
+                m_inoutline_id, m_productionline_id, c_projectissue_id,
+                m_attributesetinstance_id, m_warehousetask_id, 
+                m_workordertransactionline_id, z_production_inline_id, 
+                z_production_outline_id
+            )
+            SELECT 
+                (SELECT NVL(MAX(m_transaction_id),0) + 1 FROM m_transaction WHERE ad_client_id = 1000000) + ROWNUM,
+                1000000, 1000000, 'Y',
+                sysdate, 100, sysdate, 100,
+                'I+',
+                ml.m_locator_id,
+                ml.m_product_id,
+                sysdate,
+                ml.qtycount,
+                ml.m_inventoryline_id,
+                null, null, null,
+                ml.m_attributesetinstance_id,
+                null, null, null, null
+            FROM m_inventoryline ml
+            JOIN m_inventory i ON ml.m_inventory_id = i.m_inventory_id
+            WHERE i.m_inventory_id = :new_inventory_id
+        """, new_inventory_id=new_inventory_id)
+
+        # Commit transaction
+        connection.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Inventory inserted successfully",
+            "inventory_id": new_inventory_id,
+            "product_id": product_id
+        })
+
+    except Exception as e:
+        # Rollback in case of error
+        if 'connection' in locals():
+            connection.rollback()
+        logger.error(f"Error inserting inventory: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        # Release connection back to pool
+        if 'connection' in locals():
+            DB_POOL.release(connection)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5003)

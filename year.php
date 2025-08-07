@@ -10,9 +10,15 @@ if (!isset($_SESSION['user_id'])) {
 
 
 // Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
-    header("Location: Acess_Denied");    exit();
-}
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
+//     header("Location: Acess_Denied");    exit();
+// }
+
+
+$page_identifier = 'Annual_Recap_V';
+
+require_once 'check_permission.php';
+
 ?>
 
 <!DOCTYPE html>
@@ -40,6 +46,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
 
 <link rel="stylesheet" href="year.css">
     <script src="theme.js"></script>
+    <script src="api_config.js"></script>
 
 
 </head>
@@ -355,11 +362,11 @@ const elements = {
 
 // Constants
 const API_ENDPOINTS = {
-  fetchData: 'http://192.168.1.94:5000/fetchFournisseurDataByYear',
-  listFournisseur: 'http://192.168.1.94:5000/listfournisseur',
-  listProduct: 'http://192.168.1.94:5000/listproduct', // Added product endpoint
-  listClient: 'http://192.168.1.94:5000/listclient',
-  listZone: 'http://192.168.1.94:5000/listregion'
+  fetchData: API_CONFIG.getApiUrl('/fetchFournisseurDataByYear'),
+  listFournisseur: API_CONFIG.getApiUrl('/listfournisseur'),
+  listProduct: API_CONFIG.getApiUrl('/listproduct'), // Added product endpoint
+  listClient: API_CONFIG.getApiUrl('/listclient'),
+  listZone: API_CONFIG.getApiUrl('/listregion')
 };
 const monthNames = {
   '01': 'Janvier', '02': 'Février', '03': 'Mars', '04': 'Avril',

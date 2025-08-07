@@ -8,10 +8,16 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente', 'Comptable'])) {
-    header("Location: Acess_Denied");    
-    exit();
-}
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente', 'Comptable'])) {
+//     header("Location: Acess_Denied");    
+//     exit();
+// }
+
+
+$page_identifier = 'rot_men_achat';
+
+require_once 'check_permission.php';
+
 ?>
 
 <!DOCTYPE html>
@@ -24,6 +30,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente', 'Compt
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="recap_achat.css">
     <script src="theme.js"></script>
+    <script src="api_config.js"></script>
     <style>
         .year-tab {
             padding: 8px 16px;
@@ -405,11 +412,11 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente', 'Compt
 
         // Constants
         const API_ENDPOINTS = {
-            download_pdf: 'http://192.168.1.94:5003/rotation_monthly_achat_pdf',
-            fetchProductData: 'http://192.168.1.94:5003/rotation_monthly_achat',
-            listFournisseur: 'http://192.168.1.94:5003/listfournisseur',
-            listProduct: 'http://192.168.1.94:5003/fetch-rotation-product-data',
-            fetchSuppliersByProduct: 'http://192.168.1.94:5003/fetchSuppliersByProduct'
+            download_pdf: API_CONFIG.getApiUrl('/rotation_monthly_achat_pdf'),
+            fetchProductData: API_CONFIG.getApiUrl('/rotation_monthly_achat'),
+            listFournisseur: API_CONFIG.getApiUrl('/listfournisseur'),
+            listProduct: API_CONFIG.getApiUrl('/fetch-rotation-product-data'),
+            fetchSuppliersByProduct: API_CONFIG.getApiUrl('/fetchSuppliersByProduct')
         };
 
         // Store product mapping (name -> id)

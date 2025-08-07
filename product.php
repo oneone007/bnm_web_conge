@@ -9,10 +9,14 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 
-// Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
-    header("Location: Acess_Denied");    exit();
-}
+// // Restrict access for 'vente' and 'achat'
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
+//     header("Location: Acess_Denied");    exit();
+// }
+
+$page_identifier = 'Product';
+
+require_once 'check_permission.php';
 
 
 
@@ -29,6 +33,8 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="product.css">
     <link rel="stylesheet" href="prdct.css">
+        <script src="api_config.js"></script>
+
     <script>
         // Check and apply theme on page load
         const isDarkMode = localStorage.getItem('theme') === 'dark';
@@ -611,7 +617,7 @@ var loadingAnimation = lottie.loadAnimation({
 
     async function fetchRemiseData() {
         try {
-            const response = await fetch('http://192.168.1.94:5000/fetch-remise-data');
+            const response = await fetch(API_CONFIG.getApiUrl('/fetch-remise-data'));
             if (!response.ok) throw new Error('Network response was not ok');
 
             remiseData = await response.json();
@@ -854,18 +860,18 @@ document.getElementById("downloadExcel").addEventListener("click", function () {
     let product = document.getElementById("search-product").value;
     let marge = document.getElementById("margeInput").value;
 
-    let url = `http://192.168.1.94:5000/download-marge-excel?fournisseur=${encodeURIComponent(fournisseur)}&product=${encodeURIComponent(product)}&marge=${encodeURIComponent(marge)}`;
+    let url = API_CONFIG.getApiUrl(`/download-marge-excel?fournisseur=${encodeURIComponent(fournisseur)}&product=${encodeURIComponent(product)}&marge=${encodeURIComponent(marge)}`);
     window.open(url, "_blank");
 });
 
 document.getElementById("downloadExcel_REMISE").addEventListener("click", function () {
-    window.open("http://192.168.1.94:5000/download-remise-excel", "_blank"); 
+    window.open(API_CONFIG.getApiUrl('/download-remise-excel'), "_blank"); 
 });
 document.getElementById("downloadExcel_BONUS").addEventListener("click", function () {
-    window.open("http://192.168.1.94:5000/download-bonus-excel", "_blank"); 
+    window.open(API_CONFIG.getApiUrl('/download-bonus-excel'), "_blank"); 
 });
 document.getElementById("downloadExcel_RESERVE").addEventListener("click", function () {
-    window.open("http://192.168.1.94:5000/download-reserved-excel", "_blank"); 
+    window.open(API_CONFIG.getApiUrl('/download-reserved-excel'), "_blank"); 
 });
 
 
@@ -1064,7 +1070,7 @@ function generateChart() {
 // Fetch data function
 async function fetchData() {
     try {
-        const response = await fetch('http://192.168.1.94:5000/fetch-data');
+        const response = await fetch(API_CONFIG.getApiUrl('/fetch-data'));
         if (!response.ok) throw new Error('Network response was not ok');
 
         allData = await response.json();
@@ -1294,7 +1300,7 @@ let sortDirectionRemise = 'asc';
 
 async function fetchRemiseData() {
     try {
-        const response = await fetch('http://192.168.1.94:5000/fetch-remise-data');
+        const response = await fetch(API_CONFIG.getApiUrl('/fetch-remise-data'));
         if (!response.ok) throw new Error('Network response was not ok');
 
         remiseData = await response.json();
@@ -1438,7 +1444,7 @@ let sortDirectionBonus = 'asc';
 // Fetch data for the bonus table
 async function fetchBonusData() {
     try {
-        const response = await fetch('http://192.168.1.94:5000/fetch-bonus-data');
+        const response = await fetch(API_CONFIG.getApiUrl('/fetch-bonus-data'));
         if (!response.ok) throw new Error('Network response was not ok');
 
         bonusData = await response.json();
@@ -1577,7 +1583,7 @@ const rowsPerPageReserved = 10;
 // Fetch data for the reserved table
 async function fetchReservedData() {
     try {
-        const response = await fetch('http://192.168.1.94:5000/fetch-reserved-data');
+        const response = await fetch(API_CONFIG.getApiUrl('/fetch-reserved-data'));
         if (!response.ok) throw new Error('Network response was not ok');
 
         reservedData = await response.json();

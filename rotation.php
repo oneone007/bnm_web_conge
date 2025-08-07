@@ -10,9 +10,15 @@ if (!isset($_SESSION['user_id'])) {
 
 
 // Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
-    header("Location: Acess_Denied");    exit();
-}
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
+//     header("Location: Acess_Denied");    exit();
+// }
+
+$page_identifier = 'Rotation';
+
+
+require_once 'check_permission.php';
+
 
 ?>
 

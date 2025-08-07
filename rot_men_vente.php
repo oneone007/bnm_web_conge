@@ -8,10 +8,14 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
-    header("Location: Acess_Denied");    
-    exit();
-}
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
+//     header("Location: Acess_Denied");    
+//     exit();
+// }
+$page_identifier = 'rot_men_vente';
+
+require_once 'check_permission.php';
+
 ?>
 
 <!DOCTYPE html>
@@ -24,6 +28,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="recap_achat.css">
     <script src="theme.js"></script>
+    <script src="api_config.js"></script>
     <style>
         .year-tab {
             padding: 8px 16px;
@@ -863,14 +868,14 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
 
         // Constants
         const API_ENDPOINTS = {
-            download_pdf: 'http://192.168.1.94:5003/rotation_monthly_vente_pdf',
-            fetchProductData: 'http://192.168.1.94:5003/rot_mont_vente',
-            listFournisseur: 'http://192.168.1.94:5003/listfournisseur',
-            listProduct: 'http://192.168.1.94:5003/fetch-rotation-product-data',
-            fetchSuppliersByProduct: 'http://192.168.1.94:5003/fetchSuppliersByProduct',
-            listRegion: 'http://192.168.1.94:5003/listregion',
-            listClient: 'http://192.168.1.94:5003/listclient',
-            fetchZoneClients: 'http://192.168.1.94:5003/fetchZoneClients'
+            download_pdf: API_CONFIG.getApiUrl('/rotation_monthly_vente_pdf'),
+            fetchProductData: API_CONFIG.getApiUrl('/rot_mont_vente'),
+            listFournisseur: API_CONFIG.getApiUrl('/listfournisseur'),
+            listProduct: API_CONFIG.getApiUrl('/fetch-rotation-product-data'),
+            fetchSuppliersByProduct: API_CONFIG.getApiUrl('/fetchSuppliersByProduct'),
+            listRegion: API_CONFIG.getApiUrl('/listregion'),
+            listClient: API_CONFIG.getApiUrl('/listclient'),
+            fetchZoneClients: API_CONFIG.getApiUrl('/fetchZoneClients')
         };
 
 

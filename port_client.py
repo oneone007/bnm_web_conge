@@ -243,5 +243,64 @@ def get_client_operator():
 
 
 
+def get_client_operator_data2():
+    """
+    Fetch client and operator data from database and group clients by operator
+    Returns a list of dictionaries with operator name and their clients
+    """
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            
+            query = """
+            SELECT DISTINCT cb.name as client, ad.name as operator
+            FROM c_bpartner cb
+            INNER JOIN ad_user ad ON (cb.salesrep_id = ad.ad_user_id)
+            WHERE ad.c_bpartner_id IN (1121780,1122143,1118392,1122144,1119089,1111429,1122761,1122868,1122142,1143361)
+            AND cb.isactive = 'Y'
+            AND cb.ad_org_id = 1000000
+            ORDER BY ad.name, cb.name 
+            """
+
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            
+            # Group clients by operator
+            operator_data = {}
+            for row in rows:
+                operator = row[1].strip()  # Remove extra whitespace
+                client = row[0].strip()    # Remove extra whitespace
+                
+                if operator not in operator_data:
+                    operator_data[operator] = []
+                operator_data[operator].append(client)
+            
+            # Convert to desired output format
+            result = []
+            for operator, clients in operator_data.items():
+                result.append({
+                    "operator": operator,
+                    "clients": clients
+                })
+            
+            return result
+
+    except Exception as e:
+        logger.error(f"Error fetching client-operator data: {e}")
+        return {"error": "An error occurred while fetching client-operator data."}
+
+
+@app.route('/api/client-operator2', methods=['GET'])
+def get_client_operator():
+    """
+    API endpoint to get client-operator data as JSON grouped by operator
+    """
+    try:
+        data = get_client_operator_data2()
+        return jsonify(data)
+    except Exception as e:
+        logger.error(f"Error in client-operator endpoint: {e}")
+        return jsonify({"error": "An error occurred while fetching data."}), 500
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)

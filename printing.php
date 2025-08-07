@@ -7,15 +7,17 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: BNM"); // Redirect to login if not logged in
     exit();
 }
+$page_identifier = 'print';
+
+
+require_once 'check_permission.php';
 
 
 
-
-
-// Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup Vente'])) {
-    header("Location: Acess_Denied");    exit();
-}
+// // Restrict access for 'vente' and 'achat'
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup Vente'])) {
+//     header("Location: Acess_Denied");    exit();
+// }
 
 
 ?>

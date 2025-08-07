@@ -11,10 +11,12 @@ if (!isset($_SESSION['user_id'])) {
 
 
 
+$page_identifier = 'Recap_Achat';
 
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
-    header("Location: Acess_Denied");    exit();
-}
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
+//     header("Location: Acess_Denied");    exit();
+// }
+require_once 'check_permission.php';
 
 
 ?>
@@ -34,6 +36,7 @@ Reacap Achat
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <link rel="stylesheet" href="recap_achat.css">
     <script src="theme.js"></script>
+            <script src="api_config.js"></script>
 
 
 
@@ -48,9 +51,50 @@ Reacap Achat
 
 
 <style>
-    
+    .loading-spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3498db;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 2s linear infinite;
+        margin: 0 auto 10px;
+    }
 
-    </style>
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .table-wrapper {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .table-container {
+        flex: 1;
+        min-width: 300px;
+    }
+
+    #invoice-section .flex {
+        flex-wrap: wrap;
+    }
+
+    #invoice-section .flex-1 {
+        min-width: 400px;
+    }
+
+    @media (max-width: 768px) {
+        #invoice-section .flex {
+            flex-direction: column;
+        }
+        
+        .table-wrapper {
+            flex-direction: column;
+        }
+    }
+</style>
 
 
     <!-- Main Content -->
@@ -282,6 +326,87 @@ Reacap Achat
         </div>
     </div>
 
+    <!-- Invoice Details Section -->
+    <div id="invoice-section" class="hidden mt-8">
+        <!-- Download buttons for Invoice Tables -->
+        <div class="flex gap-4 mb-4 justify-center">
+            <button id="download-invoices-excel" class="button">
+                <img src="assets/excel.png" alt="Excel Icon" class="icon" style="width: 24px; height: 24px;" />
+                <p class="text">
+                    <span style="transition-duration: 100ms">I</span>
+                    <span style="transition-duration: 150ms">n</span>
+                    <span style="transition-duration: 200ms">v</span>
+                    <span style="transition-duration: 250ms">o</span>
+                    <span style="transition-duration: 300ms">i</span>
+                    <span style="transition-duration: 350ms">c</span>
+                    <span style="transition-duration: 400ms">e</span>
+                    <span style="transition-duration: 450ms">s</span>
+                </p>
+            </button>
+            
+            <button id="download-invoice-lines-excel" class="button">
+                <img src="assets/excel.png" alt="Excel Icon" class="icon" style="width: 24px; height: 24px;" />
+                <p class="text">
+                    <span style="transition-duration: 100ms">L</span>
+                    <span style="transition-duration: 150ms">i</span>
+                    <span style="transition-duration: 200ms">n</span>
+                    <span style="transition-duration: 250ms">e</span>
+                    <span style="transition-duration: 300ms">s</span>
+                </p>
+            </button>
+        </div>
+        
+        <div class="flex gap-4">
+            <!-- Invoice Table -->
+            <div class="flex-1 table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
+                <div class="flex justify-between items-center p-4">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">FACTURES - <span id="selected-supplier-name">Supplier</span></h2>
+                    <button id="close-invoice-section" class="text-red-500 hover:text-red-700 font-bold text-xl">×</button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border-collapse text-sm text-left dark:text-white">
+                        <thead>
+                            <tr class="table-header bg-gray-100 dark:bg-gray-700">
+                                <th class="border px-4 py-2 text-gray-900 dark:text-white">Document No</th>
+                                <th class="border px-4 py-2 text-gray-900 dark:text-white">Total</th>
+                                <th class="border px-4 py-2 text-gray-900 dark:text-white">Description</th>
+                                <th class="border px-4 py-2 text-gray-900 dark:text-white">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoice-table-body" class="dark:bg-gray-800">
+                            <!-- Invoice rows will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Invoice Lines Table -->
+            <div class="flex-1 table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
+                <div class="p-4">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">INVOICE LINES - <span id="selected-invoice-number">Select Invoice</span></h2>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border-collapse text-sm text-left dark:text-white">
+                        <thead>
+                            <tr class="table-header bg-gray-100 dark:bg-gray-700">
+                                <th class="border px-4 py-2 text-gray-900 dark:text-white">Product Name</th>
+                                <th class="border px-4 py-2 text-gray-900 dark:text-white">Quantity</th>
+                                <th class="border px-4 py-2 text-gray-900 dark:text-white">Line Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoice-lines-table-body" class="dark:bg-gray-800">
+                            <tr>
+                                <td colspan="3" class="text-center p-4 text-gray-500">Click on an invoice to view line details</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
 function makeTableColumnsResizable(table) {
     const cols = table.querySelectorAll("th");
@@ -449,7 +574,7 @@ tables.forEach((table) => makeTableColumnsResizable(table));
   document.getElementById("recap-text").classList.add("hidden");
 
   try {
-    const response = await fetch(`http://192.168.1.94:5000/fetchTotalRecapAchat?start_date=${startDate}&end_date=${endDate}`);
+    const response = await fetch(API_CONFIG.getApiUrl(`/fetchTotalRecapAchat?start_date=${startDate}&end_date=${endDate}`));
     if (!response.ok) throw new Error("Network response was not ok");
 
     const data = await response.json();
@@ -516,7 +641,7 @@ async function fetchFournisseurRecapAchat() {
     if (!startDate || !endDate) return;
 
     // Construct URL with query parameters
-    const url = `http://192.168.1.94:5000/fetchfourisseurRecapAchat?start_date=${startDate}&end_date=${endDate}&fournisseur=${fournisseur}&product=${product}`;
+    const url = API_CONFIG.getApiUrl(`/fetchfourisseurRecapAchat?start_date=${startDate}&end_date=${endDate}&fournisseur=${fournisseur}&product=${product}`);
 
     try {
         showLoader(); // Show loading animation
@@ -596,10 +721,16 @@ function updateFournisseurRecapAchatTable(data) {
         `;
 
         tr.addEventListener("click", () => {
+            // Update search input (existing functionality)
             const searchInput = document.getElementById("recap_fournisseur");
             if (row.FOURNISSEUR) {
                 searchInput.value = row.FOURNISSEUR;
                 searchInput.dispatchEvent(new Event("input"));
+            }
+
+            // Fetch invoices for this supplier (new functionality)
+            if (row.FOURNISSEUR && row.FOURNISSEUR !== "Total") {
+                fetchSupplierInvoices(row.FOURNISSEUR);
             }
         });
 
@@ -628,7 +759,7 @@ async function fetchProductRecapAchat() {
     if (!startDate || !endDate) return;
 
     // Construct URL with query parameters
-    const url = `http://192.168.1.94:5000/fetchProductRecapAchat?start_date=${startDate}&end_date=${endDate}&fournisseur=${fournisseur}&product=${product}`;
+    const url = API_CONFIG.getApiUrl(`/fetchProductRecapAchat?start_date=${startDate}&end_date=${endDate}&fournisseur=${fournisseur}&product=${product}`);
 
     try {
         showLoader(); // Show loading animation
@@ -772,6 +903,175 @@ document.getElementById("recap_product").addEventListener("input", fetchProductR
 document.getElementById("start-date").addEventListener("input", fetchProductRecapAchat);
 document.getElementById("end-date").addEventListener("input", fetchProductRecapAchat);
 
+// New functionality for supplier invoices
+async function fetchSupplierInvoices(supplierName) {
+    const startDate = document.getElementById("start-date").value;
+    const endDate = document.getElementById("end-date").value;
+
+    if (!startDate || !endDate) {
+        alert("Please select start and end dates first");
+        return;
+    }
+
+    try {
+        // Show the invoice section
+        const invoiceSection = document.getElementById("invoice-section");
+        const supplierNameSpan = document.getElementById("selected-supplier-name");
+        
+        invoiceSection.classList.remove("hidden");
+        supplierNameSpan.textContent = supplierName;
+
+        // Show loading in invoice table
+        const invoiceTableBody = document.getElementById("invoice-table-body");
+        invoiceTableBody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center p-4">
+                    <div class="loading-spinner"></div>
+                    <p>Loading invoices...</p>
+                </td>
+            </tr>
+        `;
+
+        // Clear invoice lines table
+        const invoiceLinesTableBody = document.getElementById("invoice-lines-table-body");
+        invoiceLinesTableBody.innerHTML = `
+            <tr>
+                <td colspan="3" class="text-center p-4 text-gray-500">Click on an invoice to view line details</td>
+            </tr>
+        `;
+
+        // Fetch invoices
+        const url = API_CONFIG.getApiUrl(`/fetchFactureRecapAchat?start_date=${startDate}&end_date=${endDate}&partner_name=${encodeURIComponent(supplierName)}`);
+        const response = await fetch(url);
+        
+        if (!response.ok) throw new Error("Network response was not ok");
+        
+        const data = await response.json();
+        updateInvoiceTable(data);
+
+    } catch (error) {
+        console.error("Error fetching supplier invoices:", error);
+        const invoiceTableBody = document.getElementById("invoice-table-body");
+        invoiceTableBody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center text-red-500 p-4">Failed to load invoices</td>
+            </tr>
+        `;
+    }
+}
+
+function updateInvoiceTable(data) {
+    const tableBody = document.getElementById("invoice-table-body");
+    tableBody.innerHTML = "";
+
+    if (!data || data.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">No invoices found</td></tr>`;
+        return;
+    }
+
+    data.forEach(invoice => {
+        const tr = document.createElement("tr");
+        tr.className = "dark:bg-gray-700 cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600";
+        tr.setAttribute('data-invoice-id', invoice.c_invoice_id); // Store invoice ID for download
+        
+        // Format date
+        const dateFormatted = invoice.dateinvoiced ? new Date(invoice.dateinvoiced).toLocaleDateString() : 'N/A';
+        
+        tr.innerHTML = `
+            <td class="border px-4 py-2 dark:border-gray-600">${invoice.documentno || "N/A"}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(invoice.totallines)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${invoice.description || "N/A"}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${dateFormatted}</td>
+        `;
+
+        // Add click event to fetch invoice lines
+        tr.addEventListener("click", () => {
+            if (invoice.c_invoice_id) {
+                fetchInvoiceLines(invoice.c_invoice_id, invoice.documentno);
+            }
+        });
+
+        tableBody.appendChild(tr);
+    });
+}
+
+async function fetchInvoiceLines(invoiceId, documentNo) {
+    try {
+        // Update the invoice number in the header
+        const invoiceNumberSpan = document.getElementById("selected-invoice-number");
+        invoiceNumberSpan.textContent = documentNo;
+
+        // Show loading in invoice lines table
+        const invoiceLinesTableBody = document.getElementById("invoice-lines-table-body");
+        invoiceLinesTableBody.innerHTML = `
+            <tr>
+                <td colspan="3" class="text-center p-4">
+                    <div class="loading-spinner"></div>
+                    <p>Loading invoice lines...</p>
+                </td>
+            </tr>
+        `;
+
+        // Fetch invoice lines
+        const url = API_CONFIG.getApiUrl(`/fetchBCFProduct?invoice_id=${invoiceId}`);
+        const response = await fetch(url);
+        
+        if (!response.ok) throw new Error("Network response was not ok");
+        
+        const data = await response.json();
+        updateInvoiceLinesTable(data);
+
+    } catch (error) {
+        console.error("Error fetching invoice lines:", error);
+        const invoiceLinesTableBody = document.getElementById("invoice-lines-table-body");
+        invoiceLinesTableBody.innerHTML = `
+            <tr>
+                <td colspan="3" class="text-center text-red-500 p-4">Failed to load invoice lines</td>
+            </tr>
+        `;
+    }
+}
+
+function updateInvoiceLinesTable(data) {
+    const tableBody = document.getElementById("invoice-lines-table-body");
+    tableBody.innerHTML = "";
+
+    if (!data || data.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="3" class="text-center p-4">No invoice lines found</td></tr>`;
+        return;
+    }
+
+    data.forEach(line => {
+        const tr = document.createElement("tr");
+        tr.className = "dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600";
+        
+        tr.innerHTML = `
+            <td class="border px-4 py-2 dark:border-gray-600">${line.product_name || "N/A"}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(line.qtyentered)}</td>
+            <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(line.linenetamt)}</td>
+        `;
+
+        tableBody.appendChild(tr);
+    });
+}
+
+// Close invoice section
+document.getElementById("close-invoice-section").addEventListener("click", () => {
+    const invoiceSection = document.getElementById("invoice-section");
+    invoiceSection.classList.add("hidden");
+    
+    // Reset invoice lines table
+    const invoiceLinesTableBody = document.getElementById("invoice-lines-table-body");
+    const invoiceNumberSpan = document.getElementById("selected-invoice-number");
+    
+    invoiceNumberSpan.textContent = "Select Invoice";
+    invoiceLinesTableBody.innerHTML = `
+        <tr>
+            <td colspan="3" class="text-center p-4 text-gray-500">Click on an invoice to view line details</td>
+        </tr>
+    `;
+});
+
 
 
 document.getElementById("download-recap-product-achat-excel").addEventListener("click", async function () {
@@ -788,7 +1088,7 @@ document.getElementById("download-recap-product-achat-excel").addEventListener("
     }
 
     // Construct the URL with query parameters
-    const url = new URL("http://192.168.1.94:5000/download-recap-product-achat-excel");
+    const url = API_CONFIG.getApiUrl('/download-recap-product-achat-excel');
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
@@ -819,7 +1119,7 @@ document.getElementById("download-recap-fournisseur-achat-excel").addEventListen
     }
 
     // Construct the URL with query parameters
-    const url = new URL("http://192.168.1.94:5000/download-recap-fournisseur-achat-excel");
+    const url = API_CONFIG.getApiUrl('/download-recap-fournisseur-achat-excel');
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
     if (fournisseur) url.searchParams.append("fournisseur", fournisseur);
@@ -834,6 +1134,81 @@ document.getElementById("download-recap-fournisseur-achat-excel").addEventListen
         alert("Failed to download the Excel file.");
     }
 });
+
+// Download Invoices Excel
+document.getElementById("download-invoices-excel").addEventListener("click", async function () {
+    const startDate = document.getElementById("start-date").value;
+    const endDate = document.getElementById("end-date").value;
+    const supplierName = document.getElementById("selected-supplier-name").textContent;
+
+    // Check if we have the required data
+    if (!startDate || !endDate) {
+        alert("Please select start and end dates first.");
+        return;
+    }
+
+    if (!supplierName || supplierName === "Supplier") {
+        alert("Please select a supplier first by clicking on a supplier in the table.");
+        return;
+    }
+
+    // Create URL for downloading invoices
+    const url = API_CONFIG.getApiUrl('/download-invoices-excel');
+    url.searchParams.append("start_date", startDate);
+    url.searchParams.append("end_date", endDate);
+    url.searchParams.append("partner_name", supplierName);
+
+    try {
+        // Trigger the download by navigating to the URL
+        window.location.href = url;
+    } catch (error) {
+        console.error("Error downloading invoices:", error);
+        alert("Failed to download invoices.");
+    }
+});
+
+// Download Invoice Lines Excel
+document.getElementById("download-invoice-lines-excel").addEventListener("click", async function () {
+    const invoiceNumber = document.getElementById("selected-invoice-number").textContent;
+    const invoiceTableBody = document.getElementById("invoice-table-body");
+    
+    if (!invoiceNumber || invoiceNumber === "Select Invoice") {
+        alert("Please select an invoice first by clicking on an invoice in the invoices table.");
+        return;
+    }
+
+    // Find the selected invoice ID from the invoice table
+    let selectedInvoiceId = null;
+    const invoiceRows = invoiceTableBody.querySelectorAll("tr");
+    
+    for (let row of invoiceRows) {
+        const documentNoCell = row.querySelector("td:first-child");
+        if (documentNoCell && documentNoCell.textContent.trim() === invoiceNumber) {
+            // Get the invoice ID from the row's click event data
+            // We need to store this when creating the rows
+            selectedInvoiceId = row.getAttribute('data-invoice-id');
+            break;
+        }
+    }
+
+    if (!selectedInvoiceId) {
+        alert("Could not find invoice ID. Please select the invoice again.");
+        return;
+    }
+
+    // Create URL for downloading invoice lines
+    const url = API_CONFIG.getApiUrl('/download-invoice-lines-excel');
+    url.searchParams.append("invoice_id", selectedInvoiceId);
+
+    try {
+        // Trigger the download by navigating to the URL
+        window.location.href = url;
+    } catch (error) {
+        console.error("Error downloading invoice lines:", error);
+        alert("Failed to download invoice lines.");
+    }
+});
+
  // Function to handle the click event
     function handleInputClick(event) {
         // Clear the input value

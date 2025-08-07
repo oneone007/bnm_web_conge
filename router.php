@@ -11,7 +11,6 @@ $pages = [
     "Product" => "product.php",
     "Recap_Achat" => "recap_achat.php",
     "Recap_Vente" => "recapvente.php",
-    "r" => "recapventev2.php",
     "Recap_Vente_Facturation" => "recapvente_fact.php",
     "ETAT_F" => "etat_fournisseur.php",
     "ETAT_F_CUMULE" => "etat_fournisseur_cumule.php",
@@ -26,23 +25,26 @@ $pages = [
     "Annual_Recap_A" => "yeara.php",
     "dz" => "algeria_map.html",
         "dzz" => "algeria_map.php",
-
+    "portf" => "portf.php",
     "DETTE_F" => "etatfournisseur.php",
         "inv" => "inventory/inv.php",
         "inv_admin" => "inventory/inv_admin.php",
         "inv_saisie" => "inventory/saise.php",
 
+        "inv_ad" => "inventory/inv_admin_new.php",
         "print" => "printing.php",
-
+    "manage" => "fil_manage/manage.php",
+    "upload" => "fil_manage/upload.php",
 
     "recap_achat_facturation" => "recap_achat_facturation.php",
     "Rotation" => "rotation.php",
     
     "Journal_Vente" => "journal.php",
-    "admin" => ".php",
-
+    "feedback" => "admin_feedback.php",
+    "sess" => "session.php",
     "draft" => "draft.php",
     "simuler" => "simulation.php",
+    "sudo" => "sudo.php",
 
     "Mouvement_Stock"=> "mouvementstock.php",
     
@@ -51,9 +53,8 @@ $pages = [
     "l" => "l.php",
 
     "signup" => "signup.html",
-    "mony" => "money.php",
- "mony2" => "moneyv2.php",
-  "mony3" => "moneyv3.php",
+    "monyold" => "moneyold.php",
+ "mony" => "moneyv2.php",
 
 
     "Acess_Denied" => "access_denied.html",
@@ -66,8 +67,9 @@ $pages = [
 
     "login" => "login.php",
     "c" => "arrowgame.html",
-    "working" => "constract.html",
+    "403" => "403.php",
     "t" => "tes.php",
+    "403_viewer" => "403_log_viewer.php",
 
     "build" =>"work.html"
 

@@ -7,7 +7,52 @@
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"> 
+    <!-- Animated Logo Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@800&display=swap" rel="stylesheet">
     <style>
+        /* Animated SVG Logo Styles */
+        .animated-logo-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 1.2rem;
+        }
+        .animated-logo-svg {
+            width: 100%;
+            max-width: 500px;
+            height: 120px;
+            display: block;
+        }
+        .animated-logo-text {
+            fill: none;
+            stroke: #1e40af;
+            stroke-width: 5px;
+            font-size: 72px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-weight: 800;
+            stroke-dasharray: 900;
+            stroke-dashoffset: 900;
+            animation: text-draw 3.2s forwards 1;
+            animation-delay: 0.5s;
+        }
+        .animated-logo-text.filled {
+            fill: #1e40af;
+            stroke-width: 0;
+            transition: fill 0.5s, stroke-width 0.5s;
+        }
+        @keyframes text-draw {
+            75% {
+                fill: transparent;
+                stroke-dashoffset: 0;
+                stroke-width: 5px;
+            }
+            100% {
+                fill: #1e40af;
+                stroke-dashoffset: 0;
+                stroke-width: 0;
+            }
+        }
         :root {
             /* Professional ERP Color Scheme */
             --primary-color: #1e40af;
@@ -86,19 +131,17 @@
         }
 
         .login-container {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(59, 130, 246, 0.2);
-            border-radius: 1.5rem;
-            padding: 2rem;
-            box-shadow: 
-                0 25px 50px rgba(0, 0, 0, 0.1),
-                0 0 0 1px rgba(59, 130, 246, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.99);
+            backdrop-filter: blur(32px);
+            border: 1.5px solid var(--primary-light);
+            border-radius: 2rem;
+            padding: 2.5rem 2.5rem 2rem 2.5rem;
+            box-shadow: 0 12px 40px rgba(30, 64, 175, 0.13), 0 2px 8px rgba(59, 130, 246, 0.08);
             position: relative;
             overflow: hidden;
-            max-height: 90vh;
+            max-height: 92vh;
             overflow-y: auto;
+            transition: box-shadow 0.3s, border 0.3s;
         }
 
         .login-container::before {
@@ -107,13 +150,21 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, 
-                var(--primary-color), 
-                #3b82f6, 
-                #06b6d4, 
-                var(--primary-color)
-            );
+            height: 6px;
+            background: linear-gradient(90deg, var(--primary-color), #3b82f6, #06b6d4, var(--primary-color));
+            border-radius: 2rem 2rem 0 0;
+        }
+
+        .login-container::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 10px;
+            background: linear-gradient(90deg, #06b6d4, #3b82f6, var(--primary-color), #3b82f6);
+            opacity: 0.12;
+            border-radius: 0 0 2rem 2rem;
         }
 
         /* Header */
@@ -124,15 +175,15 @@
         }
 
         .brand-logo {
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, var(--primary-color), #3b82f6);
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, var(--primary-color), #3b82f6 60%, #06b6d4 100%);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 1rem;
-            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
+            margin: 0 auto 1.2rem;
+            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.22), 0 2px 8px rgba(30, 64, 175, 0.08);
             position: relative;
         }
 
@@ -153,8 +204,8 @@
         }
 
         .brand-logo img {
-            width: 35px;
-            height: 35px;
+            width: 40px;
+            height: 40px;
             object-fit: contain;
             z-index: 1;
         }
@@ -164,27 +215,30 @@
         }
 
         .brand-title {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--text-primary);
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--primary-color);
             margin-bottom: 0.5rem;
-            background: linear-gradient(135deg, var(--primary-color), #3b82f6);
+            background: linear-gradient(135deg, var(--primary-color), #3b82f6 60%, #06b6d4 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
 
         .brand-subtitle {
-            font-size: 1rem;
-            color: var(--text-secondary);
-            font-weight: 500;
+            font-size: 1.08rem;
+            color: var(--primary-dark);
+            font-weight: 600;
             margin-bottom: 0.5rem;
+            letter-spacing: 0.5px;
         }
 
         .brand-description {
-            font-size: 0.8rem;
+            font-size: 0.9rem;
             color: var(--text-muted);
-            line-height: 1.4;
+            line-height: 1.5;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
         }
 
         /* Form Styles */
@@ -193,16 +247,17 @@
         }
 
         .form-group {
-            margin-bottom: 1.25rem;
+            margin-bottom: 1.5rem;
             position: relative;
         }
 
         .form-label {
             display: block;
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 0.75rem;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 0.7rem;
+            letter-spacing: 0.2px;
         }
 
         .input-wrapper {
@@ -211,66 +266,66 @@
 
         .form-input {
             width: 100%;
-            padding: 0.875rem 1rem;
+            padding: 1rem 1.1rem;
             padding-left: 2.75rem;
-            border: 2px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            font-size: 0.95rem;
-            transition: all 0.3s ease;
-            background: rgba(255, 255, 255, 0.9);
-            color: var(--text-primary);
-            font-weight: 500;
+            border: 2px solid var(--primary-light);
+            border-radius: 1.2rem;
+            font-size: 1.05rem;
+            transition: all 0.3s cubic-bezier(.4,1.4,.6,1);
+            background: rgba(255, 255, 255, 0.98);
+            color: var(--primary-dark);
+            font-weight: 600;
         }
 
         .form-input:focus {
             outline: none;
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.1);
-            background: rgba(255, 255, 255, 1);
-            transform: translateY(-1px);
+            box-shadow: 0 0 0 5px rgba(30, 64, 175, 0.13);
+            background: #fff;
+            transform: translateY(-2px) scale(1.01);
         }
 
         .form-input.error {
             border-color: var(--error-color);
-            box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
+            box-shadow: 0 0 0 5px rgba(220, 38, 38, 0.13);
         }
 
         .form-input.success {
             border-color: var(--success-color);
-            box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.1);
+            box-shadow: 0 0 0 5px rgba(5, 150, 105, 0.13);
         }
 
         .input-icon {
             position: absolute;
-            left: 0.875rem;
+            left: 1rem;
             top: 50%;
             transform: translateY(-50%);
-            color: var(--text-muted);
-            font-size: 1rem;
-            transition: all 0.3s ease;
+            color: var(--primary-light);
+            font-size: 1.15rem;
+            transition: all 0.3s cubic-bezier(.4,1.4,.6,1);
         }
 
         .form-input:focus ~ .input-icon {
             color: var(--primary-color);
-            transform: translateY(-50%) scale(1.1);
+            transform: translateY(-50%) scale(1.13);
         }
 
         .password-toggle {
             position: absolute;
-            right: 0.875rem;
+            right: 1rem;
             top: 50%;
             transform: translateY(-50%);
-            color: var(--text-muted);
+            color: var(--primary-light);
             cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-            padding: 0.4rem;
-            border-radius: var(--radius);
+            font-size: 1.1rem;
+            transition: all 0.3s cubic-bezier(.4,1.4,.6,1);
+            padding: 0.45rem;
+            border-radius: 0.7rem;
         }
 
         .password-toggle:hover {
             color: var(--primary-color);
-            background: rgba(59, 130, 246, 0.1);
+            background: rgba(59, 130, 246, 0.13);
         }
 
         /* Error Messages */
@@ -288,34 +343,34 @@
         /* Submit Button */
         .submit-btn {
             width: 100%;
-            background: linear-gradient(135deg, var(--primary-color), #3b82f6);
-            color: white;
+            background: linear-gradient(90deg, var(--primary-color) 0%, #3b82f6 60%, #06b6d4 100%);
+            color: #fff;
             border: none;
-            padding: 1rem;
-            border-radius: var(--radius-lg);
-            font-size: 1rem;
-            font-weight: 600;
+            padding: 1.1rem;
+            border-radius: 1.2rem;
+            font-size: 1.08rem;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(.4,1.4,.6,1);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.75rem;
+            gap: 0.85rem;
             position: relative;
             overflow: hidden;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
+            letter-spacing: 0.7px;
+            box-shadow: 0 10px 36px rgba(59, 130, 246, 0.22), 0 2px 8px rgba(30, 64, 175, 0.08);
         }
 
         .submit-btn:hover:not(:disabled) {
-            background: linear-gradient(135deg, #1d4ed8, var(--primary-color));
-            transform: translateY(-2px);
-            box-shadow: 0 12px 40px rgba(59, 130, 246, 0.4);
+            background: linear-gradient(90deg, #1d4ed8 0%, var(--primary-color) 100%);
+            transform: translateY(-2.5px) scale(1.01);
+            box-shadow: 0 16px 48px rgba(59, 130, 246, 0.28);
         }
 
         .submit-btn:active {
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
         }
 
         .submit-btn:disabled {
@@ -384,11 +439,12 @@
         /* Footer */
         .login-footer {
             text-align: center;
-            color: var(--text-muted);
-            font-size: 0.75rem;
-            margin-top: 1.5rem;
+            color: var(--primary-light);
+            font-size: 0.85rem;
+            margin-top: 2rem;
             padding-top: 1.5rem;
-            border-top: 1px solid var(--border-light);
+            border-top: 1.5px solid var(--primary-light);
+            font-weight: 600;
         }
 
         /* Responsive Design */
@@ -402,7 +458,7 @@
             }
 
             .login-container {
-                padding: 1.5rem;
+                padding: 1.2rem;
                 max-height: 95vh;
             }
 
@@ -429,32 +485,32 @@
             }
 
             .login-container {
-                padding: 1.25rem;
-                border-radius: 1rem;
+                padding: 0.7rem;
+                border-radius: 1.2rem;
                 max-height: 98vh;
             }
 
             .brand-logo {
-                width: 50px;
-                height: 50px;
-                margin-bottom: 0.75rem;
+                width: 44px;
+                height: 44px;
+                margin-bottom: 0.7rem;
             }
 
             .brand-logo img {
-                width: 28px;
-                height: 28px;
+                width: 24px;
+                height: 24px;
             }
 
             .brand-title {
-                font-size: 1.5rem;
+                font-size: 1.25rem;
             }
 
             .brand-subtitle {
-                font-size: 0.85rem;
+                font-size: 0.8rem;
             }
 
             .brand-description {
-                font-size: 0.7rem;
+                font-size: 0.68rem;
             }
 
             .login-header {
@@ -497,46 +553,46 @@
         @media (max-height: 600px) {
             .login-container {
                 max-height: 98vh;
-                padding: 1rem;
+                padding: 0.7rem;
             }
 
             .brand-logo {
-                width: 45px;
-                height: 45px;
-                margin-bottom: 0.5rem;
+                width: 32px;
+                height: 32px;
+                margin-bottom: 0.4rem;
             }
 
             .brand-logo img {
-                width: 25px;
-                height: 25px;
+                width: 18px;
+                height: 18px;
             }
 
             .brand-title {
-                font-size: 1.4rem;
-                margin-bottom: 0.25rem;
+                font-size: 1rem;
+                margin-bottom: 0.18rem;
             }
 
             .brand-subtitle {
-                font-size: 0.8rem;
-                margin-bottom: 0.25rem;
+                font-size: 0.7rem;
+                margin-bottom: 0.18rem;
             }
 
             .brand-description {
-                font-size: 0.65rem;
+                font-size: 0.55rem;
             }
 
             .login-header {
-                margin-bottom: 1rem;
+                margin-bottom: 0.7rem;
             }
 
             .form-group {
-                margin-bottom: 0.875rem;
+                margin-bottom: 0.6rem;
             }
 
             .login-footer {
-                margin-top: 0.75rem;
-                padding-top: 0.75rem;
-                font-size: 0.65rem;
+                margin-top: 0.5rem;
+                padding-top: 0.5rem;
+                font-size: 0.55rem;
             }
         }
 
@@ -825,11 +881,22 @@
     <div class="login-wrapper">
         <div class="login-container">
             <div class="login-header">
-                <div class="brand-logo">
-                    <img src="assets/tab.png" alt="BNM Logo">
-                </div>
+            <!-- Removed duplicate animated SVG logo -->
+            <div class="brand-logo">
+                <img src="assets/tab.png" alt="BNM Logo">
+            </div>
                 <div class="brand-info">
-                    <h1 class="brand-title">BNM Analyse</h1>
+<h1 class="brand-title" style="font-size:0;line-height:0;padding:0;margin:0;display:flex;justify-content:center;align-items:center;width:100%;">
+    <svg class="animated-logo-svg" viewBox="0 0 600 120" width="100%" height="90" style="display:block;margin:0 auto;">
+        <text 
+            x="50%" y="90" 
+            class="animated-logo-text"
+            id="animatedLogoText"
+            text-anchor="middle"
+        >BNM Web</text>
+    </svg>
+    <span style="position:absolute;left:-9999px;">BNM Web</span>
+</h1>
                     <p class="brand-subtitle">Analytics Dashboard</p>
                     <p class="brand-description">
                         Transform your data into actionable insights with powerful business intelligence tools
@@ -841,6 +908,14 @@
             <div class="session-message">
                 <i class="fas fa-exclamation-triangle"></i>
                 Your session has expired. Please sign in again.
+            </div>
+            <?php endif; ?>
+
+            <!-- Session terminated by admin message -->
+            <?php if (isset($_GET['message']) && $_GET['message'] === 'session_terminated'): ?>
+            <div class="session-message">
+                <i class="fas fa-shield-alt"></i>
+                Your session has been terminated . Please sign in again.
             </div>
             <?php endif; ?>
 
@@ -902,7 +977,7 @@
 
             <!-- Footer -->
             <div class="login-footer">
-                <p>&copy; 2025 BNM Analyse - Business Intelligence Platform. All rights reserved.</p>
+                <p>&copy; 2025 BNM Web - Business Intelligence Platform. All rights reserved.</p>
             </div>
         </div>
     </div>

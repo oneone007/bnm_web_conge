@@ -43,9 +43,9 @@ def get_localdb_connection():
     try:
         return mysql.connector.connect(
             host="localhost",
-            user="bmk",
+            user="root",
             password="",
-            database="bnm_web",
+            database="bnm",
             charset="utf8",
             use_unicode=True,
             autocommit=False
@@ -823,7 +823,229 @@ def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None, n
         logger.error(f"Database error: {e}")
         return {"error": "An error occurred while fetching stock data."}
 
+def fetch_desactivated_lot_data_from_db(fournisseur=None, magasin=None, emplacement=None, name=None):
+    """
+    Fetch stock data for lots where isactive = 'N' (deactivated lots)
+    """
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
 
+            query = """
+            SELECT 
+                mati.value AS fournisseur, 
+                m.name,  
+                SUM(m_storage.qtyonhand) AS qty,
+                SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand) AS prix,
+                SUM(m_storage.qtyonhand - m_storage.QTYRESERVED) AS qty_dispo, 
+                SUM(M_ATTRIBUTEINSTANCE.valuenumber * (m_storage.qtyonhand - m_storage.QTYRESERVED)) AS prix_dispo,
+                ml.M_Locator_ID AS locatorid,
+                m.m_product_id AS productid,
+                1 AS sort_order,
+                CASE 
+                    WHEN ml.M_Locator_ID = 1000614 THEN 'Préparation'
+                    WHEN ml.M_Locator_ID = 1001135 THEN 'HANGAR'
+                    WHEN ml.M_Locator_ID = 1001128 THEN 'Dépot_réserve'
+                    WHEN ml.M_Locator_ID = 1001136 THEN 'HANGAR_'
+                    WHEN ml.M_Locator_ID = 1001020 THEN 'Depot_Vente'
+                    ELSE 'Unknown' 
+                END AS place
+            FROM 
+                M_ATTRIBUTEINSTANCE
+            JOIN 
+                m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
+            JOIN 
+                M_PRODUCT m ON m.M_PRODUCT_id = m_storage.M_PRODUCT_ID
+            JOIN 
+                M_Locator ml ON ml.M_Locator_ID = m_storage.M_Locator_ID
+            INNER JOIN 
+                m_attributeinstance mati ON m_storage.m_attributesetinstance_id = mati.m_attributesetinstance_id
+            INNER JOIN 
+                m_attributesetinstance mats ON m_storage.m_attributesetinstance_id = mats.m_attributesetinstance_id
+            WHERE 
+                M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
+                AND m_storage.qtyonhand > 0
+                AND mati.m_attribute_id = 1000508
+                AND m_storage.AD_Client_ID = 1000000
+                AND NVL(mats.isactive, 'Y') = 'N'
+            """
+
+            params = {}
+
+            if fournisseur:
+                query += " AND mati.value LIKE :fournisseur || '%'"
+                params["fournisseur"] = fournisseur
+
+            if name:
+                query += " AND m.name LIKE :name || '%'"
+                params["name"] = name
+
+            if magasin:
+                query += """
+                AND m_storage.M_Locator_ID IN (
+                    SELECT M_Locator_ID 
+                    FROM M_Locator 
+                    WHERE M_Warehouse_ID IN (
+                        SELECT M_Warehouse_ID 
+                        FROM M_Warehouse 
+                        WHERE VALUE LIKE :magasin || '%'
+                    )
+                )
+                """
+                params["magasin"] = magasin
+            else:
+                query += """
+                AND m_storage.M_Locator_ID IN (
+                    SELECT M_Locator_ID 
+                    FROM M_Locator 
+                    WHERE M_Warehouse_ID IN (
+                        SELECT M_Warehouse_ID 
+                        FROM M_Warehouse 
+                        WHERE VALUE IN ('HANGAR', '1-Dépôt Principal', '8-Dépot réserve', '88-Dépot Hangar réserve')
+                    )
+                )
+                """
+
+            if emplacement:
+                query += """
+                AND (
+                    (M_Warehouse_ID != 1000000 AND 
+                     m_storage.M_Locator_ID IN (
+                         SELECT M_Locator_ID 
+                         FROM M_Locator 
+                         WHERE value LIKE :emplacement || '%'
+                     ))
+                    OR 
+                    (M_Warehouse_ID = 1000000 AND 
+                     m.M_Locator_ID IN (
+                         SELECT M_Locator_ID 
+                         FROM M_Locator 
+                         WHERE value LIKE :emplacement || '%'
+                     ))
+                )
+                """
+                params["emplacement"] = emplacement
+
+            query += """
+            GROUP BY m.name, mati.value, m.m_product_id, ml.M_Locator_ID
+
+            UNION ALL
+
+            SELECT 
+                CAST('Total' AS NVARCHAR2(300)) AS fournisseur, 
+                CAST('' AS NVARCHAR2(300)) AS name, 
+                SUM(m_storage.qtyonhand) AS qty,
+                SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand) AS prix,
+                SUM(m_storage.qtyonhand - m_storage.QTYRESERVED) AS qty_dispo, 
+                SUM(M_ATTRIBUTEINSTANCE.valuenumber * (m_storage.qtyonhand - m_storage.QTYRESERVED)) AS prix_dispo,
+                NULL AS locatorid,
+                NULL AS productid,
+                0 AS sort_order,
+                NULL AS place
+            FROM 
+                M_ATTRIBUTEINSTANCE
+            JOIN 
+                m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
+            JOIN 
+                M_PRODUCT m ON m.M_PRODUCT_ID = m_storage.M_PRODUCT_ID
+            JOIN 
+                M_Locator ml ON ml.M_Locator_ID = m_storage.M_Locator_ID
+            INNER JOIN 
+                m_attributeinstance mati ON m_storage.m_attributesetinstance_id = mati.m_attributesetinstance_id
+            INNER JOIN 
+                m_attributesetinstance mats ON m_storage.m_attributesetinstance_id = mats.m_attributesetinstance_id
+            WHERE 
+                M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
+                AND m_storage.qtyonhand > 0
+                AND mati.m_attribute_id = 1000508
+                AND m_storage.AD_Client_ID = 1000000
+                AND NVL(mats.isactive, 'Y') = 'N'
+            """
+
+            if fournisseur:
+                query += " AND mati.value LIKE :fournisseur || '%'"
+
+            if name:
+                query += " AND m.name LIKE :name || '%'"
+
+            if magasin:
+                query += """
+                AND m_storage.M_Locator_ID IN (
+                    SELECT M_Locator_ID 
+                    FROM M_Locator 
+                    WHERE M_Warehouse_ID IN (
+                        SELECT M_Warehouse_ID 
+                        FROM M_Warehouse 
+                        WHERE VALUE LIKE :magasin || '%'
+                    )
+                )
+                """
+            else:
+                query += """
+                AND m_storage.M_Locator_ID IN (
+                    SELECT M_Locator_ID 
+                    FROM M_Locator 
+                    WHERE M_Warehouse_ID IN (
+                        SELECT M_Warehouse_ID 
+                        FROM M_Warehouse 
+                        WHERE VALUE IN ('HANGAR', '1-Dépôt Principal', '8-Dépot réserve', '88-Dépot Hangar réserve')
+                    )
+                )
+                """
+
+            if emplacement:
+                query += """
+                AND (
+                    (M_Warehouse_ID != 1000000 AND 
+                     m_storage.M_Locator_ID IN (
+                         SELECT M_Locator_ID 
+                         FROM M_Locator 
+                         WHERE value LIKE :emplacement || '%'
+                     ))
+                    OR 
+                    (M_Warehouse_ID = 1000000 AND 
+                     m.M_Locator_ID IN (
+                         SELECT M_Locator_ID 
+                         FROM M_Locator 
+                         WHERE value LIKE :emplacement || '%'
+                     ))
+                )
+                """
+
+            query += """
+            ORDER BY sort_order, fournisseur, name
+            """
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+
+            return data
+
+    except Exception as e:
+        logger.error(f"Database error: {e}")
+        return {"error": "An error occurred while fetching deactivated lot data."}
+
+# ...existing code...
+
+# New endpoint for deactivated lots
+@app.route('/fetch_desactivated_lot_data', methods=['GET'])
+def fetch_desactivated_lot_data():
+    try:
+        fournisseur = request.args.get("fournisseur", None)
+        magasin = request.args.get("magasin", None)
+        emplacement = request.args.get("emplacement", None)
+        name = request.args.get("name", None)
+
+        data = fetch_desactivated_lot_data_from_db(fournisseur, magasin, emplacement, name)
+        return jsonify(data)
+
+    except Exception as e:
+        logger.error(f"Error fetching deactivated lot data: {e}")
+        return jsonify({"error": "Failed to fetch deactivated lot data"}), 500
+
+        
 @app.route('/download-stock-excel', methods=['GET'])
 def download_stock_excel():
     try:
@@ -1418,143 +1640,61 @@ def fetch_emplacements_from_db(magasin=None, emplacement=None):
 
 # Helper function to generate Excel file
 
-# Fetch total recap data
-def fetch_rcap_data(start_date, end_date, ad_org_id):
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT 
-                    SUM(xf.TOTALLINE) AS CHIFFRE, 
-                    SUM(xf.qtyentered) AS QTY,
-                    SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION) AS MARGE,
-                    SUM(xf.CONSOMATION) AS CONSOMATION,
-                    CASE 
-                        WHEN SUM(xf.CONSOMATION) < 0 
-                        THEN ROUND(((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / (SUM(xf.CONSOMATION) * -1)), 4)
-                        ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
-                    END AS POURCENTAGE
-                FROM xx_ca_fournisseur xf
-                WHERE 
-                    xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                    AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                    AND xf.AD_Org_ID = :ad_org_id
-                    AND xf.DOCSTATUS != 'RE'
-            """
-            cursor.execute(query, {'start_date': start_date, 'end_date': end_date, 'ad_org_id': ad_org_id})
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]  # Get column names
-            data = [dict(zip(columns, row)) for row in rows]
-            return data
-    except Exception as e:
-        logger.error(f"Error fetching data: {e}")
-        return {"error": "An error occurred while fetching data."}
 
 # Fetch total recap data
 
 # Fetch fournisseur data
 
 
+def generate_excel_totalrecap_facturation(data, filename):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
 
-def fetch_bccb_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone):
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT DOCUMENTNO, DATEORDERED, GRANDTOTAL, 
-                       ROUND(AVG(marge * 100), 2) AS marge
-                FROM (
-                    SELECT det.*
-                    FROM (
-                        SELECT lot.*,  
-                               (lot.priceentered - ((lot.priceentered * NVL(lot.remise_vente, 0)) / 100)) / (1 + (lot.bonus_vente / 100)) AS ventef
-                        FROM (
-                            SELECT 
-                                ol.priceentered, 
-                                (SELECT valuenumber 
-                                 FROM m_attributeinstance 
-                                 WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
-                                       AND m_attribute_id = 1000504) AS p_revient,
-                                (SELECT valuenumber 
-                                 FROM m_attributeinstance 
-                                 WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
-                                       AND m_attribute_id = 1000908) AS bonus_vente,
-                                (SELECT valuenumber 
-                                 FROM m_attributeinstance 
-                                 WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
-                                       AND m_attribute_id = 1001408) AS remise_vente,
-                                c.DOCUMENTNO, 
-                                c.DATEORDERED, 
-                                c.GRANDTOTAL,
-                                CASE 
-                                    WHEN SUM(xf.CONSOMATION) = 0 THEN 0
-                                    WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1)
-                                    ELSE (SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION)
-                                END AS marge
-                            FROM C_Order c
-                            JOIN C_OrderLine ol ON c.C_Order_ID = ol.C_Order_ID 
-                            JOIN M_InOut mi ON mi.C_Order_ID = c.C_Order_ID
-                            JOIN xx_ca_fournisseur xf ON xf.DOCUMENTNO = mi.DOCUMENTNO
-                            JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
-                            JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
-                            JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
-                            JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
-                            WHERE c.AD_Org_ID = 1000000 
-                                  AND ol.qtyentered > 0
-                                  AND xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                                      AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                                  AND (c.DOCSTATUS = 'CL' OR c.DOCSTATUS = 'CO')
-                                  AND c.C_DocType_ID IN (1000539, 1001408)
-                                  AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
-                                  AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
-                                  AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
-                                  AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
-                                  AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
-                                  AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
-                            GROUP BY c.DOCUMENTNO, c.DATEORDERED, c.GRANDTOTAL, ol.priceentered, ol.m_attributesetinstance_id
-                            ORDER BY c.DOCUMENTNO
-                        ) lot
-                    ) det
-                )
-                GROUP BY DOCUMENTNO, DATEORDERED, GRANDTOTAL
-                ORDER BY DOCUMENTNO
-            """
-            params = {
-                'start_date': start_date,
-                'end_date': end_date,
-                'fournisseur': fournisseur or None,
-                'product': product or None,
-                'client': client or None,
-                'operateur': operateur or None,
-                'bccb': bccb or None,
-                'zone': zone or None
-            }
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
 
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in rows]
-    except Exception as e:
-        logger.error(f"Error fetching BCCB recap: {e}")
-        return {"error": "An error occurred while fetching BCCB recap."}
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Total Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    ws.append(df.columns.tolist())
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+    ws.auto_filter.ref = ws.dimensions
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="TotalRecapTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
-@app.route('/fetchBCCBRecap', methods=['GET']) 
-def fetch_bccb():
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    fournisseur = request.args.get('fournisseur')
-    product = request.args.get('product')
-    client = request.args.get('client')
-    operateur = request.args.get('operateur')
-    bccb = request.args.get('bccb')
-    zone = request.args.get('zone')
-
-    if not start_date or not end_date:
-        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
-
-    data = fetch_bccb_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone)
-    return jsonify(data)
 
  
 
@@ -1660,1132 +1800,18 @@ def fetch_bccb_fact():
 
 
 
-@app.route('/fetchZoneRecap', methods=['GET'])
-def fetch_zone():
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    fournisseur = request.args.get('fournisseur')
-    product = request.args.get('product')
-    client = request.args.get('client')
-    operateur = request.args.get('operateur')
-    bccb = request.args.get('bccb')
-    zone = request.args.get('zone')
-    ad_org_id = request.args.get('ad_org_id')
 
-    if not start_date or not end_date:
-        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
-    if not ad_org_id:
-        return jsonify({"error": "Missing ad_org_id parameter"}), 400
 
-    data = fetch_zone_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id)
-    return jsonify(data)
 
 
-def fetch_zone_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id):
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT * FROM (
-                    -- Recap by Zone
-                    SELECT 
-                        CAST(sr.name AS VARCHAR2(100)) AS "ZONE",
-                        SUM(xf.TOTALLINE) AS "TOTAL",
-                        SUM(xf.qtyentered) AS "QTY",
-                        CASE 
-                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
-                            ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
-                        END AS "MARGE",
-                        0 AS "SORT_ORDER"
-                    FROM C_SalesRegion sr
-                    JOIN C_BPartner_Location bpl ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
-                    JOIN xx_ca_fournisseur xf ON bpl.C_BPartner_ID = xf.CLIENTID
-                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
-                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
-                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
-                    JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
-                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                          AND xf.AD_Org_ID = :ad_org_id
-                          AND xf.DOCSTATUS != 'RE'
-                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
-                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
-                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
-                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
-                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
-                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
-                    GROUP BY sr.name
 
-                    UNION ALL
 
-                    -- Total Row
-                    SELECT 
-                        'Total' AS "ZONE",
-                        SUM(xf.TOTALLINE) AS "TOTAL",
-                        SUM(xf.qtyentered) AS "QTY",
-                        CASE 
-                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
-                            ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
-                        END AS "MARGE",
-                        1 AS "SORT_ORDER"
-                    FROM C_SalesRegion sr
-                    JOIN C_BPartner_Location bpl ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
-                    JOIN xx_ca_fournisseur xf ON bpl.C_BPartner_ID = xf.CLIENTID
-                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
-                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
-                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
-                    JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
-                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                          AND xf.AD_Org_ID = :ad_org_id
-                          AND xf.DOCSTATUS != 'RE'
-                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
-                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
-                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
-                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
-                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
-                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
-                ) ORDER BY "SORT_ORDER", "TOTAL" DESC
-            """
-            params = {
-                'start_date': start_date,
-                'end_date': end_date,
-                'fournisseur': fournisseur or None,
-                'product': product or None,
-                'client': client or None,
-                'operateur': operateur or None,
-                'bccb': bccb or None,
-                'zone': zone or None,
-                'ad_org_id': ad_org_id
-            }
-            
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]  # Get column names
-            return [dict(zip(columns, row)) for row in rows]
-    except Exception as e:
-        logger.error(f"Error fetching zone recap: {e}")
-        return {"error": "An error occurred while fetching zone recap."}
 
 
-def fetch_client_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id):
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT * FROM (
-                    -- Recap by Client
-                    SELECT 
-                        CAST(cb.name AS VARCHAR2(100)) AS "CLIENT",
-                        SUM(xf.TOTALLINE) AS "TOTAL",
-                        SUM(xf.qtyentered) AS "QTY",
-                        CASE 
-                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
-                            ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
-                        END AS "MARGE",
-                        0 AS "SORT_ORDER"
-                    FROM C_BPartner cb
-                    JOIN xx_ca_fournisseur xf ON cb.C_BPartner_ID = xf.CLIENTID
-                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
-                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
-                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
-                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
-                    JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
-                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                          AND xf.AD_Org_ID = :ad_org_id
-                          AND xf.DOCSTATUS != 'RE'
-                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
-                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
-                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
-                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
-                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
-                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
-                    GROUP BY cb.name
 
-                    UNION ALL
 
-                    -- Total Row
-                    SELECT 
-                        'Total' AS "CLIENT",
-                        SUM(xf.TOTALLINE) AS "TOTAL",
-                        SUM(xf.qtyentered) AS "QTY",
-                        CASE 
-                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
-                            ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
-                        END AS "MARGE",
-                        1 AS "SORT_ORDER"
-                    FROM C_BPartner cb
-                    JOIN xx_ca_fournisseur xf ON cb.C_BPartner_ID = xf.CLIENTID
-                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
-                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
-                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
-                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
-                    JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
-                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                          AND xf.AD_Org_ID = :ad_org_id
-                          AND xf.DOCSTATUS != 'RE'
-                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
-                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
-                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
-                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
-                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
-                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
-                ) ORDER BY "SORT_ORDER", "TOTAL" DESC
-            """
-            params = {
-                'start_date': start_date,
-                'end_date': end_date,
-                'fournisseur': fournisseur or None,
-                'product': product or None,
-                'client': client or None,
-                'operateur': operateur or None,
-                'bccb': bccb or None,
-                'zone': zone or None,
-                'ad_org_id': ad_org_id
-            }
-            
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]  # Get column names
-            return [dict(zip(columns, row)) for row in rows]
-    except Exception as e:
-        logger.error(f"Error fetching client recap: {e}")
-        return {"error": "An error occurred while fetching client recap."}
 
 
-@app.route('/fetchClientRecap', methods=['GET'])
-def fetch_client():
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    fournisseur = request.args.get('fournisseur')
-    product = request.args.get('product')
-    client = request.args.get('client')
-    operateur = request.args.get('operateur')
-    bccb = request.args.get('bccb')
-    zone = request.args.get('zone')
-    ad_org_id = request.args.get('ad_org_id')
-
-    if not start_date or not end_date:
-        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
-    if not ad_org_id:
-        return jsonify({"error": "Missing ad_org_id parameter"}), 400
-
-    data = fetch_client_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id)
-    return jsonify(data)
-
-def fetch_operator_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id):
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT * FROM (
-                    SELECT CAST(au.name AS VARCHAR2(100)) AS "OPERATEUR", 
-                           SUM(xf.TOTALLINE) AS "TOTAL", 
-                           SUM(xf.qtyentered) AS "QTY",
-                           CASE 
-                               WHEN SUM(xf.CONSOMATION) = 0 THEN 0
-                               WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1)
-                               ELSE (SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION)
-                           END AS "MARGE",
-                           0 AS "SORT_ORDER"
-                    FROM AD_User au
-                    JOIN xx_ca_fournisseur xf ON au.AD_User_ID = xf.SALESREP_ID
-                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
-                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
-                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
-                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
-                    JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
-                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                          AND xf.AD_Org_ID = :ad_org_id
-                          AND xf.DOCSTATUS != 'RE'
-                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
-                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
-                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
-                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
-                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
-                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
-                    GROUP BY au.name
-
-                    UNION ALL
-
-                    SELECT 'Total' AS "OPERATEUR", 
-                           SUM(xf.TOTALLINE) AS "TOTAL", 
-                           SUM(xf.qtyentered) AS "QTY",
-                           CASE 
-                               WHEN SUM(xf.CONSOMATION) = 0 THEN 0
-                               WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1)
-                               ELSE (SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION)
-                           END AS "MARGE",
-                           1 AS "SORT_ORDER"
-                    FROM AD_User au
-                    JOIN xx_ca_fournisseur xf ON au.AD_User_ID = xf.SALESREP_ID
-                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
-                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
-                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
-                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
-                    JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
-                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                          AND xf.AD_Org_ID = :ad_org_id
-                          AND xf.DOCSTATUS != 'RE'
-                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
-                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
-                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
-                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
-                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
-                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
-                ) ORDER BY "SORT_ORDER", "TOTAL" DESC
-            """
-            params = {
-                'start_date': start_date,
-                'end_date': end_date,
-                'fournisseur': fournisseur or None,
-                'product': product or None,
-                'client': client or None,
-                'operateur': operateur or None,
-                'bccb': bccb or None,
-                'zone': zone or None,
-                'ad_org_id': ad_org_id
-            }
-
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]  # Get column names
-            return [dict(zip(columns, row)) for row in rows]
-    except Exception as e:
-        logger.error(f"Error fetching operator recap: {e}")
-        return {"error": "An error occurred while fetching operator recap."}
-
-
-@app.route('/fetchOperatorRecap', methods=['GET'])
-def fetch_operator():
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    fournisseur = request.args.get('fournisseur')
-    product = request.args.get('product')
-    client = request.args.get('client')
-    operateur = request.args.get('operateur')
-    bccb = request.args.get('bccb')
-    zone = request.args.get('zone')
-    ad_org_id = request.args.get('ad_org_id')
-
-    if not start_date or not end_date:
-        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
-    if not ad_org_id:
-        return jsonify({"error": "Missing ad_org_id parameter"}), 400
-
-    data = fetch_operator_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id)
-    return jsonify(data)
-
-
-
-
-
-
-
-
-
-
-@app.route('/fetchTotalrecapData', methods=['GET'])
-def fetch_recap():
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    ad_org_id = request.args.get('ad_org_id')  # Get ad_org_id from request
-
-    if not start_date or not end_date or not ad_org_id:
-        return jsonify({"error": "Missing start_date, end_date, or ad_org_id parameters"}), 400
-
-    try:
-        ad_org_id = int(ad_org_id)  # Convert to integer
-    except ValueError:
-        return jsonify({"error": "ad_org_id must be an integer"}), 400
-
-    data = fetch_rcap_data(start_date, end_date, ad_org_id)
-    return jsonify(data)
-
-
-
-
-
-
-@app.route('/download-totalrecap-excel', methods=['GET'])
-def download_totalrecap_excel():
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    ad_org_id = request.args.get('ad_org_id')
-
-    if not start_date or not end_date or not ad_org_id:
-        return jsonify({"error": "Missing start_date, end_date, or ad_org_id parameters"}), 400
-
-    try:
-        ad_org_id = int(ad_org_id)  # Convert to integer
-    except ValueError:
-        return jsonify({"error": "ad_org_id must be an integer"}), 400
-
-    # Fetch data from the database
-    data = fetch_rcap_data(start_date, end_date, ad_org_id)
-
-    if not data or "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
-    # Generate filename based on ad_org_id
-    today_date = datetime.now().strftime("%d-%m-%Y")
-    if ad_org_id == 1000012:
-        filename = f"TotalRecap_facturation_{start_date}_to_{end_date}_{today_date}.xlsx"
-    else:
-        filename = f"TotalRecap_{start_date}_to_{end_date}_{today_date}.xlsx"
-
-    return generate_excel_totalrecap(data, filename)
-
-
-def generate_excel_totalrecap(data, filename):
-    if not data or "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
-    df = pd.DataFrame(data)
-    if df.empty:
-        return jsonify({"error": "No data available"}), 400
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Total Recap"
-
-    # Formatting headers
-    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
-    header_font = Font(color="FFFFFF", bold=True)
-
-    ws.append(df.columns.tolist())
-    for col_idx, cell in enumerate(ws[1], 1):
-        cell.fill = header_fill
-        cell.font = header_font
-    ws.auto_filter.ref = ws.dimensions
-
-    # Add data rows with alternating row colors
-    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
-        ws.append(row)
-        if row_idx % 2 == 0:
-            for cell in ws[row_idx]:
-                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
-
-    # Add an Excel table
-    table = Table(displayName="TotalRecapTable", ref=ws.dimensions)
-    style = TableStyleInfo(
-        name="TableStyleMedium9",
-        showFirstColumn=False,
-        showLastColumn=False,
-        showRowStripes=True,
-        showColumnStripes=False
-    )
-    table.tableStyleInfo = style
-    ws.add_table(table)
-
-    # Save the Excel file in memory
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-
-    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-
-def generate_excel_totalrecap_facturation(data, filename):
-    if not data or "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
-    df = pd.DataFrame(data)
-    if df.empty:
-        return jsonify({"error": "No data available"}), 400
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Total Recap"
-
-    # Formatting headers
-    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
-    header_font = Font(color="FFFFFF", bold=True)
-
-    ws.append(df.columns.tolist())
-    for col_idx, cell in enumerate(ws[1], 1):
-        cell.fill = header_fill
-        cell.font = header_font
-    ws.auto_filter.ref = ws.dimensions
-
-    # Add data rows with alternating row colors
-    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
-        ws.append(row)
-        if row_idx % 2 == 0:
-            for cell in ws[row_idx]:
-                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
-
-    # Add an Excel table
-    table = Table(displayName="TotalRecapTable", ref=ws.dimensions)
-    style = TableStyleInfo(
-        name="TableStyleMedium9",
-        showFirstColumn=False,
-        showLastColumn=False,
-        showRowStripes=True,
-        showColumnStripes=False
-    )
-    table.tableStyleInfo = style
-    ws.add_table(table)
-
-    # Save the Excel file in memory
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-
-    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-
-
-
-def fetch_fournisseur_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id):
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT * FROM (
-                    SELECT 
-                        CAST(xf.name AS VARCHAR2(300)) AS FOURNISSEUR,   
-                        SUM(xf.TOTALLINE) AS total, 
-                        SUM(xf.qtyentered) AS QTY,
-                        ROUND(
-                            CASE 
-                                WHEN SUM(xf.CONSOMATION) = 0 THEN 0
-                                WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1) * 100
-                                ELSE ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION)) * 100
-                            END, 4) AS marge,
-                        0 AS sort_order
-                    FROM xx_ca_fournisseur xf
-                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
-                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
-                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
-                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
-                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
-                    JOIN C_ORDER C ON mi.C_ORDER_ID = c.C_ORDER_ID
-                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                        AND xf.AD_Org_ID = :ad_org_id
-                        AND xf.DOCSTATUS != 'RE'
-                        AND (:fournisseur IS NULL OR xf.name LIKE :fournisseur || '%')
-                        AND (:product IS NULL OR xf.product LIKE :product || '%')
-                        AND (:client IS NULL OR cb.name LIKE :client || '%')
-                        AND (:operateur IS NULL OR au.name LIKE :operateur || '%')
-                        AND (:bccb IS NULL OR C.DOCUMENTNO LIKE :bccb || '%')
-                        AND (:zone IS NULL OR sr.name LIKE :zone || '%')
-                    GROUP BY xf.name
-                    UNION ALL
-                    SELECT 
-                        CAST('Total' AS VARCHAR2(300)) AS name, 
-                        SUM(xf.TOTALLINE) AS total, 
-                        SUM(xf.qtyentered) AS QTY,
-                        ROUND(
-                            CASE 
-                                WHEN SUM(xf.CONSOMATION) = 0 THEN 0
-                                WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1) * 100
-                                ELSE ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION)) * 100
-                            END, 4) AS marge,
-                        1 AS sort_order
-                    FROM xx_ca_fournisseur xf
-                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
-                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
-                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
-                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
-                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
-                    JOIN C_ORDER C ON mi.C_ORDER_ID = c.C_ORDER_ID
-                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                        AND xf.AD_Org_ID = :ad_org_id
-                        AND xf.DOCSTATUS != 'RE'
-                        AND (:fournisseur IS NULL OR xf.name LIKE :fournisseur || '%')
-                        AND (:product IS NULL OR xf.product LIKE :product || '%')
-                        AND (:client IS NULL OR cb.name LIKE :client || '%')
-                        AND (:operateur IS NULL OR au.name LIKE :operateur || '%')
-                        AND (:bccb IS NULL OR C.DOCUMENTNO LIKE :bccb || '%')
-                        AND (:zone IS NULL OR sr.name LIKE :zone || '%')
-                )
-                ORDER BY sort_order, total DESC
-            """
-            params = {
-                'start_date': start_date,
-                'end_date': end_date,
-                'fournisseur': fournisseur or None,
-                'product': product or None,
-                'client': client or None,
-                'operateur': operateur or None,
-                'bccb': bccb or None,
-                'zone': zone or None,
-                'ad_org_id': ad_org_id  # New parameter
-            }
-
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]
-            data = [dict(zip(columns, row)) for row in rows]
-            return data
-    except Exception as e:
-        logger.error(f"Error fetching fournisseur data: {e}")
-        return {"error": "An error occurred while fetching fournisseur data."}
-
-@app.route('/fetchFournisseurData', methods=['GET'])
-def fetch_fournisseur():
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    fournisseur = request.args.get('fournisseur')
-    product = request.args.get('product')
-    client = request.args.get('client')
-    operateur = request.args.get('operateur')
-    bccb = request.args.get('bccb')
-    zone = request.args.get('zone')
-    ad_org_id = request.args.get('ad_org_id')  # New parameter
-
-    if not start_date or not end_date:
-        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
-
-    if not ad_org_id:
-        return jsonify({"error": "Missing ad_org_id parameter"}), 400  # Ensure ad_org_id is provided
-
-    try:
-        ad_org_id = int(ad_org_id)  # Convert to integer
-    except ValueError:
-        return jsonify({"error": "Invalid ad_org_id format"}), 400
-
-    data = fetch_fournisseur_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id)
-    return jsonify(data)
-
-
-@app.route('/download-fournisseur-excel', methods=['GET'])
-def download_fournisseur_excel():
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    fournisseur = request.args.get('fournisseur')
-    product = request.args.get('product')
-    client = request.args.get('client')
-    operateur = request.args.get('operateur')
-    bccb = request.args.get('bccb')
-    zone = request.args.get('zone')
-    ad_org_id = request.args.get('ad_org_id')
-
-    if not start_date or not end_date:
-        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
-
-    try:
-        ad_org_id = int(ad_org_id) if ad_org_id else None  # Convert if provided
-    except ValueError:
-        return jsonify({"error": "ad_org_id must be an integer"}), 400
-
-    # Fetch data
-    data = fetch_fournisseur_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id)
-
-    if not data or isinstance(data, dict) and "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
-    # Generate filename based on ad_org_id
-    today_date = datetime.now().strftime("%d-%m-%Y")
-    if ad_org_id == 1000012:
-        filename = f"FournisseurRecap_facturation_{start_date}_to_{end_date}_{today_date}.xlsx"
-    else:
-        filename = f"FournisseurRecap_{start_date}_to_{end_date}_{today_date}.xlsx"
-
-    return generate_excel_fournisseur(data, filename)
-
-
-def generate_excel_fournisseur(data, filename):
-    if not data or isinstance(data, dict) and "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
-    df = pd.DataFrame(data)
-    if df.empty:
-        return jsonify({"error": "No data available"}), 400
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Fournisseur Recap"
-
-    # Formatting headers
-    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
-    header_font = Font(color="FFFFFF", bold=True)
-
-    # Add headers
-    ws.append(df.columns.tolist())
-    for cell in ws[1]:  # Style header row
-        cell.fill = header_fill
-        cell.font = header_font
-
-    # Add data rows with alternating row colors
-    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
-        ws.append(list(row))  # Convert tuple to list before appending
-        if row_idx % 2 == 0:
-            for cell in ws[row_idx]:
-                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
-
-    # Add an Excel table
-    table = Table(displayName="FournisseurRecapTable", ref=f"A1:{chr(65 + len(df.columns) - 1)}{len(df) + 1}")
-    style = TableStyleInfo(
-        name="TableStyleMedium9",
-        showFirstColumn=False,
-        showLastColumn=False,
-        showRowStripes=True,
-        showColumnStripes=False
-    )
-    table.tableStyleInfo = style
-    ws.add_table(table)
-
-    # Save the Excel file in memory
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-
-    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-
- 
-
-def fetch_product_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id):
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT * FROM (
-                    -- Main Product Breakdown
-                    SELECT 
-                        CAST(xf.product AS VARCHAR2(400)) AS "PRODUIT",
-                        SUM(xf.TOTALLINE) AS "TOTAL",
-                        SUM(xf.qtyentered) AS "QTY",
-                        CASE 
-                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
-                            ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
-                        END AS "MARGE",
-                        0 AS "SORT_ORDER"
-                    FROM xx_ca_fournisseur xf
-                    LEFT JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
-                    LEFT JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
-                    LEFT JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
-                    LEFT JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
-                    LEFT JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
-                    LEFT JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
-                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                          AND xf.AD_Org_ID = :ad_org_id
-                          AND xf.DOCSTATUS != 'RE'
-                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
-                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
-                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
-                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
-                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
-                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
-                    GROUP BY xf.product
-
-                    UNION ALL
-
-                    -- Total Row
-                    SELECT 
-                        'Total' AS "PRODUIT",
-                        SUM(xf.TOTALLINE) AS "TOTAL",
-                        SUM(xf.qtyentered) AS "QTY",
-                        CASE 
-                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
-                            ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
-                        END AS "MARGE",
-                        1 AS "SORT_ORDER"
-                    FROM xx_ca_fournisseur xf
-                    LEFT JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
-                    LEFT JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
-                    LEFT JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
-                    LEFT JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
-                    LEFT JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
-                    LEFT JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
-                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                          AND xf.AD_Org_ID = :ad_org_id
-                          AND xf.DOCSTATUS != 'RE'
-                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
-                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
-                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
-                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
-                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
-                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
-                ) ORDER BY "SORT_ORDER", "TOTAL" DESC
-            """
-            params = {
-                'start_date': start_date,
-                'end_date': end_date,
-                'fournisseur': fournisseur or None,
-                'product': product or None,
-                'client': client or None,
-                'operateur': operateur or None,
-                'bccb': bccb or None,
-                'zone': zone or None,
-                'ad_org_id': ad_org_id
-            }
-
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]  # Get column names
-            return [dict(zip(columns, row)) for row in rows]
-
-    except Exception as e:
-        logger.error(f"Error fetching product data: {e}")
-        return {"error": "An error occurred while fetching product data."}
-
-@app.route('/fetchProductData', methods=['GET'])
-def fetch_product():
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    fournisseur = request.args.get('fournisseur')
-    product = request.args.get("product", "").strip()
-    client = request.args.get('client')
-    operateur = request.args.get('operateur')
-    bccb = request.args.get('bccb')
-    zone = request.args.get('zone')
-    ad_org_id = request.args.get('ad_org_id')
-
-    if not start_date or not end_date or not ad_org_id:
-        return jsonify({"error": "Missing start_date, end_date, or ad_org_id parameters"}), 400
-
-    data = fetch_product_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id)
-    return jsonify(data)
-
-
-
-
-@app.route('/download-product-excel', methods=['GET'])
-def download_product_excel():
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    fournisseur = request.args.get('fournisseur')
-    product = request.args.get('product')
-    client = request.args.get('client')
-    operateur = request.args.get('operateur')
-    bccb = request.args.get('bccb')
-    zone = request.args.get('zone')
-    ad_org_id = request.args.get('ad_org_id')
-
-    if not start_date or not end_date:
-        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
-
-    try:
-        ad_org_id = int(ad_org_id) if ad_org_id else None  # Convert if provided
-    except ValueError:
-        return jsonify({"error": "ad_org_id must be an integer"}), 400
-
-    # Fetch data
-    data = fetch_product_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id)
-
-    if not data or isinstance(data, dict) and "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
-    # Generate filename based on ad_org_id
-    today_date = datetime.now().strftime("%d-%m-%Y")
-    if ad_org_id == 1000012:
-        filename = f"ProductRecap_facturation_{start_date}_to_{end_date}_{today_date}.xlsx"
-    else:
-        filename = f"ProductRecap_{start_date}_to_{end_date}_{today_date}.xlsx"
-
-    return generate_excel_product(data, filename)
-
-
-def generate_excel_product(data, filename):
-    if not data or isinstance(data, dict) and "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
-    df = pd.DataFrame(data)
-    if df.empty:
-        return jsonify({"error": "No data available"}), 400
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Product Recap"
-
-    # Formatting headers
-    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
-    header_font = Font(color="FFFFFF", bold=True)
-
-    # Add headers
-    ws.append(df.columns.tolist())
-    for cell in ws[1]:  # Style header row
-        cell.fill = header_fill
-        cell.font = header_font
-
-    # Add data rows with alternating row colors
-    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
-        ws.append(list(row))  # Convert tuple to list before appending
-        if row_idx % 2 == 0:
-            for cell in ws[row_idx]:
-                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
-
-    # Add an Excel table
-    table = Table(displayName="ProductRecapTable", ref=f"A1:{chr(65 + len(df.columns) - 1)}{len(df) + 1}")
-    style = TableStyleInfo(
-        name="TableStyleMedium9",
-        showFirstColumn=False,
-        showLastColumn=False,
-        showRowStripes=True,
-        showColumnStripes=False
-    )
-    table.tableStyleInfo = style
-    ws.add_table(table)
-
-    # Save the Excel file in memory
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-
-    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-
-@app.route('/download-zone-excel', methods=['GET'])
-def download_zone_excel():
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    fournisseur = request.args.get('fournisseur')
-    product = request.args.get('product')
-    client = request.args.get('client')
-    operateur = request.args.get('operateur')
-    bccb = request.args.get('bccb')
-    zone = request.args.get('zone')
-    ad_org_id = request.args.get('ad_org_id')
-
-    if not start_date or not end_date:
-        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
-
-    try:
-        ad_org_id = int(ad_org_id) if ad_org_id else None  # Convert if provided
-    except ValueError:
-        return jsonify({"error": "ad_org_id must be an integer"}), 400
-
-    # Fetch data
-    data = fetch_zone_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id)
-
-    if not data or isinstance(data, dict) and "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
-    # Generate filename based on ad_org_id
-    today_date = datetime.now().strftime("%d-%m-%Y")
-    if ad_org_id == 1000012:
-        filename = f"ZoneRecap_facturation_{start_date}_to_{end_date}_{today_date}.xlsx"
-    else:
-        filename = f"ZoneRecap_{start_date}_to_{end_date}_{today_date}.xlsx"
-
-    return generate_excel_zone(data, filename)
-
-
-def generate_excel_zone(data, filename):
-    if not data or isinstance(data, dict) and "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
-    df = pd.DataFrame(data)
-    if df.empty:
-        return jsonify({"error": "No data available"}), 400
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Zone Recap"
-
-    # Formatting headers
-    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
-    header_font = Font(color="FFFFFF", bold=True)
-
-    # Add headers
-    ws.append(df.columns.tolist())
-    for cell in ws[1]:  # Style header row
-        cell.fill = header_fill
-        cell.font = header_font
-
-    # Add data rows with alternating row colors
-    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
-        ws.append(list(row))  # Convert tuple to list before appending
-        if row_idx % 2 == 0:
-            for cell in ws[row_idx]:
-                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
-
-    # Add an Excel table
-    table = Table(displayName="ZoneRecapTable", ref=f"A1:{chr(65 + len(df.columns) - 1)}{len(df) + 1}")
-    style = TableStyleInfo(
-        name="TableStyleMedium9",
-        showFirstColumn=False,
-        showLastColumn=False,
-        showRowStripes=True,
-        showColumnStripes=False
-    )
-    table.tableStyleInfo = style
-    ws.add_table(table)
-
-    # Save the Excel file in memory
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-
-    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-@app.route('/download-client-excel', methods=['GET'])
-def download_client_excel():
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    fournisseur = request.args.get('fournisseur')
-    product = request.args.get('product')
-    client = request.args.get('client')
-    operateur = request.args.get('operateur')
-    bccb = request.args.get('bccb')
-    zone = request.args.get('zone')
-    ad_org_id = request.args.get('ad_org_id')
-
-    if not start_date or not end_date:
-        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
-
-    try:
-        ad_org_id = int(ad_org_id) if ad_org_id else None  # Convert if provided
-    except ValueError:
-        return jsonify({"error": "ad_org_id must be an integer"}), 400
-
-    # Fetch data
-    data = fetch_client_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id)
-
-    if not data or isinstance(data, dict) and "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
-    # Generate filename based on ad_org_id
-    today_date = datetime.now().strftime("%d-%m-%Y")
-    if ad_org_id == 1000012:
-        filename = f"ClientRecap_facturation_{start_date}_to_{end_date}_{today_date}.xlsx"
-    else:
-        filename = f"ClientRecap_{start_date}_to_{end_date}_{today_date}.xlsx"
-
-    return generate_excel_client(data, filename)
-
-
-def generate_excel_client(data, filename):
-    if not data or isinstance(data, dict) and "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
-    df = pd.DataFrame(data)
-    if df.empty:
-        return jsonify({"error": "No data available"}), 400
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Client Recap"
-
-    # Formatting headers
-    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
-    header_font = Font(color="FFFFFF", bold=True)
-
-    # Add headers
-    ws.append(df.columns.tolist())
-    for cell in ws[1]:  # Style header row
-        cell.fill = header_fill
-        cell.font = header_font
-
-    # Add data rows with alternating row colors
-    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
-        ws.append(list(row))  # Convert tuple to list before appending
-        if row_idx % 2 == 0:
-            for cell in ws[row_idx]:
-                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
-
-    # Add an Excel table
-    table = Table(displayName="ClientRecapTable", ref=f"A1:{chr(65 + len(df.columns) - 1)}{len(df) + 1}")
-    style = TableStyleInfo(
-        name="TableStyleMedium9",
-        showFirstColumn=False,
-        showLastColumn=False,
-        showRowStripes=True,
-        showColumnStripes=False
-    )
-    table.tableStyleInfo = style
-    ws.add_table(table)
-
-    # Save the Excel file in memory
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-
-    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-
-@app.route('/download-operator-excel', methods=['GET'])
-def download_operator_excel():
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    fournisseur = request.args.get('fournisseur')
-    product = request.args.get('product')
-    client = request.args.get('client')
-    operateur = request.args.get('operateur')
-    bccb = request.args.get('bccb')
-    zone = request.args.get('zone')
-    ad_org_id = request.args.get('ad_org_id')
-
-    if not start_date or not end_date:
-        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
-
-    try:
-        ad_org_id = int(ad_org_id) if ad_org_id else None  # Convert if provided
-    except ValueError:
-        return jsonify({"error": "ad_org_id must be an integer"}), 400
-
-    # Fetch data
-    data = fetch_operator_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id)
-
-    if not data or isinstance(data, dict) and "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
-    # Generate filename based on ad_org_id
-    today_date = datetime.now().strftime("%d-%m-%Y")
-    if ad_org_id == 1000012:
-        filename = f"OperatorRecap_facturation_{start_date}_to_{end_date}_{today_date}.xlsx"
-    else:
-        filename = f"OperatorRecap_{start_date}_to_{end_date}_{today_date}.xlsx"
-
-    return generate_excel_operator(data, filename)
-
-
-def generate_excel_operator(data, filename):
-    if not data or isinstance(data, dict) and "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
-    df = pd.DataFrame(data)
-    if df.empty:
-        return jsonify({"error": "No data available"}), 400
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Operator Recap"
-
-    # Formatting headers
-    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
-    header_font = Font(color="FFFFFF", bold=True)
-
-    # Add headers
-    ws.append(df.columns.tolist())
-    for cell in ws[1]:  # Style header row
-        cell.fill = header_fill
-        cell.font = header_font
-
-    # Add data rows with alternating row colors
-    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
-        ws.append(list(row))  # Convert tuple to list before appending
-        if row_idx % 2 == 0:
-            for cell in ws[row_idx]:
-                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
-
-    # Add an Excel table
-    table = Table(displayName="OperatorRecapTable", ref=f"A1:{chr(65 + len(df.columns) - 1)}{len(df) + 1}")
-    style = TableStyleInfo(
-        name="TableStyleMedium9",
-        showFirstColumn=False,
-        showLastColumn=False,
-        showRowStripes=True,
-        showColumnStripes=False
-    )
-    table.tableStyleInfo = style
-    ws.add_table(table)
-
-    # Save the Excel file in memory
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-
-    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
 
@@ -2867,80 +1893,6 @@ def generate_excel_bccbf(data, filename):
 
 
 
-
-@app.route('/download-bccb-excel', methods=['GET'])
-def download_bccb_excel():
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    fournisseur = request.args.get('fournisseur')
-    product = request.args.get('product')
-    client = request.args.get('client')
-    operateur = request.args.get('operateur')
-    bccb = request.args.get('bccb')
-    zone = request.args.get('zone')
-
-    if not start_date or not end_date:
-        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
-
-    # Fetch data
-    data = fetch_bccb_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone)
-
-    if not data or "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
-    # Generate filename
-    today_date = datetime.now().strftime("%d-%m-%Y")
-    filename = f"BCCBRecap_{start_date}_to_{end_date}_{today_date}.xlsx"
-
-    return generate_excel_bccb(data, filename)
-
-def generate_excel_bccb(data, filename):
-    if not data or "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
-    df = pd.DataFrame(data)
-    if df.empty:
-        return jsonify({"error": "No data available"}), 400
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "BCCB Recap"
-
-    # Formatting headers
-    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
-    header_font = Font(color="FFFFFF", bold=True)
-
-    ws.append(df.columns.tolist())
-    for col_idx, cell in enumerate(ws[1], 1):
-        cell.fill = header_fill
-        cell.font = header_font
-    ws.auto_filter.ref = ws.dimensions
-
-    # Add data rows with alternating row colors
-    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
-        ws.append(row)
-        if row_idx % 2 == 0:
-            for cell in ws[row_idx]:
-                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
-
-    # Add an Excel table
-    table = Table(displayName="BCCBRecapTable", ref=ws.dimensions)
-    style = TableStyleInfo(
-        name="TableStyleMedium9",
-        showFirstColumn=False,
-        showLastColumn=False,
-        showRowStripes=True,
-        showColumnStripes=False
-    )
-    table.tableStyleInfo = style
-    ws.add_table(table)
-
-    # Save the Excel file in memory
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-
-    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 def fetch_total_recap_achat(start_date, end_date, fournisseur, product):
     try:
@@ -3787,56 +2739,6 @@ def generate_excel_prdct_achatf(data, filename):
 
 
 
-def fetch_bccb_product(bccb, ad_org_id):
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT product, qty, remise, marge 
-                FROM (
-                    SELECT det.*, 
-                           ROUND((det.ventef - det.p_revient) / det.p_revient * 100, 2) AS marge 
-                    FROM (
-                        SELECT lot.*, 
-                               (lot.priceentered - ((lot.priceentered * NVL(lot.remise_vente, 0)) / 100)) / 
-                               (1 + (lot.bonus_vente / 100)) AS ventef 
-                        FROM (
-                            SELECT ol.priceentered AS priceentered, 
-                                   ol.qtyentered AS qty, 
-                                   mp.name AS product, 
-                                   ol.discount / 100 AS remise, 
-                                   (SELECT valuenumber FROM m_attributeinstance 
-                                    WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
-                                          AND m_attribute_id = 1000504) AS p_revient, 
-                                   (SELECT valuenumber FROM m_attributeinstance 
-                                    WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
-                                          AND m_attribute_id = 1000908) AS bonus_vente, 
-                                   (SELECT valuenumber FROM m_attributeinstance 
-                                    WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
-                                          AND m_attribute_id = 1001408) AS remise_vente 
-                            FROM c_orderline ol 
-                            INNER JOIN c_order o ON o.c_order_id = ol.c_order_id 
-                            INNER JOIN m_product mp ON ol.m_product_id = mp.m_product_id 
-                            WHERE ol.qtyentered > 0 
-                                  AND (:bccb IS NULL OR UPPER(o.documentno) LIKE UPPER(:bccb) || '%')
-                                  AND o.AD_Org_ID = :ad_org_id
-                        ) lot
-                    ) det
-                )
-            """
-            
-            params = {
-                'bccb': bccb or None,
-                'ad_org_id': ad_org_id
-            }
-            
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]  # Get column names
-            return [dict(zip(columns, row)) for row in rows]
-    except Exception as e:
-        logger.error(f"Error fetching BCCB product data: {e}")
-        return {"error": "An error occurred while fetching BCCB product data."}
 
 def fetch_bccb_productfact(bccb, ad_org_id):
     try:
@@ -3890,18 +2792,6 @@ def fetch_bccb_productfact(bccb, ad_org_id):
         logger.error(f"Error fetching BCCB product data: {e}")
         return {"error": "An error occurred while fetching BCCB product data."}
 
-@app.route('/fetchBCCBProduct', methods=['GET'])
-def fetch_bccb_p():
-    bccb = request.args.get('bccb')
-    ad_org_id = request.args.get('ad_org_id')
-
-    if not ad_org_id:
-        return jsonify({"error": "Missing ad_org_id parameter"}), 400
-
-    data = fetch_bccb_product(bccb, ad_org_id)
-    return jsonify(data)
-
-
 @app.route('/fetchBCCBProductfact', methods=['GET'])
 def fetch_bccb_pf():
     bccb = request.args.get('bccb')
@@ -3913,79 +2803,6 @@ def fetch_bccb_pf():
     data = fetch_bccb_productfact(bccb, ad_org_id)
     return jsonify(data)
 
-@app.route('/download-bccb-product-excel', methods=['GET'])
-def download_bccb_product_excel():
-    bccb = request.args.get('bccb')
-    ad_org_id = request.args.get('ad_org_id', '1000012')
-
-    if not bccb:
-        return jsonify({"error": "Missing BCCB parameter"}), 400
-
-    try:
-        ad_org_id = int(ad_org_id)
-    except ValueError:
-        return jsonify({"error": "ad_org_id must be an integer"}), 400
-
-    # Fetch data
-    data = fetch_bccb_product(bccb, ad_org_id)
-
-    if not data or isinstance(data, dict) and "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
-    # Generate filename
-    today_date = datetime.now().strftime("%d-%m-%Y")
-    filename = f"BCCB_Product_{bccb}_{today_date}.xlsx"
-
-    return generate_excel_bccb_product(data, filename)
-
-
-def generate_excel_bccb_product(data, filename):
-    if not data or isinstance(data, dict) and "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
-    df = pd.DataFrame(data)
-    if df.empty:
-        return jsonify({"error": "No data available"}), 400
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "BCCB Product Recap"
-
-    # Formatting headers
-    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
-    header_font = Font(color="FFFFFF", bold=True)
-
-    # Add headers
-    ws.append(df.columns.tolist())
-    for cell in ws[1]:  # Style header row
-        cell.fill = header_fill
-        cell.font = header_font
-
-    # Add data rows with alternating row colors
-    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
-        ws.append(list(row))  # Convert tuple to list before appending
-        if row_idx % 2 == 0:
-            for cell in ws[row_idx]:
-                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
-
-    # Add an Excel table
-    table = Table(displayName="BCCBProductTable", ref=f"A1:{chr(65 + len(df.columns) - 1)}{len(df) + 1}")
-    style = TableStyleInfo(
-        name="TableStyleMedium9",
-        showFirstColumn=False,
-        showLastColumn=False,
-        showRowStripes=True,
-        showColumnStripes=False
-    )
-    table.tableStyleInfo = style
-    ws.add_table(table)
-
-    # Save the Excel file in memory
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-
-    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
 @app.route('/download-bccb-product-excel-f', methods=['GET'])
@@ -4068,7 +2885,7 @@ def fetch_rotation_product_data():
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
             query = """
-            select M_product_id as id, name from M_PRODUCT
+            select M_product_id as M_PRODUCT_ID, name as NAME from M_PRODUCT
                 WHERE AD_Client_ID = 1000000
                 AND AD_Org_ID = 1000000
                 AND ISACTIVE = 'Y'
@@ -6009,7 +4826,26 @@ def get_last_recouvrement_value():
         logger.error(f"Error in get_last_recouvrement_value: {e}")
         return 481114494.36  # Default fallback value
 
-
+@app.route('/api/recouvrement/last-value', methods=['GET'])
+def last_recouvrement_value():
+    """
+    API endpoint to get the last recouvrement value from database
+    Returns JSON response with the value or default fallback
+    """
+    try:
+        value = get_last_recouvrement_value()
+        return jsonify({
+            'status': 'success',
+            'value': value,
+            'message': 'Last recouvrement value retrieved successfully'
+        }), 200
+    except Exception as e:
+        logger.error(f"Error in last_recouvrement_value endpoint: {e}")
+        return jsonify({
+            'status': 'error',
+            'value': 481114494.36,
+            'message': 'Failed to retrieve recouvrement value, using fallback'
+        }), 500
 
 @app.route('/recouvrement', methods=['GET'])
 def recouvrement():
@@ -9731,11 +8567,11 @@ def generate_excel_charges_dashboard(data, filename):
 
 
 
-
 @app.route('/retour_documents', methods=['GET'])
 def retour_documents():
     """
     Fetch sales documents with detailed information including margin calculation.
+    Excludes documents with docstatus = 'DR' (Drafted).
     Can filter by:
     - Date range (start_date and end_date, format: YYYY-MM-DD)
     - Specific document number (ndocument)
@@ -9777,6 +8613,7 @@ def retour_documents():
                     co.ad_org_id = 1000000
                     AND issotrx = 'Y'
                     AND C_DOCTYPETARGET_ID = 1001408
+                    AND docstatus != 'DR'  -- NEW: Exclude drafted documents
                     AND (
                         (:ndocument IS NULL AND co.dateordered BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD'))
                         OR 
@@ -9798,7 +8635,1899 @@ def retour_documents():
         import logging
         logging.error(f"Error in retour_documents: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+def fetch_facture_recap_achat(start_date, end_date, partner_name):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+                SELECT 
+                    i.documentno, 
+                    i.totallines, 
+                    i.description, 
+                    i.dateinvoiced, 
+                    i.c_bpartner_id, 
+                    i.C_Invoice_ID
+                FROM C_Invoice i
+                JOIN C_BPartner cb ON i.c_bpartner_id = cb.c_bpartner_id
+                WHERE (:partner_name IS NULL OR UPPER(cb.name) LIKE UPPER(:partner_name) || '%')
+                  AND i.dateinvoiced BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                and i.docstatus IN ('CO', 'CL')
+                AND i.issotrx = 'N'
+                ORDER BY i.dateinvoiced DESC
+            """
+
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'partner_name': partner_name or None
+            }
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+
+            data = [
+                {
+                    "documentno": row[0],
+                    "totallines": row[1],
+                    "description": row[2],
+                    "dateinvoiced": row[3],
+                    "c_bpartner_id": row[4],
+                    "c_invoice_id": row[5]
+                }
+                for row in rows
+            ]
+
+            return data
+
+    except Exception as e:
+        logger.error(f"Error fetching facture recap achat: {e}")
+        return {"error": "An error occurred while fetching facture recap achat."}
+
+# Helper function to generate Excel file for invoices
+def generate_excel_invoices(data, filename):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    # Create a new workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Invoices"
+
+    # Define header styling
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    # Define column headers
+    headers = ["Document No", "Total", "Description", "Date Invoiced"]
+    ws.append(headers)
+
+    # Apply header styling
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Add data rows
+    for row_idx, row_data in enumerate(data, start=2):
+        # Format date
+        date_formatted = ""
+        if row_data.get("dateinvoiced"):
+            try:
+                if isinstance(row_data["dateinvoiced"], str):
+                    date_formatted = datetime.strptime(row_data["dateinvoiced"], "%Y-%m-%d").strftime("%Y-%m-%d")
+                else:
+                    date_formatted = row_data["dateinvoiced"].strftime("%Y-%m-%d")
+            except:
+                date_formatted = str(row_data["dateinvoiced"])
+
+        row = [
+            row_data.get("documentno", ""),
+            row_data.get("totallines", 0),
+            row_data.get("description", ""),
+            date_formatted
+        ]
+        ws.append(row)
+
+        # Apply alternating row colors
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Auto-fit columns
+    for column in ws.columns:
+        max_length = 0
+        column = [cell for cell in column]
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = (max_length + 2)
+        ws.column_dimensions[column[0].column_letter].width = adjusted_width
+
+    # Create Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    # Create response
+    response = make_response(output.read())
+    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    return response
+
+# Helper function to generate Excel file for invoice lines
+def generate_excel_invoice_lines(data, filename):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    # Create a new workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Invoice Lines"
+
+    # Define header styling
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    # Define column headers
+    headers = ["Product Name", "Quantity", "Line Amount"]
+    ws.append(headers)
+
+    # Apply header styling
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Add data rows
+    for row_idx, row_data in enumerate(data, start=2):
+        row = [
+            row_data.get("product_name", ""),
+            row_data.get("qtyentered", 0),
+            row_data.get("linenetamt", 0)
+        ]
+        ws.append(row)
+
+        # Apply alternating row colors
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Auto-fit columns
+    for column in ws.columns:
+        max_length = 0
+        column = [cell for cell in column]
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = (max_length + 2)
+        ws.column_dimensions[column[0].column_letter].width = adjusted_width
+
+    # Create Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    # Create response
+    response = make_response(output.read())
+    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    return response
+
+# Route to download Excel for invoices
+@app.route('/download-invoices-excel', methods=['GET'])
+def download_invoices_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    partner_name = request.args.get('partner_name')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    if not partner_name:
+        return jsonify({"error": "Missing partner_name parameter"}), 400
+
+    # Fetch invoice data
+    data = fetch_facture_recap_achat(start_date, end_date, partner_name)
     
+    if "error" in data:
+        return jsonify(data), 500
+
+    # Generate filename
+    filename = f"Invoices_{partner_name}_{start_date}_to_{end_date}.xlsx"
+    
+    return generate_excel_invoices(data, filename)
+
+# Route to download Excel for invoice lines
+@app.route('/download-invoice-lines-excel', methods=['GET'])
+def download_invoice_lines_excel():
+    invoice_id = request.args.get('invoice_id')
+
+    if not invoice_id:
+        return jsonify({"error": "Missing invoice_id parameter"}), 400
+
+    # Fetch invoice lines data
+    data = BCF_product(invoice_id)
+    
+    if "error" in data:
+        return jsonify(data), 500
+
+    # Generate filename
+    filename = f"Invoice_Lines_{invoice_id}_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
+    
+    return generate_excel_invoice_lines(data, filename)
+
+
+@app.route('/fetchFactureRecapAchat', methods=['GET'])
+def fetch_facture_achat():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    partner_name = request.args.get('partner_name')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    data = fetch_facture_recap_achat(start_date, end_date, partner_name)
+    return jsonify(data)
+
+
+def BCF_product(invoice_id):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+                SELECT 
+                    il.qtyentered, 
+                    p.name AS product_name, 
+                    il.linenetamt
+                FROM C_InvoiceLine il
+                JOIN M_Product p ON il.m_product_id = p.m_product_id
+                WHERE il.c_invoice_id = :invoice_id
+            """
+
+            params = {'invoice_id': invoice_id}
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+
+            data = [
+                {
+                    "qtyentered": row[0],
+                    "product_name": row[1],
+                    "linenetamt": row[2]
+                }
+                for row in rows
+            ]
+
+            return data
+
+    except Exception as e:
+        logger.error(f"Error fetching invoice lines: {e}")
+        return {"error": "An error occurred while fetching invoice line details."}
+
+
+@app.route('/fetchBCFProduct', methods=['GET'])
+def fetch_bcf_product():
+    invoice_id = request.args.get('invoice_id')
+
+    if not invoice_id:
+        return jsonify({"error": "Missing invoice_id parameter"}), 400
+
+    data = BCF_product(invoice_id)
+    return jsonify(data)
+
+
+
+
+
+# recap vente part
+
+
+
+def fetch_fournisseur_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label=None):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT * FROM (
+                    SELECT 
+                        CAST(xf.name AS VARCHAR2(300)) AS FOURNISSEUR,   
+                        SUM(xf.TOTALLINE) AS total, 
+                        SUM(xf.qtyentered) AS QTY,
+                        ROUND(
+                            CASE 
+                                WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                                WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1) * 100
+                                ELSE ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION)) * 100
+                            END, 4) AS marge,
+                        0 AS sort_order
+                    FROM xx_ca_fournisseur xf
+                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    JOIN C_ORDER C ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                        AND xf.AD_Org_ID = :ad_org_id
+                        AND xf.DOCSTATUS != 'RE'
+                        AND (:fournisseur IS NULL OR xf.name LIKE :fournisseur || '%')
+                        AND (:product IS NULL OR xf.product LIKE :product || '%')
+                        AND (:client IS NULL OR cb.name LIKE :client || '%')
+                        AND (:operateur IS NULL OR au.name LIKE :operateur || '%')
+                        AND (:bccb IS NULL OR C.DOCUMENTNO LIKE :bccb || '%')
+                        AND (:zone IS NULL OR sr.name LIKE :zone || '%')
+                        AND (
+                            :group_label IS NULL OR
+                            (CASE 
+                                WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                ELSE 'autre'
+                            END = :group_label)
+                        )
+                    GROUP BY xf.name
+                    UNION ALL
+                    SELECT 
+                        CAST('Total' AS VARCHAR2(300)) AS name, 
+                        SUM(xf.TOTALLINE) AS total, 
+                        SUM(xf.qtyentered) AS QTY,
+                        ROUND(
+                            CASE 
+                                WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                                WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1) * 100
+                                ELSE ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION)) * 100
+                            END, 4) AS marge,
+                        1 AS sort_order
+                    FROM xx_ca_fournisseur xf
+                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    JOIN C_ORDER C ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                        AND xf.AD_Org_ID = :ad_org_id
+                        AND xf.DOCSTATUS != 'RE'
+                        AND (:fournisseur IS NULL OR xf.name LIKE :fournisseur || '%')
+                        AND (:product IS NULL OR xf.product LIKE :product || '%')
+                        AND (:client IS NULL OR cb.name LIKE :client || '%')
+                        AND (:operateur IS NULL OR au.name LIKE :operateur || '%')
+                        AND (:bccb IS NULL OR C.DOCUMENTNO LIKE :bccb || '%')
+                        AND (:zone IS NULL OR sr.name LIKE :zone || '%')
+                        AND (
+                            :group_label IS NULL OR
+                            (CASE 
+                                WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                ELSE 'autre'
+                            END = :group_label)
+                        )
+                )
+                ORDER BY sort_order, total DESC
+            """
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'fournisseur': fournisseur or None,
+                'product': product or None,
+                'client': client or None,
+                'operateur': operateur or None,
+                'bccb': bccb or None,
+                'zone': zone or None,
+                'ad_org_id': ad_org_id,
+                'group_label': group_label
+            }
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+            return data
+    except Exception as e:
+        logger.error(f"Error fetching fournisseur data: {e}")
+        return {"error": "An error occurred while fetching fournisseur data."}
+
+@app.route('/fetchFournisseurData', methods=['GET'])
+def fetch_fournisseur():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    if not ad_org_id:
+        return jsonify({"error": "Missing ad_org_id parameter"}), 400  # Ensure ad_org_id is provided
+
+    try:
+        ad_org_id = int(ad_org_id)  # Convert to integer
+    except ValueError:
+        return jsonify({"error": "Invalid ad_org_id format"}), 400
+
+    data = fetch_fournisseur_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label)
+    return jsonify(data)
+
+
+
+
+
+def fetch_product_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label=None):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT * FROM (
+                    -- Main Product Breakdown
+                    SELECT 
+                        CAST(xf.product AS VARCHAR2(400)) AS "PRODUIT",
+                        SUM(xf.TOTALLINE) AS "TOTAL",
+                        SUM(xf.qtyentered) AS "QTY",
+                        CASE 
+                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                            ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
+                        END AS "MARGE",
+                        0 AS "SORT_ORDER"
+                    FROM xx_ca_fournisseur xf
+                    LEFT JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                    LEFT JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                    LEFT JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                    LEFT JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    LEFT JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    LEFT JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                          AND xf.AD_Org_ID = :ad_org_id
+                          AND xf.DOCSTATUS != 'RE'
+                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
+                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
+                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
+                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
+                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
+                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
+                          AND (
+                              :group_label IS NULL OR
+                              (CASE 
+                                  WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                  WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                  ELSE 'autre'
+                              END = :group_label)
+                          )
+                    GROUP BY xf.product
+
+                    UNION ALL
+
+                    -- Total Row
+                    SELECT 
+                        'Total' AS "PRODUIT",
+                        SUM(xf.TOTALLINE) AS "TOTAL",
+                        SUM(xf.qtyentered) AS "QTY",
+                        CASE 
+                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                            ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
+                        END AS "MARGE",
+                        1 AS "SORT_ORDER"
+                    FROM xx_ca_fournisseur xf
+                    LEFT JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                    LEFT JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                    LEFT JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                    LEFT JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    LEFT JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    LEFT JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                          AND xf.AD_Org_ID = :ad_org_id
+                          AND xf.DOCSTATUS != 'RE'
+                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
+                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
+                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
+                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
+                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
+                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
+                          AND (
+                              :group_label IS NULL OR
+                              (CASE 
+                                  WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                  WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                  ELSE 'autre'
+                              END = :group_label)
+                          )
+                ) ORDER BY "SORT_ORDER", "TOTAL" DESC
+            """
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'fournisseur': fournisseur or None,
+                'product': product or None,
+                'client': client or None,
+                'operateur': operateur or None,
+                'bccb': bccb or None,
+                'zone': zone or None,
+                'ad_org_id': ad_org_id,
+                'group_label': group_label
+            }
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            return [dict(zip(columns, row)) for row in rows]
+
+    except Exception as e:
+        logger.error(f"Error fetching product data: {e}")
+        return {"error": "An error occurred while fetching product data."}
+
+@app.route('/fetchProductData', methods=['GET'])
+def fetch_product():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get("product", "").strip()
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date or not ad_org_id:
+        return jsonify({"error": "Missing start_date, end_date, or ad_org_id parameters"}), 400
+
+    data = fetch_product_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label)
+    return jsonify(data)
+
+
+
+
+
+
+# Fetch total recap data
+def fetch_rcap_data(start_date, end_date, ad_org_id, group_label=None):
+
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT 
+                    SUM(xf.TOTALLINE) AS CHIFFRE, 
+                    SUM(xf.qtyentered) AS QTY,
+                    SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION) AS MARGE,
+                    SUM(xf.CONSOMATION) AS CONSOMATION,
+                    CASE 
+                        WHEN SUM(xf.CONSOMATION) < 0 
+                        THEN ROUND(((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / (SUM(xf.CONSOMATION) * -1)), 4)
+                        ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
+                    END AS POURCENTAGE
+                FROM xx_ca_fournisseur xf
+                JOIN C_BPartner cb ON cb.C_BPARTNER_ID = xf.CLIENTID
+                WHERE 
+                    xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                    AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                    AND xf.AD_Org_ID = :ad_org_id
+                    AND xf.DOCSTATUS != 'RE'
+                    AND cb.ISCUSTOMER = 'Y'
+                    AND cb.AD_Client_ID = 1000000
+                    AND cb.AD_Org_ID = 1000000
+                    AND (
+                        :group_label IS NULL OR
+                        (CASE 
+                            WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                            WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                            ELSE 'autre'
+                        END = :group_label)
+                    )
+            """
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'ad_org_id': ad_org_id,
+                'group_label': group_label
+            }
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+            return data
+    except Exception as e:
+        logger.error(f"Error fetching data: {e}")
+        return {"error": "An error occurred while fetching data."}
+    
+
+
+
+
+
+@app.route('/fetchTotalrecapData', methods=['GET'])
+def fetch_recap():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    ad_org_id = request.args.get('ad_org_id')  # Get ad_org_id from request
+    group_label = request.args.get('group_label')  # Optional group_label (para, potentiel, autre)
+
+    if not start_date or not end_date or not ad_org_id:
+        return jsonify({"error": "Missing start_date, end_date, or ad_org_id parameters"}), 400
+
+    try:
+        ad_org_id = int(ad_org_id)  # Convert to integer
+    except ValueError:
+        return jsonify({"error": "ad_org_id must be an integer"}), 400
+
+    data = fetch_rcap_data(start_date, end_date, ad_org_id, group_label)
+    return jsonify(data)
+
+
+
+
+
+@app.route('/fetchZoneRecap', methods=['GET'])
+def fetch_zone():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+    if not ad_org_id:
+        return jsonify({"error": "Missing ad_org_id parameter"}), 400
+
+    data = fetch_zone_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label)
+    return jsonify(data)
+
+
+def fetch_zone_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label=None):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT * FROM (
+                    -- Recap by Zone
+                    SELECT 
+                        CAST(sr.name AS VARCHAR2(100)) AS "ZONE",
+                        SUM(xf.TOTALLINE) AS "TOTAL",
+                        SUM(xf.qtyentered) AS "QTY",
+                        CASE 
+                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                            ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
+                        END AS "MARGE",
+                        0 AS "SORT_ORDER"
+                    FROM C_SalesRegion sr
+                    JOIN C_BPartner_Location bpl ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    JOIN xx_ca_fournisseur xf ON bpl.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                          AND xf.AD_Org_ID = :ad_org_id
+                          AND xf.DOCSTATUS != 'RE'
+                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
+                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
+                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
+                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
+                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
+                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
+                          AND (
+                              :group_label IS NULL OR
+                              (CASE 
+                                  WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                  WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                  ELSE 'autre'
+                              END = :group_label)
+                          )
+                    GROUP BY sr.name
+
+                    UNION ALL
+
+                    -- Total Row
+                    SELECT 
+                        'Total' AS "ZONE",
+                        SUM(xf.TOTALLINE) AS "TOTAL",
+                        SUM(xf.qtyentered) AS "QTY",
+                        CASE 
+                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                            ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
+                        END AS "MARGE",
+                        1 AS "SORT_ORDER"
+                    FROM C_SalesRegion sr
+                    JOIN C_BPartner_Location bpl ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    JOIN xx_ca_fournisseur xf ON bpl.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                          AND xf.AD_Org_ID = :ad_org_id
+                          AND xf.DOCSTATUS != 'RE'
+                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
+                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
+                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
+                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
+                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
+                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
+                          AND (
+                              :group_label IS NULL OR
+                              (CASE 
+                                  WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                  WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                  ELSE 'autre'
+                              END = :group_label)
+                          )
+                ) ORDER BY "SORT_ORDER", "TOTAL" DESC
+            """
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'fournisseur': fournisseur or None,
+                'product': product or None,
+                'client': client or None,
+                'operateur': operateur or None,
+                'bccb': bccb or None,
+                'zone': zone or None,
+                'ad_org_id': ad_org_id,
+                'group_label': group_label
+            }
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            return [dict(zip(columns, row)) for row in rows]
+    except Exception as e:
+        logger.error(f"Error fetching zone recap: {e}")
+        return {"error": "An error occurred while fetching zone recap."}
+
+
+
+def fetch_client_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label=None):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT * FROM (
+                    -- Recap by Client
+                    SELECT 
+                        CAST(cb.name AS VARCHAR2(100)) AS "CLIENT",
+                        SUM(xf.TOTALLINE) AS "TOTAL",
+                        SUM(xf.qtyentered) AS "QTY",
+                        CASE 
+                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                            ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
+                        END AS "MARGE",
+                        0 AS "SORT_ORDER"
+                    FROM C_BPartner cb
+                    JOIN xx_ca_fournisseur xf ON cb.C_BPartner_ID = xf.CLIENTID
+                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                          AND xf.AD_Org_ID = :ad_org_id
+                          AND xf.DOCSTATUS != 'RE'
+                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
+                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
+                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
+                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
+                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
+                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
+                          AND (
+                              :group_label IS NULL OR
+                              (CASE 
+                                  WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                  WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                  ELSE 'autre'
+                              END = :group_label)
+                          )
+                    GROUP BY cb.name
+
+                    UNION ALL
+
+                    -- Total Row
+                    SELECT 
+                        'Total' AS "CLIENT",
+                        SUM(xf.TOTALLINE) AS "TOTAL",
+                        SUM(xf.qtyentered) AS "QTY",
+                        CASE 
+                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                            ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
+                        END AS "MARGE",
+                        1 AS "SORT_ORDER"
+                    FROM C_BPartner cb
+                    JOIN xx_ca_fournisseur xf ON cb.C_BPartner_ID = xf.CLIENTID
+                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                          AND xf.AD_Org_ID = :ad_org_id
+                          AND xf.DOCSTATUS != 'RE'
+                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
+                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
+                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
+                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
+                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
+                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
+                          AND (
+                              :group_label IS NULL OR
+                              (CASE 
+                                  WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                  WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                  ELSE 'autre'
+                              END = :group_label)
+                          )
+                ) ORDER BY "SORT_ORDER", "TOTAL" DESC
+            """
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'fournisseur': fournisseur or None,
+                'product': product or None,
+                'client': client or None,
+                'operateur': operateur or None,
+                'bccb': bccb or None,
+                'zone': zone or None,
+                'ad_org_id': ad_org_id,
+                'group_label': group_label
+            }
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            return [dict(zip(columns, row)) for row in rows]
+    except Exception as e:
+        logger.error(f"Error fetching client recap: {e}")
+        return {"error": "An error occurred while fetching client recap."}
+
+
+@app.route('/fetchClientRecap', methods=['GET'])
+def fetch_client():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+    if not ad_org_id:
+        return jsonify({"error": "Missing ad_org_id parameter"}), 400
+
+    data = fetch_client_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label)
+    return jsonify(data)
+
+def fetch_operator_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label=None):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT * FROM (
+                    SELECT CAST(au.name AS VARCHAR2(100)) AS "OPERATEUR", 
+                           SUM(xf.TOTALLINE) AS "TOTAL", 
+                           SUM(xf.qtyentered) AS "QTY",
+                           CASE 
+                               WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                               WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1)
+                               ELSE (SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION)
+                           END AS "MARGE",
+                           0 AS "SORT_ORDER"
+                    FROM AD_User au
+                    JOIN xx_ca_fournisseur xf ON au.AD_User_ID = xf.SALESREP_ID
+                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                          AND xf.AD_Org_ID = :ad_org_id
+                          AND xf.DOCSTATUS != 'RE'
+                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
+                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
+                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
+                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
+                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
+                          AND (
+                              :group_label IS NULL OR
+                              (CASE 
+                                  WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                  WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                  ELSE 'autre'
+                              END = :group_label)
+                          )
+                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
+                    GROUP BY au.name
+
+                    UNION ALL
+
+                    SELECT 'Total' AS "OPERATEUR", 
+                           SUM(xf.TOTALLINE) AS "TOTAL", 
+                           SUM(xf.qtyentered) AS "QTY",
+                           CASE 
+                               WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                               WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1)
+                               ELSE (SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION)
+                           END AS "MARGE",
+                           1 AS "SORT_ORDER"
+                    FROM AD_User au
+                    JOIN xx_ca_fournisseur xf ON au.AD_User_ID = xf.SALESREP_ID
+                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                          AND xf.AD_Org_ID = :ad_org_id
+                          AND xf.DOCSTATUS != 'RE'
+                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
+                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
+                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
+                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
+                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
+                          AND (
+                              :group_label IS NULL OR
+                              (CASE 
+                                  WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                  WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                  ELSE 'autre'
+                              END = :group_label)
+                          )
+                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
+                ) ORDER BY "SORT_ORDER", "TOTAL" DESC
+            """
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'fournisseur': fournisseur or None,
+                'product': product or None,
+                'client': client or None,
+                'operateur': operateur or None,
+                'bccb': bccb or None,
+                'zone': zone or None,
+                'ad_org_id': ad_org_id,
+                'group_label': group_label
+            }
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            return [dict(zip(columns, row)) for row in rows]
+    except Exception as e:
+        logger.error(f"Error fetching operator recap: {e}")
+        return {"error": "An error occurred while fetching operator recap."}
+
+
+@app.route('/fetchOperatorRecap', methods=['GET'])
+def fetch_operator():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+    if not ad_org_id:
+        return jsonify({"error": "Missing ad_org_id parameter"}), 400
+
+    data = fetch_operator_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label)
+    return jsonify(data)
+
+
+
+
+def fetch_bccb_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, group_label=None):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT DOCUMENTNO, DATEORDERED, GRANDTOTAL, 
+                       ROUND(AVG(marge * 100), 2) AS marge
+                FROM (
+                    SELECT det.*
+                    FROM (
+                        SELECT lot.*,  
+                               (lot.priceentered - ((lot.priceentered * NVL(lot.remise_vente, 0)) / 100)) / (1 + (lot.bonus_vente / 100)) AS ventef
+                        FROM (
+                            SELECT 
+                                ol.priceentered, 
+                                (SELECT valuenumber 
+                                 FROM m_attributeinstance 
+                                 WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                                       AND m_attribute_id = 1000504) AS p_revient,
+                                (SELECT valuenumber 
+                                 FROM m_attributeinstance 
+                                 WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                                       AND m_attribute_id = 1000908) AS bonus_vente,
+                                (SELECT valuenumber 
+                                 FROM m_attributeinstance 
+                                 WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                                       AND m_attribute_id = 1001408) AS remise_vente,
+                                c.DOCUMENTNO, 
+                                c.DATEORDERED, 
+                                c.GRANDTOTAL,
+                                CASE 
+                                    WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                                    WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1)
+                                    ELSE (SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION)
+                                END AS marge
+                            FROM C_Order c
+                            JOIN C_OrderLine ol ON c.C_Order_ID = ol.C_Order_ID 
+                            JOIN M_InOut mi ON mi.C_Order_ID = c.C_Order_ID
+                            JOIN xx_ca_fournisseur xf ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                            JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                            JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                            JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                            JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                            WHERE c.AD_Org_ID = 1000000 
+                                  AND ol.qtyentered > 0
+                                  AND xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                                      AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                                  AND (c.DOCSTATUS = 'CL' OR c.DOCSTATUS = 'CO')
+                                  AND c.C_DocType_ID IN (1000539, 1001408)
+                                  AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
+                                  AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
+                                  AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
+                                  AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
+                                  AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
+                                  AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
+                                  AND (
+                                      :group_label IS NULL OR
+                                      (CASE 
+                                          WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                          WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                          ELSE 'autre'
+                                      END = :group_label)
+                                  )
+                            GROUP BY c.DOCUMENTNO, c.DATEORDERED, c.GRANDTOTAL, ol.priceentered, ol.m_attributesetinstance_id
+                            ORDER BY c.DOCUMENTNO
+                        ) lot
+                    ) det
+                )
+                GROUP BY DOCUMENTNO, DATEORDERED, GRANDTOTAL
+                ORDER BY DOCUMENTNO
+            """
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'fournisseur': fournisseur or None,
+                'product': product or None,
+                'client': client or None,
+                'operateur': operateur or None,
+                'bccb': bccb or None,
+                'zone': zone or None,
+                'group_label': group_label
+            }
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            return [dict(zip(columns, row)) for row in rows]
+    except Exception as e:
+        logger.error(f"Error fetching BCCB recap: {e}")
+        return {"error": "An error occurred while fetching BCCB recap."}
+
+
+@app.route('/fetchBCCBRecap', methods=['GET']) 
+def fetch_bccb():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    data = fetch_bccb_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, group_label)
+    return jsonify(data)
+
+
+
+
+@app.route('/download-bccb-product-excel', methods=['GET'])
+def download_bccb_product_excel():
+    bccb = request.args.get('bccb')
+    ad_org_id = request.args.get('ad_org_id', '1000012')
+
+    if not bccb:
+        return jsonify({"error": "Missing BCCB parameter"}), 400
+
+    try:
+        ad_org_id = int(ad_org_id)
+    except ValueError:
+        return jsonify({"error": "ad_org_id must be an integer"}), 400
+
+    # Fetch data
+    data = fetch_bccb_product(bccb, ad_org_id)
+
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    filename = f"BCCB_Product_{bccb}_{today_date}.xlsx"
+
+    return generate_excel_bccb_product(data, filename)
+
+
+def generate_excel_bccb_product(data, filename):
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "BCCB Product Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    # Add headers
+    ws.append(df.columns.tolist())
+    for cell in ws[1]:  # Style header row
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(list(row))  # Convert tuple to list before appending
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="BCCBProductTable", ref=f"A1:{chr(65 + len(df.columns) - 1)}{len(df) + 1}")
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+
+
+
+
+@app.route('/download-fournisseur-excel', methods=['GET'])
+def download_fournisseur_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    try:
+        ad_org_id = int(ad_org_id) if ad_org_id else None  # Convert if provided
+    except ValueError:
+        return jsonify({"error": "ad_org_id must be an integer"}), 400
+
+    # Fetch data
+    data = fetch_fournisseur_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label)
+
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename based on ad_org_id and group_label
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    group_label_part = f"_{group_label}" if group_label else ""
+    if ad_org_id == 1000012:
+        filename = f"FournisseurRecap_facturation{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+    else:
+        filename = f"FournisseurRecap{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_fournisseur(data, filename)
+
+
+def generate_excel_fournisseur(data, filename):
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Fournisseur Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    # Add headers
+    ws.append(df.columns.tolist())
+    for cell in ws[1]:  # Style header row
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(list(row))  # Convert tuple to list before appending
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="FournisseurRecapTable", ref=f"A1:{chr(65 + len(df.columns) - 1)}{len(df) + 1}")
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+
+
+
+
+@app.route('/download-product-excel', methods=['GET'])
+def download_product_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    try:
+        ad_org_id = int(ad_org_id) if ad_org_id else None  # Convert if provided
+    except ValueError:
+        return jsonify({"error": "ad_org_id must be an integer"}), 400
+
+    # Fetch data
+    data = fetch_product_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label)
+
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename based on ad_org_id and group_label
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    group_label_part = f"_{group_label}" if group_label else ""
+    if ad_org_id == 1000012:
+        filename = f"ProductRecap_facturation{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+    else:
+        filename = f"ProductRecap{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_product(data, filename)
+
+
+def generate_excel_product(data, filename):
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Product Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    # Add headers
+    ws.append(df.columns.tolist())
+    for cell in ws[1]:  # Style header row
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(list(row))  # Convert tuple to list before appending
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="ProductRecapTable", ref=f"A1:{chr(65 + len(df.columns) - 1)}{len(df) + 1}")
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+
+
+
+@app.route('/download-totalrecap-excel', methods=['GET'])
+def download_totalrecap_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date or not ad_org_id:
+        return jsonify({"error": "Missing start_date, end_date, or ad_org_id parameters"}), 400
+
+    try:
+        ad_org_id = int(ad_org_id)  # Convert to integer
+    except ValueError:
+        return jsonify({"error": "ad_org_id must be an integer"}), 400
+
+    # Fetch data from the database
+    data = fetch_rcap_data(start_date, end_date, ad_org_id, group_label)
+
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename based on ad_org_id and group_label
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    group_label_part = f"_{group_label}" if group_label else ""
+    if ad_org_id == 1000012:
+        filename = f"TotalRecap_facturation{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+    else:
+        filename = f"TotalRecap{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_totalrecap(data, filename)
+
+
+def generate_excel_totalrecap(data, filename):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Total Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    ws.append(df.columns.tolist())
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+    ws.auto_filter.ref = ws.dimensions
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="TotalRecapTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+
+
+
+
+ 
+
+
+
+@app.route('/download-zone-excel', methods=['GET'])
+def download_zone_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    try:
+        ad_org_id = int(ad_org_id) if ad_org_id else None  # Convert if provided
+    except ValueError:
+        return jsonify({"error": "ad_org_id must be an integer"}), 400
+
+    # Fetch data
+    data = fetch_zone_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label)
+
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename based on ad_org_id and group_label
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    group_label_part = f"_{group_label}" if group_label else ""
+    if ad_org_id == 1000012:
+        filename = f"ZoneRecap_facturation{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+    else:
+        filename = f"ZoneRecap{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_zone(data, filename)
+
+
+def generate_excel_zone(data, filename):
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Zone Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    # Add headers
+    ws.append(df.columns.tolist())
+    for cell in ws[1]:  # Style header row
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(list(row))  # Convert tuple to list before appending
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="ZoneRecapTable", ref=f"A1:{chr(65 + len(df.columns) - 1)}{len(df) + 1}")
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+@app.route('/download-client-excel', methods=['GET'])
+def download_client_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    try:
+        ad_org_id = int(ad_org_id) if ad_org_id else None  # Convert if provided
+    except ValueError:
+        return jsonify({"error": "ad_org_id must be an integer"}), 400
+
+    # Fetch data
+    data = fetch_client_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label)
+
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename based on ad_org_id and group_label
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    group_label_part = f"_{group_label}" if group_label else ""
+    if ad_org_id == 1000012:
+        filename = f"ClientRecap_facturation{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+    else:
+        filename = f"ClientRecap{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_client(data, filename)
+
+
+def generate_excel_client(data, filename):
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Client Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    # Add headers
+    ws.append(df.columns.tolist())
+    for cell in ws[1]:  # Style header row
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(list(row))  # Convert tuple to list before appending
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="ClientRecapTable", ref=f"A1:{chr(65 + len(df.columns) - 1)}{len(df) + 1}")
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@app.route('/download-operator-excel', methods=['GET'])
+def download_operator_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    try:
+        ad_org_id = int(ad_org_id) if ad_org_id else None  # Convert if provided
+    except ValueError:
+        return jsonify({"error": "ad_org_id must be an integer"}), 400
+
+    # Fetch data
+    data = fetch_operator_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label)
+
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename based on ad_org_id and group_label
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    group_label_part = f"_{group_label}" if group_label else ""
+    if ad_org_id == 1000012:
+        filename = f"OperatorRecap_facturation{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+    else:
+        filename = f"OperatorRecap{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_operator(data, filename)
+
+
+def generate_excel_operator(data, filename):
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Operator Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    # Add headers
+    ws.append(df.columns.tolist())
+    for cell in ws[1]:  # Style header row
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(list(row))  # Convert tuple to list before appending
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="OperatorRecapTable", ref=f"A1:{chr(65 + len(df.columns) - 1)}{len(df) + 1}")
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+
+
+
+
+
+
+@app.route('/download-bccb-excel', methods=['GET'])
+def download_bccb_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    # Fetch data
+    data = fetch_bccb_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone)
+
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    filename = f"BCCBRecap_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_bccb(data, filename)
+
+def generate_excel_bccb(data, filename):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "BCCB Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    ws.append(df.columns.tolist())
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+    ws.auto_filter.ref = ws.dimensions
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="BCCBRecapTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+
+ 
+@app.route('/fetchBCCBProduct', methods=['GET'])
+def fetch_bccb_p():
+    bccb = request.args.get('bccb')
+    ad_org_id = request.args.get('ad_org_id')
+
+    if not ad_org_id:
+        return jsonify({"error": "Missing ad_org_id parameter"}), 400
+
+    data = fetch_bccb_product(bccb, ad_org_id)
+    return jsonify(data)
+
+
+
+def fetch_bccb_product(bccb, ad_org_id):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT product, qty, remise, marge 
+                FROM (
+                    SELECT det.*, 
+                           ROUND((det.ventef - det.p_revient) / det.p_revient * 100, 2) AS marge 
+                    FROM (
+                        SELECT lot.*, 
+                               (lot.priceentered - ((lot.priceentered * NVL(lot.remise_vente, 0)) / 100)) / 
+                               (1 + (lot.bonus_vente / 100)) AS ventef 
+                        FROM (
+                            SELECT ol.priceentered AS priceentered, 
+                                   ol.qtyentered AS qty, 
+                                   mp.name AS product, 
+                                   ol.discount / 100 AS remise, 
+                                   (SELECT valuenumber FROM m_attributeinstance 
+                                    WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                                          AND m_attribute_id = 1000504) AS p_revient, 
+                                   (SELECT valuenumber FROM m_attributeinstance 
+                                    WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                                          AND m_attribute_id = 1000908) AS bonus_vente, 
+                                   (SELECT valuenumber FROM m_attributeinstance 
+                                    WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                                          AND m_attribute_id = 1001408) AS remise_vente 
+                            FROM c_orderline ol 
+                            INNER JOIN c_order o ON o.c_order_id = ol.c_order_id 
+                            INNER JOIN m_product mp ON ol.m_product_id = mp.m_product_id 
+                            WHERE ol.qtyentered > 0 
+                                  AND (:bccb IS NULL OR UPPER(o.documentno) LIKE UPPER(:bccb) || '%')
+                                  AND o.AD_Org_ID = :ad_org_id
+                        ) lot
+                    ) det
+                )
+            """
+            
+            params = {
+                'bccb': bccb or None,
+                'ad_org_id': ad_org_id
+            }
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            return [dict(zip(columns, row)) for row in rows]
+    except Exception as e:
+        logger.error(f"Error fetching BCCB product data: {e}")
+        return {"error": "An error occurred while fetching BCCB product data."}
+
+
+
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)

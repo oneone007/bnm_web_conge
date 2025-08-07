@@ -7,11 +7,18 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Restrict access for certain roles
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente'])) {
-    header("Location: Acess_Denied");    
-    exit();
-}
+// // Restrict access for certain roles
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente'])) {
+//     header("Location: Acess_Denied");    
+//     exit();
+// }
+
+
+
+$page_identifier = 'ETAT_F_CUMULE';
+
+require_once 'check_permission.php';
+
 ?>
 
 <!DOCTYPE html>
@@ -23,6 +30,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente'])) {
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="etatstock.css">
+
     <!-- Font Awesome for icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>

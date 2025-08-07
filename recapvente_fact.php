@@ -11,9 +11,14 @@ if (!isset($_SESSION['user_id'])) {
 
 
 
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup Vente'])) {
-    header("Location: Acess_Denied");    exit();
-}
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup Vente'])) {
+//     header("Location: Acess_Denied");    exit();
+// }
+
+$page_identifier = 'Recap_Vente_Facturation';
+
+require_once 'check_permission.php';
+
 ?>
 
 
@@ -32,6 +37,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup V
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <link rel="stylesheet" href="recap_achat.css">
     <script src="theme.js"></script>
+            <script src="api_config.js"></script>
 
 
 
@@ -826,7 +832,7 @@ tables.forEach((table) => makeTableColumnsResizable(table));
 
                 try {
                     
-                    const response = await fetch(`http://192.168.1.94:5000/fetchTotalrecapData?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000012`);
+                    const response = await fetch(API_CONFIG.getApiUrl(`/fetchTotalrecapData?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000012`));
 
                     if (!response.ok) throw new Error("Network response was not ok");
 
@@ -896,8 +902,7 @@ tables.forEach((table) => makeTableColumnsResizable(table));
         return;
     }
 
-    const downloadUrl = `http://192.168.1.94:5000/download-totalrecap-excel?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000012`;
-    window.location.href = downloadUrl;  // Triggers file download
+    window.location.href = API_CONFIG.getApiUrl(`/download-totalrecap-excel?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000012`);  // Triggers file download
 });
 
 
@@ -928,7 +933,7 @@ let fullData = [];
 
                 if (!startDate || !endDate) return;
 
-                const url = new URL("http://192.168.1.94:5000/fetchFournisseurData");
+                const url = new URL(API_CONFIG.getApiUrl("/fetchFournisseurData"));
                 url.searchParams.append("start_date", startDate);
                 url.searchParams.append("end_date", endDate);
                 url.searchParams.append("ad_org_id", "1000012"); 
@@ -1098,7 +1103,7 @@ document.getElementById("download-fournisseur").addEventListener("click", async 
         return;
     }
 
-    const url = new URL("http://192.168.1.94:5000/download-fournisseur-excel");
+    const url = new URL(API_CONFIG.getApiUrl("/download-fournisseur-excel"));
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
     url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
@@ -1171,7 +1176,7 @@ async function fetchProductRecap() {
 
     if (!startDate || !endDate) return;
 
-    const url = new URL("http://192.168.1.94:5000/fetchProductData");
+    const url = new URL(API_CONFIG.getApiUrl("/fetchProductData"));
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
     url.searchParams.append("ad_org_id", "1000012"); 
@@ -1296,7 +1301,7 @@ document.getElementById("download-product-excel").addEventListener("click", asyn
         return;
     }
 
-    const url = new URL("http://192.168.1.94:5000/download-product-excel");
+    const url = new URL(API_CONFIG.getApiUrl("/download-product-excel"));
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
     url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
@@ -1387,7 +1392,7 @@ async function fetchZoneRecap(page = 1) {
 
     if (!startDate || !endDate) return;
 
-    const url = new URL("http://192.168.1.94:5000/fetchZoneRecap");
+    const url = new URL(API_CONFIG.getApiUrl("/fetchZoneRecap"));
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
     url.searchParams.append("ad_org_id", "1000012");
@@ -1539,7 +1544,7 @@ function downloadExcel(endpoint) {
         return;
     }
 
-    const url = new URL(`http://192.168.1.94:5000/${endpoint}`);
+    const url = new URL(API_CONFIG.getApiUrl(`/${endpoint}`));
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
     url.searchParams.append("ad_org_id", "1000012"); // Added ad_org_id parameter
@@ -1572,7 +1577,7 @@ async function fetchClientRecap(page = 1) {
 
     if (!startDate || !endDate) return;
 
-    const url = new URL("http://192.168.1.94:5000/fetchClientRecap");
+    const url = new URL(API_CONFIG.getApiUrl("/fetchClientRecap"));
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
     url.searchParams.append("ad_org_id", "1000012");
@@ -1740,7 +1745,7 @@ async function fetchOperatorRecap(page = 1) {
 
     if (!startDate || !endDate) return;
 
-    const url = new URL("http://192.168.1.94:5000/fetchOperatorRecap");
+    const url = new URL(API_CONFIG.getApiUrl("/fetchOperatorRecap"));
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
     url.searchParams.append("ad_org_id", "1000012");
@@ -2020,7 +2025,7 @@ const itemsPerBccbPage = 10; // Adjust this to the number of items per page
 
     if (!startDate || !endDate) return;
 
-    const url = new URL("http://192.168.1.94:5000/fetchBCCBRecapfact"); 
+    const url = new URL(API_CONFIG.getApiUrl("/fetchBCCBRecapfact")); 
     url.searchParams.append("start_date", startDate);
     url.searchParams.append("end_date", endDate);
     url.searchParams.append("page", page);  // Add page parameter for pagination
@@ -2197,7 +2202,7 @@ function changeBccbPage(page) {
     const tableContainer = document.getElementById("bccb-product-container");
     tableContainer.style.display = "none"; // Hide table before fetching
 
-    const url = new URL("http://192.168.1.94:5000/fetchBCCBProductfact");
+    const url = new URL(API_CONFIG.getApiUrl("/fetchBCCBProductfact"));
     url.searchParams.append("bccb", bccb);
     url.searchParams.append("ad_org_id", "1000012"); 
 

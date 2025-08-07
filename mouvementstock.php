@@ -7,11 +7,19 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Vente', 'Comptable'])) {
-    header("Location: Acess_Denied");    
-    exit();
-}
+// // Restrict access for 'vente' and 'achat'
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat','Sup Vente', 'Comptable'])) {
+//     header("Location: Acess_Denied");    
+//     exit();
+// }
+
+
+$page_identifier = 'Mouvement_Stock';
+
+
+
+require_once 'check_permission.php';
+
 ?>
 
 <!DOCTYPE html>

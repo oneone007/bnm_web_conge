@@ -1155,3 +1155,145 @@ WHERE
     AND C_DOCTYPETARGET_ID = 1001408
     AND co.dateordered >= TO_DATE(:start_date, 'YYYY-MM-DD')
     AND co.dateordered <= TO_DATE(:end_date, 'YYYY-MM-DD')
+
+
+;
+
+
+select docstatus from C_Order where C_Order_ID in (3259877,3259876);
+
+
+
+
+
+
+SELECT 
+    i.documentno, 
+    i.totallines, 
+    i.description, 
+    i.dateinvoiced, 
+    i.c_bpartner_id, 
+    i.C_Invoice_ID,
+FROM C_Invoice i
+JOIN C_BPartner cb ON i.c_bpartner_id = cb.c_bpartner_id
+WHERE cb.name = :partner_name
+  AND i.dateinvoiced BETWEEN :start_date AND :end_date;
+
+
+
+
+SELECT 
+    qtyentered, 
+    m_product_id, 
+    linenetamt
+FROM C_InvoiceLine
+WHERE c_invoice_id = :invoice_id;
+
+
+
+
+select CLIENTID from xx_ca_fournisseur where  MOVEMENTDATE BETWEEN :start_date AND :end_date FETCH FIRST 1 ROWS ONLY;
+
+
+SELECT name, c_bp_group_id,C_BPARTNER_ID
+                FROM C_BPartner
+                WHERE iscustomer = 'Y'
+                  AND AD_Client_ID = 1000000
+                  AND AD_Org_ID = 1000000
+                ORDER BY name;
+
+                --1000003 para     1001330 pot
+SELECT 
+
+    cb.name, 
+    cb.c_bp_group_id,
+    cb.C_BPARTNER_ID,
+    CASE 
+        WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+        WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+        ELSE 'autre'
+    END AS group_label
+FROM C_BPartner cb
+WHERE cb.ISCUSTOMER = 'Y'
+  AND cb.AD_Client_ID = 1000000
+  AND cb.AD_Org_ID = 1000000
+  AND cb.C_BPARTNER_ID = (
+        SELECT CLIENTID 
+        FROM xx_ca_fournisseur 
+        WHERE MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')
+        FETCH FIRST 1 ROWS ONLY
+  )
+;
+
+SELECT 
+    cb.name, 
+    cb.c_bp_group_id,
+    cb.C_BPARTNER_ID,
+    CASE 
+        WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+        WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+        ELSE 'autre'
+    END AS group_label
+FROM C_BPartner cb
+WHERE cb.ISCUSTOMER = 'Y'
+  AND cb.AD_Client_ID = 1000000
+  AND cb.AD_Org_ID = 1000000
+  AND cb.C_BPARTNER_ID IN (
+      SELECT CLIENTID 
+      FROM xx_ca_fournisseur 
+      WHERE MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')
+  AND (
+      (:group_label IS NULL) 
+      OR 
+      (CASE 
+          WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+          WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+          ELSE 'autre'
+      END = :group_label)
+  )
+  );
+------------------------------------------
+
+
+                DEFINE BankStatement = 1025270;
+UPDATE C_BankStatement 
+SET  processed = 'N',docstatus = 'DR', docaction = 'CO'
+WHERE C_BankStatement_id = &BankStatement;
+UPDATE C_BankStatementLine  
+SET processed = 'N'
+WHERE C_BankStatement_id = &BankStatement;
+COMMIT;
+--------------------------------------------------------------
+------------------------ Pour Achever Un Extrait de Caisse -----------------------------------------------------
+-----------------------------------------------------------------
+UPDATE C_BankStatement 
+SET processed = 'Y',docstatus = 'CO', docaction = 'CL'
+WHERE C_BankStatement_id = &BankStatement;
+UPDATE C_BankStatementLine  
+SET processed = 'Y'
+WHERE C_BankStatement_id = &BankStatement;
+COMMIT;
+
+
+
+
+
+SELECT DISTINCT cb.name as client, ad.name as operator
+            FROM c_bpartner cb
+            INNER JOIN ad_user ad ON (cb.salesrep_id = ad.ad_user_id)
+            WHERE ad.c_bpartner_id IN (1121780,1122143,1118392,1122144,1119089,1111429,1122761,1122868,1122142,1143361)
+            AND cb.isactive = 'Y'
+            AND cb.ad_org_id = 1000000
+            ORDER BY ad.name, cb.name ;
+
+
+            SELECT 
+    ad.name as operator,
+    COUNT(DISTINCT cb.c_bpartner_id) as client_count
+FROM c_bpartner cb
+INNER JOIN ad_user ad ON (cb.salesrep_id = ad.ad_user_id)
+WHERE ad.c_bpartner_id IN (1121780,1122143,1118392,1122144,1119089,1111429,1122761,1122868,1122142,1143361)
+AND cb.isactive = 'Y'
+AND cb.ad_org_id = 1000000
+GROUP BY ad.name
+ORDER BY ad.name

@@ -1,0 +1,29 @@
+[
+    {
+        "session_id": "rbganrs7q9d3ktdgefukrj31n4",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-08-06 13:00:45",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "DIRECT",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "rbganrs7q9d3ktdgefukrj31n4",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-08-06 13:04:22",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "DIRECT",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "km28hrte0vcc7cnl3lk5mmm9kl",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-08-06 13:19:11",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "DIRECT",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    }
+]

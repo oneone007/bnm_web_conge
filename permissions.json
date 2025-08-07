@@ -1,0 +1,55 @@
+{
+    "Admin": "all",
+    "Developer": "all",
+    "DRH": "all",
+    "Sup Achat": [
+        "Annual_Recap_A",
+        "Annual_Recap_V",
+        "DETTE_F",
+        "ETAT_F",
+        "ETAT_F_CUMULE",
+        "Etatstock",
+        "Product",
+        "Recap_Achat",
+        "Recap_Vente",
+        "Rotation",
+        "inventory\/inv",
+        "rot_men_achat",
+        "rot_men_vente"
+    ],
+    "Sup Vente": [
+        "Annual_Recap_A",
+        "Annual_Recap_V",
+        "CONFIRMED_ORDERS",
+        "Etatstock",
+        "Product",
+        "Quota",
+        "Recap_Achat",
+        "Recap_Vente",
+        "Rotation",
+        "rot_men_vente",
+        "simuler"
+    ],
+    "Comptable": [
+        "DETTE_F",
+        "ETAT_F",
+        "ETAT_F_CUMULE",
+        "Journal_Vente",
+        "Recap_Vente_Facturation",
+        "bank",
+        "charge",
+        "mony",
+        "print",
+        "recap_achat_facturation"
+    ],
+    "gestion stock": [
+        "inventory\/inv"
+    ],
+    "stock": [
+        "inventory\/inv"
+    ],
+    "saisie": [
+        "inventory\/inv",
+        "inventory\/inv_saisie"
+    ]
+}

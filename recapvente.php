@@ -7,11 +7,15 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Restrict access for 'Comptable'
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
-    header("Location: Acess_Denied");
-    exit();
-}
+// // Restrict access for 'Comptable'
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
+//     header("Location: Acess_Denied");
+//     exit();
+// }
+$page_identifier = 'Recap_Vente';
+
+require_once 'check_permission.php';
+
 ?>
 
 <!DOCTYPE html>
@@ -336,17 +340,22 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
                     <label for="start-date" class="dark:text-white">Begin Date:</label>
                     <input type="date" id="start-date" class="border rounded px-3 py-2 dark:bg-gray-700 dark:text-white dark:border-gray-600">
                 </div>
-                
                 <div class="flex items-center space-x-2">
                     <label for="end-date" class="dark:text-white">End Date:</label>
                     <input type="date" id="end-date" class="border rounded px-3 py-2 dark:bg-gray-700 dark:text-white dark:border-gray-600">
                 </div>
-                
+                <div class="flex items-center space-x-2">
+                    <label for="group-label-select" class="dark:text-white">Group:</label>
+                    <select id="group-label-select" class="border rounded px-3 py-2 dark:bg-gray-700 dark:text-white dark:border-gray-600">
+                        <option value="">All</option>
+                        <option value="para">Para</option>
+                        <option value="potentiel">Potentiel</option>
+                    </select>
+                </div>
                 <button id="fetch-data-btn" class="btn-primary">
                     <i class="fas fa-download mr-2"></i>
                     Fetch Data
                 </button>
-                
                 <button id="refresh-btn" class="btn-primary">
                     <i class="fas fa-refresh mr-2"></i>
                     Refresh
@@ -822,7 +831,11 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('start-date').value = today;
             document.getElementById('end-date').value = today;
-            
+            // Set default for group_label select
+            const groupLabelSelect = document.getElementById('group-label-select');
+            if (groupLabelSelect) {
+                groupLabelSelect.value = '';
+            }
             // Add resizable-table class to all tables
             setTimeout(() => {
                 document.querySelectorAll('table').forEach(table => {
@@ -1042,9 +1055,11 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
         async function fetchTotalRecap() {
             const startDate = document.getElementById('start-date').value;
             const endDate = document.getElementById('end-date').value;
-            
+            const groupLabel = document.getElementById('group-label-select')?.value || '';
             try {
-                const response = await fetch(API_CONFIG.getApiUrl(`/fetchTotalrecapData?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000000`));
+                let url = `/fetchTotalrecapData?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000000`;
+                if (groupLabel) url += `&group_label=${groupLabel}`;
+                const response = await fetch(API_CONFIG.getApiUrl(url));
                 const data = await response.json();
                 updateTotalRecapTable(data);
             } catch (error) {
@@ -1056,9 +1071,11 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
         async function fetchFournisseurData() {
             const startDate = document.getElementById('start-date').value;
             const endDate = document.getElementById('end-date').value;
-            
+            const groupLabel = document.getElementById('group-label-select')?.value || '';
             try {
-                const response = await fetch(API_CONFIG.getApiUrl(`/fetchFournisseurData?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000000`));
+                let url = `/fetchFournisseurData?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000000`;
+                if (groupLabel) url += `&group_label=${groupLabel}`;
+                const response = await fetch(API_CONFIG.getApiUrl(url));
                 const data = await response.json();
                 updateFournisseurTable(data);
                 currentData.fournisseur = data;
@@ -1071,9 +1088,11 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
         async function fetchProductData() {
             const startDate = document.getElementById('start-date').value;
             const endDate = document.getElementById('end-date').value;
-            
+            const groupLabel = document.getElementById('group-label-select')?.value || '';
             try {
-                const response = await fetch(API_CONFIG.getApiUrl(`/fetchProductData?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000000`));
+                let url = `/fetchProductData?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000000`;
+                if (groupLabel) url += `&group_label=${groupLabel}`;
+                const response = await fetch(API_CONFIG.getApiUrl(url));
                 const data = await response.json();
                 updateProductTable(data);
                 currentData.product = data;
@@ -1086,9 +1105,14 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
         async function fetchZoneData() {
             const startDate = document.getElementById('start-date').value;
             const endDate = document.getElementById('end-date').value;
-            
+            const groupLabel = document.getElementById('group-label-select')?.value || '';
             try {
-                const response = await fetch(API_CONFIG.getApiUrl(`/fetchZoneRecap?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000000`));
+                let url = `/fetchZoneRecap?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000000`;
+                if (groupLabel) url += `&group_label=${groupLabel}`;
+                const response = await fetch(API_CONFIG.getApiUrl(url));
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 const data = await response.json();
                 updateZoneTable(data);
                 currentData.zone = data;
@@ -1101,18 +1125,15 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
         async function fetchClientData() {
             const startDate = document.getElementById('start-date').value;
             const endDate = document.getElementById('end-date').value;
-            
+            const groupLabel = document.getElementById('group-label-select')?.value || '';
             try {
-                const url = API_CONFIG.getApiUrl(`/fetchClientRecap?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000000`);
-                console.log('Fetching client data from:', url);
-                const response = await fetch(url);
-                
+                let url = `/fetchClientRecap?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000000`;
+                if (groupLabel) url += `&group_label=${groupLabel}`;
+                const response = await fetch(API_CONFIG.getApiUrl(url));
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                
                 const data = await response.json();
-                console.log('Client data received:', data);
                 updateClientTable(data);
                 currentData.client = data;
             } catch (error) {
@@ -1124,18 +1145,15 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
         async function fetchOperateurData() {
             const startDate = document.getElementById('start-date').value;
             const endDate = document.getElementById('end-date').value;
-            
+            const groupLabel = document.getElementById('group-label-select')?.value || '';
             try {
-                const url = API_CONFIG.getApiUrl(`/fetchOperatorRecap?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000000`);
-                console.log('Fetching operateur data from:', url);
-                const response = await fetch(url);
-                
+                let url = `/fetchOperatorRecap?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000000`;
+                if (groupLabel) url += `&group_label=${groupLabel}`;
+                const response = await fetch(API_CONFIG.getApiUrl(url));
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                
                 const data = await response.json();
-                console.log('Operateur data received:', data);
                 updateOperateurTable(data);
                 currentData.operateur = data;
             } catch (error) {
@@ -1147,18 +1165,15 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
         async function fetchBccbData() {
             const startDate = document.getElementById('start-date').value;
             const endDate = document.getElementById('end-date').value;
-            
+            const groupLabel = document.getElementById('group-label-select')?.value || '';
             try {
-                const url = API_CONFIG.getApiUrl(`/fetchBCCBRecap?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000000`);
-                console.log('Fetching BCCB data from:', url);
-                const response = await fetch(url);
-                
+                let url = `/fetchBCCBRecap?start_date=${startDate}&end_date=${endDate}&ad_org_id=1000000`;
+                if (groupLabel) url += `&group_label=${groupLabel}`;
+                const response = await fetch(API_CONFIG.getApiUrl(url));
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                
                 const data = await response.json();
-                console.log('BCCB data received:', data);
                 updateBccbTable(data);
                 currentData.bccb = data;
             } catch (error) {
@@ -1858,12 +1873,20 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
                 return;
             }
             
+            // Map type to backend endpoint if needed
+            let endpointType = type;
+            if (type === 'operateur') endpointType = 'operator';
+            if (type === 'total') endpointType = 'totalrecap';
             // Construct URL with filters
-            const url = new URL(API_CONFIG.getApiUrl(`/download-${type}-excel`));
+            const url = new URL(API_CONFIG.getApiUrl(`/download-${endpointType}-excel`));
             url.searchParams.append("start_date", startDate);
             url.searchParams.append("end_date", endDate);
             url.searchParams.append("ad_org_id", "1000000");
-            
+
+            // Add group_label if selected
+            const groupLabel = document.getElementById('group-label-select')?.value;
+            if (groupLabel) url.searchParams.append("group_label", groupLabel);
+
             // Add filter parameters if they exist
             if (filterParams.fournisseur) url.searchParams.append("fournisseur", filterParams.fournisseur);
             if (filterParams.product) url.searchParams.append("product", filterParams.product);
@@ -1871,7 +1894,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
             if (filterParams.operateur) url.searchParams.append("operateur", filterParams.operateur);
             if (filterParams.bccb) url.searchParams.append("bccb", filterParams.bccb);
             if (filterParams.zone) url.searchParams.append("zone", filterParams.zone);
-            
+
             window.location.href = url;
         }
 

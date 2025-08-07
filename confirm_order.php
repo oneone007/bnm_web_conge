@@ -11,10 +11,13 @@ if (!isset($_SESSION['user_id'])) {
 
 
 
-// Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Comptable'])) {
-    header("Location: Acess_Denied");    exit();
-}
+// // Restrict access for 'vente' and 'achat'
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Comptable'])) {
+//     header("Location: Acess_Denied");    exit();
+// }
+$page_identifier = 'CONFIRMED_ORDERS';
+  
+require_once 'check_permission.php';
 
 
 ?>
@@ -33,6 +36,7 @@ Order a Confirmer
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <link rel="stylesheet" href="confirm_order.css">
+        <script src="api_config.js"></script>
 
     <script src="theme.js"></script>
 
@@ -334,7 +338,7 @@ document.getElementById("refresh-btn").addEventListener("click", async function 
 
 async function fetchOrderConfirmed() {
     try {
-        const response = await fetch('http://192.168.1.94:5000/order_confirmed');
+        const response = await fetch(API_CONFIG.getApiUrl('/order_confirmed'));
         const data = await response.json();
         
         const tableBody = document.getElementById('order-confirmer-table');
@@ -418,7 +422,7 @@ async function fetchBccbProduct(bccb) {
     const tableContainer = document.getElementById("bccb-product-container");
     tableContainer.style.display = "none"; // Hide table before fetching
 
-    const url = new URL("http://192.168.1.94:5000/fetchBCCBProduct");
+    const url = new URL(API_CONFIG.getApiUrl('/fetchBCCBProduct'));
     url.searchParams.append("bccb", bccb);
     url.searchParams.append("ad_org_id", "1000000"); 
 

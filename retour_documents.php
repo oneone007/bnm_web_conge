@@ -8,9 +8,13 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Comptable', 'Sup Vente','gestion stock','stock', 'saisie'])) {
-    header("Location: Acess_Denied");    exit();
-}
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Comptable', 'Sup Vente','gestion stock','stock', 'saisie'])) {
+//     header("Location: Acess_Denied");    exit();
+// }
+
+$page_identifier = 'retour';
+require_once 'check_permission.php';
+
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -22,6 +26,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Compt
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="confirm_order.css">
     <script src="theme.js"></script>
+    <script src="api_config.js"></script>
     <style>
         .input__container--variant {
             background: linear-gradient(to bottom, #F3FFF9, #F3FFF9);
@@ -201,7 +206,7 @@ async function fetchOrmDocuments() {
     const ndocument = document.getElementById('orm_search').value.trim();
     const startDate = document.getElementById('start_date').value;
     const endDate = document.getElementById('end_date').value;
-    let url = new URL('http://192.168.1.94:5000/retour_documents');
+    let url = new URL(API_CONFIG.getApiUrl('/retour_documents'));
     // If document number is provided, use only that param
     if (ndocument) {
         url.searchParams.append('ndocument', ndocument);
@@ -260,14 +265,22 @@ function updateOrmDocumentsTable(data) {
 // Show summary for selected ORM document
 function showOrmSummary(row) {
     const summaryEl = document.getElementById('selected-orm-summary');
-    summaryEl.innerHTML = `<span class="font-semibold">N° Document:</span> ${row.NDOCUMENT} &nbsp;| <span class="font-semibold">ORM:</span> ${row.ORM} &nbsp;| <span class="font-semibold">Date:</span> ${row.DATE} &nbsp;| <span class="font-semibold">Organisation:</span> ${row.ORGANISATION}`;
+    // Compose the summary with the requested fields
+    summaryEl.innerHTML = `
+        <span class="font-semibold">N° Document:</span> ${row.NDOCUMENT || ''} &nbsp;|
+        <span class="font-semibold">Tiers:</span> ${row.TIER || ''} &nbsp;|
+        <span class="font-semibold">Date Commande:</span> ${row.DATECOMMANDE ? new Date(row.DATECOMMANDE).toLocaleDateString('fr-FR') : ''} &nbsp;|
+        <span class="font-semibold">Vendeur:</span> ${row.VENDEUR || ''} &nbsp;|
+        <span class="font-semibold">Marge:</span> ${row.MARGE !== null && row.MARGE !== undefined ? new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(row.MARGE) + ' %' : ''} &nbsp;|
+        <span class="font-semibold">Montant:</span> ${row.MONTANT !== null && row.MONTANT !== undefined ? new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(row.MONTANT) : ''}
+    `;
 }
 // Fetch product details for selected document
 async function fetchOrmProduct(documentNo) {
     if (!documentNo) return;
     const tableContainer = document.getElementById('orm-product-container');
     tableContainer.style.display = 'none';
-    const url = new URL('http://192.168.1.94:5000/fetchBCCBProduct');
+    const url = new URL(API_CONFIG.getApiUrl('/fetchBCCBProduct'));
     url.searchParams.append('bccb', documentNo);
     url.searchParams.append('ad_org_id', '1000000');
     try {

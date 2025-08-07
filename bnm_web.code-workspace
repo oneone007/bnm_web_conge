@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"name": "bnm_web",
+			"path": "."
+		},
+		{
+			"name": "css",
+			"path": "../bna/bna/css"
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "bnm_web"
+	}
+}

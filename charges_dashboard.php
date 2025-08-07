@@ -7,11 +7,15 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Check user role if needed
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup Vente'])) {
-    header("Location: Acess_Denied");    
-    exit();
-}
+// // Check user role if needed
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup Vente'])) {
+//     header("Location: Acess_Denied");    
+//     exit();
+// }
+$page_identifier = 'charge';
+
+require_once 'check_permission.php';
+
 ?>
 
 <!DOCTYPE html>
@@ -25,6 +29,8 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup V
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="theme.js" defer></script>
+        <script src="api_config.js"></script>
+
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -1022,7 +1028,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup V
         async function testServerConnection() {
             try {
                 console.log('Testing server connection...');
-                const response = await fetch('http://192.168.1.94:5000/health-check', {
+                const response = await fetch(API_CONFIG.getApiUrl('/health-check'), {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json'
@@ -1130,7 +1136,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup V
             `;
 
             try {
-                const apiUrl = `http://192.168.1.94:5000/fetch-charges-dashboard?date_debut=${dateDebut}&date_fin=${dateFin}`;
+                const apiUrl = API_CONFIG.getApiUrl(`/fetch-charges-dashboard?date_debut=${dateDebut}&date_fin=${dateFin}`);
                 console.log('Fetching data from:', apiUrl);
                 
                 const response = await fetch(apiUrl, {
@@ -1177,7 +1183,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup V
                 
                 if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
                     errorMessage = 'Erreur de connexion';
-                    errorDetails = 'Impossible de se connecter au serveur (192.168.1.94:5000). Vérifiez que le serveur est en ligne et accessible.';
+                    errorDetails = 'Impossible de se connecter au serveur. Vérifiez que le serveur est en ligne et accessible.';
                 } else if (error.message.includes('HTTP error')) {
                     errorMessage = 'Erreur du serveur';
                     errorDetails = error.message;
@@ -2029,7 +2035,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup V
             }
 
             try {
-                const url = `http://192.168.1.94:5000/download-charges-dashboard-excel?date_debut=${dateDebut}&date_fin=${dateFin}`;
+                const url = API_CONFIG.getApiUrl(`/download-charges-dashboard-excel?date_debut=${dateDebut}&date_fin=${dateFin}`);
                 console.log('Downloading Excel from:', url);
                 
                 // Create a temporary link element to trigger download

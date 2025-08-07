@@ -1,8 +1,6 @@
 <?php
 session_start();
 
-
-
 // Check if the user is logged in
 if (!isset($_SESSION['user_id'])) {
     header("Location: BNM"); // Redirect to login if not logged in
@@ -14,35 +12,22 @@ $username = $_SESSION['username'] ?? 'Guest';
 $Role = $_SESSION['Role'] ?? 'Uknown'; // Default role as 'user'
 
 // Define allowed pages for specific roles (add more as needed)
-$role_allowed_pages = [
-    'Admin' => 'all', // admin can access all
-    'Developer' => 'all',   // dev can access all
-    'DRH' => 'all',   // drh can access all
-    'Sup Achat' => [
-         'Etatstock', 'Product', 'Rotation', 'Recap_Achat', 'DETTE_F',
-        'Annual_Recap_A', 'Recap_Vente', 'Annual_Recap_V','ETAT_F', 'ETAT_F_CUMULE','rot_men_achat','rot_men_vente','inventory/inv'
-    ],
-    'Sup Vente' => [
-     'Etatstock', 'Product', 'Rotation', 'Quota', 
-        'Recap_Achat', 'Annual_Recap_A', 'Recap_Vente', 'Annual_Recap_V','CONFIRMED_ORDERS' ,'simuler' ,'rot_men_vente'
-    ],
-    'Comptable' => [
-        'mony', 'bank', 'DETTE_F',
-        'recap_achat_facturation', 'Recap_Vente_Facturation'
-        , 'Journal_Vente','ETAT_F', 'ETAT_F_CUMULE','print','charge'
-    ],
-    'gestion stock' => [
-        'inventory/inv'
-    ],
+$role_allowed_pages = [];
+$permissionsJsonPath = __DIR__ . '/permissions.json';
+if (file_exists($permissionsJsonPath)) {
+    $jsonContent = file_get_contents($permissionsJsonPath);
+    if ($jsonContent !== false) {
+        $role_allowed_pages = json_decode($jsonContent, true);
+    }
+}
 
-        'stock' => [
-        'inventory/inv'
-    ],
-    'saisie' => [
-        'inventory/inv_saisie','inventory/inv'
-    ],
-];
-
+// If JSON reading fails, set default permissions
+if (empty($role_allowed_pages)) {
+    $role_allowed_pages = [
+        'Admin' => 'all',
+        'Developer' => 'all'
+    ];
+}
 
 function is_page_allowed($page, $role, $role_allowed_pages) {
     if (($role_allowed_pages[$role] ?? null) === 'all') {
@@ -52,13 +37,11 @@ function is_page_allowed($page, $role, $role_allowed_pages) {
     return in_array($page, $allowed);
 }
 
-
 // Role-based access control (example)
 if ($Role !== 'admin' && basename($_SERVER['PHP_SELF']) === 'AdminDashboard.php') {
     header("Location: Main"); // Redirect non-admin users away from admin pages
     exit();
 }
-
 
 $host = 'localhost'; // Change if needed
 $user = 'root'; // Change if needed
@@ -350,6 +333,104 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
         .mode-toggle span {
             color: var(--sidebar-text) !important;
         }
+        /* --- Enhanced Mode Toggles --- */
+        .mode-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 0.5rem;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 100%);
+            border-radius: 0.75rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border: 1px solid var(--sidebar-border);
+            transition: background 0.3s;
+        }
+        .dark .mode-toggle {
+            background: linear-gradient(90deg, #23272f 0%, #1f2937 100%);
+            border: 1px solid #374151;
+        }
+        .mode-toggle .mode-label {
+            display: flex;
+            align-items: center;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--sidebar-text);
+            gap: 0.5rem;
+        }
+        .mode-toggle .mode-options {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .mode-toggle input[type="radio"]:checked + label {
+            background: #2563eb;
+            color: #fff !important;
+            border-radius: 0.5rem;
+            padding: 0.1rem 0.5rem;
+            font-weight: 600;
+            box-shadow: 0 1px 4px rgba(37,99,235,0.08);
+        }
+        .mode-toggle input[type="radio"] {
+            accent-color: #2563eb;
+        }
+        /* Enhance the switch for dark/light mode */
+        .mode-switch {
+            position: relative;
+            display: inline-block;
+            width: 54px;
+            height: 28px;
+            background: #e5e7eb;
+            border-radius: 28px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            transition: background 0.3s;
+        }
+        .dark .mode-switch {
+            background: #374151;
+        }
+        .mode-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 2px;
+            left: 2px;
+            right: 2px;
+            bottom: 2px;
+            background-color: #fff;
+            transition: .4s;
+            border-radius: 50px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background: linear-gradient(135deg, #fbbf24 60%, #f59e42 100%);
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: 0 1px 4px rgba(251,191,36,0.12);
+        }
+        input:checked + .slider {
+            background-color: #374151;
+        }
+        input:checked + .slider:before {
+            transform: translateX(22px);
+            background: linear-gradient(135deg, #2563eb 60%, #1e40af 100%);
+            box-shadow: 0 1px 4px rgba(37,99,235,0.12);
+        }
+        .mode-switch .slider {
+            border: 1px solid #d1d5db;
+        }
+        .dark .mode-switch .slider {
+            border: 1px solid #4b5563;
+        }
     </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
@@ -376,9 +457,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
         </div>
 
         <!-- Dark/Light Mode Toggle -->
-        <div class="mode-toggle mb-6 flex items-center justify-between px-2 py-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                <i class="fas fa-moon mr-2"></i>Theme
+        <div class="mode-toggle">
+            <span class="mode-label">
+                <i class="fas fa-circle-half-stroke"></i> Theme
             </span>
             <label class="mode-switch">
                 <input type="checkbox" id="themeToggle">
@@ -386,15 +467,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
             </label>
         </div>
         <!-- Sidebar Mode Toggle -->
-        <div class="mode-toggle mb-6 flex items-center justify-between px-2 py-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                <i class="fas fa-compass mr-2"></i> Mode
+        <div class="mode-toggle">
+            <span class="mode-label">
+                <i class="fas fa-compass"></i> Mode
             </span>
-            <div class="flex gap-2">
+            <div class="mode-options">
                 <input type="radio" id="sidebarModeManual" name="sidebarMode" value="manual" checked>
                 <label for="sidebarModeManual" class="text-xs">Manual</label>
                 <input type="radio" id="sidebarModeAuto" name="sidebarMode" value="auto">
-                <label  for="sidebarModeAuto" class="text-xs ">Auto</label>
+                <label for="sidebarModeAuto" class="text-xs">Auto</label>
             </div>
         </div>
 
@@ -402,13 +483,46 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
         <nav class="sidebar-nav">
             <ul class="space-y-1">
                 <!-- Admin Section -->
+                <!-- DEBUG: Current Role is -->
+                <?php if ($Role === 'Developer' || $Role === 'Admin'): ?>
                 <li>
-                    <?php $page = 'admin'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
-                    <button <?php if (!$disabled) {?>onclick="navigateTo('admin')"<?php } ?> class="w-full flex items-center text-left gap-3 px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
-                        <i class="fas fa-tools icon"></i>
-                        <span class="flex-1">Admin</span>
+                    <button onclick="toggleSubmenu('admin-submenu')" class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+                        <div class="flex items-center text-left gap-3 flex-1">
+                            <i class="fas fa-tools icon"></i>
+                            <span class="flex-1">Admin</span>
+                        </div>
+                        <i class="fas fa-chevron-right chevron text-xs"></i>
                     </button>
+                    <ul id="admin-submenu" class="submenu pl-4">
+                        <?php if ($Role === 'Admin' || $Role === 'Developer'): ?>
+                            <li>
+                                <button onclick="navigateTo('sudo')" class="w-full flex items-center text-left gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+                                    <i class="fas fa-user-shield icon text-sm"></i>
+                                    <span class="">Admin Dashboard</span>
+                                </button>
+                            </li>
+                        <?php endif; ?>
+                        <li>
+                            <button onclick="navigateTo('feedback')" class="w-full flex items-center text-left gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+                                <i class="fas fa-comment-alt icon text-sm"></i>
+                                <span class="">Admin Feedback</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="navigateTo('sess')" class="w-full flex items-center text-left gap-3 px-4 py-2 rounded-lg hover:bg-green-100 dark:hover:bg-green-900">
+                                <i class="fas fa-users icon text-sm"></i>
+                                <span class="">Sessions</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="navigateTo('403_viewer')" class="w-full flex items-center text-left gap-3 px-4 py-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900">
+                                <i class="fas fa-shield-alt icon text-sm"></i>
+                                <span class="">403 Access Logs</span>
+                            </button>
+                        </li>
+                    </ul>
                 </li>
+                <?php endif; ?>
 
                 <hr class="my-2 border-gray-200 dark:border-gray-600">
 
@@ -424,7 +538,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
                     <ul id="fond-submenu" class="submenu pl-4">
                         <li>
                             <?php $page = 'mony'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
-                            <button <?php if (!$disabled) {?>onclick="navigateTo('mony2')"<?php } ?> class="w-full flex items-center text-left gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('mony')"<?php } ?> class="w-full flex items-center text-left gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
                                 <i class="fas fa-chart-line icon text-sm"></i>
                                 <span class="">Analysis</span>
                             </button>
@@ -604,6 +718,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
                             <button <?php if (!$disabled) {?>onclick="navigateTo('Recap_Vente')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
                                 <i class="fas fa-money-bill-wave icon text-sm"></i>
                                 <span class="">Recap Vente</span>
+                            </button>
+                        </li>
+
+                        <li>
+                            <?php $page = 'portf'; $disabled = !is_page_allowed($page, $Role, $role_allowed_pages); ?>
+                            <button <?php if (!$disabled) {?>onclick="navigateTo('portf')"<?php } ?> class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700<?php if($disabled) echo ' disabled'; ?>">
+                                <i class="fas fa-user-friends icon text-sm"></i>
+                                <span class="">Client Portfeuille</span>
                             </button>
                         </li>
                         <li>

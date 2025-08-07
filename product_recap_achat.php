@@ -8,6 +8,8 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="recap_achat.css">
     <script src="theme.js"></script>
+                <script src="api_config.js"></script>
+
     <style>
         .year-tab {
             padding: 8px 16px;
@@ -216,9 +218,9 @@
 
         // Constants
         const API_ENDPOINTS = {
-            fetchProductData: 'http://192.168.1.94:5001/fetchProductRecapAchat',
-            listFournisseur: 'http://192.168.1.94:5001/listfournisseur',
-            listProduct: 'http://192.168.1.94:5001/listproduct'
+            fetchProductData: API_CONFIG.getApiUrl('/fetchProductRecapAchat'),
+            listFournisseur: API_CONFIG.getApiUrl('/listfournisseur'),
+            listProduct: API_CONFIG.getApiUrl('/listproduct')
         };
 
         const monthNames = [

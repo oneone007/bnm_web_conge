@@ -8,11 +8,15 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Restrict access for certain roles
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente'])) {
-    header("Location: Acess_Denied");    
-    exit();
-}
+// // Restrict access for certain roles
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente'])) {
+//     header("Location: Acess_Denied");    
+//     exit();
+// }
+$page_identifier = 'ETAT_F';
+
+require_once 'check_permission.php';
+
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -614,6 +618,8 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente'])) {
     </div>
 
     <!-- Scripts -->
+    <!-- API Configuration -->
+    <script src="api_config.js"></script>
     <!-- jsPDF and jsPDF-AutoTable for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -655,7 +661,6 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente'])) {
 
     <script>
         let currentData = [];
-        const API_BASE_URL = 'http://localhost:5000';
 
         document.addEventListener('DOMContentLoaded', function() {
             // Set default dates (current month)
@@ -703,7 +708,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente'])) {
         let allFournisseurs = [];
 
         function loadFournisseurs() {
-            fetch(API_BASE_URL + '/listfournisseur_etat')
+            fetch(API_CONFIG.getApiUrl('/listfournisseur_etat'))
                 .then(response => response.json())
                 .then(data => {
                     if (Array.isArray(data)) {
@@ -826,7 +831,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Vente'])) {
                 }
             });
 
-            fetch(API_BASE_URL + '/etat_f?' + params.toString())
+            fetch(API_CONFIG.getApiUrl('/etat_f?' + params.toString()))
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('loadingSpinner').style.display = 'none';

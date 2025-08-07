@@ -11,10 +11,14 @@ if (!isset($_SESSION['user_id'])) {
 
 
 
-// Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Comptable'])) {
-    header("Location: Acess_Denied");    exit();
-}
+$page_identifier = 'simuler';
+
+require_once 'check_permission.php';
+
+// // Restrict access for 'vente' and 'achat'
+// if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Comptable'])) {
+//     header("Location: Acess_Denied");    exit();
+// }
 
 
 ?>
@@ -31,6 +35,7 @@ if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Compt
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <link rel="stylesheet" href="confirm_order.css">
     <script src="theme.js"></script>
+    <script src="api_config.js"></script>
     <style>
 
 
@@ -333,7 +338,11 @@ function sortorderconfirmedTable(column) {
         currentOrderConfirmedSortDirection = 'asc';
     }
 
-    // Sort the data
+
+    // Define which columns are numeric or date
+    const numericColumns = ['MONTANT', 'MARGE', 'QTY'];
+    const dateColumns = ['DATECOMMANDE'];
+
     const sortedData = [...orderConfirmedData].sort((a, b) => {
         let aVal = a[column];
         let bVal = b[column];
@@ -342,13 +351,20 @@ function sortorderconfirmedTable(column) {
         if (aVal === null || aVal === undefined) aVal = '';
         if (bVal === null || bVal === undefined) bVal = '';
 
-        // Convert to string for comparison if not numbers
-        if (typeof aVal !== 'number' && typeof bVal !== 'number') {
+        // Numeric sort
+        if (numericColumns.includes(column)) {
+            aVal = parseFloat(aVal) || 0;
+            bVal = parseFloat(bVal) || 0;
+        } else if (dateColumns.includes(column)) {
+            // Date sort
+            aVal = aVal ? new Date(aVal) : new Date(0);
+            bVal = bVal ? new Date(bVal) : new Date(0);
+        } else {
+            // String sort
             aVal = String(aVal).toLowerCase();
             bVal = String(bVal).toLowerCase();
         }
 
-        // Perform comparison
         if (aVal < bVal) return currentOrderConfirmedSortDirection === 'asc' ? -1 : 1;
         if (aVal > bVal) return currentOrderConfirmedSortDirection === 'asc' ? 1 : -1;
         return 0;
@@ -555,7 +571,7 @@ document.addEventListener("DOMContentLoaded", function () {
 // Fetch single simulation by ndocument and show in table
 async function fetchSimulationSingle(ndocument) {
     try {
-        const response = await fetch(`http://192.168.1.94:5000/simulation_all?ndocument=${encodeURIComponent(ndocument)}`);
+        const response = await fetch(API_CONFIG.getApiUrl(`/simulation_all?ndocument=${encodeURIComponent(ndocument)}`));
         const data = await response.json();
         if (data && !data.error) {
             // Show as single row in table
@@ -606,7 +622,7 @@ document.getElementById("refresh-btn").addEventListener("click", async function 
 
 async function fetchOrderConfirmed() {
     try {
-        const response = await fetch('http://192.168.1.94:5000/simulation');
+        const response = await fetch(API_CONFIG.getApiUrl('/simulation'));
         const data = await response.json();
         
         // Store data globally for sorting
@@ -640,7 +656,7 @@ async function fetchBccbProduct(bccb) {
     const tableContainer = document.getElementById("bccb-product-container");
     tableContainer.style.display = "none"; // Hide table before fetching
 
-    const url = new URL("http://192.168.1.94:5000/fetchBCCBProduct");
+    const url = new URL(API_CONFIG.getApiUrl("/fetchBCCBProduct"));
     url.searchParams.append("bccb", bccb);
     url.searchParams.append("ad_org_id", "1000000"); 
 

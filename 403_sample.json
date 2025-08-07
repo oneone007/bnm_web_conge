@@ -1,0 +1,11 @@
+[
+    {
+        "session_id": "sample_session_123456",
+        "ip_address": "192.168.1.100",
+        "timestamp": "2025-08-06 14:30:15",
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "referer": "https://example.com/some-page",
+        "request_uri": "/bnm_web/403.php",
+        "server_name": "localhost"
+    }
+]

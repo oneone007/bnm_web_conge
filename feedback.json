@@ -16,5 +16,32 @@
         "content": "this is a test",
         "rating": null,
         "page": "Recap_Vente_Facturation"
+    },
+    {
+        "timestamp": "2025-07-28 17:51:50",
+        "user_id": 33,
+        "username": "admin",
+        "type": "rating",
+        "content": "Wow! Thank you for the perfect score. You made our day!",
+        "rating": 5,
+        "page": null
+    },
+    {
+        "timestamp": "2025-07-28 17:52:08",
+        "user_id": 33,
+        "username": "admin",
+        "type": "bug",
+        "content": "test",
+        "rating": null,
+        "page": "Main"
+    },
+    {
+        "timestamp": "2025-07-31 10:16:01",
+        "user_id": 33,
+        "username": "admin",
+        "type": "bug",
+        "content": "gg",
+        "rating": null,
+        "page": "Main"
     }
 ]

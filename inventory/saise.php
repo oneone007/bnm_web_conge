@@ -37,6 +37,7 @@ $current_user = $_SESSION['username'];
     <title>Saise - Casse Inventories</title>
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="api_config_inv.js"></script>
     <script src="theme.js" defer></script>
 
     <style>
@@ -371,7 +372,7 @@ $current_user = $_SESSION['username'];
             
             try {
                 // Call Python API to get all inventories, we'll filter for casse + confirmed
-                const response = await fetch('http://192.168.1.94:5003/inventory/list?limit=200&offset=0');
+                const response = await fetch(`${API_CONFIGinv.getApiUrl('/inventory/list')}?limit=200&offset=0`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -517,7 +518,7 @@ $current_user = $_SESSION['username'];
             
             try {
                 // Call Python API to update status to 'done'
-                const response = await fetch(`http://192.168.1.94:5003/inventory/update_status/${inventoryId}`, {
+                const response = await fetch(`${API_CONFIGinv.getApiUrl('/inventory/update_status/')}${inventoryId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -574,7 +575,7 @@ $current_user = $_SESSION['username'];
             modal.classList.remove('hidden');
             
             try {
-                const response = await fetch(`http://192.168.1.94:5003/inventory/details/${inventoryId}`);
+                const response = await fetch(`${API_CONFIGinv.getApiUrl('/inventory/details/')}${inventoryId}`);
                 const data = await response.json();
                 
                 if (data.success) {

@@ -7,8 +7,8 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 // Restrict access for 'vente' and 'achat'
-if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup Vente','admin', 'Comptable'])) {
-    header("Location: Acess_Denied");    exit();
+if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup Vente','Admin', 'Comptable'])) {
+    header("Location: build");    exit();
 }
 
 // Handle feedback deletion
@@ -52,25 +52,84 @@ if (file_exists($json_file)) {
   <meta charset="UTF-8">
   <title>Admin - User Feedback</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+              <script src="theme.js"></script>
+
   <style>
     body {
       background-color: #f8f9fa;
       padding-top: 50px;
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
     .container {
       max-width: 1200px;
+      transition: background-color 0.3s ease;
     }
     h2 {
       margin-bottom: 20px;
+      transition: color 0.3s ease;
     }
     table {
       background-color: white;
+      transition: background-color 0.3s ease;
     }
     .badge-json {
       background-color: #198754;
     }
     .action-buttons {
       white-space: nowrap;
+    }
+    
+    /* Dark mode styles */
+    body.dark-mode {
+      background-color: #111827;
+      color: #F3F4F6;
+    }
+    body.dark-mode h2 {
+      color: #F3F4F6;
+    }
+    body.dark-mode table {
+      background-color: #1F2937;
+    }
+    body.dark-mode .table {
+      color: #FFFFFF;
+      border-color: #4B5563;
+    }
+    body.dark-mode .table td,
+    body.dark-mode .table th {
+      border-color: #4B5563;
+      background-color: #1F2937;
+      color: #FFFFFF;
+    }
+    body.dark-mode .table-striped > tbody > tr:nth-of-type(odd) > td,
+    body.dark-mode .table-striped > tbody > tr:nth-of-type(odd) > th {
+      background-color: #374151;
+      color: #FFFFFF;
+    }
+    body.dark-mode .table-hover > tbody > tr:hover > td,
+    body.dark-mode .table-hover > tbody > tr:hover > th {
+      background-color: #4B5563;
+      color: #FFFFFF;
+    }
+    body.dark-mode .table-dark {
+      background-color: #374151;
+      border-color: #4B5563;
+    }
+    body.dark-mode .table-dark th,
+    body.dark-mode .table-dark td {
+      background-color: #374151;
+      border-color: #4B5563;
+      color: #FFFFFF;
+    }
+    body.dark-mode .btn-danger {
+      background-color: #DC2626;
+      border-color: #DC2626;
+    }
+    body.dark-mode .btn-danger:hover {
+      background-color: #B91C1C;
+      border-color: #B91C1C;
+    }
+    body.dark-mode .badge.bg-success {
+      background-color: #059669 !important;
     }
   </style>
 </head>
