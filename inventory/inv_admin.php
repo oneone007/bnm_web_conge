@@ -48,6 +48,8 @@ $inventories = [];
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="theme.js" defer></script>
+    <script src="api_config_inv.js" defer></script>
+
 
     <style>
         .status-pending { background-color: #fef3c7; color: #92400e; }
@@ -232,9 +234,43 @@ $inventories = [];
             background-color: #1f2937 !important;
             color: #e5e7eb !important;
         }
-    </style>
-        <script src="api_config_inv.js"></script>
 
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 1.5em;
+            padding-right: 2.5rem;
+        }
+
+        /* Dark mode adjustments */
+        .dark select {
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+        }
+
+        /* Tom Select Dark Mode Overrides */
+        .dark .ts-dropdown {
+            background-color: #122645ff;
+            border-color: #193050ff;
+            color: #e5e7eb;
+        }
+        .dark .ts-dropdown .active {
+            background-color: #0b1f39ff;
+        }
+        .dark .ts-control {
+            background-color: #122544ff;
+            border-color: #0b1f3bff;
+        }
+        .dark .ts-control input {
+            color: black !important;
+        }
+        .dark .ts-dropdown .selected {
+            background-color: #1E40AF;
+        }
+    </style>
+        <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto px-4 py-6">
@@ -364,11 +400,11 @@ $inventories = [];
     </div>
 
     <!-- Popu Button -->
-    <div class="fixed bottom-6 left-6 z-50">
+    <!-- <div class="fixed bottom-6 left-6 z-50">
         <button id="popuBtn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full shadow-lg font-medium">
             ➕ Popup
         </button>
-    </div>
+    </div> -->
 
     <!-- Popu Modal -->
     <div id="popuModal" class="fixed inset-0 bg-black bg-opacity-40 hidden z-50 flex items-center justify-center">
@@ -441,6 +477,9 @@ $inventories = [];
         // Get user info from PHP session (username is always from session)
         const currentUser = '<?= isset($_SESSION['username']) ? $_SESSION['username'] : '' ?>';
         
+
+        let fournisseurTomSelect = null; // Global reference
+
         // Get filter parameters from URL
         const urlParams = new URLSearchParams(window.location.search);
         const filters = {
@@ -449,6 +488,29 @@ $inventories = [];
             date_to: urlParams.get('date_to') || '',
             search: urlParams.get('search') || ''
         };
+
+        // Sudo mode flag
+        window.sudoMode = false;
+        // Intercept search form submit for sudo911
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchForm = document.querySelector('form[method="GET"]');
+            if (searchForm) {
+                searchForm.addEventListener('submit', function(e) {
+                    const searchInput = searchForm.querySelector('input[name="search"]');
+                    if (searchInput && searchInput.value.trim() === 'sudo911' && currentUser === 'admin') {
+                        e.preventDefault();
+                        window.sudoMode = true;
+                        filters.search = '';
+                        // Remove search param from URL and reload inventories
+                        urlParams.delete('search');
+                        history.replaceState(null, '', window.location.pathname + '?' + urlParams.toString());
+                        loadInventories();
+                    } else {
+                        window.sudoMode = false;
+                    }
+                });
+            }
+        });
         
         // Add console debugging
         console.log('🔍 Debug: Page loaded successfully');
@@ -593,10 +655,11 @@ $inventories = [];
                         <!-- Action Buttons -->
                         <div class="flex gap-2">
                             ${generateActionButtons(inventory)}
+                            ${(currentUser === 'admin' && window.sudoMode) ? `
                             <button onclick="handleInsert(${inventory.id})" 
                                 class="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm">
                                 Insert
-                            </button>   
+                            </button>` : ''}
                         </div>
                     </div>
                 </div>
@@ -636,54 +699,88 @@ $inventories = [];
             container.appendChild(card);
         }
 
-
+function formatDateForInput(dateString) {
+    if (!dateString) return '';
+    console.log('🔍 Debug: formatDateForInput called with:', dateString);
+    // Handle both formats: "dd/mm/yy" and "yyyy-mm-dd"
+    let date;
+    if (dateString.includes('/')) {
+        const [day, month, year] = dateString.split('/');
+        date = new Date(`20${year}`,month - 1,day);
+        console.log('🔍 Debug: Parsed date from dd/mm/yy:', date);
+    } else {
+        date = new Date(dateString);
+    }
+    
+    // Format as YYYY-MM-DD (HTML date input format)
+    const isoDate = date.toISOString().split('T')[0];
+    console.log('🔍 Debug: Formatted date for input:', isoDate);
+    return isoDate;
+}
     // Modify the handleInsert function
 async function handleInsert(inventoryId) {
     try {
         // 1. Get inventory details
         const response = await fetch(`${API_CONFIGinv.getApiUrl()}/inventory/details/${inventoryId}`);
         const data = await response.json();
-        
+        console.log('🔍 Debug: Inventory details fetched:', data);
         if (!data.success || !data.items || data.items.length === 0) {
             throw new Error('No items found in inventory');
         }
 
-        // 2. Show modal for each item that needs attribute instance creation
+        // 2. Collect all items for batch processing
+        const itemsToInsert = [];
+
         for (const item of data.items) {
             let itemData = {
                 inventory_id: inventoryId,
                 product_name: item.product_name,
                 quantity: item.quantity,
-                qty_dispo: item.qty_dispo,
-                m_attributesetinstance_id: item.m_attributesetinstance_id
+                qty_dispo: item.qty_dispo || 0,
+                m_attributesetinstance_id: item.m_attributesetinstance_id || null,
+                attributes: {}
             };
             if (!item.m_attributesetinstance_id) {
                 // Show modal to collect attribute information
                 const attributeData = await showAttributeModal(item);
                 
                 // Merge the collected data with our item data
-                itemData = {
+                Object.assign(itemData, {
                     ...itemData,
-                    lot: attributeData.lot,
-                    date_expiration: attributeData.date_expiration,
-                    attributes: attributeData.attributes  // This is the crucial change
-                };
+                    lot: attributeData.lot || '-',
+                    date_expiration: attributeData.date_expiration || null,
+                    attributes: attributeData.attributes || {}  // This is the crucial change
+                });
             }
-                console.log('Collected attribute data:', itemData);
 
-            // Proceed with insertion
+            itemsToInsert.push(itemData);
+            console.log('Collected attribute data:', itemData);
+        }
+
+            // 3. Send ALL items in a single API call
             const insertionResponse = await fetch(`${API_CONFIGinv.getApiUrl()}/inventory/insert_inventory`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(itemData)  // Send the complete item data
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    items: itemsToInsert,
+                    title: data.inventory.title,
+                    notes: data.inventory.notes,
+                    casse: data.inventory.casse
+                })
             });
 
-            if (!insertionResponse.ok) {
-                const errorData = await insertionResponse.json();
-                console.error(`Failed to insert item: ${item.product_name}`, errorData);
-                throw new Error(`Failed to insert ${item.product_name}: ${errorData.error || 'Unknown error'}`);
+            const result = await insertionResponse.json().catch(e => {
+                console.error("Failed to parse response:", e);
+                return { success: false, error: "Invalid server response" };
+            });
+
+            if (!insertionResponse.ok || !result.success) {
+                throw new Error(result.error || 'Insertion failed');
             }
-        }
+      
         
         alert('All items inserted successfully!');
         
@@ -691,11 +788,11 @@ async function handleInsert(inventoryId) {
         console.error('Error during insertion:', error);
         alert(`Insertion failed: ${error.message}`);
     }
+        // Helper function to format date for HTML input (YYYY-MM-DD)
 }
-
 // New function to show attribute collection modal
 // Update the showAttributeModal function
-function showAttributeModal(item) {
+async function showAttributeModal(item) {
     return new Promise((resolve) => {
         const modal = document.createElement('div');
         modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
@@ -709,11 +806,11 @@ function showAttributeModal(item) {
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Lot Number</label>
-                                <input type="text" name="lot" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
+                                <input type="text" name="lot" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white text-gray-900 shadow-sm" required value="${item.lot}">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Expiration Date</label>
-                                <input type="date" name="date_expiration" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
+                                <input type="date" name="date_expiration" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white text-gray-900 shadow-sm" required value="${item.date ? formatDateForInput(item.date) : ''}">
                             </div>
                         </div>
                     </div>
@@ -724,43 +821,45 @@ function showAttributeModal(item) {
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Prix Achat</label>
-                                <input type="number" step="0.01" name="Prix Achat" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                <input type="number" step="0.01" name="Prix Achat" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white text-gray-900" value="0.00">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Colisage</label>
-                                <input type="number" step="0.01" name="Colisage" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                <input type="number" step="0.01" name="Colisage" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white text-gray-900" value="0.00">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">PPA</label>
-                                <input type="number" step="0.01" name="PPA" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                <input type="number" step="0.01" name="PPA" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white text-gray-900" value="${item.ppa}">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Prix Vente</label>
-                                <input type="number" step="0.01" name="Prix Vente" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                <input type="number" step="0.01" name="Prix Vente" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white text-gray-900" value="0.00">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Prix Revient</label>
-                                <input type="number" step="0.01" name="Prix Revient" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                <input type="number" step="0.01" name="Prix Revient" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white text-gray-900" value="0.00">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Fournisseur</label>
-                                <input type="text" name="Fournisseur" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                <select id="fournisseur-select" name="Fournisseur" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white text-gray-900" required >
+                                    <option value="">-- Sélectionner un fournisseur --</option>
+                                </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Bonus</label>
-                                <input type="number" step="0.01" name="Bonus" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                <input type="number" step="0.01" name="Bonus" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white text-gray-900" value="0.00">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Bonus Vente</label>
-                                <input type="number" step="0.01" name="Bonus Vente" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                <input type="number" step="0.01" name="Bonus Vente" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white text-gray-900" value="0.00">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Remise Supp</label>
-                                <input type="number" step="0.01" name="Remise Supp" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                <input type="number" step="0.01" name="Remise Supp" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white text-gray-900" value="0.00">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Remise Vente</label>
-                                <input type="number" step="0.01" name="Remise Vente" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                <input type="number" step="0.01" name="Remise Vente" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white text-gray-900" value="0.00">
                             </div>
                         </div>
                     </div>
@@ -782,32 +881,117 @@ function showAttributeModal(item) {
             // Filter out empty values and prepare for backend
             const attributes = {};
             for (const [key, value] of Object.entries(data)) {
-                if (value && key !== 'lot' && key !== 'date_expiration') {
+                if (value && !['lot', 'date_expiration'].includes(key)) {
                     attributes[key] = value;
                 }
             }
+            console.log('🔍 Debug: Collected attributes:', attributes);
 
             let date = data.date_expiration;
+            let formattedDate = null;
+            console.log('🔍 Debug: Date before formatting:', data.date_expiration);
             if (date) {
                 const [year, month, day] = date.split("-");
-                const formattedDate = `${day}/${month}/${year.slice(-2)}`; // dd/mm/yy
-                data.date_expiration = formattedDate;
+                formattedDate = `${day}/${month}/${year.slice(-2)}`; // dd/mm/yy
+                console.log('🔍 Debug: Formatted date:', formattedDate);
             }
+           
 
             resolve({
                 lot: data.lot,
-                date_expiration: data.date_expiration,
+                date_expiration: formattedDate,
                 attributes: attributes
             });
 
             modal.remove();
-});
+        });
 
-
+   
         document.body.appendChild(modal);
+        // After adding modal to DOM:
+         loadFournisseurs(item);
+
+        // Cleanup when modal closes
+        modal.addEventListener('close', () => {
+            if (fournisseurTomSelect) {
+                fournisseurTomSelect.destroy();
+                fournisseurTomSelect = null;
+            }
+        });
     });
 }
+        // Fetch fournisseurs when modal opens
+function showConfirmation(message) {
+    return new Promise((resolve) => {
+        const dialog = document.createElement('div');
+        dialog.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        dialog.innerHTML = `
+            <div class="bg-white rounded-lg p-6 max-w-md w-full dark:bg-gray-800">
+                <h3 class="text-lg font-medium mb-4 dark:text-white">Confirmation</h3>
+                <p class="mb-6 dark:text-gray-300">${message}</p>
+                <div class="flex justify-end space-x-3">
+                    <button id="confirmCancel" class="px-4 py-2 bg-gray-300 rounded-md dark:bg-gray-600 dark:text-white">
+                        Cancel
+                    </button>
+                    <button id="confirmOK" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                        Confirm
+                    </button>
+                </div>
+            </div>
+        `;
         
+        document.body.appendChild(dialog);
+        
+        dialog.querySelector('#confirmOK').addEventListener('click', () => {
+            document.body.removeChild(dialog);
+            resolve(true);
+        });
+        
+        dialog.querySelector('#confirmCancel').addEventListener('click', () => {
+            document.body.removeChild(dialog);
+            resolve(false);
+        });
+    });
+}
+
+async function loadFournisseurs(item) {
+    try {
+        const response = await fetch(`${API_CONFIGinv.getApiUrl()}/api/fournisseurs`);
+        const data = await response.json();
+        
+        if (data.success) {
+            // Initialize Tom Select if not already done
+            if (!fournisseurTomSelect) {
+                fournisseurTomSelect = new TomSelect('#fournisseur-select', {
+                    valueField: 'value',
+                    labelField: 'text',
+                    searchField: 'text',
+                    options: data.fournisseurs.map(f => ({ value: f, text: f })),
+                    create: false,
+                    placeholder: 'Rechercher un fournisseur...',
+                    render: {
+                        option: function(item, escape) {
+                            return `<div class="p-2 hover:bg-gray-100 dark:hover:bg-gray-600">${escape(item.text)}</div>`;
+                        }
+                    }
+                });
+            } else {
+                // Just update options if already initialized
+                fournisseurTomSelect.clearOptions();
+                fournisseurTomSelect.addOptions(data.fournisseurs.map(f => ({ value: f, text: f })));
+            }
+            
+            // Set default value if item has a fournisseur
+            if (item.fournisseur) {
+                fournisseurTomSelect.setValue(item.fournisseur);
+            }
+        }
+    } catch (error) {
+        console.error('Error loading fournisseurs:', error);
+    }
+}
+
+
         // Generate action buttons based on inventory status and workflow
         function generateActionButtons(inventory) {
             // Confirm/Cancel/Done/Reopen buttons visible for 'hichem', 'admin', or 'mohamed', others see nothing
@@ -1015,8 +1199,10 @@ function showAttributeModal(item) {
             entryItems.forEach(item => {
                 const isManual = item.is_manual_entry == 1;
                 html += `
-                    <div class="bg-green-50 p-3 rounded border border-green-200${isManual ? ' border-l-4 border-l-orange-400' : ''}">
-                        <div class="font-medium">${item.product_name}${isManual ? ' <span class="text-orange-600 text-xs">📝 Manual Entry</span>' : ''}</div>
+                    <div class="bg-green-50 p-3 rounded border border-green-200${isManual ? ' border-l-4 border-l-orange-400 bg-orange-50 border-orange-300' : ''}">
+                        <div class="font-medium">${item.product_name}</div>
+                        ${isManual ? '<div class="mt-1"><span class="bg-orange-200 text-orange-800 px-2 py-1 rounded-full text-xs font-bold">⚠️ 📝 MANUAL ENTRY</span></div>' : ''}
+                        ${item.description ? `<div class="text-sm text-gray-700 italic mb-1">${item.description}</div>` : ''}
                         <div class="text-sm text-gray-600">
                             Qty: <strong>${item.quantity}</strong> | 
                             Lot: ${item.lot || 'N/A'} | 
@@ -1039,8 +1225,10 @@ function showAttributeModal(item) {
             sortieItems.forEach(item => {
                 const isManual = item.is_manual_entry == 1;
                 html += `
-                    <div class="bg-orange-50 p-3 rounded border border-orange-200${isManual ? ' border-l-4 border-l-orange-600' : ''}">
-                        <div class="font-medium">${item.product_name}${isManual ? ' <span class="text-orange-600 text-xs">📝 Manual Entry</span>' : ''}</div>
+                    <div class="bg-orange-50 p-3 rounded border border-orange-200${isManual ? ' border-l-4 border-l-red-500 bg-red-50 border-red-300' : ''}">
+                        <div class="font-medium">${item.product_name}</div>
+                        ${isManual ? '<div class="mt-1"><span class="bg-red-200 text-red-800 px-2 py-1 rounded-full text-xs font-bold">⚠️ 📝 MANUAL ENTRY</span></div>' : ''}
+                        ${item.description ? `<div class="text-sm text-gray-700 italic mb-1">${item.description}</div>` : ''}
                         <div class="text-sm text-gray-600">
                             Qty: <strong>${item.quantity}</strong> | 
                             Lot: ${item.lot || 'N/A'} | 

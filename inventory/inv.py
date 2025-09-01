@@ -22,6 +22,8 @@ from reportlab.lib import colors
 from reportlab.lib.units import inch
 from datetime import datetime
 import io
+import json
+import os
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -29,6 +31,50 @@ CORS(app)  # Enable CORS for all routes
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# JSON Recipients Management
+RECIPIENTS_FILE = os.path.join(os.path.dirname(__file__), 'mail_recipients.json')
+
+def get_recipients_from_json(route_name):
+    """Get recipients for a specific route from JSON file"""
+    try:
+        if os.path.exists(RECIPIENTS_FILE):
+            with open(RECIPIENTS_FILE, 'r') as f:
+                recipients_data = json.load(f)
+                return recipients_data.get(route_name, [])
+        return []
+    except Exception as e:
+        logger.error(f"Error reading recipients JSON: {e}")
+        return []
+
+def save_recipients_to_json(route_name, recipients):
+    """Save recipients for a specific route to JSON file"""
+    try:
+        recipients_data = {}
+        if os.path.exists(RECIPIENTS_FILE):
+            with open(RECIPIENTS_FILE, 'r') as f:
+                recipients_data = json.load(f)
+        
+        recipients_data[route_name] = recipients
+        
+        with open(RECIPIENTS_FILE, 'w') as f:
+            json.dump(recipients_data, f, indent=4)
+        
+        return True
+    except Exception as e:
+        logger.error(f"Error saving recipients JSON: {e}")
+        return False
+
+def get_all_recipients():
+    """Get all recipients configuration"""
+    try:
+        if os.path.exists(RECIPIENTS_FILE):
+            with open(RECIPIENTS_FILE, 'r') as f:
+                return json.load(f)
+        return {}
+    except Exception as e:
+        logger.error(f"Error reading recipients JSON: {e}")
+        return {}
 
 # Configure Oracle database connection pool
 DB_POOL = oracledb.create_pool(
@@ -39,6 +85,191 @@ DB_POOL = oracledb.create_pool(
     max=10,
     increment=1
 )
+
+# Mail Management Functions
+
+def setup_mail_tables():
+    """Create mail management tables if they don't exist"""
+    connection = get_localdb_connection()
+    if not connection:
+        return {"success": False, "error": "Database connection failed"}
+    
+    try:
+        cursor = connection.cursor()
+        
+        # Create email_configs table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS email_configs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                config_name VARCHAR(100) NOT NULL UNIQUE,
+                subject VARCHAR(255) NOT NULL,
+                body TEXT NOT NULL,
+                from_email VARCHAR(255) NOT NULL DEFAULT 'inventory.system.bnm@bnmparapharm.com',
+                from_password VARCHAR(255) NOT NULL DEFAULT 'bnmparapharminv',
+                smtp_server VARCHAR(255) NOT NULL DEFAULT 'mail.bnmparapharm.com',
+                smtp_port INT NOT NULL DEFAULT 465,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT NULL
+            )
+        """)
+        
+        # Create email_contacts table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS email_contacts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                email VARCHAR(255) NOT NULL UNIQUE,
+                department VARCHAR(100),
+                position VARCHAR(100),
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT NULL
+            )
+        """)
+        
+        # Create email_logs table (only keeps today's data)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS email_logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                config_name VARCHAR(100),
+                subject VARCHAR(255) NOT NULL,
+                body TEXT NOT NULL,
+                from_email VARCHAR(255) NOT NULL,
+                to_email VARCHAR(255) NOT NULL,
+                sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                status ENUM('success', 'failed') NOT NULL,
+                error_message TEXT,
+                related_inventory_id INT,
+                INDEX idx_sent_at (sent_at),
+                INDEX idx_date (sent_at)
+            )
+        """)
+        
+        connection.commit()
+        logger.info("Mail management tables created successfully")
+        return {"success": True, "message": "Mail management tables created successfully"}
+        
+    except mysql.connector.Error as e:
+        connection.rollback()
+        logger.error(f"Error creating mail tables: {e}")
+        return {"success": False, "error": str(e)}
+    finally:
+        cursor.close()
+        connection.close()
+
+
+def get_email_config(config_name):
+    """Get email configuration by name"""
+    connection = get_localdb_connection()
+    if not connection:
+        return None
+    
+    try:
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM email_configs WHERE config_name = %s AND is_active = 1", (config_name,))
+        config = cursor.fetchone()
+        return config
+    except mysql.connector.Error as e:
+        logger.error(f"Error getting email config: {e}")
+        return None
+    finally:
+        cursor.close()
+        connection.close()
+
+
+def cleanup_old_email_logs():
+    """Clean up email logs older than today"""
+    connection = get_localdb_connection()
+    if not connection:
+        return False
+    
+    try:
+        cursor = connection.cursor()
+        # Delete emails older than today (keep only today's emails)
+        cursor.execute("""
+            DELETE FROM email_logs 
+            WHERE DATE(sent_at) < CURDATE()
+        """)
+        deleted_count = cursor.rowcount
+        connection.commit()
+        
+        if deleted_count > 0:
+            logger.info(f"Cleaned up {deleted_count} old email logs")
+        
+        return True
+    except mysql.connector.Error as e:
+        logger.error(f"Error cleaning up email logs: {e}")
+        return False
+    finally:
+        cursor.close()
+        connection.close()
+
+
+def log_email(config_name, subject, body, from_email, to_email, status, error_message=None, inventory_id=None):
+    """Log sent email to database (only keeps today's data)"""
+    # First, cleanup old logs to keep only today's data
+    cleanup_old_email_logs()
+    
+    connection = get_localdb_connection()
+    if not connection:
+        return False
+    
+    try:
+        cursor = connection.cursor()
+        cursor.execute("""
+            INSERT INTO email_logs 
+            (config_name, subject, body, from_email, to_email, status, error_message, related_inventory_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (config_name, subject, body, from_email, to_email, status, error_message, inventory_id))
+        connection.commit()
+        return True
+    except mysql.connector.Error as e:
+        logger.error(f"Error logging email: {e}")
+        return False
+    finally:
+        cursor.close()
+        connection.close()
+
+
+
+
+
+def send_email_from_config(config_name, to_email, replacements=None, inventory_id=None):
+    """Send email using configuration from database"""
+    config = get_email_config(config_name)
+    if not config:
+        error_msg = f"Email configuration '{config_name}' not found"
+        logger.error(error_msg)
+        return {"success": False, "error": error_msg}
+    
+    # Replace placeholders in subject and body
+    subject = config['subject']
+    body = config['body']
+    
+    if replacements:
+        for key, value in replacements.items():
+            subject = subject.replace(f"{{{key}}}", str(value))
+            body = body.replace(f"{{{key}}}", str(value))
+    
+    # Send the email
+    result = send_email(
+        subject=subject,
+        body=body,
+        to_email=to_email,
+        from_email=config['from_email'],
+        from_password=config['from_password'],
+        smtp_server=config['smtp_server'],
+        smtp_port=config['smtp_port']
+    )
+    
+    # Log the email (with daily cleanup)
+    status = 'success' if result['success'] else 'failed'
+    error_message = result.get('error') if not result['success'] else None
+    log_email(config_name, subject, body, config['from_email'], to_email, status, error_message, inventory_id)
+    
+    return result
+
 
 def send_email(subject, body, to_email,
                from_email='inventory.system.bnm@bnmparapharm.com',
@@ -59,7 +290,6 @@ def send_email(subject, body, to_email,
 
         # Use SSL if port 465, else TLS
         if smtp_port == 465:
-            import smtplib
             server = smtplib.SMTP_SSL(smtp_server, smtp_port)
             logger.info(f"Connecting to SMTP server {smtp_server}:{smtp_port} using SSL...")
         else:
@@ -125,7 +355,7 @@ def setup_inventory_tables():
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT NULL,
             completed_at DATETIME DEFAULT NULL,
-            casse ENUM('yes') DEFAULT NULL COMMENT 'Indicates if this inventory is related to casse',
+            casse ENUM('yes', 'no') DEFAULT NULL COMMENT 'Indicates if this inventory is related to casse',
             PRIMARY KEY (id),
             KEY idx_status (status),
             KEY idx_created_by (created_by),
@@ -140,6 +370,7 @@ def setup_inventory_tables():
             id INT(11) NOT NULL AUTO_INCREMENT,
             inventory_id INT(11) NOT NULL,
             product_name VARCHAR(255) NOT NULL,
+            description TEXT NULL,
             quantity INT(11) NOT NULL,
             date DATE DEFAULT NULL,
             lot VARCHAR(100) DEFAULT NULL,
@@ -167,7 +398,7 @@ def setup_inventory_tables():
         try:
             alter_casse_query = """
                 ALTER TABLE inventories 
-                ADD COLUMN casse ENUM('yes') DEFAULT NULL COMMENT 'Indicates if this inventory is related to casse',
+                ADD COLUMN casse ENUM('yes', 'no') DEFAULT NULL COMMENT 'Indicates if this inventory is related to casse',
                 ADD KEY idx_casse (casse)
             """
             cursor.execute(alter_casse_query)
@@ -175,6 +406,16 @@ def setup_inventory_tables():
         except mysql.connector.Error as e:
             if "Duplicate column name" in str(e):
                 logger.info("Casse column already exists")
+                # Try to modify existing column to support both 'yes' and 'no'
+                try:
+                    modify_casse_query = """
+                        ALTER TABLE inventories 
+                        MODIFY COLUMN casse ENUM('yes', 'no') DEFAULT NULL COMMENT 'Indicates if this inventory is related to casse'
+                    """
+                    cursor.execute(modify_casse_query)
+                    logger.info("Modified casse column to support 'yes' and 'no' values")
+                except mysql.connector.Error as modify_error:
+                    logger.warning(f"Could not modify casse column: {modify_error}")
             else:
                 logger.warning(f"Could not add casse column: {e}")
         
@@ -191,6 +432,20 @@ def setup_inventory_tables():
                 logger.info("m_attributesetinstance_id column already exists")
             else:
                 logger.warning(f"Could not add m_attributesetinstance_id column: {e}")
+
+        # Add description column if it doesn't exist
+        try:
+            alter_description_query = """
+                ALTER TABLE inventory_items 
+                ADD COLUMN description TEXT NULL AFTER product_name
+            """
+            cursor.execute(alter_description_query)
+            logger.info("Added description column to inventory_items table")
+        except mysql.connector.Error as e:
+            if "Duplicate column name" in str(e):
+                logger.info("description column already exists")
+            else:
+                logger.warning(f"Could not add description column: {e}")
 
         connection.commit()
         
@@ -212,7 +467,13 @@ def save_inventory_data(data):
     if not connection:
         return {"success": False, "error": "Database connection failed"}
     
+    cursor = None  # Initialize cursor variable
     try:
+        # Debug logging
+        logger.info(f"DEBUG: Received data: {data}")
+        logger.info(f"DEBUG: Data type: {type(data)}")
+        logger.info(f"DEBUG: Data keys: {list(data.keys()) if data else 'None'}")
+        
         # Validate input data
         if not data or 'title' not in data or 'items' not in data:
             return {"success": False, "error": "Missing required fields: title and items"}
@@ -223,8 +484,12 @@ def save_inventory_data(data):
         created_by = data.get('created_by', 'system')
         casse = data.get('casse', None)  # New casse field
         
+        # Auto-generate title if empty
         if not title:
-            return {"success": False, "error": "Title cannot be empty"}
+            # Generate title based on timestamp and created_by
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+            title = f"Inventory - {timestamp} - {created_by}"
+            logger.info(f"Auto-generated title: '{title}'")
         
         if not items:
             return {"success": False, "error": "No items to save"}
@@ -235,18 +500,30 @@ def save_inventory_data(data):
         connection.start_transaction()
         
         # Insert into inventories table with casse field
-        inventory_query = """
-            INSERT INTO inventories (title, notes, status, created_by, created_at, casse) 
-            VALUES (%s, %s, 'pending', %s, NOW(), %s)
-        """
-        cursor.execute(inventory_query, (title, notes, created_by, casse))
+        try:
+            # Try with casse column first
+            inventory_query = """
+                INSERT INTO inventories (title, notes, status, created_by, created_at, casse) 
+                VALUES (%s, %s, 'pending', %s, NOW(), %s)
+            """
+            cursor.execute(inventory_query, (title, notes, created_by, casse))
+        except mysql.connector.Error as e:
+            if "Unknown column 'casse'" in str(e):
+                # Fallback: Insert without casse column
+                inventory_query_fallback = """
+                    INSERT INTO inventories (title, notes, status, created_by, created_at) 
+                    VALUES (%s, %s, 'pending', %s, NOW())
+                """
+                cursor.execute(inventory_query_fallback, (title, notes, created_by))
+            else:
+                raise e
         inventory_id = cursor.lastrowid
         
         # Insert items into inventory_items table
         item_query = """
             INSERT INTO inventory_items 
-            (inventory_id, product_name, quantity, date, lot, m_attributesetinstance_id, ppa, qty_dispo, type, is_manual_entry) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            (inventory_id, product_name, description, quantity, date, lot, m_attributesetinstance_id, ppa, qty_dispo, type, is_manual_entry) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         
         item_count = 0
@@ -256,6 +533,8 @@ def save_inventory_data(data):
                 continue
 
             product_name = item.get('product', '').strip()
+            description = item.get('description', '').strip() if item.get('description') else ''
+            description = description if description else None  # Convert empty string to None for NULL in DB
             quantity = int(item.get('qty', 0))
             date = item.get('date') if item.get('date') else None
             lot = item.get('lot', '').strip() if item.get('lot') else None
@@ -272,6 +551,7 @@ def save_inventory_data(data):
             cursor.execute(item_query, (
                 inventory_id,
                 product_name,
+                description,
                 quantity,
                 date,
                 lot,
@@ -302,13 +582,16 @@ def save_inventory_data(data):
         return result
         
     except (mysql.connector.Error, ValueError) as e:
-        connection.rollback()
+        if connection:
+            connection.rollback()
         error_msg = str(e)
         logger.error(f"Error saving inventory: {error_msg}")
         return {"success": False, "error": error_msg}
     finally:
-        cursor.close()
-        connection.close()
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
 
 
 def get_inventory_list(limit=50, offset=0, status=None):
@@ -317,6 +600,7 @@ def get_inventory_list(limit=50, offset=0, status=None):
     if not connection:
         return {"success": False, "error": "Database connection failed"}
     
+    cursor = None  # Initialize cursor variable
     try:
         cursor = connection.cursor(dictionary=True)
         
@@ -366,8 +650,10 @@ def get_inventory_list(limit=50, offset=0, status=None):
         logger.error(f"Error getting inventory list: {e}")
         return {"success": False, "error": str(e)}
     finally:
-        cursor.close()
-        connection.close()
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
 
 
 def get_inventory_details(inventory_id):
@@ -376,6 +662,7 @@ def get_inventory_details(inventory_id):
     if not connection:
         return {"success": False, "error": "Database connection failed"}
     
+    cursor = None  # Initialize cursor variable
     try:
         cursor = connection.cursor(dictionary=True)
         
@@ -410,8 +697,10 @@ def get_inventory_details(inventory_id):
         logger.error(f"Error getting inventory details: {e}")
         return {"success": False, "error": str(e)}
     finally:
-        cursor.close()
-        connection.close()
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
 
 
 def update_inventory_status(inventory_id, status, updated_by):
@@ -533,6 +822,317 @@ def setup_inventory_tables_route():
         return jsonify(result), 500
 
 
+# Mail Management Routes
+
+@app.route('/mail/setup', methods=['POST'])
+def setup_mail_tables_route():
+    """Setup mail management database tables"""
+    result = setup_mail_tables()
+    return jsonify(result), 200 if result['success'] else 500
+
+
+@app.route('/mail/configs', methods=['GET'])
+def get_mail_configs():
+    """Get all email configurations"""
+    connection = get_localdb_connection()
+    if not connection:
+        return jsonify({"success": False, "error": "Database connection failed"}), 500
+    
+    try:
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM email_configs ORDER BY config_name")
+        configs = cursor.fetchall()
+        
+        # Convert datetime objects to strings
+        for config in configs:
+            if config['created_at']:
+                config['created_at'] = config['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+            if config['updated_at']:
+                config['updated_at'] = config['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
+        
+        return jsonify({"success": True, "configs": configs})
+    except mysql.connector.Error as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+
+@app.route('/mail/configs', methods=['POST'])
+def create_mail_config():
+    """Create new email configuration"""
+    try:
+        data = request.get_json()
+        required_fields = ['config_name', 'subject', 'body']
+        
+        if not all(field in data for field in required_fields):
+            return jsonify({"success": False, "error": "Missing required fields"}), 400
+        
+        connection = get_localdb_connection()
+        if not connection:
+            return jsonify({"success": False, "error": "Database connection failed"}), 500
+        
+        cursor = connection.cursor()
+        cursor.execute("""
+            INSERT INTO email_configs 
+            (config_name, subject, body, from_email, from_password, smtp_server, smtp_port, is_active)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            data['config_name'],
+            data['subject'],
+            data['body'],
+            data.get('from_email', 'inventory.system.bnm@bnmparapharm.com'),
+            data.get('from_password', 'bnmparapharminv'),
+            data.get('smtp_server', 'mail.bnmparapharm.com'),
+            data.get('smtp_port', 465),
+            data.get('is_active', True)
+        ))
+        connection.commit()
+        
+        return jsonify({"success": True, "message": "Email configuration created successfully"})
+    except mysql.connector.Error as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+
+@app.route('/mail/configs/<int:config_id>', methods=['PUT'])
+def update_mail_config(config_id):
+    """Update email configuration"""
+    try:
+        data = request.get_json()
+        
+        connection = get_localdb_connection()
+        if not connection:
+            return jsonify({"success": False, "error": "Database connection failed"}), 500
+        
+        cursor = connection.cursor()
+        
+        # Build update query dynamically based on provided fields
+        update_fields = []
+        update_values = []
+        
+        for field in ['config_name', 'subject', 'body', 'from_email', 'from_password', 'smtp_server', 'smtp_port', 'is_active']:
+            if field in data:
+                update_fields.append(f"{field} = %s")
+                update_values.append(data[field])
+        
+        if not update_fields:
+            return jsonify({"success": False, "error": "No fields to update"}), 400
+        
+        update_values.append(config_id)
+        
+        cursor.execute(f"""
+            UPDATE email_configs 
+            SET {', '.join(update_fields)}
+            WHERE id = %s
+        """, update_values)
+        
+        if cursor.rowcount == 0:
+            return jsonify({"success": False, "error": "Configuration not found"}), 404
+        
+        connection.commit()
+        return jsonify({"success": True, "message": "Email configuration updated successfully"})
+    except mysql.connector.Error as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+
+@app.route('/mail/contacts', methods=['GET'])
+def get_mail_contacts():
+    """Get all email contacts"""
+    connection = get_localdb_connection()
+    if not connection:
+        return jsonify({"success": False, "error": "Database connection failed"}), 500
+    
+    try:
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM email_contacts WHERE is_active = 1 ORDER BY name")
+        contacts = cursor.fetchall()
+        
+        # Convert datetime objects to strings
+        for contact in contacts:
+            if contact['created_at']:
+                contact['created_at'] = contact['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+            if contact['updated_at']:
+                contact['updated_at'] = contact['updated_at'].strftime('%Y-%m-%d %H:%M:%S')
+        
+        return jsonify({"success": True, "contacts": contacts})
+    except mysql.connector.Error as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+
+@app.route('/mail/contacts', methods=['POST'])
+def create_mail_contact():
+    """Create new email contact"""
+    try:
+        data = request.get_json()
+        required_fields = ['name', 'email']
+        
+        if not all(field in data for field in required_fields):
+            return jsonify({"success": False, "error": "Missing required fields"}), 400
+        
+        connection = get_localdb_connection()
+        if not connection:
+            return jsonify({"success": False, "error": "Database connection failed"}), 500
+        
+        cursor = connection.cursor()
+        cursor.execute("""
+            INSERT INTO email_contacts 
+            (name, email, department, position, is_active)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (
+            data['name'],
+            data['email'],
+            data.get('department'),
+            data.get('position'),
+            data.get('is_active', True)
+        ))
+        connection.commit()
+        
+        return jsonify({"success": True, "message": "Email contact created successfully"})
+    except mysql.connector.Error as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+
+@app.route('/mail/contacts/<int:contact_id>', methods=['PUT'])
+def update_mail_contact(contact_id):
+    """Update existing email contact"""
+    try:
+        data = request.get_json()
+        required_fields = ['name', 'email']
+        
+        if not all(field in data for field in required_fields):
+            return jsonify({"success": False, "error": "Missing required fields"}), 400
+        
+        connection = get_localdb_connection()
+        if not connection:
+            return jsonify({"success": False, "error": "Database connection failed"}), 500
+        
+        cursor = connection.cursor()
+        cursor.execute("""
+            UPDATE email_contacts 
+            SET name = %s, email = %s, department = %s, position = %s, is_active = %s, updated_at = NOW()
+            WHERE id = %s
+        """, (
+            data['name'],
+            data['email'],
+            data.get('department'),
+            data.get('position'),
+            data.get('is_active', True),
+            contact_id
+        ))
+        
+        if cursor.rowcount == 0:
+            return jsonify({"success": False, "error": "Contact not found"}), 404
+        
+        connection.commit()
+        
+        return jsonify({"success": True, "message": "Email contact updated successfully"})
+    except mysql.connector.Error as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    finally:
+        cursor.close()
+        connection.close()
+
+
+@app.route('/mail/send', methods=['POST'])
+def send_mail_from_config():
+    """Send email using configuration"""
+    try:
+        data = request.get_json()
+        required_fields = ['config_name', 'to_emails']
+        
+        if not all(field in data for field in required_fields):
+            return jsonify({"success": False, "error": "Missing required fields"}), 400
+        
+        results = []
+        for to_email in data['to_emails']:
+            result = send_email_from_config(
+                config_name=data['config_name'],
+                to_email=to_email,
+                replacements=data.get('replacements', {}),
+                inventory_id=data.get('inventory_id')
+            )
+            results.append({"to": to_email, **result})
+        
+        return jsonify({"success": True, "results": results})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/mail/logs', methods=['GET'])
+def get_mail_logs():
+    """Get today's email logs with pagination"""
+    connection = None
+    cursor = None
+    try:
+        limit = int(request.args.get('limit', 50))
+        offset = int(request.args.get('offset', 0))
+        
+        connection = get_localdb_connection()
+        if not connection:
+            return jsonify({"success": False, "error": "Database connection failed"}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+        
+        # Check if email_logs table exists
+        cursor.execute("SHOW TABLES LIKE 'email_logs'")
+        if not cursor.fetchone():
+            return jsonify({"success": False, "error": "Email logs table not found. Please setup mail tables first."}), 404
+        
+        # Only get today's emails
+        cursor.execute("""
+            SELECT * FROM email_logs 
+            WHERE DATE(sent_at) = CURDATE()
+            ORDER BY sent_at DESC 
+            LIMIT %s OFFSET %s
+        """, (limit, offset))
+        logs = cursor.fetchall()
+        
+        # Convert datetime objects to strings
+        for log in logs:
+            if log['sent_at']:
+                log['sent_at'] = log['sent_at'].strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Get total count for today
+        cursor.execute("SELECT COUNT(*) as total FROM email_logs WHERE DATE(sent_at) = CURDATE()")
+        total = cursor.fetchone()['total']
+        
+        return jsonify({"success": True, "logs": logs, "total": total})
+    except mysql.connector.Error as e:
+        return jsonify({"success": False, "error": f"Database error: {str(e)}"}), 500
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Server error: {str(e)}"}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+
+
+@app.route('/mail/cleanup', methods=['POST'])
+def cleanup_email_logs_route():
+    """Manually cleanup old email logs"""
+    try:
+        result = cleanup_old_email_logs()
+        if result:
+            return jsonify({"success": True, "message": "Old email logs cleaned up successfully"})
+        else:
+            return jsonify({"success": False, "error": "Failed to cleanup old logs"}), 500
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @app.route('/inventory/save', methods=['POST'])
 def save_inventory_route():
     """Save inventory data"""
@@ -541,38 +1141,52 @@ def save_inventory_route():
         if not data:
             return jsonify({"success": False, "error": "No data provided"}), 400
 
-
         result = save_inventory_data(data)
 
-        # Prepare inventory details for email body
+        # Only send emails if inventory save was successful
         if result['success']:
+            # Prepare inventory details for email body
             inv_id = result.get('inventory_id')
             total_items = result.get('total_items')
             title = data.get('title', '')
             notes = data.get('notes', '')
             casse = data.get('casse', '')
             items = data.get('items', [])
-            item_lines = []
-            for item in items:
-                item_lines.append(f"- {item.get('product','')} | Qty: {item.get('qty','')} | Type: {item.get('type','')}")
-            items_str = '\n'.join(item_lines)
-            body = f"The inventory has been created successfully.\n\nInventory ID: {inv_id}\nTitle: {title}\nNotes: {notes}\nCasse: {casse}\nTotal Items: {total_items}\n\nItems:\n{items_str}\n Best regards,\nBNM System "
-        else:
-            body = f"Inventory creation failed. Error: {result.get('error','Unknown error')}"
+            
+            # Build email content
+            inventory_details = f"""Inventory ID: {result['inventory_id']}
+Title: {data.get('title', 'N/A')}
+Notes: {data.get('notes', 'N/A')}
+Casse: {data.get('casse', 'N/A')}
+Total Items: {result['total_items']}
 
-        # Send email after saving inventory (regardless of success)
-        email_result_1 = send_email(
-            subject="INVENTORY CREATED",
-            body=body,
-            to_email="benmalek.abderrahmane@bnmparapharm.com"
-        )
-        email_result_2 = send_email(
-            subject="INVENTORY CREATED",
-            body=body,
-            to_email="mahroug.nazim@bnmparapharm.com"
-        )
-        email_result = {"benmalek": email_result_1, "bedjghit": email_result_2}
-        logger.info(f"Email send result: {email_result}")
+Items Details:
+"""
+            for item in data.get('items', []):
+                inventory_details += f"- {item.get('product', 'N/A')} | Qty: {item.get('qty', 'N/A')} | Type: {item.get('type', 'N/A')}\n"
+            
+            replacements = {
+                'inventory_details': inventory_details
+            }
+
+            # Get recipients from JSON file for inventory notifications
+            default_recipients = get_recipients_from_json('inventory_save')
+            
+            # Fallback to default recipients if JSON is empty
+            if not default_recipients:
+                default_recipients = ["benmalek.abderrahmane@bnmparapharm.com", "mahroug.nazim@bnmparapharm.com"]
+
+            email_results = []
+            for to_email in default_recipients:
+                email_result = send_email_from_config(
+                    config_name='inventory_created',
+                    to_email=to_email,
+                    replacements=replacements,
+                    inventory_id=result.get('inventory_id')
+                )
+                email_results.append({"to": to_email, **email_result})
+            
+            logger.info(f"Email send results: {email_results}")
 
         if result['success']:
             return jsonify(result), 200
@@ -739,6 +1353,25 @@ def fetch_product_details():
         logger.error(f"Error fetching product details: {e}")
         return jsonify({"error": "Failed to fetch product details"}), 500
 
+
+
+@app.route('/api/fournisseurs', methods=['GET'])
+def get_fournisseurs():
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            cursor.execute("""
+                SELECT DISTINCT name as fournisseurs
+                from c_bpartner
+                WHERE AD_Client_ID = 1000000
+                AND ISACTIVE = 'Y'
+                AND isvendor = 'Y'
+            """)
+            fournisseurs = [row[0] for row in cursor.fetchall()]
+            return jsonify({"success": True, "fournisseurs": fournisseurs})
+    except Exception as e:
+        logger.error(f"Error fetching fournisseurs: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/inventory-products', methods=['GET'])
 def inventory_products():
@@ -927,6 +1560,7 @@ def fetch_inventory_products_data_updated(product_id, category="all"):
             SELECT
                 p.name AS PRODUCT,
                 (SELECT lot FROM m_attributesetinstance WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id) AS LOT,
+                (SELECT description FROM m_attributesetinstance WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id) AS DESCRIPTION,
                 (SELECT valuenumber FROM m_attributeinstance WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id AND m_attribute_id = 1000503) AS PPA,
                 (mst.qtyonhand - mst.QTYRESERVED) AS QTY_DISPO,
                 mst.m_attributesetinstance_id as M_ATTRIBUTESSETINSTANCE_ID,
@@ -984,6 +1618,9 @@ def fetch_inventory_products_data_updated(product_id, category="all"):
     except Exception as e:
         logger.error(f"Error fetching inventory products: {e}")
         return {"error": "An error occurred while fetching inventory products."}
+
+
+
 
 def fetch_product_details_data(product_name):
     """
@@ -1295,27 +1932,29 @@ def get_confirmed_casse_count():
 
 
 
-# Route to send a test email to multiple recipients
 @app.route('/send_saisie_mail', methods=['GET'])
 def send_saisie_mail_route():
-    recipients = [
-        "guend.hamza@bnmparapharm.com",
-        "seifeddine.nemdili@bnmparapharm.com",
-        "belhanachi.abdenour@bnmparapharm.com"
-    ]
-    subject = "Inventory system notification: Please do the inventory and mark it as done"
-    body = (
-        "Dear Team,\n\n"
-        "The inventory is being created. Please proceed to do the inventory as soon as possible, "
-        "and once completed, mark it as done in the system.\n\n"
-        "Good job!\n\n"
-        "Best regards,\nBNM System"
-    )
+    """Send inventory notification to operations team"""
+    # Get recipients from JSON file
+    recipients = get_recipients_from_json('send_saisie_mail')
+    
+    # Fallback to default recipients if JSON is empty
+    if not recipients:
+        recipients = [
+            "guend.hamza@bnmparapharm.com",
+            "seifeddine.nemdili@bnmparapharm.com",
+            "belhanachi.abdenour@bnmparapharm.com"
+        ]
+    
     results = []
     for to_email in recipients:
-        result = send_email(subject=subject, body=body, to_email=to_email)
-        logger.info(f"Test mail to {to_email}: {result}")
+        result = send_email_from_config(
+            config_name='inventory_saisie_notification',
+            to_email=to_email
+        )
+        logger.info(f"Saisie mail to {to_email}: {result}")
         results.append({"to": to_email, **result})
+    
     return jsonify({"results": results}), 200 if all(r["success"] for r in results) else 500
 
         
@@ -1323,24 +1962,30 @@ def send_saisie_mail_route():
 # Route to send an info email to multiple recipients
 @app.route('/send_info_mail', methods=['GET'])
 def send_info_mail_route():
-    recipients = [
-        "maamri.yasser@bnmparapharm.com",
-        "mahroug.nazim@bnmparapharm.com",
-        "benmalek.abderrahmane@bnmparapharm.com"
-    ]
-    subject = "INFO: Inventory system notification"
-    body = (
-        "Dear Team,\n\n"
-        "DO THE INV .\n\n"
-        "Please proceed to do the inventory as soon as possible, "
-        "Best regards,\nBNM System"
-    )
+    """Send info notification to management team"""
+    # Get recipients from JSON file
+    recipients = get_recipients_from_json('send_info_mail')
+    
+    # Fallback to default recipients if JSON is empty
+    if not recipients:
+        recipients = [
+            "maamri.yasser@bnmparapharm.com",
+            "mahroug.nazim@bnmparapharm.com",
+            "benmalek.abderrahmane@bnmparapharm.com"
+        ]
+    
     results = []
     for to_email in recipients:
-        result = send_email(subject=subject, body=body, to_email=to_email)
+        result = send_email_from_config(
+            config_name='inventory_info_notification',
+            to_email=to_email
+        )
         logger.info(f"Info mail to {to_email}: {result}")
         results.append({"to": to_email, **result})
+    
     return jsonify({"results": results}), 200 if all(r["success"] for r in results) else 500
+
+
 
 
 @app.route('/inventory/insert_inventory', methods=['POST', 'OPTIONS'])
@@ -1377,8 +2022,8 @@ def insert_inventory():
                 return jsonify({"error": "Missing required fields in one or more items"}), 400
 
         
-        print("------------------------------------------.", item['attributes'].items())
-        
+        print("------------------------------------------.", item['attributes'])
+        print("Attributes for item:", item['product_name'])
         
         # Get connection from pool
         connection = DB_POOL.acquire()
@@ -1406,7 +2051,7 @@ def insert_inventory():
                  FROM AD_Sequence s
                  JOIN C_DocType dt ON s.AD_Sequence_ID = dt.DocNoSequence_ID
                  WHERE dt.C_DocType_ID = 1000021),
-                'Inventory for product adjustment', 
+                , 
                 1000000, sysdate, 
                 'N', 'N', 'N', 'N', 'N', 
                 null, null, null, null, 
@@ -1414,7 +2059,9 @@ def insert_inventory():
                 'DR', 'CO', 0.00, 1000021,
                 null, 'N', 'N', null, null
             FROM dual
-        """)
+        """, {
+                    'description': item.get('title')
+                })
 
         # Update document sequence
         cursor.execute("""
@@ -1454,13 +2101,13 @@ def insert_inventory():
             cursor.execute("""
                 SELECT M_Product_ID 
                 FROM M_Product 
-                WHERE Name = :name 
+                WHERE Name like '%' || :name || '%' 
                 AND AD_Client_ID = 1000000
                 AND AD_Org_ID = 1000000
                 AND IsActive='Y'
             """, {'name': item['product_name']})
             product_row = cursor.fetchone()
-           
+            print(f"Product row for {item['product_name']}: {product_row}")
             if not product_row:
                 raise Exception(f"Product not found: {item['product_name']}")
             
@@ -1470,11 +2117,18 @@ def insert_inventory():
             # Handle attributes if needed
             if not m_attributesetinstance_id and ('lot' in item or 'date_expiration' in item or 'attributes' in item):
                 guaranteedate = None
-                if 'date_expiration' in item:
+                if item.get('date_expiration'):
                     try:
-                        guaranteedate = datetime.strptime(item['date_expiration'], '%d/%m/%y')
-                    except ValueError:
-                        continue  # or handle error
+                        # Handle both dd/mm/yy and yyyy-mm-dd formats
+                        date_str = item['date_expiration']
+                        print(f"Parsing date_expiration: {date_str}")
+                        if '/' in date_str:
+                            guaranteedate = datetime.strptime(date_str, '%d/%m/%y')
+                        elif '-' in date_str:
+                            guaranteedate = datetime.strptime(date_str, '%Y-%m-%d')
+                    except ValueError as e:
+                        logger.error(f"Invalid date format '{date_str}': {str(e)}")
+                        raise Exception(f"Invalid date format. Use DD/MM/YY or YYYY-MM-DD")
                 
                 cursor.execute("""
                     INSERT INTO M_ATTRIBUTESETINSTANCE (
@@ -1502,6 +2156,12 @@ def insert_inventory():
                 if 'attributes' in item and isinstance(item['attributes'], dict):
                     for attr_name, attr_value in item['attributes'].items():
                         if attr_name in attribute_map:
+                            # Get the attribute ID from your map
+                            attr_id = attribute_map[attr_name]
+
+                            # Determine if this is a special attribute (Colisage or Fournisseur)
+                            is_special_attr = attr_id in [attribute_map["Fournisseur"]]
+
                             try:
                                 cursor.execute("""
                                     INSERT INTO M_ATTRIBUTEINSTANCE (
@@ -1509,19 +2169,23 @@ def insert_inventory():
                                         isactive, created, createdby, updated, updatedby, 
                                         m_attributevalue_id, value, valuenumber, valuedate
                                     ) VALUES (
-                                        :asi_id, :m_attribute_id, 1000000, 1000000, 'Y', 
+                                        :asi_id, :attr_id, 1000000, 1000000, 'Y', 
                                         SYSDATE, 100, SYSDATE, 100,
-                                        NULL, :value, :valuenumber, NULL
+                                        case when :attr_id = 1000506 then 1000405 else NULL end , 
+                                        :value, 
+                                        CASE WHEN :is_special = 1 THEN (select c_bpartner_id from c_bpartner where name like :value and isactive = 'Y' and ad_client_id = 1000000 and isvendor = 'Y') ELSE :num_value END, 
+                                        NULL
                                     )
                                 """, {
                                     'asi_id': m_attributesetinstance_id,
-                                    'm_attribute_id': attribute_map[attr_name],
+                                    'attr_id': attr_id,
+                                    'is_special': 1 if is_special_attr else 0,
                                     'value': str(attr_value),
-                                    'valuenumber': float(attr_value)
+                                    'num_value': float(attr_value) if not is_special_attr else None
                                 })
                             except Exception as e:
                                 logger.error(f"Error inserting attribute {attr_name}: {str(e)}")
-                                continue
+                                raise Exception(f"Failed to insert attribute {attr_name}: {str(e)}")
 
             # Insert inventory line
             cursor.execute("""
@@ -1559,6 +2223,43 @@ def insert_inventory():
                 'product_name': item['product_name'],
                 'quantity': item['quantity']
             })
+
+            # INSERT INTO M_Transaction after all inventory lines are created
+            cursor.execute("""
+                INSERT INTO M_Transaction (
+                    m_transaction_id, ad_client_id, ad_org_id, isactive, 
+                    created, createdby, updated, updatedby, 
+                    movementtype, m_locator_id, m_product_id, 
+                    movementdate, movementqty, m_inventoryline_id, 
+                    m_inoutline_id, m_productionline_id, c_projectissue_id,
+                    m_attributesetinstance_id, m_warehousetask_id, 
+                    m_workordertransactionline_id, z_production_inline_id, 
+                    z_production_outline_id
+                )
+                SELECT 
+                    (SELECT NVL(MAX(m_transaction_id),0) + 1 FROM m_transaction WHERE ad_client_id = 1000000) + ROWNUM,
+                    1000000, -- AD_Client_ID
+                    1000000, -- AD_Org_ID
+                    'Y',
+                    sysdate, 100, sysdate, 100,
+                    'I+', -- MovementType
+                    ml.m_locator_id, -- M_Locator_ID
+                    ml.m_product_id, -- M_Product_ID
+                    sysdate, -- MovementDate
+                    ml.qtycount, -- MovementQty
+                    ml.m_inventoryline_id, -- M_InventoryLine_ID
+                    null, -- M_InOutLine_ID     
+                    null, -- M_ProductionLine_ID
+                    null, -- C_ProjectIssue_ID
+                    ml.m_attributesetinstance_id, -- M_AttributeSetInstance_ID
+                    null, -- M_WarehouseTask_ID
+                    null, -- M_WorkOrderTransactionLine_ID
+                    null, -- Z_Production_InLine_ID
+                    null -- Z_Production_OutLine_ID
+                FROM m_inventoryline ml
+                JOIN m_inventory i ON ml.m_inventory_id = i.m_inventory_id
+                WHERE i.m_inventory_id = :new_inventory_id
+            """, {'new_inventory_id': new_inventory_id})
 
         
 
@@ -1605,7 +2306,8 @@ def insert_inventory():
             AND il.m_attributesetinstance_id IS NOT NULL
             AND i.ad_client_id = 1000000
             AND ms.qtyonhand > 0
-                """,{
+            AND ms.m_locator_id = 1000614
+            """,{
                     'new_inventory_id': new_inventory_id
                 })
 
@@ -1625,55 +2327,39 @@ def insert_inventory():
 
         # 10. Update storage
         cursor.execute(f"""
-            MERGE INTO m_storage s
-            USING (
-                SELECT 
-                    il.m_product_id,
-                    il.m_attributesetinstance_id,
-                    il.qtycount
-                FROM m_inventoryline il
-                WHERE il.m_inventory_id = :new_inventory_id
-            ) il
-            ON (
-                s.m_product_id = il.m_product_id
-                AND s.m_locator_id = 1000614
-                AND (s.m_attributesetinstance_id = il.m_attributesetinstance_id
-                     OR (s.m_attributesetinstance_id IS NULL AND il.m_attributesetinstance_id IS NULL))
-            )
-            WHEN MATCHED THEN
-            UPDATE SET s.qtyonhand = il.qtycount
-        """, new_inventory_id=new_inventory_id)
-
-        # 11. Insert transaction records
-        cursor.execute(f"""
-            INSERT INTO M_Transaction (
-                m_transaction_id, ad_client_id, ad_org_id, isactive, 
-                created, createdby, updated, updatedby, 
-                movementtype, m_locator_id, m_product_id, 
-                movementdate, movementqty, m_inventoryline_id, 
-                m_inoutline_id, m_productionline_id, c_projectissue_id,
-                m_attributesetinstance_id, m_warehousetask_id, 
-                m_workordertransactionline_id, z_production_inline_id, 
-                z_production_outline_id
-            )
-            SELECT 
-                (SELECT NVL(MAX(m_transaction_id),0) + 1 FROM m_transaction WHERE ad_client_id = 1000000) + ROWNUM,
-                1000000, 1000000, 'Y',
-                sysdate, 100, sysdate, 100,
-                'I+',
-                ml.m_locator_id,
-                ml.m_product_id,
-                sysdate,
-                ml.qtycount,
-                ml.m_inventoryline_id,
-                null, null, null,
-                ml.m_attributesetinstance_id,
-                null, null, null, null
-            FROM m_inventoryline ml
-            JOIN m_inventory i ON ml.m_inventory_id = i.m_inventory_id
-            WHERE i.m_inventory_id = :new_inventory_id
-        """, new_inventory_id=new_inventory_id)
-
+    MERGE INTO m_storage s
+    USING (
+        SELECT 
+            il.m_product_id,
+            il.m_attributesetinstance_id,
+            il.qtycount
+        FROM m_inventoryline il
+        WHERE il.m_inventory_id = :new_inventory_id
+    ) il
+    ON (
+        s.m_product_id = il.m_product_id
+        AND s.m_locator_id = 1000614
+        AND (s.m_attributesetinstance_id = il.m_attributesetinstance_id
+             OR (s.m_attributesetinstance_id IS NULL AND il.m_attributesetinstance_id IS NULL))
+    )
+    WHEN MATCHED THEN
+        UPDATE SET s.qtyonhand = il.qtycount
+    WHEN NOT MATCHED THEN
+        INSERT (
+            m_product_id, m_locator_id, ad_client_id, ad_org_id, isactive, 
+            created, createdby, updated, updatedby, qtyonhand,
+            qtyreserved, qtyordered, datelastinventory, m_attributesetinstance_id, 
+            qtyallocated, qtydedicated, qtyexpected
+        )
+        VALUES (
+            il.m_product_id, 1000614, 1000000, 1000000, 'Y',
+            SYSDATE, 100, SYSDATE, 100, il.qtycount,
+            0, 0, SYSDATE, il.m_attributesetinstance_id,
+            0, 0, 0
+        )
+""", new_inventory_id=new_inventory_id)
+        
+       
         # Commit transaction
         connection.commit()
 
@@ -1691,10 +2377,127 @@ def insert_inventory():
         logger.error(f"Error inserting inventory: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+
+@app.route('/mail/init_data', methods=['POST'])
+def init_mail_data():
+    """Initialize default email configurations and contacts"""
+    connection = get_localdb_connection()
+    if not connection:
+        return jsonify({"success": False, "error": "Database connection failed"}), 500
+    
+    try:
+        cursor = connection.cursor()
+        
+        # Insert default email configurations
+        configs = [
+            ('inventory_created', 'INVENTORY CREATED', 
+             'Dear Team,\n\nA new inventory has been created and requires your attention.\n\nInventory Details:\n{inventory_details}\n\nPlease proceed with the inventory process.\n\nBest regards,\nBNM Inventory System'),
+            ('inventory_saisie_notification', 'Inventory system notification: Please do the inventory and mark it as done',
+             'Dear Team,\n\nThe inventory is being created. Please proceed to do the inventory as soon as possible, and once completed, mark it as done in the system.\n\nGood job!\n\nBest regards,\nBNM System'),
+            ('inventory_info_notification', 'INFO: Inventory system notification',
+             'Dear Team,\n\nDO THE INV.\n\nPlease proceed to do the inventory as soon as possible,\n\nBest regards,\nBNM System')
+        ]
+        
+        for config_name, subject, body in configs:
+            cursor.execute("""
+                INSERT INTO email_configs (config_name, subject, body) 
+                VALUES (%s, %s, %s)
+                ON DUPLICATE KEY UPDATE subject = VALUES(subject), body = VALUES(body)
+            """, (config_name, subject, body))
+        
+        # Insert default email contacts
+        contacts = [
+            ('Abderrahmane Benmalek', 'benmalek.abderrahmane@bnmparapharm.com', 'INFO', 'Sudo'),
+            ('Nazim Mahroug', 'mahroug.nazim@bnmparapharm.com', 'INFO', 'Sudo'),
+            ('Hamza Guend', 'guend.hamza@bnmparapharm.com', 'ACHAT', 'Saisie'),
+            ('Seifeddine Nemdili', 'seifeddine.nemdili@bnmparapharm.com', 'ACHAT', 'Saisie'),
+            ('Abdenour Belhanachi', 'belhanachi.abdenour@bnmparapharm.com', 'ACHAT', 'Casse'),
+            ('Yasser Maamri', 'maamri.yasser@bnmparapharm.com', 'INFO', 'Sudo'),
+            ('Bedjghit Hichem', 'bedjghit.hichem@bnmparapharm.com', 'Admin', 'Admin'),
+            ('Guedjali Mohamed', 'guedjali.mohamed@bnmparapharm.com', 'DOP', 'Admin')
+        ]
+        
+        for name, email, department, position in contacts:
+            cursor.execute("""
+                INSERT INTO email_contacts (name, email, department, position) 
+                VALUES (%s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE name = VALUES(name), department = VALUES(department), position = VALUES(position)
+            """, (name, email, department, position))
+        
+        connection.commit()
+        return jsonify({"success": True, "message": "Default mail data initialized successfully"})
+    except mysql.connector.Error as e:
+        connection.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
     finally:
-        # Release connection back to pool
-        if 'connection' in locals():
-            DB_POOL.release(connection)
+        cursor.close()
+        connection.close()
+
+
+
+# JSON Recipients Management API Endpoints
+@app.route('/mail/recipients', methods=['GET'])
+def get_mail_recipients():
+    """Get all mail recipients configuration"""
+    try:
+        recipients = get_all_recipients()
+        return jsonify({"success": True, "recipients": recipients})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/mail/recipients/<route_name>', methods=['GET'])
+def get_route_recipients(route_name):
+    """Get recipients for a specific route"""
+    try:
+        recipients = get_recipients_from_json(route_name)
+        return jsonify({"success": True, "recipients": recipients})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/mail/recipients/<route_name>', methods=['POST'])
+def save_route_recipients(route_name):
+    """Save recipients for a specific route"""
+    try:
+        data = request.get_json()
+        if not data or 'recipients' not in data:
+            return jsonify({"success": False, "error": "Recipients data required"}), 400
+        
+        recipients = data['recipients']
+        if not isinstance(recipients, list):
+            return jsonify({"success": False, "error": "Recipients must be a list"}), 400
+        
+        success = save_recipients_to_json(route_name, recipients)
+        if success:
+            return jsonify({"success": True, "message": f"Recipients saved for {route_name}"})
+        else:
+            return jsonify({"success": False, "error": "Failed to save recipients"}), 500
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/mail/recipients/all', methods=['POST'])
+def save_all_recipients():
+    """Save all recipients configuration"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "error": "Recipients data required"}), 400
+        
+        # Validate that all values are lists
+        for route_name, recipients in data.items():
+            if not isinstance(recipients, list):
+                return jsonify({"success": False, "error": f"Recipients for {route_name} must be a list"}), 400
+        
+        # Save to JSON file
+        with open(RECIPIENTS_FILE, 'w') as f:
+            json.dump(data, f, indent=4)
+        
+        return jsonify({"success": True, "message": "All recipients configuration saved"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5003)

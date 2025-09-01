@@ -58,21 +58,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Add created_by from session
         $data['created_by'] = $_SESSION['username'];
         
-        // Determine API base URL based on hostname
-        $hostname = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'localhost';
-        $baseUrl = 'http://192.168.1.94:5003';
-        
-        // If accessing via localhost or local IP, use local Flask server
-        if ($hostname === 'localhost' || $hostname === '127.0.0.1' || strpos($hostname, '192.168.') === 0) {
-            $baseUrl = 'http://192.168.1.94:5003';
-        }
-        // If accessing via DDNS domain, use external Flask server
-        elseif (strpos($hostname, 'ddns.net') !== false) {
-            $baseUrl = "http://{$hostname}:5003";
-        }
-        
         // Call Python Flask API to save inventory
-        $pythonApiUrl = $baseUrl . '/inventory/save';
+        $pythonApiUrl = 'http://localhost:5003/inventory/save';
         
         // Prepare cURL request
         $ch = curl_init();
@@ -1186,7 +1173,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background-color: #064e3b !important;
         }
     </style>
-    <script src="api_config_inv.js"></script>
     <script src="theme.js" defer></script>
 </head>
 <body class="bg-gray-100 min-h-screen w-full">
@@ -1285,9 +1271,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <table class="min-w-full border-collapse text-sm text-left inventory-table dark:text-white">
                             <thead>
                                 <tr class="table-header dark:bg-gray-700">
-                                    <th class="border border-gray-300 px-4 py-2 dark:border-gray-600">Select</th>
-                                    <th class="border border-gray-300 px-4 py-2 dark:border-gray-600">Product</th>
+                                    <th class="border border-gray-300 p-1 dark:border-gray-600 text-center text-xs" style="width: 30px; min-width: 30px; max-width: 30px;">Sel</th>
+                                    <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 min-w-[250px]">Product</th>
                                     <th class="border border-gray-300 px-4 py-2 dark:border-gray-600">Lot</th>
+                                    <th class="border border-gray-300 px-4 py-2 dark:border-gray-600">Description</th>
                                     <th class="border border-gray-300 px-4 py-2 dark:border-gray-600">PPA</th>
                                     <th class="border border-gray-300 px-4 py-2 dark:border-gray-600">P_REVIENT</th>
                                     <th class="border border-gray-300 px-4 py-2 dark:border-gray-600">QTY_DISPO</th>
@@ -1922,7 +1909,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Load product list from API
         async function loadProductList() {
             try {
-                const response = await fetch(API_CONFIGinv.getApiUrl("/listproduct_inv"));
+                const response = await fetch("http://192.168.1.94:5003/listproduct_inv");
                 if (!response.ok) throw new Error("Failed to load products");
                 
                 const products = await response.json();
@@ -2418,7 +2405,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
                 
-                const response = await fetch(API_CONFIGinv.getApiUrl(`/inventory-products-updated?product_id=${encodeURIComponent(product.id)}&category=${encodeURIComponent(categoryFilter)}`));
+                const response = await fetch(`http://192.168.1.94:5003/inventory-products-updated?product_id=${encodeURIComponent(product.id)}&category=${encodeURIComponent(categoryFilter)}`);
                 
                 // Hide loading indicator
                 hideLoadingIndicator();
@@ -2484,6 +2471,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Handle different possible property names from API and show actual values
                 const productName = detail.PRODUCT_NAME || detail.PRODUCT || detail.NAME || detail.name || '';
                 const lot = detail.LOT || detail.lot || '';
+                const description = detail.DESCRIPTION || detail.description || '';
                 const ppa = detail.PPA || detail.ppa || '';
                 const pRevient = detail.P_REVIENT || detail.p_revient || '';
                 const qtyDispo = detail.QTY_DISPO || detail.qty_dispo || detail.QTY || detail.qty || 0;
@@ -2500,7 +2488,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Debug: log each processed item
                 console.log('Processing item:', {
-                    productName, lot, ppa, pRevient, qtyDispo, guaranteeDate,
+                    productName, lot, description, ppa, pRevient, qtyDispo, guaranteeDate,
                     formattedPPA, formattedPRevient, formattedDate
                 });
                 
@@ -2510,6 +2498,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </td>
                     <td>${productName}</td>
                     <td>${lot}</td>
+                    <td>${description || ''}</td>
                     <td>${formattedPPA}</td>
                     <td>${formattedPRevient}</td>
                     <td>${qtyDispo || 0}</td>
@@ -2558,7 +2547,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <br>
                     <small class="text-red-500 dark:text-red-400 font-semibold">⚠️ No details found in ${categoryText} - Manual entry required</small>
                 </td>
-                <td colspan="4">
+                <td colspan="5">
                     <div class="text-orange-600 dark:text-orange-400 font-semibold text-sm">
                         ⚠️ Warning: this product does not have any details available in the ${categoryText} inventory system.
                         <br>
@@ -2639,9 +2628,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Use provided product details
             // Handle different possible property names from API
             const product = productDetails.PRODUCT_NAME || productDetails.PRODUCT || productDetails.NAME || productDetails.name || '';
+            const description = productDetails.DESCRIPTION || productDetails.description || '';
             
             // Debug: Log the extracted product name for ENTRY
             console.log('ENTRY - Extracted product name:', product);
+            console.log('ENTRY - Extracted description:', description);
             console.log('ENTRY - Product details keys:', Object.keys(productDetails || {}));
             console.log('ENTRY - Full productDetails object:', productDetails);
             const lot = productDetails && !isManualEntry ? 
@@ -2667,6 +2658,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="flex flex-col">
                             <span class="font-medium text-orange-600 dark:text-orange-400">${product || 'Manual Product Entry'}</span>
                             <input type="hidden" name="product" value="${product}">
+                            <input type="hidden" name="description" value="${description}">
                             <div class="text-xs text-orange-500 dark:text-orange-400 mt-1 flex items-center">
                                 <span class="mr-1">⚠️</span>
                                 <span>Manual Entry - No System Data</span>
@@ -2712,6 +2704,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="flex flex-col">
                             <span class="font-bold text-lg text-black dark:text-white" style="min-height: 20px; display: block; color: #000 !important; background-color: yellow; padding: 2px; border: 2px solid red;">${product || 'Product Name Not Available'}</span>
                             <input type="hidden" name="product" value="${product}">
+                            <input type="hidden" name="description" value="${description}">
                             <div class="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center">
                                 <span class="mr-1">✓</span>
                                 <span>System Data Available</span>
@@ -2801,9 +2794,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Use provided product details
             // Handle different possible property names from API
             const product = productDetails.PRODUCT_NAME || productDetails.PRODUCT || productDetails.NAME || productDetails.name || '';
+            const description = productDetails.DESCRIPTION || productDetails.description || '';
             
             // Debug: Log the extracted product name for SORTIE
             console.log('SORTIE - Extracted product name:', product);
+            console.log('SORTIE - Extracted description:', description);
             console.log('SORTIE - Product details keys:', Object.keys(productDetails || {}));
             console.log('SORTIE - Full productDetails object:', productDetails);
             const lot = productDetails && !isManualEntry ? 
@@ -2829,6 +2824,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="flex flex-col">
                             <span class="font-medium text-orange-600 dark:text-orange-400">${product || 'Manual Product Entry'}</span>
                             <input type="hidden" name="product" value="${product}">
+                            <input type="hidden" name="description" value="${description}">
                             <div class="text-xs text-orange-500 dark:text-orange-400 mt-1 flex items-center">
                                 <span class="mr-1">⚠️</span>
                                 <span>Manual Entry - No System Data</span>
@@ -2874,6 +2870,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="flex flex-col">
                             <span class="font-bold text-lg text-black dark:text-white" style="min-height: 20px; display: block; color: #000 !important; background-color: yellow; padding: 2px; border: 2px solid red;">${product || 'Product Name Not Available'}</span>
                             <input type="hidden" name="product" value="${product}">
+                            <input type="hidden" name="description" value="${description}">
                             <div class="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center">
                                 <span class="mr-1">✓</span>
                                 <span>System Data Available</span>
@@ -3532,12 +3529,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (qty > 0) {
                         // Get values from inputs
                         const productInput = row.querySelector('input[name="product"]');
+                        const descriptionInput = row.querySelector('input[name="description"]');
                         const dateInput = row.querySelector('input[name="date"]');
                         const lotInput = row.querySelector('input[name="lot"]');
                         const ppaInput = row.querySelector('input[name="ppa"]');
                         const qtyDispoInput = row.querySelector('input[name="qty_dispo"]');
 
                         const product = productInput ? productInput.value.trim() : '';
+                        const description = descriptionInput ? descriptionInput.value.trim() : '';
                         const date = dateInput ? dateInput.value : null;
                         const lot = lotInput ? lotInput.value : null;
                         const ppa = ppaInput ? parseFloat(ppaInput.value) || 0 : 0;
@@ -3548,6 +3547,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if (product) {
                             items.push({
                                 product: product,
+                                description: description,
                                 qty: qty,
                                 date: date,
                                 lot: lot,
@@ -3572,12 +3572,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (qty > 0) {
                         // Get values from inputs
                         const productInput = row.querySelector('input[name="product"]');
+                        const descriptionInput = row.querySelector('input[name="description"]');
                         const dateInput = row.querySelector('input[name="date"]');
                         const lotInput = row.querySelector('input[name="lot"]');
                         const ppaInput = row.querySelector('input[name="ppa"]');
                         const qtyDispoInput = row.querySelector('input[name="qty_dispo"]');
 
                         const product = productInput ? productInput.value.trim() : '';
+                        const description = descriptionInput ? descriptionInput.value.trim() : '';
                         const date = dateInput ? dateInput.value : null;
                         const lot = lotInput ? lotInput.value : null;
                         const ppa = ppaInput ? parseFloat(ppaInput.value) || 0 : 0;
@@ -3602,6 +3604,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if (product) {
                             items.push({
                                 product: product,
+                                description: description,
                                 qty: qty,
                                 date: date,
                                 lot: lot,
@@ -3650,7 +3653,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 console.log('Sending data:', dataToSend);
                 
                 // Send data to Python API
-                const response = await fetch(API_CONFIGinv.getApiUrl('/inventory/save'), {
+                const response = await fetch('http://192.168.1.94:5003/inventory/save', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

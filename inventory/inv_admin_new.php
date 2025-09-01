@@ -816,8 +816,10 @@ $inventories = [];
             entryItems.forEach(item => {
                 const isManual = item.is_manual_entry == 1;
                 html += `
-                    <div class="bg-green-50 p-3 rounded border border-green-200${isManual ? ' border-l-4 border-l-orange-400' : ''}">
-                        <div class="font-medium">${item.product_name}${isManual ? ' <span class="text-orange-600 text-xs">📝 Manual Entry</span>' : ''}</div>
+                    <div class="bg-green-50 p-3 rounded border border-green-200${isManual ? ' border-l-4 border-l-orange-400 bg-orange-50 border-orange-300' : ''}">
+                        <div class="font-medium">${item.product_name}</div>
+                        ${isManual ? '<div class="mt-1"><span class="bg-orange-200 text-orange-800 px-2 py-1 rounded-full text-xs font-bold">⚠️ 📝 MANUAL ENTRY</span></div>' : ''}
+                        ${item.description ? `<div class="text-sm text-gray-700 italic mb-1">${item.description}</div>` : ''}
                         <div class="text-sm text-gray-600">
                             Qty: <strong>${item.quantity}</strong> | 
                             Lot: ${item.lot || 'N/A'} | 
@@ -840,8 +842,10 @@ $inventories = [];
             sortieItems.forEach(item => {
                 const isManual = item.is_manual_entry == 1;
                 html += `
-                    <div class="bg-orange-50 p-3 rounded border border-orange-200${isManual ? ' border-l-4 border-l-orange-600' : ''}">
-                        <div class="font-medium">${item.product_name}${isManual ? ' <span class="text-orange-600 text-xs">📝 Manual Entry</span>' : ''}</div>
+                    <div class="bg-orange-50 p-3 rounded border border-orange-200${isManual ? ' border-l-4 border-l-red-500 bg-red-50 border-red-300' : ''}">
+                        <div class="font-medium">${item.product_name}</div>
+                        ${isManual ? '<div class="mt-1"><span class="bg-red-200 text-red-800 px-2 py-1 rounded-full text-xs font-bold">⚠️ 📝 MANUAL ENTRY</span></div>' : ''}
+                        ${item.description ? `<div class="text-sm text-gray-700 italic mb-1">${item.description}</div>` : ''}
                         <div class="text-sm text-gray-600">
                             Qty: <strong>${item.quantity}</strong> | 
                             Lot: ${item.lot || 'N/A'} | 

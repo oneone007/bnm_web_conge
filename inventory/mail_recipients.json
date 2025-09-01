@@ -1,0 +1,13 @@
+{
+    "send_saisie_mail": [
+        "guend.hamza@bnmparapharm.com",
+        "seifeddine.nemdili@bnmparapharm.com",
+        "belhanachi.abdenour@bnmparapharm.com"
+    ],
+    "send_info_mail": [
+        "maamri.yasser@bnmparapharm.com"
+    ],
+    "inventory_save": [
+        "maamri.yasser@bnmparapharm.com"
+    ]
+}
