@@ -81,6 +81,8 @@ $latestDataJson = json_encode($latestData);
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="theme.js"></script>
+        <script src="api_config_money.js"></script>
+
 
     <script>
         tailwind.config = {
@@ -653,11 +655,11 @@ $latestDataJson = json_encode($latestData);
                 // Fetch all data in parallel
                 const [stockResponse, creditResponse, traisorieResponse, 
                        bankResponse, detteResponse] = await Promise.all([
-                    fetch("http://192.168.1.200:4999/stock-summary"),
-                    fetch("http://192.168.1.200:4999/credit-client"),
-                    fetch("http://192.168.1.200:4999/total-tresorie"),
-                    fetch("http://192.168.1.200:4999/total-bank"),
-                    fetch("http://192.168.1.200:4999/total-dette"),
+                    fetch(API_CONFIG.getApiUrl("/stock-summary")),
+                    fetch(API_CONFIG.getApiUrl("/credit-client")),
+                    fetch(API_CONFIG.getApiUrl("/total-tresorie")),
+                    fetch(API_CONFIG.getApiUrl("/total-bank")),
+                    fetch(API_CONFIG.getApiUrl("/total-dette")),
                 ]);
 
                 const [stockData, creditData, traisorieData, bankData, detteData] = await Promise.all([
@@ -1006,7 +1008,7 @@ html += createRow('Baraka Checks', detteData.details.checks_details.Baraka.check
                 // Build URL with parameters
                 // Fetch data for selected metrics in parallel
                 const responses = await Promise.all(metricsToFetch.map(metric => {
-                    const url = new URL('http://192.168.1.200:4999/kpi-trends-data');
+                    const url = new URL(API_CONFIG.getApiUrl("/kpi-trends-data"));
                     url.searchParams.append('start_date', startDateInput.value);
                     url.searchParams.append('end_date', endDateInput.value);
                     url.searchParams.append('metric', metric);
@@ -1534,7 +1536,7 @@ async function fetchAllFinancialData() {
         if (stockDetailsElement) stockDetailsElement.classList.add("hidden");
 
         // Make single API call
-        const response = await fetch("http://192.168.1.200:4999/total-profit-page");
+        const response = await fetch(API_CONFIG.getApiUrl("/total-profit-page"));
         const data = await response.json();
         
         if ('error' in data) {

@@ -7,17 +7,17 @@ const API_CONFIG = {
         
         // If accessing via localhost or local IP, use local Flask server
         if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.')) {
-            return 'http://192.168.1.94:5005';
+            return 'http://192.168.1.94:4999';
         }
         
         // If accessing via any DDNS domain, use external Flask server
-        // Use the same domain as the current page but port 5000
+        // Use the same domain as the current page but port 4999
         if (hostname.includes('ddns.net')) {
-            return `http://${hostname}:5005`;
+            return `http://${hostname}:4999`;
         }
         
         // Default fallback
-        return 'http://bnm.ddns.net:5005';
+        return 'http://bnm.ddns.net:4999';
     },
     
     // Get full API URL

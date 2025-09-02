@@ -127,15 +127,15 @@
             position: relative;
             z-index: 10;
             width: 100%;
-            max-width: 500px;
+            max-width: 420px;
         }
 
         .login-container {
             background: rgba(255, 255, 255, 0.99);
             backdrop-filter: blur(32px);
             border: 1.5px solid var(--primary-light);
-            border-radius: 2rem;
-            padding: 2.5rem 2.5rem 2rem 2.5rem;
+            border-radius: 1.5rem;
+            padding: 2rem 2rem 1.5rem 2rem;
             box-shadow: 0 12px 40px rgba(30, 64, 175, 0.13), 0 2px 8px rgba(59, 130, 246, 0.08);
             position: relative;
             overflow: hidden;
@@ -152,7 +152,7 @@
             right: 0;
             height: 6px;
             background: linear-gradient(90deg, var(--primary-color), #3b82f6, #06b6d4, var(--primary-color));
-            border-radius: 2rem 2rem 0 0;
+            border-radius: 1.5rem 1.5rem 0 0;
         }
 
         .login-container::after {
@@ -164,25 +164,25 @@
             height: 10px;
             background: linear-gradient(90deg, #06b6d4, #3b82f6, var(--primary-color), #3b82f6);
             opacity: 0.12;
-            border-radius: 0 0 2rem 2rem;
+            border-radius: 0 0 1.5rem 1.5rem;
         }
 
         /* Header */
         .login-header {
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
             position: relative;
         }
 
         .brand-logo {
-            width: 70px;
-            height: 70px;
+            width: 60px;
+            height: 60px;
             background: linear-gradient(135deg, var(--primary-color), #3b82f6 60%, #06b6d4 100%);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 1.2rem;
+            margin: 0 auto 1rem;
             box-shadow: 0 8px 32px rgba(59, 130, 246, 0.22), 0 2px 8px rgba(30, 64, 175, 0.08);
             position: relative;
         }
@@ -204,21 +204,21 @@
         }
 
         .brand-logo img {
-            width: 40px;
-            height: 40px;
+            width: 32px;
+            height: 32px;
             object-fit: contain;
             z-index: 1;
         }
 
         .brand-info {
-            margin-bottom: 1rem;
+            margin-bottom: 0.8rem;
         }
 
         .brand-title {
-            font-size: 2.2rem;
+            font-size: 1.9rem;
             font-weight: 800;
             color: var(--primary-color);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.4rem;
             background: linear-gradient(135deg, var(--primary-color), #3b82f6 60%, #06b6d4 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -226,37 +226,37 @@
         }
 
         .brand-subtitle {
-            font-size: 1.08rem;
+            font-size: 1rem;
             color: var(--primary-dark);
             font-weight: 600;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.4rem;
             letter-spacing: 0.5px;
         }
 
         .brand-description {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: var(--text-muted);
             line-height: 1.5;
             font-weight: 500;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.4rem;
         }
 
         /* Form Styles */
         .login-form {
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
         }
 
         .form-group {
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.2rem;
             position: relative;
         }
 
         .form-label {
             display: block;
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 700;
             color: var(--primary-dark);
-            margin-bottom: 0.7rem;
+            margin-bottom: 0.6rem;
             letter-spacing: 0.2px;
         }
 
@@ -266,11 +266,11 @@
 
         .form-input {
             width: 100%;
-            padding: 1rem 1.1rem;
-            padding-left: 2.75rem;
+            padding: 0.9rem 1rem;
+            padding-left: 2.5rem;
             border: 2px solid var(--primary-light);
-            border-radius: 1.2rem;
-            font-size: 1.05rem;
+            border-radius: 1rem;
+            font-size: 1rem;
             transition: all 0.3s cubic-bezier(.4,1.4,.6,1);
             background: rgba(255, 255, 255, 0.98);
             color: var(--primary-dark);
@@ -297,11 +297,11 @@
 
         .input-icon {
             position: absolute;
-            left: 1rem;
+            left: 0.9rem;
             top: 50%;
             transform: translateY(-50%);
             color: var(--primary-light);
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             transition: all 0.3s cubic-bezier(.4,1.4,.6,1);
         }
 
@@ -312,15 +312,15 @@
 
         .password-toggle {
             position: absolute;
-            right: 1rem;
+            right: 0.9rem;
             top: 50%;
             transform: translateY(-50%);
             color: var(--primary-light);
             cursor: pointer;
-            font-size: 1.1rem;
+            font-size: 1rem;
             transition: all 0.3s cubic-bezier(.4,1.4,.6,1);
-            padding: 0.45rem;
-            border-radius: 0.7rem;
+            padding: 0.4rem;
+            border-radius: 0.6rem;
         }
 
         .password-toggle:hover {
@@ -346,20 +346,20 @@
             background: linear-gradient(90deg, var(--primary-color) 0%, #3b82f6 60%, #06b6d4 100%);
             color: #fff;
             border: none;
-            padding: 1.1rem;
-            border-radius: 1.2rem;
-            font-size: 1.08rem;
+            padding: 1rem;
+            border-radius: 1rem;
+            font-size: 1rem;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(.4,1.4,.6,1);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.85rem;
+            gap: 0.8rem;
             position: relative;
             overflow: hidden;
             text-transform: uppercase;
-            letter-spacing: 0.7px;
+            letter-spacing: 0.6px;
             box-shadow: 0 10px 36px rgba(59, 130, 246, 0.22), 0 2px 8px rgba(30, 64, 175, 0.08);
         }
 
@@ -440,9 +440,9 @@
         .login-footer {
             text-align: center;
             color: var(--primary-light);
-            font-size: 0.85rem;
-            margin-top: 2rem;
-            padding-top: 1.5rem;
+            font-size: 0.8rem;
+            margin-top: 1.5rem;
+            padding-top: 1.2rem;
             border-top: 1.5px solid var(--primary-light);
             font-weight: 600;
         }
@@ -899,7 +899,7 @@
 </h1>
                     <p class="brand-subtitle">Analytics Dashboard</p>
                     <p class="brand-description">
-                        Transform your data into actionable insights with powerful business intelligence tools
+                        Data-driven insights for smarter business decisions
                     </p>
                 </div>
             </div>

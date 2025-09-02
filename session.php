@@ -11,7 +11,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Verify developer access (case-sensitive match)
 if (!isset($_SESSION['Role']) || !in_array($_SESSION['Role'], ['Developer'], true)) {
-    header('Location: build');
+    header('Location: 403');
     exit();
 }
 
@@ -92,6 +92,41 @@ $total_records = $count_result ? $count_result->fetch_assoc()['total'] : 0;
 
 // Main query without pagination - load all records
 $sql = "SELECT * FROM user_sessions $where_sql ORDER BY login_time DESC";
+
+// Handle clean table action (Developer only)
+if (isset($_POST['clean_table']) && $_SESSION['Role'] === 'Developer') {
+    $clean_sql = "DELETE FROM user_sessions";
+    
+    if ($conn->query($clean_sql)) {
+        $success_message = "All session records have been deleted successfully.";
+    } else {
+        $error_message = "Failed to clean the session table: " . $conn->error;
+    }
+    
+    // Refresh the page to show updated data
+    header("Location: " . $_SERVER['PHP_SELF'] . "?" . http_build_query($_GET));
+    exit();
+}
+
+// Handle logout all users action (Developer only)
+if (isset($_POST['logout_all_users']) && $_SESSION['Role'] === 'Developer') {
+    $logout_time = date('Y-m-d H:i:s');
+    $logout_all_sql = "UPDATE user_sessions SET logout_time = ? WHERE logout_time IS NULL";
+    $logout_all_stmt = $conn->prepare($logout_all_sql);
+    $logout_all_stmt->bind_param("s", $logout_time);
+    
+    if ($logout_all_stmt->execute()) {
+        $affected_rows = $logout_all_stmt->affected_rows;
+        $success_message = "Successfully logged out {$affected_rows} active user session(s).";
+    } else {
+        $error_message = "Failed to logout all user sessions: " . $conn->error;
+    }
+    $logout_all_stmt->close();
+    
+    // Refresh the page to show updated data
+    header("Location: " . $_SERVER['PHP_SELF'] . "?" . http_build_query($_GET));
+    exit();
+}
 
 // Handle force logout
 if (isset($_POST['force_logout']) && isset($_POST['session_id'])) {
@@ -287,6 +322,30 @@ $query_error = $result ? null : $conn->error;
         }
         .btn-success:hover {
             background: #059669;
+        }
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        .btn-danger:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+        .btn-warning:hover {
+            background: #d97706;
+        }
+        .btn-warning:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            opacity: 0.6;
         }
         table {
             width: 100%;
@@ -618,7 +677,29 @@ $query_error = $result ? null : $conn->error;
         <div class="filter-group" style="align-self: flex-end; margin-left: auto;">
             <button type="submit" name="download" value="xls" class="btn-success">Download XLS</button>
         </div>
+        <?php if (isset($_SESSION['Role']) && $_SESSION['Role'] === 'Developer'): ?>
+        <div class="filter-group" style="align-self: flex-end;">
+            <button type="button" onclick="confirmLogoutAll()" class="btn-warning">
+                ⚠️ Logout All Users
+            </button>
+        </div>
+        <div class="filter-group" style="align-self: flex-end;">
+            <button type="button" onclick="confirmCleanTable()" class="btn-danger">
+                🗑️ Clean Table
+            </button>
+        </div>
+        <?php endif; ?>
     </form>
+
+    <!-- Hidden forms for actions -->
+    <?php if (isset($_SESSION['Role']) && $_SESSION['Role'] === 'Developer'): ?>
+    <form id="logoutAllForm" method="post" style="display: none;">
+        <input type="hidden" name="logout_all_users" value="1">
+    </form>
+    <form id="cleanTableForm" method="post" style="display: none;">
+        <input type="hidden" name="clean_table" value="1">
+    </form>
+    <?php endif; ?>
 
     <!-- Records info display -->
     <?php if ($total_records > 0): ?>
@@ -718,6 +799,24 @@ function toggleExpand(element) {
         expandedContent.style.display = 'block';
     } else {
         expandedContent.style.display = 'none';
+    }
+}
+
+// Clean table confirmation
+function confirmCleanTable() {
+    if (confirm('⚠️ WARNING: This will permanently delete ALL session records from the database.\n\nThis action cannot be undone. Are you absolutely sure you want to proceed?')) {
+        if (confirm('Final confirmation: Click OK to DELETE ALL session data, or Cancel to abort.')) {
+            document.getElementById('cleanTableForm').submit();
+        }
+    }
+}
+
+// Logout all users confirmation
+function confirmLogoutAll() {
+    if (confirm('⚠️ WARNING: This will logout ALL active user sessions immediately.\n\nAll users will be forced to login again. Are you sure you want to proceed?')) {
+        if (confirm('Final confirmation: Click OK to LOGOUT ALL ACTIVE USERS, or Cancel to abort.')) {
+            document.getElementById('logoutAllForm').submit();
+        }
     }
 }
 

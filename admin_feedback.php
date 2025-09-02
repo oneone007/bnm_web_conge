@@ -8,7 +8,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 // Restrict access for 'vente' and 'achat'
 if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Sup Achat', 'Sup Vente','Admin', 'Comptable'])) {
-    header("Location: build");    exit();
+    header("Location: 403");    exit();
 }
 
 // Handle feedback deletion

@@ -14,27 +14,33 @@ $pages = [
     "Recap_Vente_Facturation" => "recapvente_fact.php",
     "ETAT_F" => "etat_fournisseur.php",
     "ETAT_F_CUMULE" => "etat_fournisseur_cumule.php",
-
+    "ETAT_F_CUMULE_PAIMENT" => "etat_fournissuer_paiment.php",
+    "Arrivage" => "reception.php",
     "retour" => "retour_documents.php",
-
-    
+    "expire" => "expire.php",
     "charge" => "charges_dashboard.php",
-
+    "manque_casse" => "manque_casse.php",
+    "vente_logs" => "vente_track/view_logs.php",
     "CONFIRMED_ORDERS" => "confirm_order.php",
     "Annual_Recap_V" => "year.php",
     "Annual_Recap_A" => "yeara.php",
     "dz" => "algeria_map.html",
-        "dzz" => "algeria_map.php",
+    "dzz" => "algeria_map.php",
     "portf" => "portf.php",
     "DETTE_F" => "etatfournisseur.php",
         "inv" => "inventory/inv.php",
         "inv_admin" => "inventory/inv_admin.php",
         "inv_saisie" => "inventory/saise.php",
+        "inv_adv2" => "inventory/inv_admin_new.php",
+        "stock_inventory" => "stock_inventory.php",
 
-        "inv_ad" => "inventory/inv_admin_new.php",
+        "inv_ad" => "inventory/inv_admin.php",
         "print" => "printing.php",
     "manage" => "fil_manage/manage.php",
     "upload" => "fil_manage/upload.php",
+
+
+  
 
     "recap_achat_facturation" => "recap_achat_facturation.php",
     "Rotation" => "rotation.php",
@@ -43,7 +49,6 @@ $pages = [
     "feedback" => "admin_feedback.php",
     "sess" => "session.php",
     "draft" => "draft.php",
-    "simuler" => "simulation.php",
     "sudo" => "sudo.php",
 
     "Mouvement_Stock"=> "mouvementstock.php",
@@ -51,7 +56,7 @@ $pages = [
     "AFFECTATION" => "affectation.php",
     "recouverement" => "rcvrmnt.php",
     "l" => "l.php",
-
+    "adminmail" => "adminmail.php",
     "signup" => "signup.html",
     "monyold" => "moneyold.php",
  "mony" => "moneyv2.php",
@@ -64,18 +69,32 @@ $pages = [
     "Quota" => "quota.php",
     "bank" => "bank.php",
 
-
+    "editnavbar" => "sidebar/editnavbar.php",
     "login" => "login.php",
     "c" => "arrowgame.html",
     "403" => "403.php",
     "t" => "tes.php",
     "403_viewer" => "403_log_viewer.php",
-
-    "build" =>"work.html"
-
-
+    "build" =>"work.html",
+    "secure_login" => "secure_login.html",
 
 
+
+    // Mail Management Pages
+     "mail_dashboard" => "mail/dashboard.php",
+    "mail_templates" => "mail/templates.php",
+    "mail_contacts" => "mail/contacts.php",
+    "send_mail" => "mail/send.php",
+    "mail_logs" => "mail/logs.php",
+    "mail_settings" => "mail/settings.php",
+    "mail_recipients" => "mail/recipients.php",
+
+
+    "network" => "wifi.php",
+       // "simuler" => "simulation.php",
+
+
+    "simuler" => "real_simulation.php"
 ];
 
 $page = isset($_GET['page']) ? $_GET['page'] : 'BNM'; // Default page

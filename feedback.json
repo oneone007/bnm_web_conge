@@ -43,5 +43,23 @@
         "content": "gg",
         "rating": null,
         "page": "Main"
+    },
+    {
+        "timestamp": "2025-08-10 11:55:33",
+        "user_id": 33,
+        "username": "admin",
+        "type": "bug",
+        "content": "tet",
+        "rating": null,
+        "page": "AFFECTATION"
+    },
+    {
+        "timestamp": "2025-08-10 11:55:41",
+        "user_id": 33,
+        "username": "admin",
+        "type": "suggestion",
+        "content": "test",
+        "rating": null,
+        "page": "AFFECTATION"
     }
 ]

@@ -1,0 +1,284 @@
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    min-width: 250px;
+    max-width: 250px;
+    height: 100vh;
+    background-color: #f9fafb;
+    border-right: 1px solid #e5e7eb;
+    transition: transform 0.3s ease-in-out;
+    z-index: 40;
+    padding-top: 60px;
+}
+
+.sidebar-hidden {
+    transform: translateX(-250px);
+}
+
+/* Toggle Button */
+#sidebarToggle {
+    position: fixed;
+    top: 20px;
+    left: 260px;
+    z-index: 999;
+    background: #2563eb;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#sidebarToggle:hover {
+    background: #1d4ed8;
+}
+
+/* Content area */
+.content {
+    margin-left: 250px;
+    transition: margin-left 0.3s ease-in-out;
+    width: calc(100% - 250px);
+    padding: 20px;
+}
+
+.content-full {
+    margin-left: 0;
+    width: 100%;
+}
+
+/* Dark mode adjustments */
+html.dark .sidebar {
+    background-color: #1f2937;
+    border-right-color: #374151;
+}
+html.dark body {
+    background-color: #111827;
+    color: white;
+}
+
+/* Dark Mode Toggle - Styled Checkbox */
+.checkbox {
+    display: none;
+}
+
+/* Toggle Background */
+.checkbox-label {
+    width: 60px;
+    height: 30px;
+    background: #ddd;
+    display: flex;
+    border-radius: 50px;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+    padding: 5px;
+    transition: background 0.3s ease-in-out;
+}
+
+/* Ball as Sun (Default) */
+.ball {
+    width: 22px;
+    height: 22px;
+    background: #facc15; /* Sun color (yellow) */
+    position: absolute;
+    border-radius: 50%;
+    transition: transform 0.3s ease-in-out, background 0.3s ease-in-out;
+    left: 5px;
+    box-shadow: 0 0 5px 2px #facc15; /* Sun glow effect */
+}
+
+/* Add Sun Rays */
+.ball::before {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: inherit;
+    border-radius: 50%;
+    transform: scale(1.4);
+    opacity: 0.5;
+}
+
+/* Moon Shape */
+html.dark .ball {
+    transform: translateX(30px);
+    background: #1e40af; /* Moon color (blue) */
+    box-shadow: none; /* Remove glow */
+}
+
+/* Crescent Moon Effect */
+html.dark .ball::before {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: white;
+    border-radius: 50%;
+    left: 5px; /* Shift left to create crescent effect */
+}
+
+/* Dark Mode Background */
+html.dark .checkbox-label {
+    background: #333;
+}
+
+/* Positioning the Dark Mode Toggle on Top Right */
+#themeSwitcher {
+    position: fixed;
+    top: 10px;
+    right: 20px;
+    z-index: 50;
+}
+#ram-animation {
+    position: absolute;  /* Place it behind other elements */
+    top: 0;
+    left: 0;
+    width: 100%;  /* Fit inside sidebar */
+    height: 300px; /* Adjust height as needed */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none; /* Prevent interaction */
+    background: transparent;
+    z-index: -1; /* Push it behind other content */
+}
+#space{
+    height: 150px;
+}
+
+#products-submenu, #recaps-submenu {
+    transition: max-height 0.3s ease;
+    overflow: hidden;
+}
+
+
+
+
+
+/* From Uiverse.io by alexruix */ 
+.notification {
+  display: flex;
+  width: 0;
+  border-radius: 10px;
+  animation: slideIn 1s ease-in-out 1.25s forwards;
+}
+
+.notification-info {
+  display: inline-flex;
+  overflow: hidden;
+  background-color: #e0e0e0;
+color: #333;
+
+  width: 90%;
+  border-radius: 12px 8px 8px 12px;
+  padding-left: 10px;
+  align-items: center;
+}
+
+.notification-text {
+  opacity: 0;
+  padding: 10px 8px;
+  white-space: nowrap;
+  animation: textInfo 1s ease-in-out 1.5s forwards;
+}
+
+.highlight {
+  color:rgb(85, 196, 17);
+}
+
+
+
+/*Animations*/
+@keyframes slideIn {
+  0% {
+    width: 0;
+    padding: 2px;
+  }
+
+  100% {
+    width: 250px;
+    padding: 2px;
+  }
+}
+
+@keyframes textInfo {
+  0% {
+    opacity: 0%;
+    margin-left: -20em;
+  }
+
+  100% {
+    opacity: 100%;
+    margin-left: 0;
+  }
+}
+
+@keyframes grow {
+  0% {
+    transform: scale(100%) translateY(0%);
+  }
+
+  50% {
+    transform: scale(100%) translateY(-10%);
+  }
+
+  100% {
+    transform: scale(100%) translateY(0%);
+  }
+}
+
+
+.sidebar-logo {
+  width: 180px;      /* Adjust to your sidebar width */
+  height: 120px;     /* Adjust height */
+  overflow: hidden;
+}
+
+.scene {
+  width: 100%;
+  height: 100%;
+  animation: sceneSwing 10s infinite ease-in-out alternate;
+  transform-style: preserve-3d;
+}
+
+@keyframes sceneSwing {
+  from { transform: rotateX(20deg); }
+  to   { transform: rotateX(-20deg); }
+}
+
+.logo {
+  /* width: 100px;
+  height: 100px; */
+  animation: logoRotate 12s infinite linear;
+  transform-style: preserve-3d;
+} 
+
+@keyframes logoRotate {
+  to { transform: rotateY(360deg); }
+}
+
+.rotating-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;   /* Keeps image aspect ratio */
+  border-radius: 10px;
+  box-shadow: 0 0 10px #0005;  /* Optional subtle shadow */
+}
+
+.stars {
+    font-size: 30px;
+    cursor: pointer;
+    color: gray;
+}
+
+.stars:hover,
+.stars.selected {
+    color: gold;
+}
+
+#result {
+    color: green;
+}

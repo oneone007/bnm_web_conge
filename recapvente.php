@@ -663,7 +663,7 @@ require_once 'check_permission.php';
                             Download
                         </button>
                     </div>
-                    <div class="flex gap-2 mb-3">
+                    <!-- <div class="flex gap-2 mb-3">
                         <button id="retour-filter-btn" class="btn-primary text-sm" onclick="toggleRetourFilter()">
                             <i class="fas fa-undo mr-1"></i>
                             <span id="retour-filter-text">Show Retour Only</span>
@@ -672,7 +672,7 @@ require_once 'check_permission.php';
                             <i class="fas fa-times mr-1"></i>
                             Clear Filters
                         </button>
-                    </div>
+                    </div> -->
                     <div class="relative search-input-container">
                         <i class="fas fa-file-invoice search-input-icon"></i>
                         <input type="text" id="search-bccb" placeholder="Search BCCB..." 
@@ -1533,8 +1533,51 @@ require_once 'check_permission.php';
             // Store the original data
             currentData.bccb = data;
             
-            // Apply current filters
-            applyBccbFilters();
+            // For server-filtered data, display directly without additional client-side filtering
+            // Separate Total row from regular data for pagination
+            const totalRow = data.find(row => row.DOCUMENTNO === 'Total');
+            const regularData = data.filter(row => row.DOCUMENTNO !== 'Total');
+
+            // Store only regular data for pagination
+            pagination.bccb.filteredData = regularData;
+            const paginatedData = getPaginatedData('bccb');
+
+            tableBody.innerHTML = '';
+            
+            // Always add Total row first if it exists (not paginated)
+            if (totalRow) {
+                const tr = document.createElement('tr');
+                tr.className = 'bg-blue-100 dark:bg-blue-900 font-bold';
+                tr.innerHTML = `
+                    <td class="border px-4 py-2 dark:border-gray-600">${totalRow.DOCUMENTNO || 'Total'}</td>
+                    <td class="border px-4 py-2 dark:border-gray-600">${totalRow.DATEORDERED || ''}</td>
+                    <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.GRANDTOTAL)}</td>
+                    <td class="border px-4 py-2 dark:border-gray-600">${formatMargin(totalRow.MARGE)}</td>
+                `;
+                tableBody.appendChild(tr);
+            }
+            
+            // Add paginated rows
+            paginatedData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 dark:hover:bg-gray-700 row-selectable';
+                tr.innerHTML = `
+                    <td class="border px-4 py-2 dark:border-gray-600">${row.DOCUMENTNO || ''}</td>
+                    <td class="border px-4 py-2 dark:border-gray-600">${formatDate(row.DATEORDERED)}</td>
+                    <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.GRANDTOTAL)}</td>
+                    <td class="border px-4 py-2 dark:border-gray-600">${formatMargin(row.MARGE)}</td>
+                `;
+                
+                // Add click event for row selection
+                tr.addEventListener('click', function() {
+                    selectTableRow('bccb', row, tr);
+                });
+                
+                tableBody.appendChild(tr);
+            });
+            
+            updatePagination('bccb', regularData, regularData.length);
+            setTimeout(makeTablesResizable, 50);
         }
 
         function updateBccbProductTable(data) {
@@ -1977,13 +2020,8 @@ require_once 'check_permission.php';
                         pagination[dataType].currentPage = 1;
                     }
                     
-                    // Apply filter (which will show all data since search is empty)
-                    if (dataType === 'bccb') {
-                        bccbFilters.searchText = '';
-                        applyBccbFilters();
-                    } else {
-                        autoApplyFilters();
-                    }
+                    // Apply filter for all tables (including BCCB) - this will fetch fresh data
+                    autoApplyFilters();
                     
                     // Provide visual feedback
                     e.target.style.backgroundColor = '#fff3cd';
@@ -2271,14 +2309,7 @@ require_once 'check_permission.php';
                 return;
             }
             
-            // Handle BCCB search input specially
-            const bccbInput = document.getElementById('search-bccb');
-            if (bccbInput) {
-                bccbFilters.searchText = bccbInput.value.trim();
-                applyBccbFilters();
-            }
-            
-            // Debounce the filter application to avoid rapid successive calls for other tables
+            // Debounce the filter application to avoid rapid successive calls
             clearTimeout(window.autoFilterTimeout);
             window.autoFilterTimeout = setTimeout(() => {
                 fetchAllDataWithFilters();

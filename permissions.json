@@ -2,6 +2,9 @@
     "Admin": "all",
     "Developer": "all",
     "DRH": "all",
+    "Vente": [
+        "Arrivage"
+    ],
     "Sup Achat": [
         "Annual_Recap_A",
         "Annual_Recap_V",
@@ -15,6 +18,7 @@
         "Rotation",
         "inventory\/inv",
         "rot_men_achat",
+        "Arrivage",
         "rot_men_vente"
     ],
     "Sup Vente": [
@@ -28,6 +32,7 @@
         "Recap_Vente",
         "Rotation",
         "rot_men_vente",
+        "Arrivage",
         "simuler"
     ],
     "Comptable": [

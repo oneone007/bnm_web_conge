@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Logging</title>
+    <script src="simple_tracker.js"></script>
+</head>
+<body>
+    <h1>Test Page</h1>
+    <button>Test Button</button>
+    <a href="#">Test Link</a>
+    
+    <script>
+    // Test manual logging
+    setTimeout(function() {
+        console.log('Testing manual log...');
+        let data = new FormData();
+        data.append('action', 'TEST_ACTION');
+        data.append('details', 'Manual test');
+        
+        fetch('simple_log.php', {
+            method: 'POST',
+            body: data
+        }).then(response => response.text())
+        .then(data => console.log('Response:', data))
+        .catch(error => console.error('Error:', error));
+    }, 2000);
+    </script>
+</body>
+</html>

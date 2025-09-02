@@ -249,6 +249,7 @@ require_once 'check_permission.php';
         border-radius: 8px;
         background: white;
         box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        overflow: hidden;
         }
 
         .products-table {
@@ -260,6 +261,9 @@ require_once 'check_permission.php';
         .products-table thead {
         background-color: #f9fafb;
         border-bottom: 2px solid #e5e7eb;
+        position: sticky;
+        top: 0;
+        z-index: 10;
         }
 
         .products-table th {
@@ -277,6 +281,24 @@ require_once 'check_permission.php';
         .products-table tbody {
         max-height: 200px;
         overflow-y: auto;
+        display: block;
+        }
+
+        .products-table thead, .products-table tbody tr {
+        display: table;
+        width: 100%;
+        table-layout: fixed;
+        }
+
+        .products-table th:first-child,
+        .products-table td:first-child {
+        width: 60px; /* Narrow width for # column */
+        text-align: center;
+        }
+
+        .products-table th:last-child,
+        .products-table td:last-child {
+        width: calc(100% - 60px); /* Remaining width for Product Name */
         }
 
         .products-table td {
@@ -293,6 +315,25 @@ require_once 'check_permission.php';
 
         .products-table tbody tr:hover {
         background-color: #f9fafb;
+        }
+
+        /* Custom scrollbar for product table */
+        .products-table tbody::-webkit-scrollbar {
+        width: 6px;
+        }
+
+        .products-table tbody::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+        }
+
+        .products-table tbody::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+        }
+
+        .products-table tbody::-webkit-scrollbar-thumb:hover {
+        background: #a1a1a1;
         }
 
         .table-pagination {
@@ -356,6 +397,19 @@ require_once 'check_permission.php';
 
         .dark .products-table tbody tr:hover {
         background-color: #4b5563;
+        }
+
+        /* Dark mode scrollbar */
+        .dark .products-table tbody::-webkit-scrollbar-track {
+        background: #374151;
+        }
+
+        .dark .products-table tbody::-webkit-scrollbar-thumb {
+        background: #6b7280;
+        }
+
+        .dark .products-table tbody::-webkit-scrollbar-thumb:hover {
+        background: #9ca3af;
         }
 
         .dark .table-pagination {

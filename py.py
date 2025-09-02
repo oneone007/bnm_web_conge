@@ -10,6 +10,7 @@ import io
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font
 from openpyxl.worksheet.table import Table, TableStyleInfo
+from openpyxl.cell.cell import MergedCell
 from datetime import datetime
 import os
 import json
@@ -37,22 +38,6 @@ DB_POOL = oracledb.create_pool(
     increment=1
 )
 
-
-# MySQL connection for recouvrement data
-def get_localdb_connection():
-    try:
-        return mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="",
-            database="bnm",
-            charset="utf8",
-            use_unicode=True,
-            autocommit=False
-        )
-    except mysql.connector.Error as err:
-        logger.error(f"Error connecting to MySQL database: {err}")
-        return None
 
 
 # Fetch reserved data from Oracle DB
@@ -153,7 +138,6 @@ def fetch_remise_data():
 # Fetch marge data from Oracle DB
 
 # Fetch marge data from Oracle DB
-# Fetch marge data from Oracle DB
 def fetch_marge_data():
     try:
         with DB_POOL.acquire() as connection:
@@ -164,26 +148,25 @@ SELECT
 FROM
     (
         SELECT
-            "source"."FOURNISSEUR" "FOURNISSEUR",
-            "source"."PRODUCT" "PRODUCT",
-            "source"."P_ACHAT" "P_ACHAT",
-            "source"."P_VENTE" "P_VENTE",
-            "source"."REM_ACHAT" "REM_ACHAT",
-            "source"."REM_VENTE" "REM_VENTE",
-            "source"."BON_ACHAT" "BON_ACHAT",
-            "source"."BON_VENTE" "BON_VENTE",
-            "source"."REMISE_AUTO" "REMISE_AUTO",
-            "source"."BONUS_AUTO" "BONUS_AUTO",
-            "source"."P_REVIENT" "P_REVIENT",
-            "source"."MARGE" "MARGE",
-            "source"."LABO" "LABO",
-            "source"."LOT" "LOT",
-            "source"."QTY" "QTY",
-            "source"."QTY_DISPO" "QTY_DISPO",
-
-            "source"."GUARANTEEDATE" "GUARANTEEDATE",  -- Added the GUARANTEEDATE column
-            "source"."PPA" "PPA",  -- Added the PPA column
-            "source"."LOCATION" "LOCATION"
+            source.FOURNISSEUR,
+            source.PRODUCT,
+            source.P_ACHAT,
+            source.P_VENTE,
+            source.REM_ACHAT,
+            source.REM_VENTE,
+            source.BON_ACHAT,
+            source.BON_VENTE,
+            source.REMISE_AUTO,
+            source.BONUS_AUTO,
+            source.P_REVIENT,
+            source.MARGE,
+            source.LABO,
+            source.LOT,
+            source.QTY,
+            source.QTY_DISPO,
+            source.GUARANTEEDATE,
+            source.PPA,
+            source.LOCATION
         FROM
             (
                 SELECT
@@ -191,21 +174,20 @@ FROM
                     product,
                     p_achat,
                     p_vente,
-                    round(rem_achat, 2) AS rem_achat,
+                    ROUND(rem_achat, 2) AS rem_achat,
                     rem_vente,
-                    round(bon_achat, 2) AS bon_achat,
+                    ROUND(bon_achat, 2) AS bon_achat,
                     bon_vente,
                     remise_auto,
                     bonus_auto,
-                    round(p_revient, 2) AS p_revient,
-                    LEAST(round((marge), 2), 100) AS marge,
+                    ROUND(p_revient, 2) AS p_revient,
+                    LEAST(ROUND(marge, 2), 100) AS marge,
                     labo,
                     lot,
                     qty,
                     qty_dispo,
-
-                    guaranteedate,  -- Added the GUARANTEEDATE column
-                    ppa,  -- Added the PPA column
+                    guaranteedate,
+                    ppa,
                     CASE 
                         WHEN m_locator_id = 1000614 THEN 'Préparation'
                         WHEN m_locator_id = 1001135 THEN 'HANGAR'
@@ -218,8 +200,8 @@ FROM
                         SELECT
                             d.*,
                             LEAST(
-                                round(
-                                    (((ventef - ((ventef * nvl(rma, 0)) / 100))) - p_revient) / p_revient * 100,
+                                ROUND(
+                                    (((ventef - ((ventef * NVL(rma, 0)) / 100))) - p_revient) / p_revient * 100,
                                     2
                                 ), 
                                 100
@@ -228,9 +210,9 @@ FROM
                             (
                                 SELECT
                                     det.*,
-                                    (det.p_achat - ((det.p_achat * det.rem_achat) / 100)) / (1 + (det.bon_achat / 100)) p_revient,
+                                    (det.p_achat - ((det.p_achat * det.rem_achat) / 100)) / (1 + (det.bon_achat / 100)) AS p_revient,
                                     (
-                                        det.p_vente - ((det.p_vente * nvl(det.rem_vente, 0)) / 100)
+                                        det.p_vente - ((det.p_vente * NVL(det.rem_vente, 0)) / 100)
                                     ) / (
                                         1 + (
                                             CASE
@@ -238,27 +220,24 @@ FROM
                                                 ELSE det.bon_vente
                                             END / 100
                                         )
-                                    ) ventef
+                                    ) AS ventef
                                 FROM
                                     (
                                         SELECT
-                                            p.name product,
+                                            p.name AS product,
                                             (
-                                                SELECT
-                                                    NAME
-                                                FROM
-                                                    XX_Laboratory
-                                                WHERE
-                                                    XX_Laboratory_id = p.XX_Laboratory_id
-                                            ) labo,
-                                            mst.qtyonhand qty,
-                                            (mst.qtyonhand - mst.QTYRESERVED) qty_dispo,
+                                                SELECT NAME
+                                                FROM XX_Laboratory
+                                                WHERE XX_Laboratory_id = p.XX_Laboratory_id
+                                            ) AS labo,
+                                            mst.qtyonhand AS qty,
+                                            (mst.qtyonhand - mst.QTYRESERVED) AS qty_dispo,
                                             mst.m_locator_id,
-                                            mati.value fournisseur,
+                                            mati.value AS fournisseur,
                                             mats.guaranteedate,
-                                            md.name remise_auto,
-                                            sal.description bonus_auto,
-                                            md.flatdiscount rma,
+                                            md.name AS remise_auto,
+                                            sal.description AS bonus_auto,
+                                            md.flatdiscount AS rma,
                                             TO_NUMBER(
                                                 CASE
                                                     WHEN REGEXP_LIKE(sal.name, '^[0-9]+$') THEN sal.name
@@ -266,83 +245,62 @@ FROM
                                                 END
                                             ) AS bna,
                                             (
-                                                SELECT
-                                                    valuenumber
-                                                FROM
-                                                    m_attributeinstance
-                                                WHERE
-                                                    m_attributesetinstance_id = mst.m_attributesetinstance_id
-                                                    AND m_attribute_id = 1000501
-                                            ) p_achat,
+                                                SELECT valuenumber
+                                                FROM m_attributeinstance
+                                                WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                  AND m_attribute_id = 1000501
+                                            ) AS p_achat,
                                             (
-                                                SELECT
-                                                    valuenumber
-                                                FROM
-                                                    m_attributeinstance
-                                                WHERE
-                                                    m_attributesetinstance_id = mst.m_attributesetinstance_id
-                                                    AND m_attribute_id = 1001009
-                                            ) rem_achat,
+                                                SELECT valuenumber
+                                                FROM m_attributeinstance
+                                                WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                  AND m_attribute_id = 1001009
+                                            ) AS rem_achat,
                                             (
-                                                SELECT
-                                                    valuenumber
-                                                FROM
-                                                    m_attributeinstance
-                                                WHERE
-                                                    m_attributesetinstance_id = mst.m_attributesetinstance_id
-                                                    AND m_attribute_id = 1000808
-                                            ) bon_achat,
+                                                SELECT valuenumber
+                                                FROM m_attributeinstance
+                                                WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                  AND m_attribute_id = 1000808
+                                            ) AS bon_achat,
                                             (
-                                                SELECT
-                                                    valuenumber
-                                                FROM
-                                                    m_attributeinstance
-                                                WHERE
-                                                    m_attributesetinstance_id = mst.m_attributesetinstance_id
-                                                    AND m_attribute_id = 1000502
-                                            ) p_vente,
+                                                SELECT valuenumber
+                                                FROM m_attributeinstance
+                                                WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                  AND m_attribute_id = 1000502
+                                            ) AS p_vente,
                                             (
-                                                SELECT
-                                                    valuenumber
-                                                FROM
-                                                    m_attributeinstance
-                                                WHERE
-                                                    m_attributesetinstance_id = mst.m_attributesetinstance_id
-                                                    AND m_attribute_id = 1001408
-                                            ) rem_vente,
+                                                SELECT valuenumber
+                                                FROM m_attributeinstance
+                                                WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                  AND m_attribute_id = 1001408
+                                            ) AS rem_vente,
                                             (
-                                                SELECT
-                                                    valuenumber
-                                                FROM
-                                                    m_attributeinstance
-                                                WHERE
-                                                    m_attributesetinstance_id = mst.m_attributesetinstance_id
-                                                    AND m_attribute_id = 1000908
-                                            ) bon_vente,
+                                                SELECT valuenumber
+                                                FROM m_attributeinstance
+                                                WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                  AND m_attribute_id = 1000908
+                                            ) AS bon_vente,
                                             (
-                                                SELECT
-                                                    lot
-                                                FROM
-                                                    m_attributesetinstance
-                                                WHERE
-                                                    m_attributesetinstance_id = mst.m_attributesetinstance_id
-                                            ) lot,
+                                                SELECT lot
+                                                FROM m_attributesetinstance
+                                                WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                            ) AS lot,
                                             (
-                                                SELECT
-                                                    valuenumber
-                                                FROM
-                                                    m_attributeinstance
-                                                WHERE
-                                                    m_attributesetinstance_id = mst.m_attributesetinstance_id
-                                                    AND m_attribute_id = 1000503
-                                            ) ppa
+                                                SELECT valuenumber
+                                                FROM m_attributeinstance
+                                                WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                  AND m_attribute_id = 1000503
+                                            ) AS ppa
                                         FROM
                                             m_product p
                                             INNER JOIN m_storage mst ON p.m_product_id = mst.m_product_id
                                             INNER JOIN m_attributeinstance mati ON mst.m_attributesetinstance_id = mati.m_attributesetinstance_id
                                             INNER JOIN m_attributesetinstance mats ON mst.m_attributesetinstance_id = mats.m_attributesetinstance_id
-                                            LEFT JOIN C_BPartner_Product cp ON cp.m_product_id = p.m_product_id
-                                                OR cp.C_BPartner_Product_id IS NULL
+                                            LEFT JOIN (
+                                                SELECT *
+                                                FROM C_BPartner_Product
+                                                WHERE isactive = 'Y'
+                                            ) cp ON cp.m_product_id = p.m_product_id
                                             LEFT JOIN M_DiscountSchema md ON cp.M_DiscountSchema_id = md.M_DiscountSchema_id
                                             LEFT JOIN XX_SalesContext sal ON p.XX_SalesContext_ID = sal.XX_SalesContext_ID
                                         WHERE
@@ -373,26 +331,24 @@ FROM
                     lot,
                     qty,
                     qty_dispo,
-                    guaranteedate,  -- Added to GROUP BY
-                    ppa,  -- Added PPA to GROUP BY
+                    guaranteedate,
+                    ppa,
                     m_locator_id
                 ORDER BY
                     fournisseur
-            ) "source"
+            ) source
     )
 WHERE
-    rownum <= 1048575
+    ROWNUM <= 1048575
             """
             cursor.execute(query)
             rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]  # Get column names
+            columns = [col[0] for col in cursor.description]
             data = [dict(zip(columns, row)) for row in rows]
             return data
     except Exception as e:
         logger.error(f"Error fetching marge data: {e}")
         return {"error": "An error occurred while fetching marge data."}
-
-
 
 # Fetch bonus data from Oracle DB
 def fetch_bonus_data():
@@ -1632,6 +1588,158 @@ def fetch_emplacements_from_db(magasin=None, emplacement=None):
     except Exception as e:
         logger.error(f"Error fetching emplacements: {e}")
         return {"error": "An error occurred while fetching emplacements."}
+
+# ---------- Expiring products endpoint ----------
+def parse_ref_date(date_str: str | None) -> datetime:
+    """Parse a reference date from query params; defaults to today if missing/invalid."""
+    if not date_str:
+        return datetime.today()
+    # Try a few common formats
+    fmts = ["%Y-%m-%d", "%d/%m/%Y", "%Y/%m/%d", "%d-%m-%Y"]
+    for fmt in fmts:
+        try:
+            return datetime.strptime(date_str, fmt)
+        except ValueError:
+            continue
+    return datetime.today()
+
+
+def fetch_expiring_from_db(magasin=None, emplacement=None, fournisseur=None, ref_date=None, within_months=6):
+    """
+    Fetch products with guaranteed date near expiry.
+    Categories: expired, 1mths, 3mths, 6mths (relative to ref_date; default today).
+    """
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            # Base query: join storage, product, locator, warehouse, attribute set instance
+            query = """
+                SELECT 
+                    m.m_product_id              AS productid,
+                    m.name                      AS product_name,
+                    SUM(ms.qtyonhand)           AS qty,
+                    set_att.GUARANTEEDATE       AS expire_date,
+                    set_att.lot                 AS lot,
+                    ml.value                    AS emplacement,
+                    mw.value                    AS magasin,
+                    sup.value                   AS fournisseur,
+                    MAX(pri.valuenumber)        AS price,
+                    CASE
+                        WHEN set_att.GUARANTEEDATE < :ref_date THEN 'expired'
+                        WHEN set_att.GUARANTEEDATE < ADD_MONTHS(:ref_date, 1) THEN '1mths'
+                        WHEN set_att.GUARANTEEDATE < ADD_MONTHS(:ref_date, 3) THEN '3mths'
+                        WHEN set_att.GUARANTEEDATE < ADD_MONTHS(:ref_date, :within_months) THEN '6mths'
+                        ELSE 'later'
+                    END AS category
+                FROM m_storage ms
+                JOIN m_product m ON m.m_product_id = ms.m_product_id
+                JOIN m_locator ml ON ml.m_locator_id = ms.m_locator_id
+                JOIN m_warehouse mw ON mw.m_warehouse_id = ml.m_warehouse_id
+                JOIN m_attributesetinstance set_att ON set_att.m_attributesetinstance_id = ms.m_attributesetinstance_id
+                LEFT JOIN m_attributeinstance sup 
+                       ON sup.m_attributesetinstance_id = ms.m_attributesetinstance_id
+                      AND sup.m_attribute_id = 1000508 -- fournisseur attribute
+                LEFT JOIN m_attributeinstance pri
+                       ON pri.m_attributesetinstance_id = ms.m_attributesetinstance_id
+                      AND pri.m_attribute_id = 1000504 -- prix (unit) attribute
+                WHERE 
+                    ms.AD_Client_ID = 1000000
+                    AND mw.ISACTIVE = 'Y'
+                    AND ml.ISACTIVE = 'Y'
+                    AND ms.qtyonhand > 0
+                    AND set_att.GUARANTEEDATE IS NOT NULL
+                    AND set_att.GUARANTEEDATE < ADD_MONTHS(:ref_date, :within_months)
+            """
+
+            params = {
+                "ref_date": ref_date or datetime.today(),
+                "within_months": within_months,
+            }
+
+            if magasin:
+                query += " AND UPPER(mw.value) LIKE UPPER(:magasin) || '%'"
+                params["magasin"] = magasin
+
+            if emplacement:
+                query += " AND UPPER(ml.value) LIKE UPPER(:emplacement) || '%'"
+                params["emplacement"] = emplacement
+
+            if fournisseur:
+                query += " AND UPPER(sup.value) LIKE UPPER(:fournisseur) || '%'"
+                params["fournisseur"] = fournisseur
+
+            # Grouping and filtering out 'later' category via WHERE already; group by selected cols
+            query += """
+                GROUP BY 
+                    m.m_product_id, m.name, set_att.GUARANTEEDATE, set_att.lot, ml.value, mw.value, sup.value,
+                    CASE
+                        WHEN set_att.GUARANTEEDATE < :ref_date THEN 'expired'
+                        WHEN set_att.GUARANTEEDATE < ADD_MONTHS(:ref_date, 1) THEN '1mths'
+                        WHEN set_att.GUARANTEEDATE < ADD_MONTHS(:ref_date, 3) THEN '3mths'
+                        WHEN set_att.GUARANTEEDATE < ADD_MONTHS(:ref_date, :within_months) THEN '6mths'
+                        ELSE 'later'
+                    END
+                HAVING 
+                    CASE
+                        WHEN set_att.GUARANTEEDATE < :ref_date THEN 'expired'
+                        WHEN set_att.GUARANTEEDATE < ADD_MONTHS(:ref_date, 1) THEN '1mths'
+                        WHEN set_att.GUARANTEEDATE < ADD_MONTHS(:ref_date, 3) THEN '3mths'
+                        WHEN set_att.GUARANTEEDATE < ADD_MONTHS(:ref_date, :within_months) THEN '6mths'
+                        ELSE 'later'
+                    END <> 'later'
+                ORDER BY 
+                    CASE 
+                        WHEN set_att.GUARANTEEDATE < :ref_date THEN 0
+                        WHEN set_att.GUARANTEEDATE < ADD_MONTHS(:ref_date, 1) THEN 1
+                        WHEN set_att.GUARANTEEDATE < ADD_MONTHS(:ref_date, 3) THEN 2
+                        WHEN set_att.GUARANTEEDATE < ADD_MONTHS(:ref_date, :within_months) THEN 3
+                        ELSE 4
+                    END,
+                    mw.value, ml.value, m.name, set_att.GUARANTEEDATE
+            """
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0].lower() for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+
+            # Convert datetime to ISO strings for JSON safety
+            for item in data:
+                if item.get("expire_date") and isinstance(item["expire_date"], (datetime,)):
+                    item["expire_date"] = item["expire_date"].strftime("%Y-%m-%d")
+            return data
+
+    except Exception as e:
+        logger.error(f"Error fetching expiring products: {e}")
+        return {"error": "An error occurred while fetching expiring products."}
+
+
+@app.route('/expiring', methods=['GET'])
+def expiring_products():
+    """Return products that are expired or will expire within 6 months, categorized."""
+    try:
+        magasin = request.args.get("magasin")
+        emplacement = request.args.get("emplacement")
+        fournisseur = request.args.get("fournisseur")
+        date_str = request.args.get("date")
+        within_months = int(request.args.get("within_months", "6"))
+
+        ref_date = parse_ref_date(date_str)
+
+        data = fetch_expiring_from_db(
+            magasin=magasin,
+            emplacement=emplacement,
+            fournisseur=fournisseur,
+            ref_date=ref_date,
+            within_months=within_months,
+        )
+
+        return jsonify(data)
+
+    except Exception as e:
+        logger.error(f"Error in /expiring route: {e}")
+        return jsonify({"error": "Failed to fetch expiring products"}), 500
 
 
 
@@ -7780,6 +7888,180 @@ def fetch_etat_fournisseur_cumule():
         return jsonify({"error": f"Could not fetch supplier cumulative statement: {str(e)}"}), 500
 
 
+
+@app.route('/fetch_etat_fournisseur_cumule_paiment')
+def fetch_etat_fournisseur_cumule_paiment():
+    try:
+        # Get parameters from request
+        c_bpartner_id = request.args.get('c_bpartner_id', type=int)
+        start_date = request.args.get('start_date', '01-01-2025')
+        end_date = request.args.get('end_date', '01-06-2025')
+        
+        if not c_bpartner_id:
+            return jsonify({"error": "c_bpartner_id parameter is required"}), 400
+
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            
+            query = """
+                SELECT inv.DATEINVOICED AS DateTrx,
+                       inv.DOCUMENTNO AS DOC_ID,
+                       inv.POREFERENCE as N_BL,
+                       doc.PrintName as DOC_TYPE,
+                       CASE
+                         WHEN inv.DESCRIPTION IS NULL THEN
+                           (SELECT pro.NAME
+                              FROM M_PRODUCT pro, C_INVOICELINE il
+                             WHERE inv.C_INVOICE_ID = il.C_INVOICE_ID
+                               AND il.M_PRODUCT_ID = pro.M_PRODUCT_ID
+                               AND rownum = 1)
+                         ELSE inv.DESCRIPTION
+                       END AS DESCRIPTION,
+                       CASE
+                         WHEN (doc.docbasetype IN ('APC'))
+                         THEN inv.GRANDTOTAL * -1
+                         ELSE inv.GRANDTOTAL
+                       END AS "MONTANT"
+                FROM C_INVOICE inv,
+                     C_DOCTYPE doc
+                WHERE inv.C_DOCTYPE_ID = doc.C_DOCTYPE_ID
+                  AND inv.DOCSTATUS IN ('CO','CL')
+                  AND doc.docbasetype IN ('API','APC')
+                  AND doc.C_DocType_ID NOT IN (1001510, 1001509, 1002841)
+                  AND inv.C_BPARTNER_ID = :c_bpartner_id
+                  AND inv.AD_Client_ID = 1000000
+                  AND inv.AD_Org_ID = 1000000
+                  AND inv.DATEINVOICED BETWEEN TO_DATE(:start_date, 'DD-MM-YYYY') AND TO_DATE(:end_date, 'DD-MM-YYYY')
+
+                UNION
+
+                SELECT pa.DATETRX AS DateTrx,
+                       pa.DOCUMENTNO,
+                       NULL as POREFERENCE,
+                       N'Discount' AS NAME,
+                       N'' AS DESCRIPTION,
+                       pa.discountamt * -1
+                FROM C_PAYMENT pa,
+                     C_DOCTYPE doc
+                WHERE pa.C_DOCTYPE_ID = doc.C_DOCTYPE_ID
+                  AND pa.DOCSTATUS IN ('CO','CL')
+                  AND doc.docbasetype IN ('APP')
+                  AND doc.C_DocType_ID NOT IN (1001510, 1001509, 1002841)
+                  AND pa.C_BPARTNER_ID = :c_bpartner_id
+                  AND pa.AD_Client_ID = 1000000
+                  AND pa.AD_Org_ID = 1000000
+                  AND pa.DATETRX BETWEEN TO_DATE(:start_date, 'DD-MM-YYYY') AND TO_DATE(:end_date, 'DD-MM-YYYY')
+                  AND pa.discountamt > 0
+
+                UNION
+
+                SELECT pa.DATETRX AS DateTrx,
+                       pa.DOCUMENTNO,
+                       NULL as POREFERENCE,
+                       doc.Printname as NAME,
+                       CASE
+                         WHEN pa.DESCRIPTION IS NOT NULL THEN pa.DESCRIPTION
+                         WHEN pa.C_INVOICE_ID IS NOT NULL THEN
+                           (SELECT inv.DOCUMENTNO
+                              FROM C_INVOICE inv
+                             WHERE inv.C_INVOICE_ID = pa.C_INVOICE_ID
+                               AND rownum = 1)
+                         ELSE N''
+                       END AS DESCRIPTION,
+                       (pa.PAYAMT * -1)
+                FROM C_PAYMENT pa,
+                     C_DOCTYPE doc
+                WHERE pa.C_DOCTYPE_ID = doc.C_DOCTYPE_ID
+                  AND pa.DOCSTATUS IN ('CO','CL')
+                  AND doc.docbasetype IN ('APP')
+                  AND doc.C_DocType_ID NOT IN (1001510, 1001509, 1002841)
+                  AND pa.C_BPARTNER_ID = :c_bpartner_id
+                  AND pa.AD_Client_ID = 1000000
+                  AND pa.AD_Org_ID = 1000000
+                  AND pa.DATETRX BETWEEN TO_DATE(:start_date, 'DD-MM-YYYY') AND TO_DATE(:end_date, 'DD-MM-YYYY')
+
+                UNION
+
+                SELECT DATETRX AS DateTrx,
+                       DOCUMENTNO,
+                       NULL AS POREFERENCE,
+                       doc.PrintName AS NAME,
+                       TRANSLATE('DIFFÉRENCE_' USING NCHAR_CS) AS DESCRIPTION,
+                       COALESCE(
+                         (SELECT SUM(al.writeoffamt * -1)
+                          FROM C_ALLOCATIONLINE al
+                          WHERE al.C_PAYMENT_ID = par.C_PAYMENT_ID
+                            AND par.C_BPartner_ID = :c_bpartner_id),
+                         0) AS MONTANT
+                FROM C_PAYMENT par,
+                     C_DOCTYPE doc
+                WHERE par.C_DOCTYPE_ID = doc.C_DOCTYPE_ID
+                  AND doc.docbasetype IN ('APP')
+                  AND doc.C_DocType_ID NOT IN (1001510, 1001509, 1002841)
+                  AND par.DOCSTATUS IN ('CO','CL')
+                  AND par.C_BPARTNER_ID = :c_bpartner_id
+                  AND par.AD_Client_ID = 1000000
+                  AND par.AD_Org_ID = 1000000
+                  AND par.DATETRX BETWEEN TO_DATE(:start_date, 'DD-MM-YYYY') AND TO_DATE(:end_date, 'DD-MM-YYYY')
+                  AND COALESCE(
+                        (SELECT SUM(al.writeoffamt * -1)
+                         FROM C_ALLOCATIONLINE al
+                         WHERE al.C_PAYMENT_ID = par.C_PAYMENT_ID
+                           AND par.C_BPartner_ID = :c_bpartner_id),
+                        0) <> 0
+
+                UNION
+
+                SELECT c.StatementDATE AS DateTrx,
+                       c.Name AS DOCUMENTNO,
+                       i.POREFERENCE,
+                       N'Facture sur Caisse' AS NAME,
+                       CASE
+                         WHEN cl.DESCRIPTION IS NOT NULL THEN cl.DESCRIPTION
+                         WHEN cl.C_INVOICE_ID IS NOT NULL THEN i.DOCUMENTNO
+                         ELSE N''
+                       END AS DESCRIPTION,
+                       cl.Amount * -1 AS MONTANT
+                FROM C_CashLine cl
+                INNER JOIN C_Cash c ON cl.C_Cash_ID = c.C_Cash_ID
+                INNER JOIN C_Invoice i ON cl.C_Invoice_ID = i.C_Invoice_ID
+                WHERE c.DOCSTATUS IN ('CO','CL')
+                  AND i.ispaid = 'Y'
+                  AND cl.isactive = 'Y'
+                  AND i.C_BPARTNER_ID = :c_bpartner_id
+                  AND i.AD_Client_ID = 1000000
+                  AND i.AD_Org_ID = 1000000
+                  AND c.StatementDATE BETWEEN TO_DATE(:start_date, 'DD-MM-YYYY') AND TO_DATE(:end_date, 'DD-MM-YYYY')
+                
+                ORDER BY DateTrx
+            """
+            
+            cursor.execute(query, {
+                'c_bpartner_id': c_bpartner_id,
+                'start_date': start_date,
+                'end_date': end_date
+            })
+            
+            columns = [desc[0] for desc in cursor.description]
+            result = []
+            for row in cursor.fetchall():
+                row_dict = {}
+                for i, value in enumerate(row):
+                    if hasattr(value, 'strftime'):
+                        row_dict[columns[i]] = value.strftime('%Y-%m-%d')
+                    elif value is None:
+                        row_dict[columns[i]] = None
+                    else:
+                        row_dict[columns[i]] = value
+                result.append(row_dict)
+            
+            return jsonify(result)
+            
+    except Exception as e:
+        logger.error(f"Error fetching supplier cumulative statement: {e}")
+        return jsonify({"error": f"Could not fetch supplier cumulative statement: {str(e)}"}), 500
+
+
 @app.route('/sold_initial_etat_cum')
 def sold_initial_etat_cum():
     try:
@@ -8155,6 +8437,10 @@ def fetch_simulation_by_ndocument(ndocument):
     except Exception as e:
         logging.error(f"Error fetching simulation data by ndocument: {e}")
         return {"error": "An error occurred while fetching simulation data by ndocument."}
+
+
+
+
 
 @app.route('/simulation', methods=['GET'])
 def get_simulation():
@@ -8547,8 +8833,13 @@ def generate_excel_charges_dashboard(data, filename):
     # Auto-adjust column widths
     for column in ws.columns:
         max_length = 0
+        # Check if the first cell is a merged cell
+        if isinstance(column[0], MergedCell):
+            continue
         column_letter = column[0].column_letter
         for cell in column:
+            if isinstance(cell, MergedCell):
+                continue
             try:
                 if len(str(cell.value)) > max_length:
                     max_length = len(str(cell.value))
@@ -8743,7 +9034,12 @@ def generate_excel_invoices(data, filename):
     for column in ws.columns:
         max_length = 0
         column = [cell for cell in column]
+        # Check if the first cell is a merged cell
+        if isinstance(column[0], MergedCell):
+            continue
         for cell in column:
+            if isinstance(cell, MergedCell):
+                continue
             try:
                 if len(str(cell.value)) > max_length:
                     max_length = len(str(cell.value))
@@ -8808,7 +9104,12 @@ def generate_excel_invoice_lines(data, filename):
     for column in ws.columns:
         max_length = 0
         column = [cell for cell in column]
+        # Check if the first cell is a merged cell
+        if isinstance(column[0], MergedCell):
+            continue
         for cell in column:
+            if isinstance(cell, MergedCell):
+                continue
             try:
                 if len(str(cell.value)) > max_length:
                     max_length = len(str(cell.value))
@@ -10527,7 +10828,1526 @@ def fetch_bccb_product(bccb, ad_org_id):
 
 
 
+# Stock Inventory Analysis Endpoints
+
+@app.route('/stock-manque', methods=['GET'])
+def get_stock_manque():
+    """Get stock manque data for date range"""
+    try:
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        if not start_date or not end_date:
+            return jsonify({"success": False, "error": "start_date and end_date are required"}), 400
+        
+        data = fetch_stock_manque_data(start_date, end_date)
+        return jsonify(data)
+    
+    except Exception as e:
+        logger.error(f"Error fetching stock manque data: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/stock-casse', methods=['GET'])
+def get_stock_casse():
+    """Get stock casse data for date range (Business Partner 1126375)"""
+    try:
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        if not start_date or not end_date:
+            return jsonify({"success": False, "error": "start_date and end_date are required"}), 400
+        
+        data = fetch_stock_casse_data(start_date, end_date)
+        return jsonify(data)
+    
+    except Exception as e:
+        logger.error(f"Error fetching stock casse data: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+def fetch_stock_manque_data(start_date, end_date):
+    """
+    Query to calculate the sum of inventory differences based on Prix Revient
+    Links M_Inventory with M_InventoryLine and gets Prix Revient directly from attribute ID 1000504
+    Filters for inventories with "manque" in description and within specified date range
+    """
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            
+            query = """
+            WITH inventory_attributes AS (
+                SELECT 
+                    il.M_INVENTORYLINE_ID,
+                    il.M_INVENTORY_ID,
+                    il.QTYCOUNT,
+                    il.QTYBOOK,
+                    MAX(CASE WHEN ai.M_ATTRIBUTE_ID = 1000504 THEN ai.VALUENUMBER END) as PRIX_REVIENT
+                FROM M_INVENTORYLINE il
+                LEFT JOIN M_ATTRIBUTESETINSTANCE asi ON il.M_ATTRIBUTESETINSTANCE_ID = asi.M_ATTRIBUTESETINSTANCE_ID
+                LEFT JOIN M_ATTRIBUTEINSTANCE ai ON asi.M_ATTRIBUTESETINSTANCE_ID = ai.M_ATTRIBUTESETINSTANCE_ID
+                WHERE asi.ISACTIVE = 'Y'
+                    AND ai.ISACTIVE = 'Y'
+                    AND ai.M_ATTRIBUTE_ID = 1000504  -- Prix Revient attribute
+                GROUP BY 
+                    il.M_INVENTORYLINE_ID,
+                    il.M_INVENTORY_ID,
+                    il.QTYCOUNT,
+                    il.QTYBOOK
+            )
+            SELECT 
+                inv.M_INVENTORY_ID,
+                inv.DOCUMENTNO,
+                inv.DESCRIPTION AS INVENTORY_DESCRIPTION,
+                inv.MOVEMENTDATE,
+                COUNT(*) AS NUMBER_OF_LINES,
+                SUM(
+                    (ia.QTYCOUNT - ia.QTYBOOK) * COALESCE(ia.PRIX_REVIENT, 0)
+                ) AS TOTAL_DIFFERENCE_AMOUNT
+            FROM M_INVENTORY inv
+            INNER JOIN inventory_attributes ia ON inv.M_INVENTORY_ID = ia.M_INVENTORY_ID
+            WHERE inv.DOCSTATUS IN ('CO', 'CL')  -- Only completed or closed documents
+                AND inv.ISACTIVE = 'Y'
+                AND (ia.QTYCOUNT - ia.QTYBOOK) != 0  -- Only lines with differences
+                AND UPPER(inv.DESCRIPTION) LIKE UPPER('%manque%')  -- Only inventories with "manque" in description
+                AND inv.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')  -- Date range filter
+            GROUP BY 
+                inv.M_INVENTORY_ID,
+                inv.DOCUMENTNO,
+                inv.DESCRIPTION,
+                inv.MOVEMENTDATE
+            ORDER BY inv.MOVEMENTDATE DESC, inv.DOCUMENTNO
+            """
+            
+            cursor.execute(query, {
+                'start_date': start_date,
+                'end_date': end_date
+            })
+            
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+            
+            return {"success": True, "data": data}
+            
+    except Exception as e:
+        logger.error(f"Error fetching stock manque data: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def fetch_stock_casse_data(start_date, end_date):
+    """
+    Query to get invoices for specific business partner (C_BPartner_ID=1126375)
+    Gets C_Invoice data with document number, description, and total lines
+    Filters for DOCSTATUS in ('CO', 'CL') and includes date range filter
+    """
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            
+            query = """
+            SELECT 
+                inv.DOCUMENTNO,
+                inv.DESCRIPTION,
+                inv.DATEINVOICED,
+                inv.DOCSTATUS,
+                COUNT(il.C_INVOICELINE_ID) AS TOTAL_LINES,
+                SUM(il.LINENETAMT) AS TOTAL_NET_AMOUNT,
+                inv.GRANDTOTAL
+            FROM C_INVOICE inv
+            LEFT JOIN C_INVOICELINE il ON inv.C_INVOICE_ID = il.C_INVOICE_ID 
+                AND il.ISACTIVE = 'Y'
+            WHERE inv.C_BPARTNER_ID = 1126375  -- Specific business partner
+                AND inv.DOCSTATUS IN ('CO', 'CL')  -- Only completed or closed documents
+                AND inv.ISACTIVE = 'Y'
+                AND inv.DATEINVOICED BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')  -- Date range filter
+            GROUP BY 
+                inv.C_INVOICE_ID,
+                inv.DOCUMENTNO,
+                inv.DESCRIPTION,
+                inv.DATEINVOICED,
+                inv.DOCSTATUS,
+                inv.GRANDTOTAL
+            ORDER BY inv.DATEINVOICED DESC, inv.DOCUMENTNO
+            """
+            
+            cursor.execute(query, {
+                'start_date': start_date,
+                'end_date': end_date
+            })
+            
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+            
+            return {"success": True, "data": data}
+            
+    except Exception as e:
+        logger.error(f"Error fetching stock casse data: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.route('/stock-manque/excel', methods=['GET'])
+def download_stock_manque_excel():
+    """Download stock manque data as Excel file"""
+    try:
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        if not start_date or not end_date:
+            return jsonify({"success": False, "error": "start_date and end_date are required"}), 400
+        
+        data = fetch_stock_manque_data(start_date, end_date)
+        
+        if not data.get('success') or not data.get('data'):
+            return jsonify({"success": False, "error": "No data found for the specified date range"}), 404
+        
+        # Generate Excel file
+        excel_file = generate_manque_excel(data['data'], start_date, end_date)
+        
+        return send_file(
+            excel_file,
+            as_attachment=True,
+            download_name=f'manque_stock_{start_date}_{end_date}.xlsx',
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    
+    except Exception as e:
+        logger.error(f"Error generating manque Excel: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/stock-casse/excel', methods=['GET'])
+def download_stock_casse_excel():
+    """Download stock casse data as Excel file"""
+    try:
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        if not start_date or not end_date:
+            return jsonify({"success": False, "error": "start_date and end_date are required"}), 400
+        
+        data = fetch_stock_casse_data(start_date, end_date)
+        
+        if not data.get('success') or not data.get('data'):
+            return jsonify({"success": False, "error": "No data found for the specified date range"}), 404
+        
+        # Generate Excel file
+        excel_file = generate_casse_excel(data['data'], start_date, end_date)
+        
+        return send_file(
+            excel_file,
+            as_attachment=True,
+            download_name=f'casse_stock_{start_date}_{end_date}.xlsx',
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    
+    except Exception as e:
+        logger.error(f"Error generating casse Excel: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+def generate_manque_excel(data, start_date, end_date):
+    """Generate Excel file for manque stock data"""
+    try:
+        # Create workbook and worksheet
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Manque Stock"
+        
+        # Set headers
+        headers = [
+            "Document No",
+            "Description",
+            "Date Mouvement",
+            "Nombre de Lignes",
+            "Montant Différence (DA)"
+        ]
+        
+        # Add title row
+        title = f"Rapport Manque de Stock - Période: {start_date} au {end_date}"
+        ws.merge_cells('A1:E1')
+        ws['A1'] = title
+        ws['A1'].font = Font(size=14, bold=True)
+        ws['A1'].fill = PatternFill(start_color="DDDDDD", end_color="DDDDDD", fill_type="solid")
+        
+        # Add headers to row 3
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=3, column=col, value=header)
+            cell.font = Font(bold=True)
+            cell.fill = PatternFill(start_color="E6E6FA", end_color="E6E6FA", fill_type="solid")
+        
+        # Add data rows
+        for row_idx, item in enumerate(data, start=4):
+            ws.cell(row=row_idx, column=1, value=item.get('DOCUMENTNO', ''))
+            ws.cell(row=row_idx, column=2, value=item.get('INVENTORY_DESCRIPTION', ''))
+            ws.cell(row=row_idx, column=3, value=item.get('MOVEMENTDATE', ''))
+            ws.cell(row=row_idx, column=4, value=item.get('NUMBER_OF_LINES', 0))
+            ws.cell(row=row_idx, column=5, value=float(item.get('TOTAL_DIFFERENCE_AMOUNT', 0)))
+        
+        # Calculate totals
+        if data:
+            total_amount = sum(float(item.get('TOTAL_DIFFERENCE_AMOUNT', 0)) for item in data)
+            total_documents = len(data)
+            total_lines = sum(int(item.get('NUMBER_OF_LINES', 0)) for item in data)
+            
+            # Add totals row
+            total_row = len(data) + 5
+            ws.cell(row=total_row, column=1, value="TOTAUX:")
+            ws.cell(row=total_row, column=1).font = Font(bold=True)
+            ws.cell(row=total_row, column=2, value=f"{total_documents} documents")
+            ws.cell(row=total_row, column=4, value=total_lines)
+            ws.cell(row=total_row, column=5, value=total_amount)
+            
+            # Style totals row
+            for col in range(1, 6):
+                ws.cell(row=total_row, column=col).fill = PatternFill(start_color="FFE4B5", end_color="FFE4B5", fill_type="solid")
+                ws.cell(row=total_row, column=col).font = Font(bold=True)
+        
+        # Auto-adjust column widths
+        for column in ws.columns:
+            max_length = 0
+            # Check if the first cell is a merged cell
+            if isinstance(column[0], MergedCell):
+                continue
+            column_letter = column[0].column_letter
+            for cell in column:
+                if isinstance(cell, MergedCell):
+                    continue
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column_letter].width = adjusted_width
+        
+        # Create table for better formatting
+        if data:
+            table_range = f"A3:E{len(data) + 3}"
+            table = Table(displayName="ManqueStockTable", ref=table_range)
+            style = TableStyleInfo(
+                name="TableStyleMedium9", 
+                showFirstColumn=False,
+                showLastColumn=False, 
+                showRowStripes=True, 
+                showColumnStripes=True
+            )
+            table.tableStyleInfo = style
+            ws.add_table(table)
+        
+        # Save to BytesIO
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        return output
+        
+    except Exception as e:
+        logger.error(f"Error creating manque Excel file: {e}")
+        raise
+
+
+def generate_casse_excel(data, start_date, end_date):
+    """Generate Excel file for casse stock data"""
+    try:
+        # Create workbook and worksheet
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Casse Stock"
+        
+        # Set headers
+        headers = [
+            "Document No",
+            "Description",
+            "Date Facture",
+            "Statut",
+            "Total Lignes",
+            "Montant Net (DA)",
+            "Grand Total (DA)"
+        ]
+        
+        # Add title row
+        title = f"Rapport Casse de Stock (BP: 1126375) - Période: {start_date} au {end_date}"
+        ws.merge_cells('A1:G1')
+        ws['A1'] = title
+        ws['A1'].font = Font(size=14, bold=True)
+        ws['A1'].fill = PatternFill(start_color="DDDDDD", end_color="DDDDDD", fill_type="solid")
+        
+        # Add headers to row 3
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=3, column=col, value=header)
+            cell.font = Font(bold=True)
+            cell.fill = PatternFill(start_color="E6F3FF", end_color="E6F3FF", fill_type="solid")
+        
+        # Add data rows
+        for row_idx, item in enumerate(data, start=4):
+            ws.cell(row=row_idx, column=1, value=item.get('DOCUMENTNO', ''))
+            ws.cell(row=row_idx, column=2, value=item.get('DESCRIPTION', ''))
+            ws.cell(row=row_idx, column=3, value=item.get('DATEINVOICED', ''))
+            ws.cell(row=row_idx, column=4, value=item.get('DOCSTATUS', ''))
+            ws.cell(row=row_idx, column=5, value=int(item.get('TOTAL_LINES', 0)))
+            ws.cell(row=row_idx, column=6, value=float(item.get('TOTAL_NET_AMOUNT', 0)))
+            ws.cell(row=row_idx, column=7, value=float(item.get('GRANDTOTAL', 0)))
+        
+        # Calculate totals
+        if data:
+            total_net_amount = sum(float(item.get('TOTAL_NET_AMOUNT', 0)) for item in data)
+            total_grand_total = sum(float(item.get('GRANDTOTAL', 0)) for item in data)
+            total_documents = len(data)
+            total_lines = sum(int(item.get('TOTAL_LINES', 0)) for item in data)
+            
+            # Add totals row
+            total_row = len(data) + 5
+            ws.cell(row=total_row, column=1, value="TOTAUX:")
+            ws.cell(row=total_row, column=1).font = Font(bold=True)
+            ws.cell(row=total_row, column=2, value=f"{total_documents} documents")
+            ws.cell(row=total_row, column=5, value=total_lines)
+            ws.cell(row=total_row, column=6, value=total_net_amount)
+            ws.cell(row=total_row, column=7, value=total_grand_total)
+            
+            # Style totals row
+            for col in range(1, 8):
+                ws.cell(row=total_row, column=col).fill = PatternFill(start_color="FFE4B5", end_color="FFE4B5", fill_type="solid")
+                ws.cell(row=total_row, column=col).font = Font(bold=True)
+        
+        # Auto-adjust column widths
+        for column in ws.columns:
+            max_length = 0
+            # Check if the first cell is a merged cell
+            if isinstance(column[0], MergedCell):
+                continue
+            column_letter = column[0].column_letter
+            for cell in column:
+                if isinstance(cell, MergedCell):
+                    continue
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column_letter].width = adjusted_width
+        
+        # Create table for better formatting
+        if data:
+            table_range = f"A3:G{len(data) + 3}"
+            table = Table(displayName="CasseStockTable", ref=table_range)
+            style = TableStyleInfo(
+                name="TableStyleMedium2", 
+                showFirstColumn=False,
+                showLastColumn=False, 
+                showRowStripes=True, 
+                showColumnStripes=True
+            )
+            table.tableStyleInfo = style
+            ws.add_table(table)
+        
+        # Save to BytesIO
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        return output
+        
+    except Exception as e:
+        logger.error(f"Error creating casse Excel file: {e}")
+        raise
+
+
+
+
+#---------------------------wifi part---------------------------------------
+from cryptography.fernet import Fernet
+import mysql.connector
+
+# === Encryption Key ===
+# !! In production, store this key in a secure location (env variable or secrets manager)
+ENCRYPTION_KEY = b'hukIqOCK3RGhnVUpZRN5qdZCe-Tu4wS5QDXAVo8Wick='  # replace with your own key if needed
+cipher = Fernet(ENCRYPTION_KEY)
+
+
+# === Encrypt ===
+def encrypt(text):
+    return cipher.encrypt(text.encode()).decode()
+
+# === Decrypt ===
+def decrypt(token):
+    return cipher.decrypt(token.encode()).decode()
+
+# === Get List ===
+@app.route("/list", methods=["GET"])
+def list_wifi():
+    conn = get_localdb_connection()
+    cur = conn.cursor(dictionary=True)
+    cur.execute("SELECT id, name, password, modempasswd, ip FROM wifi_passwords ORDER BY id DESC")
+    result = cur.fetchall()
+    conn.close()
+
+    # Decrypt passwords before sending
+    for row in result:
+        try:
+            row['password'] = decrypt(row['password'])
+            row['modempasswd'] = decrypt(row['modempasswd'])
+        except Exception as e:
+            row['password'] = "[decryption error]"
+            row['modempasswd'] = "[decryption error]"
+            logger.error(f"Decryption error: {e}")
+
+    return jsonify(result)
+
+# === Add WiFi ===
+@app.route("/add", methods=["POST"])
+def add_wifi():
+    data = request.get_json()
+    conn = get_localdb_connection()
+    cur = conn.cursor()
+
+    try:
+        encrypted_password = encrypt(data['password'])
+        encrypted_modem = encrypt(data['modempasswd'])
+
+        cur.execute("""
+            INSERT INTO wifi_passwords (name, password, ip, modempasswd, created_by)
+            VALUES (%s, %s, %s, %s, 'admin')
+        """, (data['name'], encrypted_password, data['ip'], encrypted_modem))
+
+        conn.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        logger.error(f"Add WiFi error: {e}")
+        return jsonify({"success": False, "error": str(e)})
+    finally:
+        conn.close()
+
+# === Update WiFi ===
+@app.route("/update/<int:id>", methods=["POST"])
+def update_wifi(id):
+    data = request.get_json()
+    conn = get_localdb_connection()
+    cur = conn.cursor()
+
+    try:
+        encrypted_password = encrypt(data['password'])
+        encrypted_modem = encrypt(data['modempasswd'])
+
+        cur.execute("""
+            UPDATE wifi_passwords
+            SET name = %s,
+                password = %s,
+                ip = %s,
+                modempasswd = %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        """, (data['name'], encrypted_password, data['ip'], encrypted_modem, id))
+
+        conn.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        logger.error(f"Update WiFi error: {e}")
+        return jsonify({"success": False, "error": str(e)})
+    finally:
+        conn.close()
+
+# === Delete WiFi ===
+@app.route("/delete/<int:id>", methods=["POST"])
+def delete_wifi(id):
+    conn = get_localdb_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM wifi_passwords WHERE id = %s", (id,))
+        conn.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        logger.error(f"Delete error: {e}")
+        return jsonify({"success": False, "error": str(e)})
+    finally:
+        conn.close()
+
+
+
+
+
+
+
+
+
+
+
+@app.route('/recieved_products_bydate')
+def recieved_products_bydate():
+    try:
+        # Get date parameters from request
+        start_date = request.args.get('start_date', datetime.now().strftime('%Y-%m-%d'))
+        end_date = request.args.get('end_date', datetime.now().strftime('%Y-%m-%d'))
+
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT 
+                  bp.NAME AS SUPPLIER_NAME,
+                  p.NAME AS PRODUCT_NAME,
+                  sc.name AS BONUS,
+                  MAX((
+                      SELECT ai.VALUENUMBER
+                      FROM M_ATTRIBUTEINSTANCE ai
+                      WHERE ai.M_ATTRIBUTESETINSTANCE_ID = iol.M_ATTRIBUTESETINSTANCE_ID
+                        AND ai.M_ATTRIBUTE_ID = 1001408
+                        AND ai.ISACTIVE = 'Y'
+                  )) AS REM_VENTE,
+                  MAX((
+                      SELECT ai.VALUENUMBER
+                      FROM M_ATTRIBUTEINSTANCE ai
+                      WHERE ai.M_ATTRIBUTESETINSTANCE_ID = iol.M_ATTRIBUTESETINSTANCE_ID
+                        AND ai.M_ATTRIBUTE_ID = 1000908
+                        AND ai.ISACTIVE = 'Y'
+                  )) AS BON_VENTE,
+                  (SELECT SUM(ms.qtyonhand - ms.qtyreserved)
+                      FROM m_storage ms
+                      WHERE ms.m_product_id = p.m_product_id
+                        AND ms.ad_client_id = 1000000
+                        AND ms.qtyonhand > 0
+                        AND ms.m_locator_id = 1000614
+                  ) AS qty_dispo,
+                  MAX(dsp.NAME)   AS REM_POT,
+                  MAX(dspara.NAME) AS REM_PARA
+              FROM M_INOUT io
+              INNER JOIN M_INOUTLINE iol ON io.M_INOUT_ID = iol.M_INOUT_ID
+              INNER JOIN M_PRODUCT p ON iol.M_PRODUCT_ID = p.M_PRODUCT_ID
+              INNER JOIN C_BPARTNER bp ON io.C_BPARTNER_ID = bp.C_BPARTNER_ID
+              JOIN XX_SALESCONTEXT sc ON p.XX_SALESCONTEXT_ID = sc.XX_SALESCONTEXT_ID
+              LEFT JOIN (
+                  SELECT M_PRODUCT_ID, M_DISCOUNTSCHEMA_ID 
+                  FROM C_BPartner_Product 
+                  WHERE ISACTIVE = 'Y' AND C_BP_Group_ID = 1001330
+              ) bppot ON bppot.M_PRODUCT_ID = p.M_PRODUCT_ID
+              LEFT JOIN M_DiscountSchema dsp ON dsp.M_DiscountSchema_ID = bppot.M_DiscountSchema_ID
+              LEFT JOIN (
+                  SELECT M_PRODUCT_ID, M_DISCOUNTSCHEMA_ID 
+                  FROM C_BPartner_Product 
+                  WHERE ISACTIVE = 'Y' AND C_BP_Group_ID = 1000003
+              ) bppara ON bppara.M_PRODUCT_ID = p.M_PRODUCT_ID
+              LEFT JOIN M_DiscountSchema dspara ON dspara.M_DiscountSchema_ID = bppara.M_DiscountSchema_ID
+              WHERE io.DOCSTATUS IN ('CO', 'CL')
+                AND io.C_DOCTYPE_ID = 1000013
+                AND io.AD_CLIENT_ID = 1000000
+                AND io.ISACTIVE = 'Y'
+                AND iol.ISACTIVE = 'Y'
+                AND p.ISACTIVE = 'Y'
+                AND bp.ISACTIVE = 'Y'
+                AND iol.M_PRODUCT_ID IS NOT NULL
+                AND io.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')
+              GROUP BY bp.NAME, p.NAME, sc.name, p.m_product_id
+              ORDER BY bp.NAME, p.NAME
+            """
+            cursor.execute(query, {
+                'start_date': start_date,
+                'end_date': end_date
+            })
+            columns = [desc[0] for desc in cursor.description]
+            grouped = {}
+            for row in cursor.fetchall():
+                row_dict = {columns[i]: row[i] for i in range(len(columns))}
+                supplier = row_dict.pop('SUPPLIER_NAME')
+                if supplier not in grouped:
+                    grouped[supplier] = []
+                grouped[supplier].append(row_dict)
+            # Convert to list of dicts for JSON
+            reception_data = [{"SUPPLIER_NAME": k, "PRODUCTS": v} for k, v in grouped.items()]
+
+        # Also get fake reception data by calling product_details_by_id logic
+        fake_reception_data = []
+        try:
+            # Get all records from fake_reception table
+            mysql_conn = get_localdb_connection()
+            if mysql_conn:
+                try:
+                    mysql_cursor = mysql_conn.cursor(dictionary=True)
+                    
+                    # Query to get all product details from fake_reception
+                    fake_reception_query = """
+                        SELECT 
+                            id,
+                            product_id,
+                            m_attributesetinstance_id,
+                            product_name
+                        FROM fake_reception
+                        ORDER BY created_at DESC
+                    """
+                    
+                    mysql_cursor.execute(fake_reception_query)
+                    fake_reception_records = mysql_cursor.fetchall()
+                    
+                    if fake_reception_records:
+                        # Process fake reception data
+                        fake_grouped = {}
+                        
+                        with DB_POOL.acquire() as fake_connection:
+                            fake_cursor = fake_connection.cursor()
+                            
+                            for record in fake_reception_records:
+                                product_id = record['product_id']
+                                attributesetinstance_id = record['m_attributesetinstance_id']
+                                fake_reception_id = record['id']
+                                
+                                # Query to get data using the values from fake_reception
+                                fake_query = """
+                                    SELECT 
+                                      (SELECT ai.VALUE
+                                       FROM M_ATTRIBUTEINSTANCE ai
+                                       WHERE ai.M_ATTRIBUTESETINSTANCE_ID = :attributesetinstance_id
+                                         AND ai.M_ATTRIBUTE_ID = 1000508
+                                         AND ai.ISACTIVE = 'Y'
+                                         AND ROWNUM = 1
+                                      ) AS SUPPLIER_NAME,
+                                      p.NAME AS PRODUCT_NAME,
+                                      sc.name AS BONUS,
+                                      NVL((SELECT ai.VALUENUMBER
+                                           FROM M_ATTRIBUTEINSTANCE ai
+                                           WHERE ai.M_ATTRIBUTESETINSTANCE_ID = :attributesetinstance_id
+                                             AND ai.M_ATTRIBUTE_ID = 1001408
+                                             AND ai.ISACTIVE = 'Y'
+                                             AND ROWNUM = 1
+                                          ), 0) AS REM_VENTE,
+                                      NVL((SELECT ai.VALUENUMBER
+                                           FROM M_ATTRIBUTEINSTANCE ai
+                                           WHERE ai.M_ATTRIBUTESETINSTANCE_ID = :attributesetinstance_id
+                                             AND ai.M_ATTRIBUTE_ID = 1000908
+                                             AND ai.ISACTIVE = 'Y'
+                                             AND ROWNUM = 1
+                                          ), 0) AS BON_VENTE,
+                                      NVL((SELECT SUM(ms.qtyonhand - ms.qtyreserved)
+                                           FROM m_storage ms
+                                           WHERE ms.m_product_id = :product_id
+                                             AND ms.ad_client_id = 1000000
+                                             AND ms.qtyonhand > 0
+                                             AND ms.m_locator_id = 1000614
+                                          ), 0) AS qty_dispo,
+                                      (SELECT ds.NAME 
+                                       FROM C_BPartner_Product bp, M_DiscountSchema ds
+                                       WHERE bp.M_PRODUCT_ID = :product_id
+                                         AND bp.ISACTIVE = 'Y' 
+                                         AND bp.C_BP_Group_ID = 1001330
+                                         AND ds.M_DiscountSchema_ID = bp.M_DISCOUNTSCHEMA_ID
+                                         AND ROWNUM = 1
+                                      ) AS REM_POT,
+                                      (SELECT ds.NAME 
+                                       FROM C_BPartner_Product bp, M_DiscountSchema ds
+                                       WHERE bp.M_PRODUCT_ID = :product_id
+                                         AND bp.ISACTIVE = 'Y' 
+                                         AND bp.C_BP_Group_ID = 1000003
+                                         AND ds.M_DiscountSchema_ID = bp.M_DISCOUNTSCHEMA_ID
+                                         AND ROWNUM = 1
+                                      ) AS REM_PARA,
+                                      :fake_reception_id AS FAKE_RECEPTION_ID,
+                                      :product_id AS ORIGINAL_PRODUCT_ID,
+                                      :attributesetinstance_id AS ORIGINAL_ATTRIBUTESETINSTANCE_ID
+                                  FROM M_PRODUCT p
+                                  JOIN XX_SALESCONTEXT sc ON p.XX_SALESCONTEXT_ID = sc.XX_SALESCONTEXT_ID
+                                  WHERE p.M_PRODUCT_ID = :product_id
+                                    AND p.ISACTIVE = 'Y'
+                                    AND p.AD_CLIENT_ID = 1000000
+                                """
+                                
+                                # Execute query with parameters from fake_reception
+                                fake_cursor.execute(fake_query, {
+                                    'product_id': product_id,
+                                    'attributesetinstance_id': attributesetinstance_id,
+                                    'fake_reception_id': fake_reception_id
+                                })
+                                
+                                # Fetch results and group by supplier
+                                fake_columns = [desc[0] for desc in fake_cursor.description]
+                                for fake_row in fake_cursor.fetchall():
+                                    fake_row_dict = {fake_columns[i]: fake_row[i] for i in range(len(fake_columns))}
+                                    fake_supplier = fake_row_dict.pop('SUPPLIER_NAME')
+                                    
+                                    # Handle case where supplier name might be None
+                                    if fake_supplier is None:
+                                        fake_supplier = "Unknown Supplier"
+                                    
+                                    if fake_supplier not in fake_grouped:
+                                        fake_grouped[fake_supplier] = []
+                                    fake_grouped[fake_supplier].append(fake_row_dict)
+                            
+                            # Convert to list of dicts for JSON (same structure as recieved_products_bydate)
+                            fake_reception_data = [{"SUPPLIER_NAME": k, "PRODUCTS": v} for k, v in fake_grouped.items()]
+                            
+                except mysql.connector.Error as e:
+                    logger.error(f"Error fetching fake reception data: {e}")
+                finally:
+                    mysql_cursor.close()
+                    mysql_conn.close()
+        except Exception as e:
+            logger.error(f"Error processing fake reception data: {e}")
+
+        # Return both datasets
+        # Merge suppliers that exist in both datasets
+        merged_data = {}
+        
+        # First, add all real reception data
+        for supplier_data in reception_data:
+            supplier_name = supplier_data["SUPPLIER_NAME"]
+            merged_data[supplier_name] = {
+                "SUPPLIER_NAME": supplier_name,
+                "PRODUCTS": supplier_data["PRODUCTS"].copy()  # Copy real reception products
+            }
+        
+        # Then, merge fake reception data
+        for fake_supplier_data in fake_reception_data:
+            fake_supplier_name = fake_supplier_data["SUPPLIER_NAME"]
+            
+            if fake_supplier_name in merged_data:
+                # Supplier exists in both - merge products
+                merged_data[fake_supplier_name]["PRODUCTS"].extend(fake_supplier_data["PRODUCTS"])
+            else:
+                # Supplier only exists in fake data - add as new supplier
+                merged_data[fake_supplier_name] = {
+                    "SUPPLIER_NAME": fake_supplier_name,
+                    "PRODUCTS": fake_supplier_data["PRODUCTS"].copy()
+                }
+        
+        # Convert back to list format
+        combined_data = list(merged_data.values())
+        
+        return jsonify({
+            "reception_data": combined_data,  # Now contains merged data
+            "fake_reception_data": []  # Empty since data is now merged
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching recieved products by date: {e}")
+        return jsonify({"error": f"Could not fetch recieved products: {str(e)}"}), 500
+
+# ...existing code...
+
+
+
+@app.route('/details-products', methods=['GET'])
+def details_products():
+    try:
+        product_id = request.args.get("product_id", None)
+        category = request.args.get("category", "all")  # Default to "all" if no category provided
+        
+        if not product_id:
+            return jsonify({"error": "Product ID is required"}), 400
+
+        data = details_products_data(product_id, category)
+        return jsonify(data)
+
+    except Exception as e:
+        logger.error(f"Error fetching updated inventory products: {e}")
+        return jsonify({"error": "Failed to fetch updated inventory products"}), 500
+    
+
+
+
+def details_products_data(product_id, category="all"):
+    """
+    Fetch inventory product data where:
+    - ANY of these is non-zero: QTY_ONHAND, QTY_RESERVED, QTY_DISPO, QTYORDERED
+    - AND GUARANTEEDATE is NOT NULL
+    """
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            
+            # Define locator IDs for different categories
+            locator_groups = {
+                "all": "(1001135, 1000614, 1001128, 1001136, 1001020, 1000314, 1000210, 1000211, 1000109, 1000209, 1000213, 1000214, 1000414, 1000817, 1001129)",
+                "preparation": "(1001135, 1000614, 1001128, 1001136, 1001020)",
+                "tempo": "(1000314, 1000210, 1000211, 1000109, 1000209, 1000213, 1000214, 1000414, 1000817, 1001129)"
+            }
+            
+            locator_list = locator_groups.get(category, locator_groups["all"])
+            
+            logger.info(f"Fetching inventory data for product_id: {product_id}, category: {category}")
+            
+            query = f"""
+            SELECT
+                p.name AS PRODUCT,
+                (SELECT lot FROM m_attributesetinstance WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id) AS LOT,
+                (SELECT description FROM m_attributesetinstance WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id) AS DESCRIPTION,
+                (SELECT valuenumber FROM m_attributeinstance WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id AND m_attribute_id = 1000503) AS PPA,
+                (mst.qtyonhand - mst.QTYRESERVED) AS QTY_DISPO,
+                mst.m_attributesetinstance_id as M_ATTRIBUTESSETINSTANCE_ID,
+                mst.qtyonhand AS QTY_ONHAND,
+                mst.QTYRESERVED AS QTY_RESERVED,
+                mst.QTYORDERED AS QTYORDERED,
+                mats.guaranteedate AS GUARANTEEDATE,
+                ROUND(
+                    (
+                        (
+                            (SELECT valuenumber FROM m_attributeinstance WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id AND m_attribute_id = 1000501)
+                            - 
+                            ((SELECT valuenumber FROM m_attributeinstance WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id AND m_attribute_id = 1000501) 
+                             * 
+                             (SELECT NVL(valuenumber, 0) FROM m_attributeinstance WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id AND m_attribute_id = 1001009) / 100)
+                        ) 
+                        / 
+                        (1 + (SELECT NVL(valuenumber, 0) FROM m_attributeinstance WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id AND m_attribute_id = 1000808) / 100)
+                    ), 2
+                ) AS P_REVIENT,
+                (
+                    SELECT mt.movementtype 
+                    FROM m_transaction mt 
+                    WHERE mt.m_product_id = mst.m_product_id 
+                    AND mt.m_attributesetinstance_id = mst.m_attributesetinstance_id 
+                    AND mt.m_locator_id = mst.m_locator_id
+                    ORDER BY mt.created DESC 
+                    FETCH FIRST 1 ROW ONLY
+                ) AS LTS
+            FROM
+                m_product p
+                INNER JOIN m_storage mst ON p.m_product_id = mst.m_product_id
+                INNER JOIN m_attributesetinstance mats ON mst.m_attributesetinstance_id = mats.m_attributesetinstance_id
+            WHERE
+                p.m_product_id = :product_id
+                AND mst.m_locator_id IN {locator_list}
+                AND (
+                    mst.qtyonhand != 0 
+                    OR mst.QTYRESERVED != 0 
+                    OR (mst.qtyonhand - mst.QTYRESERVED) != 0
+                    OR mst.QTYORDERED != 0
+                )
+                AND mats.guaranteedate IS NOT NULL  -- NEW: Exclude NULL guarantee dates
+            ORDER BY
+                p.name, mats.guaranteedate
+            """
+            
+            cursor.execute(query, {"product_id": product_id})
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+
+            return data
+
+    except Exception as e:
+        logger.error(f"Error fetching inventory products: {e}")
+        return {"error": "An error occurred while fetching inventory products."}
+
+
+
+# MySQL connection for bank data
+def get_localdb_connection():
+    try:
+        return mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="",
+            database="bnm",
+            charset="utf8",
+            use_unicode=True,
+            autocommit=False
+        )
+    except mysql.connector.Error as err:
+        logger.error(f"Error connecting to MySQL database: {err}")
+        return None
+
+
+@app.route('/insert_fake_reception', methods=['POST'])
+def insert_fake_reception():
+    """
+    Simple function to insert data into fake_reception table
+    """
+    try:
+        # Get parameters from request
+        data = request.get_json()
+        m_attributesetinstance_id = data.get('m_attributesetinstance_id')
+        product_id = data.get('product_id')
+        product_name = data.get('product_name')
+        
+        # Validate required parameters
+        if not product_id or not product_name:
+            return jsonify({"error": "product_id and product_name are required"}), 400
+        
+        # Connect to MySQL
+        mysql_conn = get_localdb_connection()
+        if not mysql_conn:
+            return jsonify({"error": "Could not connect to MySQL database"}), 500
+        
+        try:
+            mysql_cursor = mysql_conn.cursor()
+            
+            # Insert query (explicitly set created_at for old MySQL versions)
+            insert_query = """
+                INSERT INTO fake_reception (m_attributesetinstance_id, product_id, product_name, created_at)
+                VALUES (%s, %s, %s, NOW())
+            """
+            
+            mysql_cursor.execute(insert_query, (
+                m_attributesetinstance_id,
+                product_id,
+                product_name
+            ))
+            
+            mysql_conn.commit()
+            
+            return jsonify({
+                "success": True,
+                "message": "Data inserted successfully",
+                "inserted_id": mysql_cursor.lastrowid
+            }), 200
+            
+        except mysql.connector.Error as e:
+            mysql_conn.rollback()
+            logger.error(f"Error inserting data: {e}")
+            return jsonify({"error": f"Could not insert data: {str(e)}"}), 500
+        finally:
+            mysql_cursor.close()
+            mysql_conn.close()
+            
+    except Exception as e:
+        logger.error(f"Error in insert_fake_reception: {e}")
+        return jsonify({"error": f"Could not process request: {str(e)}"}), 500
+
+
+@app.route('/get_fake_reception', methods=['GET'])
+def get_fake_reception():
+    """
+    Get all records from fake_reception table
+    """
+    try:
+        mysql_conn = get_localdb_connection()
+        if not mysql_conn:
+            return jsonify({"error": "Could not connect to MySQL database"}), 500
+        
+        try:
+            mysql_cursor = mysql_conn.cursor(dictionary=True)
+            
+            # Query to get all records
+            query = """
+                SELECT 
+                    id,
+                    m_attributesetinstance_id,
+                    product_id,
+                    product_name,
+                    created_at
+                FROM fake_reception
+                ORDER BY created_at DESC
+            """
+            
+            mysql_cursor.execute(query)
+            results = mysql_cursor.fetchall()
+            
+            # Convert datetime objects to strings for JSON serialization
+            for record in results:
+                if record.get('created_at'):
+                    record['created_at'] = record['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+            
+            return jsonify({
+                "data": results,
+                "count": len(results)
+            }), 200
+            
+        except mysql.connector.Error as e:
+            logger.error(f"Error fetching data from MySQL: {e}")
+            return jsonify({"error": f"Could not fetch data: {str(e)}"}), 500
+        finally:
+            mysql_cursor.close()
+            mysql_conn.close()
+            
+    except Exception as e:
+        logger.error(f"Error in get_fake_reception: {e}")
+        return jsonify({"error": f"Could not process request: {str(e)}"}), 500
+
+
+@app.route('/delete_fake_reception/<int:record_id>', methods=['DELETE'])
+def delete_fake_reception(record_id):
+    """
+    Delete a specific record from fake_reception table
+    """
+    try:
+        mysql_conn = get_localdb_connection()
+        if not mysql_conn:
+            return jsonify({"error": "Could not connect to MySQL database"}), 500
+        
+        try:
+            mysql_cursor = mysql_conn.cursor()
+            
+            # First check if record exists
+            check_query = "SELECT id, product_name FROM fake_reception WHERE id = %s"
+            mysql_cursor.execute(check_query, (record_id,))
+            existing_record = mysql_cursor.fetchone()
+            
+            if not existing_record:
+                return jsonify({"error": "Record not found"}), 404
+            
+            # Delete the record
+            delete_query = "DELETE FROM fake_reception WHERE id = %s"
+            mysql_cursor.execute(delete_query, (record_id,))
+            mysql_conn.commit()
+            
+            if mysql_cursor.rowcount > 0:
+                return jsonify({
+                    "success": True,
+                    "message": f"Record deleted successfully",
+                    "deleted_id": record_id
+                }), 200
+            else:
+                return jsonify({"error": "No record was deleted"}), 400
+            
+        except mysql.connector.Error as e:
+            mysql_conn.rollback()
+            logger.error(f"Error deleting data from MySQL: {e}")
+            return jsonify({"error": f"Could not delete data: {str(e)}"}), 500
+        finally:
+            mysql_cursor.close()
+            mysql_conn.close()
+            
+    except Exception as e:
+        logger.error(f"Error in delete_fake_reception: {e}")
+        return jsonify({"error": f"Could not process request: {str(e)}"}), 500
+
+
+# ...existing code...
+
+# simulation part
+
+@app.route('/simulation_fetchBCCBProduct', methods=['GET'])
+def simulation_fetch_bccb_p():
+    bccb = request.args.get('bccb')
+    ad_org_id = request.args.get('ad_org_id')
+
+    data = simulation_fetch_bccb_product(bccb, ad_org_id)
+    return jsonify(data)
+
+
+
+def simulation_fetch_bccb_product(bccb, ad_org_id):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT product, qty, remise, marge, priceentered, remise_vente, bonus_vente, p_revient,ventef, pricelist
+                FROM (
+                    SELECT det.*, 
+                           ROUND((det.ventef - det.p_revient) / det.p_revient * 100, 2) AS marge 
+                    FROM (
+                        SELECT lot.*, 
+                               (lot.priceentered - ((lot.priceentered * NVL(lot.remise_vente, 0)) / 100)) / 
+                               (1 + (lot.bonus_vente / 100)) AS ventef 
+                        FROM (
+                            SELECT ol.priceentered AS priceentered, 
+                                   ol.qtyentered AS qty, 
+                                   ol.pricelist AS pricelist,
+                                   mp.name AS product, 
+                                   ol.discount / 100 AS remise, 
+                                   (SELECT valuenumber FROM m_attributeinstance 
+                                    WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                                          AND m_attribute_id = 1000504) AS p_revient, 
+                                   (SELECT valuenumber FROM m_attributeinstance 
+                                    WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                                          AND m_attribute_id = 1000908) AS bonus_vente, 
+                                   (SELECT valuenumber FROM m_attributeinstance 
+                                    WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                                          AND m_attribute_id = 1001408) AS remise_vente 
+                            FROM c_orderline ol 
+                            INNER JOIN c_order o ON o.c_order_id = ol.c_order_id 
+                            INNER JOIN m_product mp ON ol.m_product_id = mp.m_product_id 
+                            WHERE ol.qtyentered > 0 
+                                  AND (:bccb IS NULL OR UPPER(o.documentno) LIKE UPPER(:bccb) || '%')
+                                  AND o.AD_Org_ID = 1000000
+                        ) lot
+                    ) det
+                )
+            """
+            
+            params = {
+                'bccb': bccb or None
+            }
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            return [dict(zip(columns, row)) for row in rows]
+    except Exception as e:
+        logger.error(f"Error fetching BCCB product data: {e}")
+        return {"error": "An error occurred while fetching BCCB product data."}
+
+
+
+@app.route('/real_simulation_all', methods=['GET'])
+def simulation_get_simulation_all():
+    ndocument = request.args.get('ndocument')
+    if not ndocument:
+        return jsonify({'error': 'Missing ndocument parameter'}), 400
+    result = simulation_fetch_simulation_by_ndocument(ndocument)
+    if result:
+        return jsonify(result)
+    else:
+        return jsonify({'error': 'No data found for the given ndocument'}), 404
+
+
+
+
+
+# New: fetch simulation by ndocument
+def simulation_fetch_simulation_by_ndocument(ndocument):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT 
+                    CAST(org.name AS VARCHAR2(300)) AS organisation,
+                    CAST(co.documentno AS VARCHAR2(50)) AS ndocument,
+                    CAST(cb.name AS VARCHAR2(300)) AS tier,
+                    co.dateordered AS datecommande,
+                    CAST(us.name AS VARCHAR2(100)) AS vendeur,
+                    ROUND(((co.totallines / (SELECT SUM(mat.valuenumber * li.qtyentered) 
+                         FROM c_orderline li 
+                         INNER JOIN m_attributeinstance mat ON mat.m_attributesetinstance_id = li.m_attributesetinstance_id
+                         WHERE mat.m_attribute_id = 1000504 
+                           AND li.c_order_id = co.c_order_id 
+                           AND li.qtyentered > 0 
+                         GROUP BY li.c_order_id)) - 1) * 100, 2) AS marge,
+                    ROUND(co.totallines, 2) AS montant,
+                    (SELECT mat.valuenumber 
+                     FROM c_orderline li 
+                     INNER JOIN m_attributeinstance mat ON mat.m_attributesetinstance_id = li.m_attributesetinstance_id
+                     WHERE mat.m_attribute_id = 1000504 
+                       AND li.c_order_id = co.c_order_id 
+                       AND li.qtyentered > 0 
+                       AND ROWNUM = 1) AS valuenumber
+                FROM 
+                    c_order co
+                INNER JOIN ad_org org ON co.ad_org_id = org.ad_org_id
+                INNER JOIN c_bpartner cb ON co.c_bpartner_id = cb.c_bpartner_id
+                INNER JOIN ad_user us ON co.salesrep_id = us.ad_user_id
+                WHERE 
+                     co.ad_org_id = 1000000
+                    AND issotrx = 'Y'
+                    AND co.documentno = :ndocument
+            """
+            cursor.execute(query, {'ndocument': ndocument})
+            row = cursor.fetchone()
+            if row:
+                columns = [col[0] for col in cursor.description]
+                return dict(zip(columns, row))
+            else:
+                return None
+    except Exception as e:
+        logging.error(f"Error fetching simulation data by ndocument: {e}")
+        return {"error": "An error occurred while fetching simulation data by ndocument."}
+
+
+
+
+@app.route('/simulation_fetch-product-details', methods=['GET'])
+def simulation_fetch_product_details():
+    try:
+        product_name = request.args.get("product_name", None)
+        
+        if not product_name:
+            return jsonify({"error": "Product name is required"}), 400
+
+        data = simulation_fetch_product_details_data(product_name)
+        return jsonify(data)
+
+    except Exception as e:
+        logger.error(f"Error fetching product details: {e}")
+        return jsonify({"error": "Failed to fetch product details"}), 500
+
+
+
+
+ 
+def simulation_fetch_product_details_data(product_name):
+    """
+    Fetch detailed product information similar to the marge data structure
+    """
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            
+            query = """
+            SELECT
+                *
+            FROM
+                (
+                    SELECT
+                        "source"."FOURNISSEUR" "FOURNISSEUR",
+                        "source"."PRODUCT" "PRODUCT",
+                        "source"."P_ACHAT" "P_ACHAT",
+                        "source"."P_VENTE" "P_VENTE",
+                        "source"."REM_ACHAT" "REM_ACHAT",
+                        "source"."REM_VENTE" "REM_VENTE",
+                        "source"."BON_ACHAT" "BON_ACHAT",
+                        "source"."BON_VENTE" "BON_VENTE",
+                        "source"."REMISE_AUTO" "REMISE_AUTO",
+                        "source"."BONUS_AUTO" "BONUS_AUTO",
+                        "source"."P_REVIENT" "P_REVIENT",
+                        "source"."MARGE" "MARGE",
+                        "source"."LABO" "LABO",
+                        "source"."LOT" "LOT",
+                        "source"."LOT_ACTIVE" "LOT_ACTIVE",
+
+                        "source"."QTY" "QTY",
+                        "source"."QTY_DISPO" "QTY_DISPO",
+                        "source"."GUARANTEEDATE" "GUARANTEEDATE",
+                        "source"."PPA" "PPA",
+                        "source"."LOCATION" "LOCATION"
+
+                    FROM
+                        (
+                            SELECT
+                                DISTINCT fournisseur,
+                                product,
+                                p_achat,
+                                p_vente,
+                                round(rem_achat, 2) AS rem_achat,
+                                rem_vente,
+                                round(bon_achat, 2) AS bon_achat,
+                                bon_vente,
+                                remise_auto,
+                                bonus_auto,
+                                round(p_revient, 2) AS p_revient,
+                                LEAST(round((marge), 2), 100) AS marge,
+                                labo,
+                                lot,
+                                lot_active,
+                                qty,
+                                qty_dispo,
+                                guaranteedate,
+                                ppa,
+                                CASE 
+                                    WHEN m_locator_id = 1000614 THEN 'Préparation'
+                                    WHEN m_locator_id = 1001135 THEN 'HANGAR'
+                                    WHEN m_locator_id = 1001128 THEN 'Dépot_réserve'
+                                    WHEN m_locator_id = 1001136 THEN 'HANGAR_'
+                                    WHEN m_locator_id = 1001020 THEN 'Depot_Vente'
+                                END AS location
+                            FROM
+                                (
+                                    SELECT
+                                        d.*,
+                                        LEAST(
+                                            round(
+                                                (((ventef - ((ventef * nvl(rma, 0)) / 100))) - p_revient) / p_revient * 100,
+                                                2
+                                            ), 
+                                            100
+                                        ) AS marge
+                                    FROM
+                                        (
+                                            SELECT
+                                                det.*,
+                                                (det.p_achat - ((det.p_achat * det.rem_achat) / 100)) / (1 + (det.bon_achat / 100)) p_revient,
+                                                (
+                                                    det.p_vente - ((det.p_vente * nvl(det.rem_vente, 0)) / 100)
+                                                ) / (
+                                                    1 + (
+                                                        CASE
+                                                            WHEN det.bna > 0 THEN det.bna
+                                                            ELSE det.bon_vente
+                                                        END / 100
+                                                    )
+                                                ) ventef
+                                            FROM
+                                                (
+                                                    SELECT
+                                                        p.name product,
+                                                        (
+                                                            SELECT
+                                                                NAME
+                                                            FROM
+                                                                XX_Laboratory
+                                                            WHERE
+                                                                XX_Laboratory_id = p.XX_Laboratory_id
+                                                        ) labo,
+                                                        mst.qtyonhand qty,
+                                                        (mst.qtyonhand - mst.QTYRESERVED) qty_dispo,
+                                                        mst.m_locator_id,
+                                                        mati.value fournisseur,
+                                                        mats.guaranteedate,
+                                                        md.name remise_auto,
+                                                        sal.description bonus_auto,
+                                                        md.flatdiscount rma,
+                                                        TO_NUMBER(
+                                                            CASE
+                                                                WHEN REGEXP_LIKE(sal.name, '^[0-9]+$') THEN sal.name
+                                                                ELSE NULL
+                                                            END
+                                                        ) AS bna,
+                                                        (
+                                                            SELECT
+                                                                valuenumber
+                                                            FROM
+                                                                m_attributeinstance
+                                                            WHERE
+                                                                m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                                AND m_attribute_id = 1000501
+                                                        ) p_achat,
+                                                        (
+                                                            SELECT
+                                                                valuenumber
+                                                            FROM
+                                                                m_attributeinstance
+                                                            WHERE
+                                                                m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                                AND m_attribute_id = 1001009
+                                                        ) rem_achat,
+                                                        (
+                                                            SELECT
+                                                                valuenumber
+                                                            FROM
+                                                                m_attributeinstance
+                                                            WHERE
+                                                                m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                                AND m_attribute_id = 1000808
+                                                        ) bon_achat,
+                                                        (
+                                                            SELECT
+                                                                valuenumber
+                                                            FROM
+                                                                m_attributeinstance
+                                                            WHERE
+                                                                m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                                AND m_attribute_id = 1000502
+                                                        ) p_vente,
+                                                        (
+                                                            SELECT
+                                                                valuenumber
+                                                            FROM
+                                                                m_attributeinstance
+                                                            WHERE
+                                                                m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                                AND m_attribute_id = 1001408
+                                                        ) rem_vente,
+                                                        (
+                                                            SELECT
+                                                                valuenumber
+                                                            FROM
+                                                                m_attributeinstance
+                                                            WHERE
+                                                                m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                                AND m_attribute_id = 1000908
+                                                        ) bon_vente,
+                                                        (
+                                                            SELECT
+                                                                lot
+                                                            FROM
+                                                                m_attributesetinstance
+                                                            WHERE
+                                                                m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                        ) lot,
+                                                        (
+                                                            SELECT
+                                                                isactive
+                                                            FROM
+                                                                m_attributesetinstance
+                                                            WHERE
+                                                                m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                        ) lot_active,
+                                                        (
+                                                            SELECT
+                                                                valuenumber
+                                                            FROM
+                                                                m_attributeinstance
+                                                            WHERE
+                                                                m_attributesetinstance_id = mst.m_attributesetinstance_id
+                                                                AND m_attribute_id = 1000503
+                                                        ) ppa
+                                                    FROM
+                                                        m_product p
+                                                        INNER JOIN m_storage mst ON p.m_product_id = mst.m_product_id
+                                                        INNER JOIN m_attributeinstance mati ON mst.m_attributesetinstance_id = mati.m_attributesetinstance_id
+                                                        INNER JOIN m_attributesetinstance mats ON mst.m_attributesetinstance_id = mats.m_attributesetinstance_id
+                                                        LEFT JOIN C_BPartner_Product cp ON cp.m_product_id = p.m_product_id
+                                                            OR cp.C_BPartner_Product_id IS NULL
+                                                        LEFT JOIN M_DiscountSchema md ON cp.M_DiscountSchema_id = md.M_DiscountSchema_id
+                                                        LEFT JOIN XX_SalesContext sal ON p.XX_SalesContext_ID = sal.XX_SalesContext_ID
+                                                    WHERE
+                                                        mati.m_attribute_id = 1000508
+                                                        AND mst.m_locator_id IN (1001135, 1000614, 1001128, 1001136, 1001020)
+                                                        AND mst.qtyonhand != 0
+                                                        AND p.name = :product_name
+                                                    ORDER BY
+                                                        p.name
+                                                ) det
+                                            WHERE
+                                                det.rem_achat < 200
+                                        ) d
+                                )
+                            GROUP BY
+                                fournisseur,
+                                product,
+                                p_achat,
+                                p_vente,
+                                rem_achat,
+                                rem_vente,
+                                bon_achat,
+                                bon_vente,
+                                remise_auto,
+                                bonus_auto,
+                                p_revient,
+                                marge,
+                                labo,
+                                lot,
+                                lot_active,
+
+                                qty,
+                                qty_dispo,
+                                guaranteedate,
+                                ppa,
+                                m_locator_id
+                            ORDER BY
+                                fournisseur
+                        ) "source"
+                )
+            WHERE
+                rownum <= 1048575
+            """
+
+            cursor.execute(query, {"product_name": product_name})
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+
+            return data
+
+    except Exception as e:
+        logger.error(f"Error fetching product details: {e}")
+        return {"error": "An error occurred while fetching product details."}
+
+
+@app.route('/simulation_listproduct')
+def simulation_listproduct():
+    try:
+        data = simulation_fetch_all_products()
+        return jsonify(data)
+    except Exception as e:
+        logger.error(f"Error fetching products list: {e}")
+        return jsonify({"error": "An error occurred while fetching products list."}), 500
+
+def simulation_fetch_all_products():
+    """
+    Fetch all products with basic information for search functionality
+    """
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT DISTINCT
+                    mp.name AS NAME,
+                    mp.value AS CODE,
+                    mp.m_product_id AS PRODUCT_ID
+                FROM m_product mp
+                WHERE mp.isactive = 'Y'
+                AND mp.issold = 'Y'
+                ORDER BY mp.name
+            """
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            return [dict(zip(columns, row)) for row in rows]
+    except Exception as e:
+        logger.error(f"Error fetching all products: {e}")
+        return []
+    
+
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, debug=True)

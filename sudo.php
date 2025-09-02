@@ -1,6 +1,9 @@
 <?php
 session_start();
 
+
+
+
 // Include permission system - it will automatically check if the user has access to this page
 require_once 'check_permission.php';
 
@@ -16,9 +19,11 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
+
 // Process form submissions
 $message = '';
 $messageType = '';
+
 
 // Handle user creation
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'create_user') {
@@ -198,6 +203,58 @@ if (empty($roleAccess)) {
         'DRH' => 'all'
     ];
 }
+
+
+
+// --- TABLETES CRUD LOGIC ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array($_POST['action'], ['add_tablete','edit_tablete','delete_tablete'])) {
+    if ($_POST['action'] === 'add_tablete') {
+        $stmt = $conn->prepare('INSERT INTO tabletes (id, name, `key`, number, persone, ip) VALUES (?, ?, ?, ?, ?, ?)');
+        $stmt->bind_param('isssss', $_POST['id'], $_POST['name'], $_POST['key'], $_POST['number'], $_POST['persone'], $_POST['ip']);
+        if ($stmt->execute()) {
+            $_SESSION['tabletes_message'] = 'Tablet added successfully!';
+            $_SESSION['tabletes_message_type'] = 'success';
+        } else {
+            $_SESSION['tabletes_message'] = 'Error adding tablet: ' . $stmt->error;
+            $_SESSION['tabletes_message_type'] = 'error';
+        }
+        $stmt->close();
+    } elseif ($_POST['action'] === 'edit_tablete') {
+        $stmt = $conn->prepare('UPDATE tabletes SET name=?, `key`=?, number=?, persone=?, ip=? WHERE id=?');
+        $stmt->bind_param('sssssi', $_POST['name'], $_POST['key'], $_POST['number'], $_POST['persone'], $_POST['ip'], $_POST['id']);
+        if ($stmt->execute()) {
+            $_SESSION['tabletes_message'] = 'Tablet updated successfully!';
+            $_SESSION['tabletes_message_type'] = 'success';
+        } else {
+            $_SESSION['tabletes_message'] = 'Error updating tablet: ' . $stmt->error;
+            $_SESSION['tabletes_message_type'] = 'error';
+        }
+        $stmt->close();
+    } elseif ($_POST['action'] === 'delete_tablete') {
+        $stmt = $conn->prepare('DELETE FROM tabletes WHERE id=?');
+        $stmt->bind_param('i', $_POST['id']);
+        if ($stmt->execute()) {
+            $_SESSION['tabletes_message'] = 'Tablet deleted successfully!';
+            $_SESSION['tabletes_message_type'] = 'success';
+        } else {
+            $_SESSION['tabletes_message'] = 'Error deleting tablet: ' . $stmt->error;
+            $_SESSION['tabletes_message_type'] = 'error';
+        }
+        $stmt->close();
+    }
+    header('Location: ' . 'sudo');
+    exit;
+}
+
+// Fetch all tablets for the Tabletes tab
+$tabletes = [];
+$result = $conn->query('SELECT * FROM tabletes ORDER BY id DESC');
+if ($result) {
+    $tabletes = $result->fetch_all(MYSQLI_ASSOC);
+    $result->free();
+}
+
+
 
 // Get all pages available
 $allPages = [
@@ -601,10 +658,45 @@ sort($allPages);
                         </button>
                     </li>
                     <li class="mr-2">
+                        <button onclick="switchTab('tabletes')" class="inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-blue-600 hover:border-blue-600 dark:hover:text-blue-500 tab-button" data-tab="tabletes">
+                            <i class="fas fa-tablet-alt mr-2"></i> Tabletes
+                        </button>
+                    </li>
+                    <li class="mr-2">
                         <button onclick="switchTab('new-user')" class="inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-blue-600 hover:border-blue-600 dark:hover:text-blue-500 tab-button" data-tab="new-user">
                             <i class="fas fa-user-plus mr-2"></i> Create New User
                         </button>
                     </li>
+                    <li class="mr-2">
+                         <button onclick="switchTab('wifi')" class="inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-blue-600 hover:border-blue-600 dark:hover:text-blue-500 tab-button" data-tab="wifi">
+                            <i class="fas fa-wifi mr-2"></i> WiFi Networks
+                        </button>
+                    </li>
+
+                    <li class="mr-2">
+                        <button onclick="switchTab('forbidden')" class="inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-blue-600 hover:border-blue-600 dark:hover:text-blue-500 tab-button" data-tab="forbidden">
+                            <i class="fas fa-ban mr-2"></i> Forbidden Access
+                        </button>
+                    </li>
+
+                    <li class="mr-2">
+                        <button onclick="switchTab('sess')" class="inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-blue-600 hover:border-blue-600 dark:hover:text-blue-500 tab-button" data-tab="sess">
+                            <i class="fas fa-user-clock mr-2"></i> Session Management
+                        </button>
+                    </li>
+
+                    <li class="mr-2">
+                        <button onclick="switchTab('feedback')" class="inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-blue-600 hover:border-blue-600 dark:hover:text-blue-500 tab-button" data-tab="feedback">
+                            <i class="fas fa-comment-dots mr-2"></i> Feedback Management
+                        </button>
+                    </li>
+
+                    <li class="mr-2">
+                        <button onclick="switchTab('sidebar')" class="inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-blue-600 hover:border-blue-600 dark:hover:text-blue-500 tab-button" data-tab="sidebar">
+                            <i class="fas fa-bars mr-2"></i> Sidebar Management
+                        </button>
+                    </li>
+
                 </ul>
             </div>
 
@@ -701,7 +793,121 @@ sort($allPages);
                 </div>
             </div>
 
-            <!-- Website Schema Tab -->
+
+
+
+
+
+         <!-- network tab -->
+              
+
+
+
+
+            <!-- Tabletes Tab -->
+            <div id="tabletes-tab" class="tab-content">
+                <?php if (isset($_SESSION['tabletes_message'])): ?>
+                    <div class="flash-message <?php echo $_SESSION['tabletes_message_type']; ?> mb-4">
+                        <?php echo $_SESSION['tabletes_message']; unset($_SESSION['tabletes_message'], $_SESSION['tabletes_message_type']); ?>
+                    </div>
+                <?php endif; ?>
+                <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-semibold"><i class="fas fa-tablet-alt mr-2"></i>Tabletes Management</h2>
+                        <span class="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-3 py-1 rounded-full text-sm font-medium" id="tabletCount"><?php echo isset($tabletes) ? count($tabletes) : 0; ?> Tablets</span>
+                    </div>
+                    <div class="mb-6">
+                        <form method="post" class="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+                            <input type="hidden" name="action" value="add_tablete">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">ID</label>
+                                <input type="number" name="id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="ID" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Name</label>
+                                <input type="text" name="name" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="Name" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Key</label>
+                                <input type="text" name="key" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="Key" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Number</label>
+                                <input type="text" name="number" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="Number">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Person</label>
+                                <input type="text" name="persone" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="Person">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">IP Address</label>
+                                <input type="text" name="ip" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" placeholder="IP Address">
+                            </div>
+                            <div class="md:col-span-6 flex justify-end mt-2">
+                                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition duration-300">
+                                    <i class="fas fa-plus mr-2"></i> Add Tablet
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden">
+                            <thead class="bg-gray-100 dark:bg-gray-700">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Key</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Number</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Person</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">IP</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <?php if (isset($tabletes) && count($tabletes) > 0): ?>
+                                <?php foreach ($tabletes as $tab): ?>
+                                <tr>
+                                    <form method="post" class="row-edit">
+                                        <input type="hidden" name="id" value="<?= htmlspecialchars($tab['id']) ?>">
+                                        <td class="font-semibold"><?= htmlspecialchars($tab['id']) ?></td>
+                                        <td><input type="text" name="name" value="<?= htmlspecialchars($tab['name']) ?>" class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" required></td>
+                                        <td><input type="text" name="key" value="<?= htmlspecialchars($tab['key']) ?>" class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" required></td>
+                                        <td><input type="text" name="number" value="<?= htmlspecialchars($tab['number']) ?>" class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"></td>
+                                        <td><input type="text" name="persone" value="<?= htmlspecialchars($tab['persone']) ?>" class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"></td>
+                                        <td><input type="text" name="ip" value="<?= htmlspecialchars($tab['ip']) ?>" class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"></td>
+                                        <td class="text-center">
+                                            <input type="hidden" name="action" value="edit_tablete">
+                                            <button type="submit" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-2" title="Save">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                    </form>
+                                            <form method="post" style="display:inline">
+                                                <input type="hidden" name="id" value="<?= htmlspecialchars($tab['id']) ?>">
+                                                <input type="hidden" name="action" value="delete_tablete">
+                                                <button type="submit" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300" onclick="return confirm('Delete this tablet?')" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="7" class="text-center py-4 text-gray-400 dark:text-gray-500">
+                                        <i class="fas fa-inbox fa-2x mb-2"></i><br>No tablets found. Add your first tablet above.
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            
+            
+                        <!-- Website Schema Tab -->
+
             <div id="schema-tab" class="tab-content">
                 <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-8">
                     <h2 class="text-xl font-semibold mb-6">Website Schema & Role Permissions</h2>
@@ -844,6 +1050,36 @@ sort($allPages);
                     
 
                 </div>
+            </div>
+            <!-- wifi Tab -->
+            <div id="wifi-tab" class="tab-content">
+                <iframe src="network" style="width:100%; height:800px; border:none; background:white;" title="WiFi Networks"></iframe>
+            </div>
+
+            <!-- Forbidden Access Tab -->
+
+
+            <div id="forbidden-tab" class="tab-content">
+                <iframe src="403_viewer" style="width:100%; height:800px; border:none; background:white;" title="WiFi Networks"></iframe>
+            </div>
+
+            <!-- SESSION Tab -->
+
+
+            <div id="sess-tab" class="tab-content">
+                <iframe src="sess" style="width:100%; height:800px; border:none; background:white;" title="Session Management"></iframe>
+            </div>
+
+            <!-- SIDEBAR Tab -->
+
+            <div id="sidebar-tab" class="tab-content">
+                <iframe src="editnavbar" style="width:100%; height:800px; border:none; background:white;" title="Sidebar Management"></iframe>
+            </div>
+
+            <!-- FEEDBACK Tab -->
+
+            <div id="feedback-tab" class="tab-content">
+                <iframe src="feedback" style="width:100%; height:800px; border:none; background:white;" title="Feedback Management"></iframe>
             </div>
 
             <!-- Create New User Tab -->

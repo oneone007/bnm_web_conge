@@ -1,0 +1,359 @@
+{
+  "navigation": [
+    {
+      "id": "admin",
+      "type": "section",
+      "title": "Admin",
+      "icon": "fas fa-tools",
+      "roleRequired": ["Developer", "Admin"],
+      "submenu": [
+        {
+          "id": "sudo",
+          "type": "page",
+          "title": "Admin Dashboard",
+          "icon": "fas fa-user-shield",
+          "page": "sudo",
+          "roleRequired": ["Admin", "Developer"]
+        },
+        {
+          "id": "feedback",
+          "type": "page",
+          "title": "Admin Feedback",
+          "icon": "fas fa-comment-alt",
+          "page": "feedback"
+        },
+        {
+          "id": "editnavbar",
+          "type": "page",
+          "title": "Edit Navigation",
+          "icon": "fas fa-edit",
+          "page": "editnavbar",
+          "roleRequired": ["Admin", "Developer"]
+        },
+        {
+          "id": "sess",
+          "type": "page",
+          "title": "Sessions",
+          "icon": "fas fa-users",
+          "page": "sess",
+          "hoverClass": "hover:bg-green-100 dark:hover:bg-green-900"
+        },
+        {
+          "id": "403_viewer",
+          "type": "page",
+          "title": "403 Access Logs",
+          "icon": "fas fa-shield-alt",
+          "page": "403_viewer",
+          "hoverClass": "hover:bg-red-100 dark:hover:bg-red-900"
+        }
+      ]
+    },
+    {
+      "type": "separator"
+    },
+    {
+      "id": "fond",
+      "type": "section",
+      "title": "FONDS PROPRE",
+      "icon": "fas fa-coins",
+      "submenu": [
+        {
+          "id": "mony",
+          "type": "page",
+          "title": "Analysis",
+          "icon": "fas fa-chart-line",
+          "page": "mony",
+          "permissionPage": "mony"
+        },
+        {
+          "id": "print",
+          "type": "page",
+          "title": "Print",
+          "icon": "fas fa-print",
+          "page": "print",
+          "permissionPage": "print"
+        },
+        {
+          "id": "bank",
+          "type": "page",
+          "title": "Banks",
+          "icon": "fas fa-university",
+          "page": "bank",
+          "permissionPage": "bank"
+        },
+        {
+          "id": "recouverement",
+          "type": "page",
+          "title": "Recouvrement",
+          "icon": "fas fa-money-bill-wave",
+          "page": "recouverement",
+          "permissionPage": "recouverement"
+        },
+        {
+          "id": "charge",
+          "type": "page",
+          "title": "Charges",
+          "icon": "fas fa-credit-card",
+          "page": "charge",
+          "permissionPage": "charge"
+        }
+      ]
+    },
+    {
+      "id": "dettes",
+      "type": "section",
+      "title": "DETTES",
+      "icon": "fas fa-handshake",
+      "submenu": [
+        {
+          "id": "dette_f",
+          "type": "page",
+          "title": "DETTE_F",
+          "icon": "fas fa-file-invoice-dollar",
+          "page": "DETTE_F",
+          "permissionPage": "DETTE_F"
+        },
+        {
+          "id": "etat_f",
+          "type": "page",
+          "title": "ETAT_F",
+          "icon": "fas fa-chart-line",
+          "page": "ETAT_F",
+          "permissionPage": "ETAT_F"
+        },
+        {
+          "id": "etat_f_cumule",
+          "type": "page",
+          "title": "ETAT_F_CUMULE",
+          "icon": "fas fa-file-invoice",
+          "page": "ETAT_F_CUMULE",
+          "permissionPage": "ETAT_F_CUMULE"
+        }
+      ]
+    },
+    {
+      "type": "separator"
+    },
+    {
+      "id": "products",
+      "type": "section",
+      "title": "PRODUCTS",
+      "icon": "fas fa-shopping-bag",
+      "submenu": [
+        {
+          "id": "etatstock",
+          "type": "page",
+          "title": "État de Stock",
+          "icon": "fas fa-boxes",
+          "page": "Etatstock",
+          "permissionPage": "Etatstock"
+        },
+        {
+          "id": "mouvement_stock",
+          "type": "page",
+          "title": "Mouvement Stock",
+          "icon": "fas fa-exchange-alt",
+          "page": "Mouvement_Stock",
+          "permissionPage": "Mouvement Stock"
+        },
+        {
+          "id": "product",
+          "type": "page",
+          "title": "Marge",
+          "icon": "fas fa-percentage",
+          "page": "Product",
+          "permissionPage": "Product"
+        },
+        {
+          "id": "rotation",
+          "type": "page",
+          "title": "Rotation",
+          "icon": "fas fa-sync-alt",
+          "page": "Rotation",
+          "permissionPage": "Rotation"
+        },
+        {
+          "id": "quota",
+          "type": "page",
+          "title": "Quota Produit",
+          "icon": "fas fa-bullseye",
+          "page": "Quota",
+          "permissionPage": "Quota"
+        }
+      ]
+    },
+    {
+      "type": "separator"
+    },
+    {
+      "id": "recaps_achat",
+      "type": "section",
+      "title": "RECAPS ACHAT",
+      "icon": "fas fa-cart-plus",
+      "submenu": [
+        {
+          "id": "recap_achat",
+          "type": "page",
+          "title": "Recap Achat",
+          "icon": "fas fa-shopping-cart",
+          "page": "Recap_Achat",
+          "permissionPage": "Recap_Achat"
+        },
+        {
+          "id": "recap_achat_facturation",
+          "type": "page",
+          "title": "Recap Achat F",
+          "icon": "fas fa-file-invoice",
+          "page": "recap_achat_facturation",
+          "permissionPage": "recap_achat_facturation"
+        },
+        {
+          "id": "annual_recap_a",
+          "type": "page",
+          "title": "Annual Recap",
+          "icon": "fas fa-calendar-alt",
+          "page": "Annual_Recap_A",
+          "permissionPage": "Annual_Recap_A"
+        },
+        {
+          "id": "rot_men_achat",
+          "type": "page",
+          "title": "rot_men_achat",
+          "icon": "fas fa-calendar-alt",
+          "page": "rot_men_achat",
+          "permissionPage": "rot_men_achat"
+        }
+      ]
+    },
+    {
+      "id": "recaps_vente",
+      "type": "section",
+      "title": "RECAPS VENTE",
+      "icon": "fas fa-cash-register",
+      "submenu": [
+        {
+          "id": "recap_vente",
+          "type": "page",
+          "title": "Recap Vente",
+          "icon": "fas fa-money-bill-wave",
+          "page": "Recap_Vente",
+          "permissionPage": "Recap_Vente"
+        },
+        {
+          "id": "portf",
+          "type": "page",
+          "title": "Client Portfeuille",
+          "icon": "fas fa-user-friends",
+          "page": "portf",
+          "permissionPage": "portf"
+        },
+        {
+          "id": "recap_vente_facturation",
+          "type": "page",
+          "title": "Recap Vente F",
+          "icon": "fas fa-file-invoice-dollar",
+          "page": "Recap_Vente_Facturation",
+          "permissionPage": "Recap_Vente_Facturation"
+        },
+        {
+          "id": "annual_recap_v",
+          "type": "page",
+          "title": "Annual Recap",
+          "icon": "fas fa-calendar-check",
+          "page": "Annual_Recap_V",
+          "permissionPage": "Annual_Recap_V"
+        },
+        {
+          "id": "confirmed_orders",
+          "type": "page",
+          "title": "Confirm Order",
+          "icon": "fas fa-check-circle",
+          "page": "CONFIRMED_ORDERS",
+          "permissionPage": "CONFIRMED_ORDERS"
+        },
+        {
+          "id": "rot_men_vente",
+          "type": "page",
+          "title": "rot_men_vente",
+          "icon": "fas fa-calendar-alt",
+          "page": "rot_men_vente",
+          "permissionPage": "rot_men_vente"
+        },
+        {
+          "id": "simulation",
+          "type": "page",
+          "title": "Simulation",
+          "icon": "fas fa-calculator",
+          "page": "simuler",
+          "permissionPage": "simulation"
+        },
+        {
+          "id": "retour_orm",
+          "type": "page",
+          "title": "retour ORM",
+          "icon": "fas fa-undo",
+          "page": "retour",
+          "permissionPage": "retour ORM",
+          "hoverClass": "hover:bg-blue-100 dark:hover:bg-blue-900"
+        }
+      ]
+    },
+    {
+      "type": "separator"
+    },
+    {
+      "id": "inventory",
+      "type": "section",
+      "title": "INVENTORY",
+      "icon": "fas fa-clipboard-list",
+      "submenu": [
+        {
+          "id": "create_inventory",
+          "type": "page",
+          "title": "Create Inventory",
+          "icon": "fas fa-plus-circle",
+          "page": "inv",
+          "permissionPage": "inventory/inv"
+        },
+        {
+          "id": "manage_inventory",
+          "type": "page",
+          "title": "Manage Inventory",
+          "icon": "fas fa-cogs",
+          "page": "inv_admin",
+          "permissionPage": "inventory/inv_admin"
+        },
+        {
+          "id": "saisie_inventory",
+          "type": "page",
+          "title": "Saisie Inventory",
+          "icon": "fas fa-edit",
+          "page": "inv_saisie",
+          "permissionPage": "inventory/inv_saisie"
+        }
+      ]
+    },
+    {
+      "type": "separator"
+    },
+    {
+      "id": "journal_vente",
+      "type": "page",
+      "title": "Journal de Vente",
+      "icon": "fas fa-book",
+      "page": "Journal_Vente",
+      "permissionPage": "Journal_Vente"
+    },
+    {
+      "type": "separator"
+    },
+    {
+      "id": "affectation",
+      "type": "page",
+      "title": "Affectation",
+      "icon": "fas fa-tasks",
+      "page": "AFFECTATION",
+      "permissionPage": "AFFECTATION"
+    }
+  ]
+}

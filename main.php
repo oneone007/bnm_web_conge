@@ -1,5 +1,4 @@
-
-<?php
+ <?php
 session_start();
 
 // Check for force logout by admin
@@ -315,24 +314,43 @@ file_put_contents(__DIR__ . "/login_logs.txt", $log_entry, FILE_APPEND);
     cursor: grabbing;
 }
 
+/* Custom Dark Mode Styles */
+body.dark-mode {
+    background-color: #111827 !important;
+    color: #f3f4f6 !important;
+}
+
+/* Theme toggle button */
+#themeToggleBtn {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 1000;
+  padding: 8px 10px;
+  border-radius: 9999px;
+  border: 1px solid rgba(0,0,0,0.1);
+  background: #ffffffcc;
+  color: #111827;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+.dark #themeToggleBtn,
+body.dark-mode #themeToggleBtn {
+  background: #111827cc;
+  color: #f3f4f6;
+  border-color: rgba(255,255,255,0.12);
+}
+
         </style>
     </head>
-    <body class="flex h-screen bg-gray-100 dark:bg-gray-900">
+    <body class="flex h-screen bg-gray-100">
     
 
-  <!-- Dark Mode Toggle (Top Right) -->
+  <!-- Dark Mode Toggle handled by theme.js -->
 
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
-<script>
-    lottie.loadAnimation({
-        container: document.getElementById("lottieContainer"),
-        renderer: "svg",
-        loop: true,
-        autoplay: true,
-        path: "json_files/r.json" // Replace with actual path to your .rjson file
-    });
-</script>
+
 
 <!-- Sidebar -->
 
@@ -660,25 +678,9 @@ body {
         if (content) content.style.display = 'block';
     }
 
-    const toggle = document.getElementById('themeToggle');
-
-    // Apply saved theme on load
-    if (localStorage.getItem('theme') === 'dark') {
-        document.body.classList.add('dark-mode');
-        toggle.checked = true;
-    }
-
-    toggle.addEventListener('change', () => {
-        const isDark = toggle.checked;
-        document.body.classList.toggle('dark-mode', isDark);
-        localStorage.setItem('theme', isDark ? 'dark' : 'light');
-
-        // Apply to all open tab contents
-        document.querySelectorAll('.tab-pane').forEach(tab => {
-            tab.classList.toggle('dark-mode', isDark);
-        });
-    });
-</script>
+  // Theme handling moved to theme.js
+  </script>
+  <script src="theme.js"></script>
 
 <style>
    .canvas-container {
@@ -907,6 +909,7 @@ body {
     }
     .quick-options {
       display: flex; flex-wrap: wrap; gap: 5px;
+      max-height: 150px; overflow-y: auto; padding: 5px;
     }
     .quick-option {
       background-color: #e7f3fe; border: 1px solid #b8daff; border-radius: 15px;
@@ -919,7 +922,7 @@ body {
       margin-bottom: 10px; padding: 8px 12px; border-radius: 18px; max-width: 80%; word-wrap: break-word;
     }
     .bot-message {
-      background-color: #e5e5ea; align-self: flex-start; margin-right: auto;
+      background-color: #e5e5ea; align-self: flex-start; margin-right: auto; color: black;
     }
     .user-message {
       background-color: #4CAF50; color: white; align-self: flex-end; margin-left: auto;
@@ -927,6 +930,7 @@ body {
     #userInput {
       width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;
       resize: none; font-family: inherit; font-size: 14px; height: 60px;
+      background-color: white; color: black;
     }
     #sendButton {
       width: 100%; padding: 10px; background-color: #4CAF50; color: white; border: none;
@@ -1009,9 +1013,9 @@ function showInitialMessage() {
   addBotMessage("Hi! I'm BNM Parapharm Bot. How can I assist you today?");
   const quickOptions = document.getElementById('quickOptions');
   quickOptions.innerHTML = `
-    <div class="quick-option" onclick="selectOption('report_bug')">Report a Bug</div>
-    <div class="quick-option" onclick="selectOption('make_suggestion')">Make a Suggestion</div>
-    <div class="quick-option" onclick="selectOption('give_opinion')">Give Opinion</div>
+    <div  style="color:black" class="quick-option" onclick="selectOption('report_bug')">Report a Bug</div>
+    <div  style="color:black" class="quick-option" onclick="selectOption('make_suggestion')">Make a Suggestion</div>
+    <div style="color:black" class="quick-option" onclick="selectOption('give_opinion')">Give Opinion</div>
   `;
 }
 
@@ -1030,20 +1034,35 @@ function selectOption(option) {
       quickOptions.innerHTML = `
         <div class="quick-option" onclick="selectPage('Main')">🏠 Accueil</div>
         <div class="quick-option" onclick="selectPage('mony')">📈 FONDS Analysis</div>
+        <div class="quick-option" onclick="selectPage('print')">🖨️ Print</div>
         <div class="quick-option" onclick="selectPage('bank')">🏦 Banks</div>
-        <div class="quick-option" onclick="selectPage('ETAT_Fourniseeur')">🤝 CREANCES/DETTES</div>
-        <div class="quick-option" onclick="selectPage('Etatstock')">📦 ÉTAT DE STOCK</div>
-        <div class="quick-option" onclick="selectPage('Product')">🛍️ PRODUCTS</div>
-        <div class="quick-option" onclick="selectPage('Rotation')">🔄 ROTATION</div>
-        <div class="quick-option" onclick="selectPage('Quota')">🎯 PRODUIT QUOTA</div>
+        <div class="quick-option" onclick="selectPage('recouverement')">💰 Recouvrement</div>
+        <div class="quick-option" onclick="selectPage('charge')">💳 Charges</div>
+        <div class="quick-option" onclick="selectPage('DETTE_F')">💸 DETTE_F</div>
+        <div class="quick-option" onclick="selectPage('ETAT_F')">📊 ETAT_F</div>
+        <div class="quick-option" onclick="selectPage('ETAT_F_CUMULE')">📈 ETAT_F_CUMULE</div>
+        <div class="quick-option" onclick="selectPage('Etatstock')">📦 État de Stock</div>
+        <div class="quick-option" onclick="selectPage('Mouvement_Stock')">🔄 Mouvement Stock</div>
+        <div class="quick-option" onclick="selectPage('Product')">🛍️ Marge</div>
+        <div class="quick-option" onclick="selectPage('Rotation')">🔄 Rotation</div>
+        <div class="quick-option" onclick="selectPage('Quota')">🎯 Quota Produit</div>
         <div class="quick-option" onclick="selectPage('Recap_Achat')">🛒 Recap Achat</div>
         <div class="quick-option" onclick="selectPage('recap_achat_facturation')">🧾 Recap Achat F</div>
-        <div class="quick-option" onclick="selectPage('Annual_Recap_A')">📆 Annual Recap</div>
+        <div class="quick-option" onclick="selectPage('Annual_Recap_A')">� Annual Recap A</div>
+        <div class="quick-option" onclick="selectPage('rot_men_achat')">📅 rot_men_achat</div>
         <div class="quick-option" onclick="selectPage('Recap_Vente')">💰 Recap Vente</div>
+        <div class="quick-option" onclick="selectPage('portf')">👥 Client Portfeuille</div>
         <div class="quick-option" onclick="selectPage('Recap_Vente_Facturation')">🧾 Recap Vente F</div>
-        <div class="quick-option" onclick="selectPage('Annual_Recap_V')">📆 Annual Recap</div>
-        <div class="quick-option" onclick="selectPage('Journal_Vente')">📝 Journal de Vente</div>
+        <div class="quick-option" onclick="selectPage('Annual_Recap_V')">� Annual Recap V</div>
         <div class="quick-option" onclick="selectPage('CONFIRMED_ORDERS')">✅ Confirm Order</div>
+        <div class="quick-option" onclick="selectPage('rot_men_vente')">📅 rot_men_vente</div>
+        <div class="quick-option" onclick="selectPage('simuler')">🧮 Simulation</div>
+        <div class="quick-option" onclick="selectPage('retour')">↩️ retour ORM</div>
+        <div class="quick-option" onclick="selectPage('inv')">➕ Create Inventory</div>
+        <div class="quick-option" onclick="selectPage('inv_admin')">⚙️ Manage Inventory</div>
+        <div class="quick-option" onclick="selectPage('inv_saisie')">✏️ Saisie Inventory</div>
+        <div class="quick-option" onclick="selectPage('Journal_Vente')">📝 Journal de Vente</div>
+        <div class="quick-option" onclick="selectPage('AFFECTATION')">📋 Affectation</div>
       `;
       document.getElementById('userInput').disabled = false;
       document.getElementById('sendButton').disabled = false;
@@ -1435,6 +1454,8 @@ window.addEventListener('beforeunload', function() {
 });
 </script>
 
+<!-- Scary Warning Popup for Saisie User -->
+<!-- Scary Warning Popup for Saisie User with Specific IP -->
 
 
 

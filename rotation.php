@@ -122,6 +122,12 @@ require_once 'check_permission.php';
         max-width: 250px;
         word-wrap: break-word;
         z-index: 1000;
+        transition: opacity 0.2s ease-in-out;
+        opacity: 0;
+    }
+    
+    #mapTooltip.show {
+        opacity: 1;
     }
     
     #mapTooltip::before {
@@ -1309,16 +1315,9 @@ async function calculateQtyInitial(data) {
         
         // For special rows (TOTAL, MOYENNE), calculate appropriate values
         specialRows.forEach(row => {
-            if (row.PERIOD === "TOTAL") {
-                // For TOTAL row, QTY_INITIAL could be the sum of all initial quantities
-                const totalInitial = periodsWithInitial.reduce((sum, p) => sum + (p.QTY_INITIAL || 0), 0);
-                row.QTY_INITIAL = totalInitial;
-            } else if (row.PERIOD === "MOYENNE") {
-                // For MOYENNE row, QTY_INITIAL could be the average of all initial quantities
-                const avgInitial = periodsWithInitial.length > 0 
-                    ? Math.round(periodsWithInitial.reduce((sum, p) => sum + (p.QTY_INITIAL || 0), 0) / periodsWithInitial.length)
-                    : 0;
-                row.QTY_INITIAL = avgInitial;
+            if (row.PERIOD === "TOTAL" || row.PERIOD === "MOYENNE") {
+                // Do not calculate or set QTY_INITIAL for TOTAL or MOYENNE rows
+                row.QTY_INITIAL = null;
             }
         });
         
@@ -1366,7 +1365,7 @@ async function updateRotationTable(data) {
                     <td class="border px-3 py-2 dark:border-gray-600">${row.PERIOD ?? 'N/A'}</td>
                     <td class="border px-3 py-2 dark:border-gray-600">${formatNumberWithSpace(row.QTY_VENDU ?? 0)}</td>
                     <td class="border px-3 py-2 dark:border-gray-600">${formatNumberWithSpace(row.QTY_ACHETÉ ?? 0)}</td>
-                    <td class="border px-3 py-2 dark:border-gray-600">${formatNumberWithSpace(row.QTY_INITIAL ?? 0)}</td>
+                    <td class="border px-3 py-2 dark:border-gray-600">${(row.PERIOD === "TOTAL" || row.PERIOD === "MOYENNE") ? '' : formatNumberWithSpace(row.QTY_INITIAL ?? 0)}</td>
                 </tr>
             `;
 
@@ -1881,17 +1880,34 @@ function getSelectedStyle(feature) {
     };
 }
 
+function getHighlightStyle(feature) {
+    const wilayaName = feature.properties.name;
+    const qty = getWilayaQty(wilayaName);
+    
+    return {
+        fillColor: getColorByQty(qty),
+        weight: 4,
+        opacity: 1,
+        color: '#1f2937', // Darker border on hover
+        dashArray: '',
+        fillOpacity: 1.0  // Full opacity on hover
+    };
+}
+
 // Event handlers for each feature
 function onEachFeature(feature, layer) {
     wilayaLayers.set(feature.properties.name, layer);
 
     layer.on({
         mouseover: function(e) {
-                       if (selectedWilaya !== layer) {
+            if (selectedWilaya !== layer) {
                 layer.setStyle(getHighlightStyle(feature));
             }
             layer.bringToFront();
             showMapTooltip(e, feature);
+        },
+        mousemove: function(e) {
+            updateTooltipPosition(e.originalEvent);
         },
         mouseout: function(e) {
             if (selectedWilaya !== layer) {
@@ -1935,19 +1951,25 @@ function showMapTooltip(e, feature) {
     
     document.getElementById('tooltipContent').innerHTML = tooltipContent;
     mapTooltip.style.display = 'block';
+    mapTooltip.classList.add('show');
     updateTooltipPosition(e.originalEvent);
 }
 
 // Hide tooltip
 function hideMapTooltip() {
     if (mapTooltip) {
-        mapTooltip.style.display = 'none';
+        mapTooltip.classList.remove('show');
+        setTimeout(() => {
+            if (!mapTooltip.classList.contains('show')) {
+                mapTooltip.style.display = 'none';
+            }
+        }, 200); // Match the CSS transition duration
     }
 }
 
 // Update tooltip position
 function updateTooltipPosition(e) {
-    if (mapTooltip && mapTooltip.style.display === 'block') {
+    if (mapTooltip && mapTooltip.classList.contains('show')) {
         const mapDiv = document.getElementById('mapDiv');
         const mapRect = mapDiv.getBoundingClientRect();
         const tooltipRect = mapTooltip.getBoundingClientRect();

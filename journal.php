@@ -19,21 +19,17 @@ require_once 'check_permission.php';
 
 <!DOCTYPE html>
 <html lang="en">
-
+ 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Journal</title>
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <script src="theme.js"></script>
-            <script src="api_config.js"></script>
-
+    <script src="api_config.js"></script>
     <link rel="stylesheet" href="journal.css">
-
-
 </head>
 
 
@@ -43,55 +39,22 @@ require_once 'check_permission.php';
 
 <body class="flex h-screen bg-gray-100 dark:bg-gray-900">
     
-  
- <!-- Include SweetAlert2 Library (Add this to your HTML head if not already included) -->
- <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
-
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    Swal.fire({
-        title: "You are in Facturation Server!",
-        html: '<div id="lte-alert-icon" style="width:150px; height:150px; margin:0 auto;"></div>',
-        
-        confirmButtonText: "OK",
-        allowOutsideClick: false,
-        didOpen: () => {
-            // Load Lottie Animation
-            lottie.loadAnimation({
-                container: document.getElementById("lte-alert-icon"),
-                renderer: "svg",
-                loop: true,
-                autoplay: true,
-                path: "json_files/alrt.json" // Make sure this file is accessible
-            });
-        }
-    });
-});
-</script>
-
-
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
-    <script>
-        lottie.loadAnimation({
-            container: document.getElementById("lottieContainer"),
-            renderer: "svg",
-            loop: true,
-            autoplay: true,
-            path: "json_files/r.json" // Replace with actual path to your .rjson file
-        });
-    </script>
-
-
-
     <!-- Main Content -->
     <div id="content" class="content flex-grow p-4">
 
+        <!-- Facturation Server Banner -->
+        <div class="mb-4 bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 text-white p-3 rounded-lg shadow-md text-center">
+            <div class="flex items-center justify-center space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span class="font-medium">Facturation Server</span>
+            </div>
+        </div>
 
-    <div class="flex justify-center items-center mb-6">
-        <h1 class="text-5xl font-bold dark:text-white text-center  ">
-        Journal de Vente Fact 
+        <div class="flex justify-center items-center mb-6">
+            <h1 class="text-4xl font-bold dark:text-white text-center bg-gradient-to-r from-gray-700 to-gray-900 dark:from-white dark:to-gray-200 bg-clip-text text-transparent">
+                Journal de Vente Fact 
             </h1>
         </div>
 
@@ -108,57 +71,44 @@ document.addEventListener("DOMContentLoaded", function() {
 <!-- Search Fields -->
 
 
-        <br>
         <!-- Date Inputs -->
-        <div class="date-container flex space-x-4 items-center">
-            <div class="flex items-center space-x-2">
-                <label for="start-date">Begin Date:</label>
-                <input type="date" id="start-date" class="border rounded px-2 py-1">
-        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+            <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-4">Date Filter</h3>
+            <div class="date-container flex flex-wrap gap-4 items-center">
+                <div class="flex items-center space-x-2">
+                    <label for="start-date" class="text-sm font-medium text-gray-600 dark:text-gray-300">Begin Date:</label>
+                    <input type="date" id="start-date" class="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
 
-    <div class="flex items-center space-x-2">
-        <label for="end-date">End Date:</label>
-        <input type="date" id="end-date" class="border rounded px-2 py-1">
-    </div>
+                <div class="flex items-center space-x-2">
+                    <label for="end-date" class="text-sm font-medium text-gray-600 dark:text-gray-300">End Date:</label>
+                    <input type="date" id="end-date" class="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
 
-    <!-- Refresh Button with Icon -->
-    <button id="refresh-btn" class="p-3 bg-white text-blue-500 rounded-full shadow-lg hover:shadow-xl border border-blue-500 transition duration-200 flex items-center justify-center">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75a7.5 7.5 0 0 0 12.755 4.652M4.5 15.75H9m-4.5 0v4.5m15-7.5a7.5 7.5 0 0 0-12.755-4.652M19.5 8.25H15m4.5 0V3.75" />
-        </svg>
-    </button>
-</div>
-
-<br>
-
-<div class="search-container">
-            <div>
-                <label for="client_journal">Search Client:</label>
-                <input type="text" id="client_journal" placeholder="Search for client ...">
+                <!-- Refresh Button with Icon -->
+                <button id="refresh-btn" class="p-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition duration-200 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75a7.5 7.5 0 0 0 12.755 4.652M4.5 15.75H9m-4.5 0v4.5m15-7.5a7.5 7.5 0 0 0-12.755-4.652M19.5 8.25H15m4.5 0V3.75" />
+                    </svg>
+                </button>
             </div>
-   
-           
-        
         </div>
-        <br>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+            <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-4">Search Filters</h3>
+            <div class="search-container">
+                <div>
+                    <label for="client_journal" class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Search Client:</label>
+                    <input type="text" id="client_journal" placeholder="Search for client..." class="w-full max-w-md border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+            </div>
+        </div>
 
-
-
-<div >
-  <button class="Btn center-btn" id="downloadExcel_journal">
-    <div class="svgWrapper">
-      <img src="assets/excel.png" alt="Excel Icon" class="excelIcon" />
-      <div class="text">&nbsp;Download</div>
-      </div>
-  </button>
-</div>
-
-
-
-
-
-
-        <br>
+        <div class="flex justify-center mb-6">
+            <button class="flex items-center space-x-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-lg shadow-md hover:shadow-lg transition duration-200 font-medium" id="downloadExcel_journal">
+                <img src="assets/excel.png" alt="Excel Icon" class="w-5 h-5" />
+                <span>Download Excel</span>
+            </button>
+        </div>
         
         <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 p-6 text-center">
     <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Total journal de vente</h2>

@@ -43,12 +43,17 @@ function loadPermissions() {
         "Admin" => "all",
         "Developer" => "all",
         "DRH" => "all",
+        // New role: Achat (Purchasing) — limited access
+        "Vente" => [
+            "Arrivage" // Reception page (arrivals)
+        ],
         "Sup Achat" => [
             "Annual_Recap_A",
             "Annual_Recap_V",
             "DETTE_F",
             "ETAT_F",
             "ETAT_F_CUMULE",
+            "ETAT_F_CUMULE_PAIMENT",
             "Etatstock",
             "Product",
             "Recap_Achat",
@@ -56,6 +61,7 @@ function loadPermissions() {
             "Rotation",
             "inventory/inv",
             "rot_men_achat",
+            "Arrivage",
             "rot_men_vente"
         ],
         "Sup Vente" => [
@@ -69,12 +75,14 @@ function loadPermissions() {
             "Recap_Vente",
             "Rotation",
             "rot_men_vente",
+            "Arrivage",
             "simuler"
         ],
         "Comptable" => [
             "DETTE_F",
             "ETAT_F",
             "ETAT_F_CUMULE",
+            "ETAT_F_CUMULE_PAIMENT",
             "Journal_Vente",
             "Recap_Vente_Facturation",
             "bank",
@@ -140,6 +148,7 @@ function getPageIdentifier() {
         'dette_f' => 'DETTE_F',
         'etat_f' => 'ETAT_F',
         'etat_f_cumule' => 'ETAT_F_CUMULE',
+        'etat_f_cumule_paiment' => 'ETAT_F_CUMULE_PAIMENT',
         'Etatstock' => 'Etatstock',
         'product' => 'Product',
         'recap_achat' => 'Recap_Achat',
@@ -161,6 +170,8 @@ function getPageIdentifier() {
         'mony' => 'mony',
         'moneyv2' => 'mony',
         'print' => 'print',
+    'Arrivage' => 'Arrivage',
+    'reception' => 'Arrivage',
         'recap_achat_facturation' => 'recap_achat_facturation'
     ];
     
