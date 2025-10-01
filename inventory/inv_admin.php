@@ -34,6 +34,7 @@ $status_filter = isset($_GET['status']) ? $_GET['status'] : '';
 $date_from = isset($_GET['date_from']) ? $_GET['date_from'] : date('Y-m-d'); // Default to today
 $date_to = isset($_GET['date_to']) ? $_GET['date_to'] : date('Y-m-d'); // Default to today
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$product_search = isset($_GET['product_search']) ? trim($_GET['product_search']) : '';
 
 // Initialize empty array - data will be loaded via JavaScript
 $inventories = [];
@@ -52,187 +53,444 @@ $inventories = [];
 
 
     <style>
-        .status-pending { background-color: #fef3c7; color: #92400e; }
-        .status-confirmed { background-color: #dbeafe; color: #1e40af; }
-        .status-canceled { background-color: #fecaca; color: #991b1b; }
-        .status-done { background-color: #d1fae5; color: #065f46; }
-        .btn-confirm { background-color: #3b82f6; color: white; }
-        .btn-confirm:hover { background-color: #2563eb; }
-        .btn-cancel { background-color: #ef4444; color: white; }
-        .btn-cancel:hover { background-color: #dc2626; }
-        .btn-done { background-color: #10b981; color: white; }
-        .btn-done:hover { background-color: #059669; }
-        .btn-done:disabled { background-color: #9ca3af; cursor: not-allowed; }
-        .card {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            border: 1px solid #e5e7eb;
-            margin-bottom: 1rem;
-        }
-        .card-header {
-            background-color: #f9fafb;
-            border-bottom: 1px solid #e5e7eb;
-            border-radius: 8px 8px 0 0;
-            padding: 1rem;
-        }
-        .card-body {
-            padding: 1rem;
-        }
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-        .btn {
-            padding: 0.5rem 1rem;
-            border-radius: 0.375rem;
-            font-size: 0.875rem;
-            font-weight: 500;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin: 0.25rem;
-        }
-        .filter-section {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .loading {
-            opacity: 0.6;
-            pointer-events: none;
+        /* Professional Color Palette */
+        :root {
+            --primary-50: #eff6ff;
+            --primary-100: #dbeafe;
+            --primary-200: #bfdbfe;
+            --primary-300: #93c5fd;
+            --primary-400: #60a5fa;
+            --primary-500: #3b82f6;
+            --primary-600: #2563eb;
+            --primary-700: #1d4ed8;
+            --primary-800: #1e40af;
+            --primary-900: #1e3a8a;
+
+            --success-50: #f0fdf4;
+            --success-100: #dcfce7;
+            --success-500: #22c55e;
+            --success-600: #16a34a;
+            --success-700: #15803d;
+
+            --warning-50: #fffbeb;
+            --warning-100: #fef3c7;
+            --warning-500: #f59e0b;
+            --warning-600: #d97706;
+            --warning-700: #b45309;
+
+            --danger-50: #fef2f2;
+            --danger-100: #fee2e2;
+            --danger-500: #ef4444;
+            --danger-600: #dc2626;
+            --danger-700: #b91c1c;
+
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
         }
 
-        /* DARK MODE STYLES */
+        /* Modern Status Badges */
+        .status-pending {
+            background: linear-gradient(135deg, var(--warning-100) 0%, var(--warning-50) 100%);
+            color: var(--warning-700);
+            border: 1px solid var(--warning-200);
+            box-shadow: 0 1px 2px 0 rgba(245, 158, 11, 0.05);
+        }
+        .status-confirmed {
+            background: linear-gradient(135deg, var(--primary-100) 0%, var(--primary-50) 100%);
+            color: var(--primary-700);
+            border: 1px solid var(--primary-200);
+            box-shadow: 0 1px 2px 0 rgba(59, 130, 246, 0.05);
+        }
+        .status-canceled {
+            background: linear-gradient(135deg, var(--danger-100) 0%, var(--danger-50) 100%);
+            color: var(--danger-700);
+            border: 1px solid var(--danger-200);
+            box-shadow: 0 1px 2px 0 rgba(239, 68, 68, 0.05);
+        }
+        .status-done {
+            background: linear-gradient(135deg, var(--success-100) 0%, var(--success-50) 100%);
+            color: var(--success-700);
+            border: 1px solid var(--success-200);
+            box-shadow: 0 1px 2px 0 rgba(34, 197, 94, 0.05);
+        }
+
+        /* Enhanced Card Design */
+        .card {
+            background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--gray-200);
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transform: translateY(-2px);
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-500), var(--primary-600));
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--gray-50) 0%, #ffffff 100%);
+            border-bottom: 1px solid var(--gray-200);
+            border-radius: 12px 12px 0 0;
+            padding: 1.5rem;
+            position: relative;
+        }
+        .card-header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--gray-200), transparent);
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        /* Professional Badge Design */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.375rem 0.875rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+        }
+        .badge:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Modern Button Styles */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.625rem 1.25rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 0.25rem;
+            position: relative;
+            overflow: hidden;
+            text-decoration: none;
+        }
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-confirm {
+            background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+        }
+        .btn-confirm:hover {
+            background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .btn-cancel {
+            background: linear-gradient(135deg, var(--danger-500) 0%, var(--danger-600) 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+        }
+        .btn-cancel:hover {
+            background: linear-gradient(135deg, var(--danger-600) 0%, var(--danger-700) 100%);
+            box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .btn-done {
+            background: linear-gradient(135deg, var(--success-500) 0%, var(--success-600) 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(34, 197, 94, 0.2);
+        }
+        .btn-done:hover {
+            background: linear-gradient(135deg, var(--success-600) 0%, var(--success-700) 100%);
+            box-shadow: 0 4px 8px rgba(34, 197, 94, 0.3);
+            transform: translateY(-1px);
+        }
+        .btn-done:disabled {
+            background: var(--gray-400);
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* Enhanced Filter Section */
+        .filter-section {
+            background: linear-gradient(135deg, #ffffff 0%, var(--gray-50) 100%);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.06);
+            padding: 2rem;
+            margin-bottom: 2.5rem;
+            border: 1px solid var(--gray-200);
+            position: relative;
+            overflow: hidden;
+        }
+        .filter-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, var(--primary-500), var(--primary-600), var(--primary-700));
+        }
+
+        /* Form Input Enhancements */
+        .form-input {
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            background: white;
+        }
+        .form-input:focus {
+            border-color: var(--primary-500);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            outline: none;
+        }
+        .form-select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+        }
+
+        /* Loading States */
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+            position: relative;
+        }
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid var(--gray-300);
+            border-top: 2px solid var(--primary-500);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Enhanced Typography */
+        .page-title {
+            font-size: 2.25rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--gray-900), var(--gray-600));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+        .page-subtitle {
+            font-size: 1.125rem;
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        /* Stats Cards */
+        .stats-card {
+            background: linear-gradient(135deg, #ffffff 0%, var(--gray-50) 100%);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--gray-200);
+            transition: all 0.3s ease;
+        }
+        .stats-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .stats-number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--primary-600);
+        }
+        .stats-label {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Responsive Design Improvements */
+        @media (max-width: 768px) {
+            .filter-section {
+                padding: 1.5rem;
+                margin-bottom: 2rem;
+            }
+            .card-header, .card-body {
+                padding: 1rem;
+            }
+            .page-title {
+                font-size: 1.875rem;
+            }
+        }
+
+        /* DARK MODE STYLES - Enhanced */
         .dark .card {
-            background: #1f2937;
-            border-color: #374151;
-            color: #e5e7eb;
+            background: linear-gradient(135deg, var(--gray-800) 0%, var(--gray-900) 100%);
+            border-color: var(--gray-700);
+            color: var(--gray-100);
+        }
+        .dark .card::before {
+            background: linear-gradient(90deg, var(--primary-400), var(--primary-500));
         }
         .dark .card-header {
-            background-color: #374151;
-            border-bottom: 1px solid #e5e7eb;
-            color: #fde68a;
+            background: linear-gradient(135deg, var(--gray-700) 0%, var(--gray-800) 100%);
+            border-bottom: 1px solid var(--gray-600);
+            color: var(--gray-100);
         }
         .dark .card-body {
-            color: #e5e7eb;
-        }
-        .dark .badge.status-pending {
-            background-color: #92400e;
-            color: #fde68a;
-        }
-        .dark .badge.status-confirmed {
-            background-color: #1e40af;
-            color: #dbeafe;
-        }
-        .dark .badge.status-canceled {
-            background-color: #991b1b;
-            color: #fecaca;
-        }
-        .dark .badge.status-done {
-            background-color: #065f46;
-            color: #d1fae5;
-        }
-        .dark .btn-confirm {
-            background-color: #2563eb;
-            color: #e5e7eb;
-        }
-        .dark .btn-confirm:hover {
-            background-color: #1e40af;
-        }
-        .dark .btn-cancel {
-            background-color: #dc2626;
-            color: #e5e7eb;
-        }
-        .dark .btn-cancel:hover {
-            background-color: #991b1b;
-        }
-        .dark .btn-done {
-            background-color: #059669;
-            color: #e5e7eb;
-        }
-        .dark .btn-done:hover {
-            background-color: #065f46;
-        }
-        .dark .btn-done:disabled {
-            background-color: #374151;
-            color: #9ca3af;
+            color: var(--gray-100);
         }
         .dark .filter-section {
-            background: #1f2937;
-            color: #e5e7eb;
-            border-color: #374151;
+            background: linear-gradient(135deg, var(--gray-800) 0%, var(--gray-900) 100%);
+            border-color: var(--gray-700);
+            color: var(--gray-100);
+        }
+        .dark .filter-section::before {
+            background: linear-gradient(90deg, var(--primary-400), var(--primary-500), var(--primary-600));
+        }
+        .dark .form-input {
+            background: var(--gray-800);
+            border-color: var(--gray-600);
+            color: var(--gray-100);
+        }
+        .dark .form-input:focus {
+            border-color: var(--primary-400);
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+        }
+        .dark .stats-card {
+            background: linear-gradient(135deg, var(--gray-800) 0%, var(--gray-900) 100%);
+            border-color: var(--gray-700);
+        }
+        .dark .page-title {
+            background: linear-gradient(135deg, var(--gray-100), var(--gray-400));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .dark .page-subtitle {
+            color: var(--gray-400);
         }
         .dark body {
-            background-color: #111827;
-            color: #e5e7eb;
+            background: linear-gradient(135deg, var(--gray-900) 0%, var(--gray-800) 100%);
+            color: var(--gray-100);
         }
         .dark .bg-white {
-            background-color: #1f2937 !important;
-            color: #e5e7eb !important;
+            background: linear-gradient(135deg, var(--gray-800) 0%, var(--gray-900) 100%) !important;
+            color: var(--gray-100) !important;
         }
         .dark .bg-gray-100 {
-            background-color: #111827 !important;
-            color: #e5e7eb !important;
+            background: var(--gray-800) !important;
+            color: var(--gray-100) !important;
         }
         .dark .bg-gray-50 {
-            background-color: #374151 !important;
-            color: #e5e7eb !important;
+            background: var(--gray-700) !important;
+            color: var(--gray-100) !important;
         }
         .dark .text-gray-900 {
-            color: #e5e7eb !important;
+            color: var(--gray-100) !important;
         }
         .dark .text-gray-700 {
-            color: #d1d5db !important;
+            color: var(--gray-300) !important;
         }
         .dark .text-gray-600 {
-            color: #9ca3af !important;
+            color: var(--gray-400) !important;
         }
         .dark .text-blue-600 {
-            color: #dbeafe !important;
+            color: var(--primary-400) !important;
         }
         .dark .text-blue-800 {
-            color: #1e40af !important;
+            color: var(--primary-300) !important;
         }
         .dark .bg-blue-600 {
-            background-color: #1e40af !important;
-            color: #dbeafe !important;
+            background-color: var(--primary-600) !important;
+            color: white !important;
         }
         .dark .bg-blue-700 {
-            background-color: #2563eb !important;
-            color: #dbeafe !important;
+            background-color: var(--primary-700) !important;
+            color: white !important;
         }
         .dark .bg-green-50 {
-            background-color: #065f46 !important;
-            color: #d1fae5 !important;
+            background-color: var(--success-900) !important;
+            color: var(--success-100) !important;
         }
         .dark .bg-orange-50 {
-            background-color: #92400e !important;
-            color: #fde68a !important;
+            background-color: var(--warning-900) !important;
+            color: var(--warning-100) !important;
         }
         .dark .border-green-200 {
-            border-color: #065f46 !important;
+            border-color: var(--success-700) !important;
         }
         .dark .border-orange-200 {
-            border-color: #92400e !important;
+            border-color: var(--warning-700) !important;
         }
         .dark .border-l-orange-400 {
-            border-left-color: #f59e0b !important;
+            border-left-color: var(--warning-500) !important;
         }
         .dark .border-l-orange-600 {
-            border-left-color: #92400e !important;
+            border-left-color: var(--warning-700) !important;
         }
         .dark .border-blue-200 {
-            border-color: #1e40af !important;
+            border-color: var(--primary-700) !important;
         }
         .dark .modalContent {
-            background-color: #1f2937 !important;
-            color: #e5e7eb !important;
+            background-color: var(--gray-800) !important;
+            color: var(--gray-100) !important;
         }
 
         select {
@@ -251,22 +509,22 @@ $inventories = [];
 
         /* Tom Select Dark Mode Overrides */
         .dark .ts-dropdown {
-            background-color: #122645ff;
-            border-color: #193050ff;
-            color: #e5e7eb;
+            background-color: var(--gray-800);
+            border-color: var(--gray-700);
+            color: var(--gray-100);
         }
         .dark .ts-dropdown .active {
-            background-color: #0b1f39ff;
+            background-color: var(--gray-700);
         }
         .dark .ts-control {
-            background-color: #122544ff;
-            border-color: #0b1f3bff;
+            background-color: var(--gray-800);
+            border-color: var(--gray-700);
         }
         .dark .ts-control input {
-            color: black !important;
+            color: var(--gray-100) !important;
         }
         .dark .ts-dropdown .selected {
-            background-color: #1E40AF;
+            background-color: var(--primary-700);
         }
     </style>
         <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
@@ -276,20 +534,20 @@ $inventories = [];
     <div class="container mx-auto px-4 py-6">
         <!-- Page Header -->
         <div class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-gray-900 mb-2">
+            <h1 class="page-title">
                 📋 Inventory Administration
             </h1>
-            <p class="text-gray-600">Manage and track all inventory records</p>
+            <p class="page-subtitle">Manage and track all inventory records</p>
         </div>
 
         <!-- Filters Section -->
         <div class="filter-section">
             <h2 class="text-lg font-semibold text-gray-900 mb-4">Filters & Search</h2>
-            <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                 <!-- Status Filter -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                    <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select name="status" class="form-input form-select w-full">
                         <option value="all" <?= $status_filter === 'all' || $status_filter === '' ? 'selected' : '' ?>>All Statuses</option>
                         <option value="pending" <?= $status_filter === 'pending' ? 'selected' : '' ?>>Pending</option>
                         <option value="confirmed" <?= $status_filter === 'confirmed' ? 'selected' : '' ?>>Confirmed</option>
@@ -302,14 +560,14 @@ $inventories = [];
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Date From</label>
                     <input type="date" name="date_from" value="<?= htmlspecialchars($date_from) ?>" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                           class="form-input w-full">
                 </div>
 
                 <!-- Date To -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Date To</label>
                     <input type="date" name="date_to" value="<?= htmlspecialchars($date_to) ?>" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                           class="form-input w-full">
                 </div>
 
                 <!-- Search -->
@@ -317,12 +575,18 @@ $inventories = [];
                     <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
                     <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" 
                            placeholder="Title, notes, or user..."
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                           class="form-input w-full">
                 </div>
 
-                <!-- Filter Button -->
+                <!-- Product Search -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Product Search</label>
+                    <input type="text" name="product_search" value="<?= htmlspecialchars(isset($_GET['product_search']) ? $_GET['product_search'] : '') ?>" 
+                           placeholder="Search by product name..."
+                           class="form-input w-full">
+                </div>
                 <div class="flex items-end">
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium">
+                    <button type="submit" class="btn btn-confirm">
                         🔍 Filter
                     </button>
                 </div>
@@ -377,8 +641,8 @@ $inventories = [];
                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg font-medium">
                 ➕ New Inventory
             </a>
-        </div>
-    </div> -->
+        </div> -->
+    </div>
 
     <!-- Modal for Inventory Details -->
     <div id="detailsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
@@ -486,7 +750,8 @@ $inventories = [];
             status: urlParams.get('status') || '',
             date_from: urlParams.get('date_from') || '',
             date_to: urlParams.get('date_to') || '',
-            search: urlParams.get('search') || ''
+            search: urlParams.get('search') || '',
+            product_search: urlParams.get('product_search') || ''
         };
 
         // Sudo mode flag
@@ -566,6 +831,28 @@ $inventories = [];
                 
                 let inventories = apiResult.inventories || [];
                 
+                // Apply product search filter first if specified
+                if (filters.product_search) {
+                    try {
+                        const productResponse = await fetch(`${API_CONFIGinv.getApiUrl()}/inventory_product_search?product_name=${encodeURIComponent(filters.product_search)}`);
+                        if (productResponse.ok) {
+                            const productResult = await productResponse.json();
+                            if (productResult.success && productResult.inventories.length > 0) {
+                                // Get inventory IDs that contain the product
+                                const matchingInventoryIds = productResult.inventories.map(inv => inv.id);
+                                // Filter inventories to only include those with matching products
+                                inventories = inventories.filter(inv => matchingInventoryIds.includes(inv.id));
+                            } else {
+                                // No products found, show empty results
+                                inventories = [];
+                            }
+                        }
+                    } catch (error) {
+                        console.error('❌ Error searching products:', error);
+                        // Continue with normal filtering if product search fails
+                    }
+                }
+                
                 // Apply additional filters (date and search) since Python API doesn't support them yet
                 if (filters.date_from || filters.date_to || filters.search) {
                     inventories = inventories.filter(inventory => {
@@ -638,7 +925,7 @@ $inventories = [];
                         <div class="flex-1">
                             <div class="flex items-center gap-3 mb-2">
                                 <h3 class="text-lg font-semibold text-gray-900">
-                                    #${inventory.id} - ${escapeHtml(inventory.title)}
+                                    inv${inventory.id}/${new Date().getFullYear()} - ${escapeHtml(inventory.title)}
                                     ${inventory.casse === 'yes' ? '<span class="ml-2 px-2 py-1 bg-orange-100 text-orange-800 text-xs font-medium rounded-full">🏪 from casse</span>' : ''}
                                 </h3>
                                 <span class="badge status-${inventory.status}">
@@ -821,7 +1108,7 @@ async function showAttributeModal(item) {
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Prix Achat</label>
-                                <input type="number" step="0.01" name="Prix Achat" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white text-gray-900" value="0.00">
+                                <input type="number" step="0.01" name="Prix Achat" id="prix-achat" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white text-gray-900" value="0.00">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Colisage</label>
@@ -837,7 +1124,7 @@ async function showAttributeModal(item) {
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Prix Revient</label>
-                                <input type="number" step="0.01" name="Prix Revient" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white text-gray-900" value="0.00">
+                                <input type="number" step="0.01" name="Prix Revient" id="prix-revient" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white text-gray-900" value="0.00" readonly>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Fournisseur</label>
@@ -847,7 +1134,7 @@ async function showAttributeModal(item) {
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Bonus</label>
-                                <input type="number" step="0.01" name="Bonus" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white text-gray-900" value="0.00">
+                                <input type="number" step="0.01" name="Bonus" id="bonus" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white text-gray-900" value="0.00">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Bonus Vente</label>
@@ -855,7 +1142,7 @@ async function showAttributeModal(item) {
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Remise Supp</label>
-                                <input type="number" step="0.01" name="Remise Supp" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white text-gray-900" value="0.00">
+                                <input type="number" step="0.01" name="Remise Supp" id="remise-supp" class="mt-1 block w-full border border-gray-300 rounded-md p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white bg-white text-gray-900" value="0.00">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Remise Vente</label>
@@ -872,6 +1159,31 @@ async function showAttributeModal(item) {
                 </form>
             </div>
         `;
+
+        // Ajout du calcul automatique du prix de revient
+        setTimeout(() => {
+            const prixAchatInput = modal.querySelector('#prix-achat');
+            const remiseSuppInput = modal.querySelector('#remise-supp');
+            const bonusInput = modal.querySelector('#bonus');
+            const prixRevientInput = modal.querySelector('#prix-revient');
+
+            function calculePrixRevient() {
+                let prixAchat = parseFloat(prixAchatInput.value) || 0;
+                let remiseSupp = parseFloat(remiseSuppInput.value) || 0;
+                let bonus = parseFloat(bonusInput.value) || 0;
+                // Remise Supp est un pourcentage du prix achat
+                let prixRevient = 0;
+                if (prixAchat > 0) {
+                    prixRevient = (prixAchat - (prixAchat * (remiseSupp / 100))) / (1 + (bonus / 100));
+                }
+                prixRevientInput.value = prixRevient.toFixed(2);
+            }
+            prixAchatInput.addEventListener('input', calculePrixRevient);
+            remiseSuppInput.addEventListener('input', calculePrixRevient);
+            bonusInput.addEventListener('input', calculePrixRevient);
+            // Initialiser au chargement
+            calculePrixRevient();
+        }, 100);
 
         modal.querySelector('#attributeForm').addEventListener('submit', (e) => {
             e.preventDefault();
@@ -1224,6 +1536,7 @@ async function loadFournisseurs(item) {
             
             sortieItems.forEach(item => {
                 const isManual = item.is_manual_entry == 1;
+
                 html += `
                     <div class="bg-orange-50 p-3 rounded border border-orange-200${isManual ? ' border-l-4 border-l-red-500 bg-red-50 border-red-300' : ''}">
                         <div class="font-medium">${item.product_name}</div>

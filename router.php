@@ -32,7 +32,7 @@ $pages = [
         "inv_admin" => "inventory/inv_admin.php",
         "inv_saisie" => "inventory/saise.php",
         "inv_adv2" => "inventory/inv_admin_new.php",
-        "stock_inventory" => "stock_inventory.php",
+        "Manque_Casse" => "manque_casse.php",
 
         "inv_ad" => "inventory/inv_admin.php",
         "print" => "printing.php",
@@ -67,7 +67,7 @@ $pages = [
 
     "side" => "sidebar.php",
     "Quota" => "quota.php",
-    "bank" => "bank.php",
+    "bank" => "bank_improved.php",
 
     "editnavbar" => "sidebar/editnavbar.php",
     "login" => "login.php",

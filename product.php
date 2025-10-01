@@ -26,13 +26,13 @@ require_once 'check_permission.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Products</title>
+    <title>Products data</title>
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="product.css">
-    <link rel="stylesheet" href="prdct.css">
+    <link rel="stylesheet" href="product_marge.css">
+    <link rel="stylesheet" href="prdct_marge.css">
         <script src="api_config.js"></script>
 
     <script>
@@ -78,7 +78,7 @@ require_once 'check_permission.php';
     <div id="content" class="content flex-grow p-4">
     <div class="flex justify-center items-center mb-6">
             <h1 class="text-5xl font-bold dark:text-white text-center  ">
-                 Products 
+                 Products data 
             </h1>
         </div>
       
@@ -104,7 +104,7 @@ require_once 'check_permission.php';
             <!-- <input type="text" id="search-supplier" placeholder="Search Fournisseur..." class="border px-3 py-2 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white" oninput="filterDropdown('supplier')"> -->
         </div>
         <div class="w-96 mx-auto flex items-center gap-3 p-4 bg-white rounded-lg shadow-md">
-    <button id="margeConditionBtn" class="px-5 py-2 bg-blue-600 text-white rounded-lg font-semibold shadow-md hover:bg-blue-700 transition-all">
+    <button id="margeConditionBtn" class="btn btn-primary">
          Condition
     </button>
     <input type="number" id="margeInput" class="w-32 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="MARGE" />
@@ -114,7 +114,7 @@ require_once 'check_permission.php';
         <br>
         
   
-        <button id="refresh-btn" class="px-4 py-2 bg-gray-500 text-white rounded-lg shadow-md hover:bg-gray-600 transition duration-200 flex items-center gap-2">
+        <button id="refresh-btn" class="btn btn-secondary">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
         <path fill-rule="evenodd" d="M10 2a8 8 0 00-8 8H0l3 3 3-3H4a6 6 0 111.757 4.243l1.414 1.414A8 8 0 0010 2z" clip-rule="evenodd"/>
     </svg>
@@ -125,24 +125,11 @@ require_once 'check_permission.php';
 
 
         <div class="container">
-  <button id="downloadExcel" class="button dark:text-gray-900">
-    <img src="assets/excel.png" alt="Excel Icon" class="icon" style="width: 24px; height: 24px;" />
-    <p class="text dark:text-gray-900">
-      <span style="transition-duration: 100ms" class="dark:text-gray-900">D</span>
-      <span style="transition-duration: 150ms" class="dark:text-gray-900">o</span>
-      <span style="transition-duration: 200ms">w</span>
-      <span style="transition-duration: 250ms">n</span>
-      <span style="transition-duration: 350ms">l</span>
-      <span style="transition-duration: 400ms">o</span>
-      <span style="transition-duration: 450ms">a</span>
-      <span style="transition-duration: 500ms">d</span>
-      <span class="tab"></span>
-      <span style="transition-duration: 550ms">E</span>
-      <span style="transition-duration: 600ms">x</span>
-      <span style="transition-duration: 650ms">c</span>
-      <span style="transition-duration: 700ms">e</span>
-      <span style="transition-duration: 750ms">l</span>
-    </p>
+  <button id="downloadExcel" class="excel-btn excel-btn-primary">
+    <div class="excel-icon">
+        <img src="assets/excel.png" alt="Excel Icon" />
+    </div>
+    <span class="excel-text">Download Excel</span>
   </button>
 </div>
 
@@ -151,251 +138,67 @@ require_once 'check_permission.php';
         <br>
      
         <!-- Data Table -->
-        <style>
-/* General table styles */
-table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: auto; /* Allow columns to resize dynamically */
-}
-
-/* Styles for table cells */
-th, td {
-    padding: 8px;
-    border: 1px solid #ddd;
-    text-align: left;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    /* Removed max-width for resizer to work */
-    height: 40px;
-}
-
-/* Header styles */
-th {
-    background-color: #f2f2f2;
-    font-weight: bold;
-}
-
-/* To avoid horizontal scrolling */
-.container {
-    overflow-x: auto; /* Adds horizontal scroll if content is wider than container */
-}
-
-/* Optional: If you want to allow resizing columns */
-th {
-    cursor: ew-resize; /* Changes the cursor to indicate resizable columns */
-}
-
-/* Zebra striping for alternating rows */
-tr:nth-child(even) {
-    background-color: #f9f9f9;
-}
-/* new update */
-
-
-
-
-
-
-
-
-/* Specific styles for the table with many columns */
-.table-container {
-    overflow-x: auto;
-    margin: 20px 0;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;  /* Makes the table layout more predictable */
-}
-
-th, td {
-    padding: 8px 12px;  /* Reduces the padding for better fitting */
-    text-align: left;
-    word-wrap: break-word;
-}
-
-/* Smaller header font and making column headers more compact */
-th {
-    font-size: 0.75rem;  /* Even smaller font for headers */
-    font-weight: 600;
-    text-align: center;  /* Center align header text */
-    padding: 4px 8px;    /* Reduced padding */
-}
-
-/* Resizing numeric columns for better alignment */
-th[data-column="MARGE"],
-th[data-column="QTY"],
-th[data-column="QTY_DISPO"],
-
-th[data-column="P_ACHAT"],
-th[data-column="REM_ACHAT"],
-th[data-column="BON_ACHAT"],
-th[data-column="P_REVIENT"],
-th[data-column="P_VENTE"],
-th[data-column="REM_VENTE"],
-th[data-column="BON_VENTE"],
-th[data-column="REMISE_AUTO"],
-th[data-column="BONUS_AUTO"],
-th[data-column="PPA"] {
-    width: 60px;  /* Smaller fixed width for number-heavy columns */
-    white-space: nowrap;  /* Prevents text wrapping */
-}
-
-th[data-column="LOCATION"],
-th[data-column="LOT"],
-th[data-column="GUARANTEEDATE"] {
-    width: 80px;  /* Reduced width for these columns */
-}
-
-th[data-column="FOURNISSEUR"],
-th[data-column="PRODUCT"] {
-    width: 120px;  /* Controlled width for text columns */
-}
-
-/* Table rows */
-td {
-    font-size: 0.75rem;  /* Smaller font for table data */
-    text-align: center;  /* Center align numeric data */
-    padding: 4px 8px;    /* Reduced padding */
-}
-
-/* Alternate row colors for better readability */
-
-
-/* Resizer divs for resizable columns */
-.resizer {
-    cursor: ew-resize;
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 5px;
-    height: 100%;
-    background: transparent;
-    user-select: none;
-    z-index: 1;
-}
-
-.resizer:hover {
-    background: rgba(0, 0, 0, 0.1);
-}
-
-.resizable {
-    position: relative;
-}
-
-/* Sticky header for long tables */
-thead {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-}
-
-/* Mobile responsiveness */
-@media (max-width: 768px) {
-    table {
-        width: 100%;
-        font-size: 0.75rem;  /* Smaller font on smaller screens */
-    }
-
-    th, td {
-        padding: 6px 8px;  /* Smaller padding */
-    }
-
-    th[data-column="MARGE"],
-    th[data-column="QTY"],
-    th[data-column="QTY_DISPO"],
-
-    th[data-column="P_ACHAT"],
-    th[data-column="REM_ACHAT"],
-    th[data-column="BON_ACHAT"],
-    th[data-column="P_REVIENT"],
-    th[data-column="P_VENTE"],
-    th[data-column="REM_VENTE"],
-    th[data-column="BON_VENTE"],
-    th[data-column="REMISE_AUTO"],
-    th[data-column="BONUS_AUTO"],
-    th[data-column="PPA"] {
-        width: 45px;  /* Even smaller width on mobile for numeric columns */
-    }
-
-    th[data-column="LOCATION"],
-    th[data-column="LOT"],
-    th[data-column="GUARANTEEDATE"] {
-        width: 60px;  /* Adjusted column widths for mobile */
-    }
-
-    th[data-column="FOURNISSEUR"],
-    th[data-column="PRODUCT"] {
-        width: 80px;  /* Smaller width for text columns on mobile */
-    }
-}
-
-</style>
 
         <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
     <div class="overflow-x-auto">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center font-bold">MARGE Table</h2>
-
+        
         <table class="min-w-full border-collapse text-sm text-left dark:text-white">
     <thead>
         <tr class="table-header dark:bg-gray-700">
-            <th data-column="FOURNISSEUR" onclick="sortTable('FOURNISSEUR')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+            <th data-column="FOURNISSEUR" onclick="sortTable('FOURNISSEUR')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer text-xs">
                 Fournisseur <div class="resizer"></div>
             </th>
-            <th data-column="PRODUCT" onclick="sortTable('PRODUCT')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+            <th data-column="PRODUCT" onclick="sortTable('PRODUCT')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer">
                 Produit <div class="resizer"></div>
             </th>
-            <th data-column="MARGE" onclick="sortTable('MARGE')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+            <th data-column="MARGE" onclick="sortTable('MARGE')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer text-xs">
                 Marge <div class="resizer"></div>
             </th>
-            <th data-column="QTY" onclick="sortTable('QTY')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+            <th data-column="QTY" onclick="sortTable('QTY')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer text-xs">
                 Qty <div class="resizer"></div>
             </th>
-            <th data-column="QTY_DISPO" onclick="sortTable('QTY_DISPO')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+            <th data-column="QTY_DISPO" onclick="sortTable('QTY_DISPO')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer text-xs">
                 QTY_DISPO
                 <div class="resizer"></div>
             </th>
-            <th data-column="P_ACHAT" onclick="sortTable('P_ACHAT')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+            <th data-column="P_ACHAT" onclick="sortTable('P_ACHAT')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer text-xs">
                 P_A <div class="resizer"></div>
             </th>
-            <th data-column="REM_ACHAT" onclick="sortTable('REM_ACHAT')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+            <th data-column="REM_ACHAT" onclick="sortTable('REM_ACHAT')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer text-xs">
                 R_A <div class="resizer"></div>
             </th>
-            <th data-column="BON_ACHAT" onclick="sortTable('BON_ACHAT')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+            <th data-column="BON_ACHAT" onclick="sortTable('BON_ACHAT')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer text-xs">
                 B_A <div class="resizer"></div>
             </th>
-            <th data-column="P_REVIENT" onclick="sortTable('P_REVIENT')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+            <th data-column="P_REVIENT" onclick="sortTable('P_REVIENT')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer text-xs">
                 P_R <div class="resizer"></div>
             </th>
-            <th data-column="P_VENTE" onclick="sortTable('P_VENTE')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+            <th data-column="P_VENTE" onclick="sortTable('P_VENTE')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer text-xs">
                 P_V <div class="resizer"></div>
             </th>
-            <th data-column="REM_VENTE" onclick="sortTable('REM_VENTE')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+            <th data-column="REM_VENTE" onclick="sortTable('REM_VENTE')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer text-xs">
                 R_V <div class="resizer"></div>
             </th>
-            <th data-column="BON_VENTE" onclick="sortTable('BON_VENTE')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+            <th data-column="BON_VENTE" onclick="sortTable('BON_VENTE')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer text-xs">
                 B_V <div class="resizer"></div>
             </th>
-            <th data-column="REMISE_AUTO" onclick="sortTable('REMISE_AUTO')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+            <th data-column="REMISE_AUTO" onclick="sortTable('REMISE_AUTO')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer text-xs">
                 Rem_A <div class="resizer"></div>
             </th>
-            <th data-column="BONUS_AUTO" onclick="sortTable('BONUS_AUTO')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+            <th data-column="BONUS_AUTO" onclick="sortTable('BONUS_AUTO')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer text-xs">
                 Bo_A <div class="resizer"></div>
             </th>
-            <th data-column="PPA" onclick="sortTable('PPA')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+            <th data-column="PPA" onclick="sortTable('PPA')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer text-xs">
                 PPA <div class="resizer"></div>
             </th>
-            <th data-column="LOCATION" onclick="sortTable('LOCATION')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+            <th data-column="LOCATION" onclick="sortTable('LOCATION')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer text-xs">
                 Location <div class="resizer"></div>
             </th>
-            <th data-column="LOT" onclick="sortTable('LOT')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+            <th data-column="LOT" onclick="sortTable('LOT')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer text-xs">
                 Lot <div class="resizer"></div>
             </th>
-            <th data-column="GUARANTEEDATE" onclick="sortTable('GUARANTEEDATE')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-xs">
+            <th data-column="GUARANTEEDATE" onclick="sortTable('GUARANTEEDATE')" class="resizable border border-gray-300 px-2 py-1 dark:border-gray-600 cursor-pointer text-xs">
                 Exp_Date <div class="resizer"></div>
             </th>
         </tr>
@@ -503,58 +306,18 @@ thead {
         <div class="download-wrapper">
 
     
-  <button id="downloadExcel_REMISE" class="buttonn">
-        <img src="assets/excel.png" alt="Excel Icon" class="icon" style="width: 24px; height: 24px;" />
-
-  <p>Download</p>
-  <div class="liquid">
-    <span style="--i:0"><span></span></span>
-    <span style="--i:1"><span></span></span>
-    <span style="--i:2"><span></span></span>
-    <span style="--i:3"><span></span></span>
-    <span style="--i:4"><span></span></span>
-    <span style="--i:5"><span></span></span>
-    <span style="--i:6"><span></span></span>
-    <span class="bg"><span></span></span>
-  </div>
-  <svg>
-    <filter id="gooey">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="10"></feGaussianBlur>
-      <feColorMatrix
-        values="1 0 0 0 0
-          0 1 0 0 0 
-          0 0 1 0 0
-          0 0 0 20 -10"
-      ></feColorMatrix>
-    </filter>
-  </svg>
-</button>
-<button id="downloadExcel_BONUS" class="buttonn">
-        <img src="assets/excel.png" alt="Excel Icon" class="icon" style="width: 24px; height: 24px;" />
-
-  <p>Download</p>
-  <div class="liquid">
-    <span style="--i:0"><span></span></span>
-    <span style="--i:1"><span></span></span>
-    <span style="--i:2"><span></span></span>
-    <span style="--i:3"><span></span></span>
-    <span style="--i:4"><span></span></span>
-    <span style="--i:5"><span></span></span>
-    <span style="--i:6"><span></span></span>
-    <span class="bg"><span></span></span>
-  </div>
-  <svg>
-    <filter id="gooey">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="10"></feGaussianBlur>
-      <feColorMatrix
-        values="1 0 0 0 0
-          0 1 0 0 0 
-          0 0 1 0 0
-          0 0 0 20 -10"
-      ></feColorMatrix>
-    </filter>
-  </svg>
-</button>
+  <button id="downloadExcel_REMISE" class="excel-btn excel-btn-primary">
+        <div class="excel-icon">
+            <img src="assets/excel.png" alt="Excel Icon" />
+        </div>
+        <span class="excel-text">Download Remise</span>
+  </button>
+<button id="downloadExcel_BONUS" class="excel-btn excel-btn-primary">
+        <div class="excel-icon">
+            <img src="assets/excel.png" alt="Excel Icon" />
+        </div>
+        <span class="excel-text">Download Bonus</span>
+  </button>
 
         </div>
 
@@ -578,19 +341,19 @@ thead {
                     <table class="min-w-full border-collapse text-sm text-left dark:text-white">
                         <thead>
                             <tr class="table-header dark:bg-gray-700">
-                                <th data-column="FOURNISSEUR" onclick="sortRemiseTable('FOURNISSEUR')" class="resizable border px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                                <th data-column="FOURNISSEUR" onclick="sortRemiseTable('FOURNISSEUR')" class="resizable border px-4 py-2 cursor-pointer">
                                     Fournisseur <div class="resizer"></div>
                                 </th>
-                                <th data-column="LABORATORY_NAME" onclick="sortRemiseTable('LABORATORY_NAME')" class="resizable border px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                                <th data-column="LABORATORY_NAME" onclick="sortRemiseTable('LABORATORY_NAME')" class="resizable border px-4 py-2 cursor-pointer">
                                     Laboratory Name <div class="resizer"></div>
                                 </th>
-                                <th data-column="PRODUCT" onclick="sortRemiseTable('PRODUCT')" class="resizable border px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                                <th data-column="PRODUCT" onclick="sortRemiseTable('PRODUCT')" class="resizable border px-4 py-2 cursor-pointer">
                                     Produit <div class="resizer"></div>
                                 </th>
-                                <th data-column="REWARD" onclick="sortRemiseTable('REWARD')" class="resizable border px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                                <th data-column="REWARD" onclick="sortRemiseTable('REWARD')" class="resizable border px-4 py-2 cursor-pointer">
                                     Reward <div class="resizer"></div>
                                 </th>
-                                <th data-column="TYPE_CLIENT" onclick="sortRemiseTable('TYPE_CLIENT')" class="resizable border px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                                <th data-column="TYPE_CLIENT" onclick="sortRemiseTable('TYPE_CLIENT')" class="resizable border px-4 py-2 cursor-pointer">
                                     Type Client <div class="resizer"></div>
                                 </th>
                             </tr>
@@ -692,32 +455,12 @@ var loadingAnimation = lottie.loadAnimation({
 <br>
 <div class="container">
 
-  <button id="downloadExcel_RESERVE" class="buttonn">
-        <img src="assets/excel.png" alt="Excel Icon" class="icon" style="width: 24px; height: 24px;" />
-
-  <p>Download</p>
-  <div class="liquid">
-    <span style="--i:0"><span></span></span>
-    <span style="--i:1"><span></span></span>
-    <span style="--i:2"><span></span></span>
-    <span style="--i:3"><span></span></span>
-    <span style="--i:4"><span></span></span>
-    <span style="--i:5"><span></span></span>
-    <span style="--i:6"><span></span></span>
-    <span class="bg"><span></span></span>
-  </div>
-  <svg>
-    <filter id="gooey">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="10"></feGaussianBlur>
-      <feColorMatrix
-        values="1 0 0 0 0
-          0 1 0 0 0 
-          0 0 1 0 0
-          0 0 0 20 -10"
-      ></feColorMatrix>
-    </filter>
-  </svg>
-</button>
+  <button id="downloadExcel_RESERVE" class="excel-btn excel-btn-primary">
+        <div class="excel-icon">
+            <img src="assets/excel.png" alt="Excel Icon" />
+        </div>
+        <span class="excel-text">Download Reserve</span>
+  </button>
 </div>
 <br>
 <!-- Reserver products  Table -->
@@ -728,28 +471,28 @@ var loadingAnimation = lottie.loadAnimation({
         <table class="min-w-full border-collapse text-sm text-left dark:text-white">
             <thead>
                 <tr class="table-header dark:bg-gray-700">
-                    <th data-column="OPERATEUR" onclick="sortReservedTable('OPERATEUR')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                    <th data-column="OPERATEUR" onclick="sortReservedTable('OPERATEUR')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer">
                         OPERATEUR <div class="resizer"></div>
                     </th>
-                    <th data-column="NDOCUMENT" onclick="sortReservedTable('NDOCUMENT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                    <th data-column="NDOCUMENT" onclick="sortReservedTable('NDOCUMENT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer">
                         NDOCUMENT <div class="resizer"></div>
                     </th>
-                    <th data-column="PRODUCT" onclick="sortReservedTable('PRODUCT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                    <th data-column="PRODUCT" onclick="sortReservedTable('PRODUCT')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer">
                         PRODUCT <div class="resizer"></div>
                     </th>
-                    <th data-column="DATECOMMANDE" onclick="sortReservedTable('DATECOMMANDE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                    <th data-column="DATECOMMANDE" onclick="sortReservedTable('DATECOMMANDE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer">
                         DATE COMMANDE <div class="resizer"></div>
                     </th>
-                    <th data-column="TOTALRESERVE" onclick="sortReservedTable('TOTALRESERVE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                    <th data-column="TOTALRESERVE" onclick="sortReservedTable('TOTALRESERVE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer">
                         TOTAL RESERVE <div class="resizer"></div>
                     </th>
-                    <th data-column="QTYRESERVE" onclick="sortReservedTable('QTYRESERVE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                    <th data-column="QTYRESERVE" onclick="sortReservedTable('QTYRESERVE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer">
                         QTY RESERVE <div class="resizer"></div>
                     </th>
-                    <th data-column="NAME" onclick="sortReservedTable('NAME')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                    <th data-column="NAME" onclick="sortReservedTable('NAME')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer">
                         NAME <div class="resizer"></div>
                     </th>
-                    <th data-column="STATUS" onclick="sortReservedTable('STATUS')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                    <th data-column="STATUS" onclick="sortReservedTable('STATUS')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer">
                         STATUS <div class="resizer"></div>
                     </th>
                 </tr>

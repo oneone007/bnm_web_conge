@@ -30,13 +30,45 @@ if ($result && $result->num_rows > 0) {
     $latestData['analyse'] = $result->fetch_assoc();
 }
 
-// Get bank data
-$query = "SELECT bna_remise, bna_sold, bna_check, baraka_remise, baraka_sold, 
-          baraka_check, total_bank, total_checks, creation_time 
-          FROM bank ORDER BY creation_time DESC LIMIT 1";
+// Get bank data from normalized bank_transactions table
+$query = "SELECT 
+    bt.bank_id,
+    b.bank_code,
+    b.bank_name,
+    bt.sold,
+    bt.remise,
+    bt.check_amount,
+    bt.creation_time
+FROM bank_transactions bt 
+JOIN banks b ON bt.bank_id = b.id_bank 
+WHERE bt.creation_time = (SELECT MAX(creation_time) FROM bank_transactions)
+AND b.is_active = TRUE
+ORDER BY b.bank_name";
 $result = $conn->query($query);
 if ($result && $result->num_rows > 0) {
-    $latestData['bank'] = $result->fetch_assoc();
+    $bankData = array();
+    $totalBank = 0;
+    $totalChecks = 0;
+    $latestCreationTime = null;
+    
+    while ($row = $result->fetch_assoc()) {
+        $bankCode = $row['bank_code'];
+        $bankData['banks'][$bankCode] = array(
+            'bank_name' => $row['bank_name'],
+            'sold' => floatval($row['sold']),
+            'remise' => floatval($row['remise']),
+            'check_amount' => floatval($row['check_amount'])
+        );
+        $totalBank += (floatval($row['sold']) + floatval($row['remise']));
+        $totalChecks += floatval($row['check_amount']);
+        $latestCreationTime = $row['creation_time'];
+    }
+    
+    $bankData['total_bank'] = $totalBank;
+    $bankData['total_checks'] = $totalChecks;
+    $bankData['creation_time'] = $latestCreationTime;
+    
+    $latestData['bank'] = $bankData;
 }
 
 // Get tresorie data
@@ -311,12 +343,13 @@ $latestDataJson = json_encode($latestData);
                     <span class="text-lab-accent font-bold text-xl">BNM</span>
                     <span class="text-lab-highlight font-bold text-xl">ANALYSE</span>
                 </div>
-                <div class="text-xs text-gray-400">
-                    <div class="flex items-center space-x-4">
-
-                        <span>Update in: <span id="refresh-time" style="color:red" class="text-gray-100">5min 00sec</span></span>
-                        <button id="manual-refresh-btn" class="px-2 py-1 bg-lab-accent text-black rounded hover:bg-opacity-80">⟳ Refresh Now</button>
-                    </div>
+                <div class="flex items-center space-x-4 text-xs text-gray-400">
+                    <button id="theme-toggle" class="theme-toggle">
+                        <span id="theme-icon">🌙</span>
+                        <span id="theme-text">Dark</span>
+                    </button>
+                    <span>Update in: <span id="refresh-time" style="color:red" class="text-gray-100">5min 00sec</span></span>
+                    <button id="manual-refresh-btn" class="px-2 py-1 bg-lab-accent text-black rounded hover:bg-opacity-80">⟳ Refresh Now</button>
                 </div>
             </div>
         </div>
@@ -344,6 +377,8 @@ $latestDataJson = json_encode($latestData);
                         </div>
                         <button id="update-kpi-chart" class="bg-lab-accent text-black px-3 py-1 rounded text-sm hover:bg-opacity-80">Update</button>
                     </div>
+
+
 
                     <!-- Metric selector -->                    <select 
     id="metric-selector" 
@@ -723,24 +758,15 @@ try {
             paiement_net: lastSavedData.tresorie?.paiement_net,
             bank: {
                 total: lastSavedData.bank?.total_bank,
-                bna: {
-                    sold: lastSavedData.bank?.bna_sold,
-                    remise: lastSavedData.bank?.bna_remise,
-                    checks: lastSavedData.bank?.bna_check  // Moved from dette to bank
-                },
-                baraka: {
-                    sold: lastSavedData.bank?.baraka_sold,
-                    remise: lastSavedData.bank?.baraka_remise,
-                    checks: lastSavedData.bank?.baraka_check  // Moved from dette to bank
-                }
+                banks: lastSavedData.bank?.banks || {}
             }
         },
         dette: {
             total: lastSavedData.dette?.total_dette,
             fournisseur: lastSavedData.dette?.dette_fournisseur,
             checks: {
-                total: lastSavedData.dette?.total_checks
-                // Removed bna and baraka checks from here since they belong to bank
+                total: lastSavedData.bank?.total_checks,
+                banks: lastSavedData.bank?.banks || {}
             }
         }
     };
@@ -782,15 +808,19 @@ try {
                 // Bank Section
                 html += createRow('BANK TOTAL', bankData.total_bank, bankData.creation_time , 
                     lastSavedData?.tresorerie?.bank?.total, '-', '-', true, 'rgba(155, 93, 229, 0.7)');
-                html += createRow('BNA Sold', bankData.details.BNA.sold, bankData.creation_time, 
-                    lastSavedData?.tresorerie?.bank?.bna?.sold, '-', '-', true, 'rgba(155, 93, 229, 0.7)');
-                html += createRow('BNA Remise', bankData.details.BNA.remise, bankData.creation_time, 
-                    lastSavedData?.tresorerie?.bank?.bna?.remise, '-', '-', true, 'rgba(155, 93, 229, 0.7)');
-               
-                html += createRow('Baraka Sold', bankData.details.Baraka.sold, bankData.creation_time, 
-                    lastSavedData?.tresorerie?.bank?.baraka?.sold, '-', '-', true, 'rgba(155, 93, 229, 0.7)');
-                html += createRow('Baraka Remise', bankData.details.Baraka.remise, bankData.creation_time, 
-                    lastSavedData?.tresorerie?.bank?.baraka?.remise, '-', '-', true, 'rgba(155, 93, 229, 0.7)');
+                
+                // Dynamic bank details
+                if (bankData.details && Object.keys(bankData.details).length > 0) {
+                    Object.keys(bankData.details).forEach(bankCode => {
+                        const bank = bankData.details[bankCode];
+                        const lastBankData = lastSavedData?.tresorerie?.bank?.banks?.[bankCode];
+                        
+                        html += createRow(`${bank.bank_name || bankCode} Sold`, bank.sold, bankData.creation_time, 
+                            lastBankData?.sold, '-', '-', true, 'rgba(155, 93, 229, 0.7)');
+                        html += createRow(`${bank.bank_name || bankCode} Remise`, bank.remise, bankData.creation_time, 
+                            lastBankData?.remise, '-', '-', true, 'rgba(155, 93, 229, 0.7)');
+                    });
+                }
 
 
                 // Dette Section
@@ -803,10 +833,17 @@ try {
 
                 html += createRow('TOTAL CHECKS', detteData.details.total_checks, bankData.creation_time, 
                     lastSavedData?.dette?.checks?.total, '-', '-', true, 'rgba(255, 0, 51, 0.7)');
-html += createRow('BNA Checks', detteData.details.checks_details.BNA.checks, bankData.creation_time, 
-    lastSavedData?.tresorerie?.bank?.bna?.checks, '-', '-', true, 'rgba(255, 0, 51, 0.7)');
-html += createRow('Baraka Checks', detteData.details.checks_details.Baraka.checks, bankData.creation_time, 
-    lastSavedData?.tresorerie?.bank?.baraka?.checks, '-', '-', true, 'rgba(255, 0, 51, 0.7)');
+                
+                // Dynamic bank checks
+                if (detteData.details.checks_details && Object.keys(detteData.details.checks_details).length > 0) {
+                    Object.keys(detteData.details.checks_details).forEach(bankCode => {
+                        const bankChecks = detteData.details.checks_details[bankCode];
+                        const lastBankChecks = lastSavedData?.dette?.checks?.banks?.[bankCode];
+                        
+                        html += createRow(`${bankCode} Checks`, bankChecks.checks, bankData.creation_time, 
+                            lastBankChecks?.check_amount, '-', '-', true, 'rgba(255, 0, 51, 0.7)');
+                    });
+                }
 
                 tbody.innerHTML = html;
 
@@ -992,7 +1029,7 @@ html += createRow('Baraka Checks', detteData.details.checks_details.Baraka.check
                 if (!startDateInput.value || !endDateInput.value) {
                     const end = new Date();
                     const start = new Date();
-                    start.setDate(start.getDate() - 7); // Default to last 7 days
+                    start.setDate(start.getDate() - 30); // Default to last 7 days
                     
                     endDateInput.value = end.toISOString().split('T')[0];
                     startDateInput.value = start.toISOString().split('T')[0];

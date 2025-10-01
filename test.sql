@@ -5113,3 +5113,349 @@ join C_Invoice cin on cin.c_order_id = ino.c_order_id
 join C_order ord on ord.c_order_id = ino.c_order_id
 where ord.documentno = :documentno
 ;
+
+
+-- =====================================================
+-- NEW QUERIES: Get Invoice Lines by Invoice Document Number
+-- =====================================================
+
+-- Basic query - Replace 'INVOICE_DOCUMENT_NO' with the actual invoice document number
+SELECT 
+    il.C_InvoiceLine_ID,
+    il.Line,
+    il.QtyEntered,
+    il.QtyInvoiced,
+    il.PriceEntered,
+    il.PriceActual,
+    il.LineNetAmt,
+    il.LineTotalAmt,
+    il.Description as LineDescription,
+    il.M_Product_ID,
+    p.Name as ProductName,
+    p.Value as ProductValue,
+    i.DocumentNo as InvoiceNumber,
+    i.DateInvoiced,
+    i.Description as InvoiceDescription
+FROM 
+    C_Invoice i
+    INNER JOIN C_InvoiceLine il ON i.C_Invoice_ID = il.C_Invoice_ID
+    LEFT JOIN M_Product p ON il.M_Product_ID = p.M_Product_ID
+WHERE 
+    i.DocumentNo = '15933/2025'  -- Replace with actual invoice document number
+    AND i.DocStatus IN ('CO', 'CL')  -- Only completed/closed invoices
+    AND i.IsActive = 'Y'
+    AND il.IsActive = 'Y'
+ORDER BY 
+    il.Line;
+
+-- Enhanced query with parameter binding and more details
+SELECT 
+    il.C_InvoiceLine_ID,
+    il.Line,
+    il.QtyEntered,
+    il.QtyInvoiced,
+    il.PriceEntered,
+    il.PriceActual,
+    il.LineNetAmt,
+    il.LineTotalAmt,
+    il.Description as LineDescription,
+    il.M_Product_ID,
+    p.Name as ProductName,
+    p.Value as ProductValue,
+    p.DocumentNote as ProductNote,
+    i.DocumentNo as InvoiceNumber,
+    i.DateInvoiced,
+    i.Description as InvoiceDescription,
+    i.GrandTotal as InvoiceTotal,
+    bp.Name as BusinessPartnerName
+FROM 
+    C_Invoice i
+    INNER JOIN C_InvoiceLine il ON i.C_Invoice_ID = il.C_Invoice_ID
+    LEFT JOIN M_Product p ON il.M_Product_ID = p.M_Product_ID
+    LEFT JOIN C_BPartner bp ON i.C_BPartner_ID = bp.C_BPartner_ID
+WHERE 
+    i.DocumentNo = :invoice_document_no  -- Parameter binding
+    AND i.DocStatus IN ('CO', 'CL')
+    AND i.IsActive = 'Y'
+    AND il.IsActive = 'Y'
+    AND i.AD_Client_ID = 1000000  -- Client filter
+ORDER BY 
+    il.Line;
+
+-- Simple query to find invoice by partial document number (using LIKE)
+SELECT 
+    il.C_InvoiceLine_ID,
+    il.Line,
+    il.QtyEntered,
+    il.QtyInvoiced,
+    il.LineNetAmt,
+    il.Description as LineDescription,
+    p.Name as ProductName,
+    p.Value as ProductValue,
+    i.DocumentNo as InvoiceNumber
+FROM 
+    C_Invoice i
+    INNER JOIN C_InvoiceLine il ON i.C_Invoice_ID = il.C_Invoice_ID
+    LEFT JOIN M_Product p ON il.M_Product_ID = p.M_Product_ID
+WHERE 
+    i.DocumentNo LIKE '%' || :partial_invoice_no || '%'
+    AND i.DocStatus IN ('CO', 'CL')
+    AND i.IsActive = 'Y'
+    AND il.IsActive = 'Y'
+ORDER BY 
+    i.DocumentNo, il.Line;
+
+-- Compact query for quick lookup
+SELECT 
+    il.Line,
+    il.QtyEntered,
+    il.LineNetAmt,
+    p.Name as ProductName
+FROM 
+    C_Invoice i
+    INNER JOIN C_InvoiceLine il ON i.C_Invoice_ID = il.C_Invoice_ID
+    LEFT JOIN M_Product p ON il.M_Product_ID = p.M_Product_ID
+WHERE 
+    i.DocumentNo = :invoice_document_no
+    AND i.DocStatus IN ('CO', 'CL')
+ORDER BY 
+    il.Line;
+
+
+-- =====================================================
+-- TRACE BACK FROM INVOICE TO RELATED ORDERS
+-- =====================================================
+
+-- Get all orders related to a specific invoice through invoice lines and order lines
+SELECT DISTINCT
+    o.C_Order_ID,
+    o.DocumentNo as OrderNumber,
+    o.DateOrdered,
+    o.DatePromised,
+    o.GrandTotal as OrderTotal,
+    o.Description as OrderDescription,
+    bp.Name as BusinessPartnerName,
+    o.DocStatus as OrderStatus
+FROM 
+    C_Invoice i
+    INNER JOIN C_InvoiceLine il ON i.C_Invoice_ID = il.C_Invoice_ID
+    INNER JOIN C_OrderLine ol ON il.C_OrderLine_ID = ol.C_OrderLine_ID
+    INNER JOIN C_Order o ON ol.C_Order_ID = o.C_Order_ID
+    LEFT JOIN C_BPartner bp ON o.C_BPartner_ID = bp.C_BPartner_ID
+WHERE 
+    i.DocumentNo = :invoice_document_no
+    AND i.DocStatus IN ('CO', 'CL')
+    AND i.IsActive = 'Y'
+    AND il.IsActive = 'Y'
+    AND ol.IsActive = 'Y'
+    AND o.IsActive = 'Y'
+ORDER BY 
+    o.DateOrdered, o.DocumentNo;
+
+-- Detailed version with invoice line and order line details
+SELECT 
+    i.DocumentNo as InvoiceNumber,
+    i.DateInvoiced,
+    il.Line as InvoiceLine,
+    il.QtyInvoiced,
+    il.LineNetAmt as InvoiceLineAmount,
+    ol.C_OrderLine_ID,
+    ol.Line as OrderLine,
+    ol.QtyOrdered,
+    ol.LineNetAmt as OrderLineAmount,
+    o.DocumentNo as OrderNumber,
+    o.DateOrdered,
+    o.GrandTotal as OrderTotal,
+    p.Name as ProductName,
+    p.Value as ProductValue,
+    bp.Name as BusinessPartnerName
+FROM 
+    C_Invoice i
+    INNER JOIN C_InvoiceLine il ON i.C_Invoice_ID = il.C_Invoice_ID
+    INNER JOIN C_OrderLine ol ON il.C_OrderLine_ID = ol.C_OrderLine_ID
+    INNER JOIN C_Order o ON ol.C_Order_ID = o.C_Order_ID
+    LEFT JOIN M_Product p ON il.M_Product_ID = p.M_Product_ID
+    LEFT JOIN C_BPartner bp ON o.C_BPartner_ID = bp.C_BPartner_ID
+WHERE 
+    i.DocumentNo = :invoice_document_no
+    AND i.DocStatus IN ('CO', 'CL')
+    AND i.IsActive = 'Y'
+    AND il.IsActive = 'Y'
+    AND ol.IsActive = 'Y'
+    AND o.IsActive = 'Y'
+ORDER BY 
+    o.DateOrdered, o.DocumentNo, il.Line;
+
+-- Simple query - just get order numbers related to invoice
+SELECT DISTINCT
+    o.DocumentNo as OrderNumber,
+    o.DateOrdered,
+    o.GrandTotal as OrderTotal
+FROM 
+    C_Invoice i
+    INNER JOIN C_InvoiceLine il ON i.C_Invoice_ID = il.C_Invoice_ID
+    INNER JOIN C_OrderLine ol ON il.C_OrderLine_ID = ol.C_OrderLine_ID
+    INNER JOIN C_Order o ON ol.C_Order_ID = o.C_Order_ID
+WHERE 
+    i.DocumentNo = '15933/2025'  -- Replace with actual invoice number
+    AND i.DocStatus IN ('CO', 'CL')
+    AND i.IsActive = 'Y'
+ORDER BY 
+    o.DateOrdered;
+
+-- Count how many orders are related to an invoice
+SELECT 
+    i.DocumentNo as InvoiceNumber,
+    COUNT(DISTINCT o.C_Order_ID) as NumberOfRelatedOrders,
+    STRING_AGG(DISTINCT o.DocumentNo, ', ') as OrderNumbers
+FROM 
+    C_Invoice i
+    INNER JOIN C_InvoiceLine il ON i.C_Invoice_ID = il.C_Invoice_ID
+    INNER JOIN C_OrderLine ol ON il.C_OrderLine_ID = ol.C_OrderLine_ID
+    INNER JOIN C_Order o ON ol.C_Order_ID = o.C_Order_ID
+WHERE 
+    i.DocumentNo = :invoice_document_no
+    AND i.DocStatus IN ('CO', 'CL')
+    AND i.IsActive = 'Y'
+GROUP BY 
+    i.DocumentNo;
+
+
+
+
+------------------------------------
+
+
+select xx_lignegratuite from C_OrderLine where C_OrderLine_ID=8695013;
+
+
+
+SELECT NAME FROM M_Warehouse WHERE M_Warehouse_ID IN (1000014, 1000721);
+
+SELECT 
+    p.name AS product,
+    mst.qtyonhand AS qty,
+    (mst.qtyonhand - mst.QTYRESERVED) AS qty_dispo,
+    mst.m_locator_id,
+    mati.value AS fournisseur,
+    mats.guaranteedate,
+    md.name AS remise_auto,
+    sal.description AS bonus_auto,
+    (
+        SELECT lot
+        FROM m_attributesetinstance
+        WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
+    ) AS lot,
+    (
+        SELECT valuenumber
+        FROM m_attributeinstance
+        WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
+          AND m_attribute_id = 1000501
+    ) AS p_achat,
+    (
+        SELECT valuenumber
+        FROM m_attributeinstance
+        WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
+          AND m_attribute_id = 1000502
+    ) AS p_vente,
+    (
+        SELECT valuenumber
+        FROM m_attributeinstance
+        WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
+          AND m_attribute_id = 1000503
+    ) AS ppa
+FROM 
+    m_product p
+    INNER JOIN m_storage mst ON p.m_product_id = mst.m_product_id
+    INNER JOIN m_attributeinstance mati ON mst.m_attributesetinstance_id = mati.m_attributesetinstance_id
+    INNER JOIN m_attributesetinstance mats ON mst.m_attributesetinstance_id = mats.m_attributesetinstance_id
+    LEFT JOIN C_BPartner_Product cp ON cp.m_product_id = p.m_product_id
+        OR cp.C_BPartner_Product_id IS NULL
+    LEFT JOIN M_DiscountSchema md ON cp.M_DiscountSchema_id = md.M_DiscountSchema_id
+    LEFT JOIN XX_SalesContext sal ON p.XX_SalesContext_ID = sal.XX_SalesContext_ID
+WHERE 
+    mati.m_attribute_id = 1000508
+    AND mst.m_locator_id IN (1001135, 1000614, 1001128, 1001136, 1001020)
+    AND mst.qtyonhand != 0
+    AND p.name = 'MAG ACTICARBINE BOITE 14 COMPRIMES '  -- Replace with your product_name
+ORDER BY 
+    p.name, mats.guaranteedate;
+
+
+
+
+    update C_Payment set isallocated = 'Y' where C_Payment_ID=1272137;
+
+
+
+
+------------------------------- find names contains more space -------------------------------
+SELECT 
+    M_Product_ID AS M_PRODUCT_ID, 
+    Name AS NAME
+FROM 
+    M_Product
+WHERE 
+    AD_Client_ID = 1000000
+    AND AD_Org_ID = 1000000
+    AND IsActive = 'Y'
+    AND REGEXP_LIKE(Name, ' {2,}')   -- finds 2 or more spaces
+ORDER BY 
+    Name;
+
+
+
+
+SELECT 
+    C_BPartner_ID,
+    Name AS Old_Name,
+    REGEXP_REPLACE(Name, ' {2,}', ' ') AS Cleaned_Name
+FROM 
+    C_BPartner
+WHERE 
+    AD_Client_ID = 1000000
+    AND AD_Org_ID = 1000000
+    AND IsActive = 'Y'
+    AND REGEXP_LIKE(Name, ' {2,}');
+
+
+
+
+
+    UPDATE C_BPartner
+SET Name = REGEXP_REPLACE(Name, ' {2,}', ' ')
+WHERE AD_Client_ID = 1000000
+  AND AD_Org_ID = 1000000
+  AND IsActive = 'Y'
+  AND REGEXP_LIKE(Name, ' {2,}');
+
+
+
+
+
+
+select docstatus , docaction from C_Order where C_Order_ID=3276557;
+
+
+
+
+SELECT 
+    
+    co.DocumentNo,
+    co.DocStatus,
+    co.docaction,
+    co.DateOrdered,
+    col.qtyreserved
+
+FROM 
+    C_OrderLine col
+INNER JOIN 
+    C_Order co ON col.C_Order_ID = co.C_Order_ID
+WHERE 
+    col.qtyreserved > 0
+    AND co.C_DocType_ID = 1000539
+    AND col.m_product_id = 1158567
+    and co.AD_Client_ID = 1000000
+  AND co.AD_Org_ID = 1000000
+ORDER BY 
+    co.DateOrdered DESC, col.Line;

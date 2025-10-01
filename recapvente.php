@@ -16,6 +16,12 @@ $page_identifier = 'Recap_Vente';
 
 require_once 'check_permission.php';
 
+// Developer note:
+// Changed search inputs behavior (Oct 2025): clicking on a search input no longer clears its value.
+// A dedicated clear icon/button ('.search-clear-icon') is provided next to each search field
+// which, when clicked, clears that input and reapplies filters. This prevents accidental clears
+// when users focus or click into inputs.
+
 ?>
 
 <!DOCTYPE html>
@@ -67,7 +73,7 @@ require_once 'check_permission.php';
         
         .row-selectable {
             cursor: pointer;
-            transition: background-color 0.2s;
+            
         }
         
         .row-selectable:hover {
@@ -322,6 +328,40 @@ require_once 'check_permission.php';
         .search-input-container input:not(:placeholder-shown) ~ .search-clear-icon {
             display: block;
         }
+        /* Disabled search inputs appearance */
+        .search-input-container input:disabled {
+            background-color: #f3f4f6 !important;
+            cursor: not-allowed;
+            color: #9ca3af !important;
+        }
+        .search-clear-icon.disabled {
+            opacity: 0.4;
+            pointer-events: none;
+            color: #9ca3af;
+        }
+        /* Disable transitions on table rows so hover color is instantaneous */
+        table tr,
+        table tbody tr,
+        .resizable-table tr,
+        .resizable-table tbody tr,
+        .table-container table tr,
+        .row-selectable {
+            -webkit-transition: none !important;
+            -o-transition: none !important;
+            transition: none !important;
+        }
+        /* Also disable transform/translate and box-shadow on .table-container hover to stop the "go up" effect */
+        .table-container,
+        .table-container:hover,
+        .table-container * {
+            -webkit-transform: none !important;
+            -moz-transform: none !important;
+            -ms-transform: none !important;
+            -o-transform: none !important;
+            transform: none !important;
+            -webkit-box-shadow: none !important;
+            box-shadow: none !important;
+        }
     </style>
 </head>
 
@@ -414,6 +454,7 @@ require_once 'check_permission.php';
                         <i class="fas fa-truck search-input-icon"></i>
                         <input type="text" id="search-fournisseur" placeholder="Search Fournisseur..." 
                                class="p-2 border border-gray-300 rounded text-sm dark:bg-gray-600 dark:text-white dark:border-gray-500 w-full">
+                        <i class="fas fa-times search-clear-icon" data-input="search-fournisseur" title="Clear"></i>
                         <div id="suggestions-fournisseur" class="suggestions-dropdown"></div>
                     </div>
                 </div>
@@ -462,6 +503,7 @@ require_once 'check_permission.php';
                         <i class="fas fa-box search-input-icon"></i>
                         <input type="text" id="search-product" placeholder="Search Product..." 
                                class="p-2 border border-gray-300 rounded text-sm dark:bg-gray-600 dark:text-white dark:border-gray-500 w-full">
+                        <i class="fas fa-times search-clear-icon" data-input="search-product" title="Clear"></i>
                         <div id="suggestions-product" class="suggestions-dropdown"></div>
                     </div>
                 </div>
@@ -516,6 +558,7 @@ require_once 'check_permission.php';
                         <i class="fas fa-map-marker-alt search-input-icon"></i>
                         <input type="text" id="search-zone" placeholder="Search Zone..." 
                                class="p-2 border border-gray-300 rounded text-sm dark:bg-gray-600 dark:text-white dark:border-gray-500 w-full">
+                        <i class="fas fa-times search-clear-icon" data-input="search-zone" title="Clear"></i>
                         <div id="suggestions-zone" class="suggestions-dropdown"></div>
                     </div>
                 </div>
@@ -564,6 +607,7 @@ require_once 'check_permission.php';
                         <i class="fas fa-user search-input-icon"></i>
                         <input type="text" id="search-client" placeholder="Search Client..." 
                                class="p-2 border border-gray-300 rounded text-sm dark:bg-gray-600 dark:text-white dark:border-gray-500 w-full">
+                        <i class="fas fa-times search-clear-icon" data-input="search-client" title="Clear"></i>
                         <div id="suggestions-client" class="suggestions-dropdown"></div>
                     </div>
                 </div>
@@ -618,6 +662,7 @@ require_once 'check_permission.php';
                         <i class="fas fa-user-tie search-input-icon"></i>
                         <input type="text" id="search-operateur" placeholder="Search Operateur..." 
                                class="p-2 border border-gray-300 rounded text-sm dark:bg-gray-600 dark:text-white dark:border-gray-500 w-full">
+                        <i class="fas fa-times search-clear-icon" data-input="search-operateur" title="Clear"></i>
                         <div id="suggestions-operateur" class="suggestions-dropdown"></div>
                     </div>
                 </div>
@@ -677,6 +722,7 @@ require_once 'check_permission.php';
                         <i class="fas fa-file-invoice search-input-icon"></i>
                         <input type="text" id="search-bccb" placeholder="Search BCCB..." 
                                class="p-2 border border-gray-300 rounded text-sm dark:bg-gray-600 dark:text-white dark:border-gray-500 w-full">
+                        <i class="fas fa-times search-clear-icon" data-input="search-bccb" title="Clear"></i>
                         <div id="suggestions-bccb" class="suggestions-dropdown"></div>
                     </div>
                 </div>
@@ -726,6 +772,7 @@ require_once 'check_permission.php';
                     <i class="fas fa-cube search-input-icon"></i>
                     <input type="text" id="search-bccb-product" placeholder="Search BCCB Product..." 
                            class="p-2 border border-gray-300 rounded text-sm dark:bg-gray-600 dark:text-white dark:border-gray-500 w-full">
+                    <i class="fas fa-times search-clear-icon" data-input="search-bccb-product" title="Clear"></i>
                     <div id="suggestions-bccb-product" class="suggestions-dropdown"></div>
                 </div>
             </div>
@@ -871,6 +918,43 @@ require_once 'check_permission.php';
             setupAutocomplete('search-operateur', 'operateur');
             setupAutocomplete('search-bccb', 'bccb');
             setupAutocomplete('search-bccb-product', 'bccbProduct');
+
+            // Clear icon handlers: clear specific input and reapply filters
+            document.querySelectorAll('.search-clear-icon').forEach(icon => {
+                icon.addEventListener('click', function(e) {
+                    const inputId = icon.getAttribute('data-input');
+                    if (!inputId) return;
+                    const input = document.getElementById(inputId);
+                    if (!input) return;
+
+                    // Clear value, hide suggestions, reset pagination for the type and reapply filters
+                    input.value = '';
+                    const suggestionsDiv = input.parentElement.querySelector('.suggestions-dropdown');
+                    if (suggestionsDiv) suggestionsDiv.classList.remove('show');
+
+                    // Reset pagination for corresponding data type if exists
+                    const mapping = {
+                        'search-fournisseur': 'fournisseur',
+                        'search-product': 'product',
+                        'search-zone': 'zone',
+                        'search-client': 'client',
+                        'search-operateur': 'operateur',
+                        'search-bccb': 'bccb',
+                        'search-bccb-product': 'bccbProduct'
+                    };
+
+                    const tableType = mapping[inputId];
+                    if (tableType && pagination[tableType]) {
+                        pagination[tableType].currentPage = 1;
+                    }
+
+                    // Reapply filters (debounced via autoApplyFilters)
+                    autoApplyFilters();
+
+                    // Prevent the click from bubbling to document click listener
+                    e.stopPropagation();
+                });
+            });
             
             // Initialize resizable tables
             setTimeout(makeTablesResizable, 100);
@@ -1004,6 +1088,8 @@ require_once 'check_permission.php';
         }
 
         async function fetchAllData() {
+            // Disable search inputs while fetching
+            disableSearchInputs();
             const startDate = document.getElementById('start-date').value;
             const endDate = document.getElementById('end-date').value;
             
@@ -1031,6 +1117,8 @@ require_once 'check_permission.php';
             } catch (error) {
                 console.error('Error fetching data:', error);
             }
+            // Re-enable search inputs after data has been fetched (allow time for tables to render)
+            setTimeout(enableSearchInputs, 50);
         }
 
         function showLoadingState() {
@@ -1050,6 +1138,38 @@ require_once 'check_permission.php';
                     `;
                 }
             });
+        }
+
+        // Disable all search inputs and clear icons to prevent user interaction while data is loading
+        function disableSearchInputs() {
+            document.querySelectorAll('.search-input-container input').forEach(inp => {
+                inp.disabled = true;
+            });
+            document.querySelectorAll('.search-clear-icon').forEach(icon => {
+                icon.classList.add('disabled');
+            });
+            // Optionally disable date and group select while loading
+            const sd = document.getElementById('start-date');
+            const ed = document.getElementById('end-date');
+            const gl = document.getElementById('group-label-select');
+            if (sd) sd.disabled = true;
+            if (ed) ed.disabled = true;
+            if (gl) gl.disabled = true;
+        }
+
+        function enableSearchInputs() {
+            document.querySelectorAll('.search-input-container input').forEach(inp => {
+                inp.disabled = false;
+            });
+            document.querySelectorAll('.search-clear-icon').forEach(icon => {
+                icon.classList.remove('disabled');
+            });
+            const sd = document.getElementById('start-date');
+            const ed = document.getElementById('end-date');
+            const gl = document.getElementById('group-label-select');
+            if (sd) sd.disabled = false;
+            if (ed) ed.disabled = false;
+            if (gl) gl.disabled = false;
         }
 
         async function fetchTotalRecap() {
@@ -1190,6 +1310,8 @@ require_once 'check_permission.php';
         }
 
         async function fetchBccbProductWithSpecificBccb(bccbDocumentNo) {
+            // Disable search inputs while fetching products
+            disableSearchInputs();
             if (!bccbDocumentNo) return;
             
             try {
@@ -1221,6 +1343,8 @@ require_once 'check_permission.php';
                 console.error('Error fetching BCCB product data:', error);
                 document.getElementById('bccb-product-table').innerHTML = '<tr><td colspan="4" class="text-center text-red-500">Error loading data</td></tr>';
             }
+            // Re-enable search inputs after products are loaded
+            setTimeout(enableSearchInputs, 50);
         }
 
         function updateTotalRecapTable(data) {
@@ -1610,7 +1734,7 @@ require_once 'check_permission.php';
                 tr.innerHTML = `
                     <td class="border px-4 py-2 dark:border-gray-600">${totalRow.PRODUCT || totalRow.PRODUIT || ''}</td>
                     <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.QTY)}</td>
-                    <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.REMISE)}</td>
+                    <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.REMISE * 100)}</td>
                     <td class="border px-4 py-2 dark:border-gray-600">${formatMargin(totalRow.MARGE)}</td>
                 `;
                 tableBody.appendChild(tr);
@@ -1623,7 +1747,7 @@ require_once 'check_permission.php';
                 tr.innerHTML = `
                     <td class="border px-4 py-2 dark:border-gray-600">${row.PRODUCT || row.PRODUIT || ''}</td>
                     <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
-                    <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.REMISE)}</td>
+                    <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.REMISE * 100)}</td>
                     <td class="border px-4 py-2 dark:border-gray-600">${formatMargin(row.MARGE)}</td>
                 `;
                 
@@ -2006,31 +2130,6 @@ require_once 'check_permission.php';
             const input = document.getElementById(inputId);
             const suggestionsDiv = document.getElementById(`suggestions-${dataType}`);
             let selectedIndex = -1;
-            
-            // Add click event to clear input and trigger search
-            input.addEventListener('click', function(e) {
-                // Only clear if there's content in the input
-                if (e.target.value.trim() !== '') {
-                    e.target.value = '';
-                    suggestionsDiv.classList.remove('show');
-                    selectedIndex = -1;
-                    
-                    // Reset pagination to first page
-                    if (pagination[dataType]) {
-                        pagination[dataType].currentPage = 1;
-                    }
-                    
-                    // Apply filter for all tables (including BCCB) - this will fetch fresh data
-                    autoApplyFilters();
-                    
-                    // Provide visual feedback
-                    e.target.style.backgroundColor = '#fff3cd';
-                    setTimeout(() => {
-                        e.target.style.backgroundColor = '';
-                    }, 1000);
-                }
-            });
-            
             input.addEventListener('input', function(e) {
                 const value = e.target.value.toLowerCase().trim();
                 selectedIndex = -1;
@@ -2046,28 +2145,7 @@ require_once 'check_permission.php';
                 displaySuggestions(suggestionsDiv, suggestions, input);
             });
             
-            input.addEventListener('click', function(e) {
-                const value = e.target.value.trim();
-                // If input has content, clear it and trigger search
-                if (value.length > 0) {
-                    e.target.value = '';
-                    suggestionsDiv.classList.remove('show');
-                    
-                    // Visual feedback
-                    e.target.style.backgroundColor = '#fef3cd';
-                    setTimeout(() => {
-                        e.target.style.backgroundColor = '';
-                    }, 1000);
-                    
-                    // Reset pagination to first page
-                    if (pagination[dataType]) {
-                        pagination[dataType].currentPage = 1;
-                    }
-                    
-                    // Trigger search/filter
-                    autoApplyFilters();
-                }
-            });
+            // Note: clicking the input no longer clears it. Clearing is done via the clear icon.
             
             input.addEventListener('focus', function(e) {
                 const value = e.target.value.trim();
@@ -2406,6 +2484,8 @@ require_once 'check_permission.php';
         }
         
         async function fetchAllDataWithFilters() {
+            // Disable search inputs while fetching
+            disableSearchInputs();
             showLoadingState();
             
             try {
@@ -2425,6 +2505,8 @@ require_once 'check_permission.php';
             } catch (error) {
                 console.error('Error fetching data:', error);
             }
+            // Re-enable search inputs after fetches are complete
+            setTimeout(enableSearchInputs, 50);
         }
         
         async function fetchFournisseurDataWithFilters() {

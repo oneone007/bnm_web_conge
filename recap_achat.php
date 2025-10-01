@@ -94,6 +94,11 @@ Reacap Achat
             flex-direction: column;
         }
     }
+
+    /* Pagination Styles */
+    .pagination-container button:hover:not(:disabled) {
+        transform: translateY(-1px);
+    }
 </style>
 
 
@@ -131,13 +136,26 @@ Reacap Achat
         <input type="date" id="end-date" class="border rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600">
     </div>
 
-    <!-- Refresh Button with Icon -->
-    <button id="refresh-btn" class="p-3 bg-white dark:bg-gray-700 text-blue-500 dark:text-blue-400 rounded-full shadow-lg hover:shadow-xl border border-blue-500 dark:border-blue-400 transition duration-200 flex items-center justify-center">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+    <!-- Fetch & Refresh Button -->
+    <button id="refresh-btn" class="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl border border-blue-500 dark:border-blue-400 transition-all duration-200 flex items-center justify-center space-x-2" title="Fetch and refresh all data">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75a7.5 7.5 0 0 0 12.755 4.652M4.5 15.75H9m-4.5 0v4.5m15-7.5a7.5 7.5 0 0 0-12.755-4.652M19.5 8.25H15m4.5 0V3.75" />
         </svg>
+        <span>Fetch & Refresh</span>
     </button>
 </div>
+
+<!-- User Instructions -->
+<!-- <div class="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-4">
+    <div class="flex items-center">
+        <svg class="w-5 h-5 text-blue-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+        </svg>
+        <p class="text-blue-800 dark:text-blue-200 text-sm">
+            <strong>How to use:</strong> Select both start and end dates, then click "Fetch & Refresh" to load data. Use the search fields to filter results locally or click rows for cross-filtering.
+        </p>
+    </div>
+</div> -->
 
 
 
@@ -256,14 +274,20 @@ Reacap Achat
         </div>
 
         <div class="search-container">
-            <div>
+            <div class="relative">
                 <label for="recap_fournisseur">Recap Fournisseur:</label>
-                <input type="text" id="recap_fournisseur" placeholder="Search...">
+                <div class="relative">
+                    <input type="text" id="recap_fournisseur" placeholder="Search... (click to clear & fetch all)">
+                    <button type="button" id="clear-fournisseur" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-red-500 text-xl font-bold" title="Clear and fetch all data">×</button>
+                </div>
             </div>
    
-            <div>
+            <div class="relative">
                 <label for="recap_product">Recap Product:</label>
-                <input type="text" id="recap_product" placeholder="Search...">
+                <div class="relative">
+                    <input type="text" id="recap_product" placeholder="Search... (click to clear & fetch all)">
+                    <button type="button" id="clear-product" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-red-500 text-xl font-bold" title="Clear and fetch all data">×</button>
+                </div>
             </div>
         
         </div>
@@ -295,6 +319,7 @@ Reacap Achat
                 </table>
             </div>
             <!-- Pagination for First Table -->
+            <div class="mt-4 flex justify-center space-x-2" id="fournisseur-pagination"></div>
         </div>
 
         <!-- Second Table -->
@@ -323,6 +348,7 @@ Reacap Achat
                 </table>
             </div>
             <!-- Pagination for Second Table -->
+            <div class="mt-4 flex justify-center space-x-2" id="product-pagination"></div>
         </div>
     </div>
 
@@ -542,7 +568,24 @@ tables.forEach((table) => makeTableColumnsResizable(table));
 
         // Refresh button action
         refreshBtn.addEventListener("click", function () {
-            triggerChangeEvent(endDate); // Make sure refresh triggers the change
+            if (startDate.value && endDate.value) {
+                // Clear all selections and filters
+                selectedFournisseur = null;
+                selectedProduct = null;
+                document.getElementById("recap_fournisseur").value = "";
+                document.getElementById("recap_product").value = "";
+                
+                // Reset pagination to first page
+                fournisseurCurrentPage = 1;
+                productCurrentPage = 1;
+                
+                // Fetch all data
+                fetchTotalRecapAchat();
+                fetchFournisseurRecapAchat();
+                fetchProductRecapAchat();
+            } else {
+                alert("Please select both start and end dates before fetching data.");
+            }
         });
     });
 // Format number with thousand separators & two decimals
@@ -558,16 +601,17 @@ tables.forEach((table) => makeTableColumnsResizable(table));
       
 
             
-            // Attach event listeners to date inputs
-            document.getElementById("start-date").addEventListener("change", fetchTotalRecapAchat);
-            document.getElementById("end-date").addEventListener("change", fetchTotalRecapAchat);
+            // Note: Auto-fetch removed - data will only be fetched when refresh button is clicked
 
 
             async function fetchTotalRecapAchat() {
   const startDate = document.getElementById("start-date").value;
   const endDate = document.getElementById("end-date").value;
 
-  if (!startDate || !endDate) return; // Don't fetch until both dates are selected
+  if (!startDate || !endDate) {
+    console.log("Both start and end dates are required to fetch data");
+    return; // Don't fetch until both dates are selected
+  }
 
   // Show loading animation, hide result text
   document.getElementById("loading-animation").classList.remove("hidden");
@@ -608,26 +652,7 @@ function formatNumber(value) {
     return parseFloat(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// Attach event listeners to date inputs and trigger fetch on change
-document.getElementById("start-date").addEventListener("change", fetchTotalRecapAchat);
-document.getElementById("end-date").addEventListener("change", fetchTotalRecapAchat);
-
-
-
-
-// Also trigger fetch when any other field changes
-
-
-
-
-// Attach event listeners to relevant filter inputs
-
-
-// Fetch data when filters are applied for recap achat
-document.getElementById("recap_fournisseur").addEventListener("input", fetchFournisseurRecapAchat);
-document.getElementById("recap_product").addEventListener("input", fetchFournisseurRecapAchat);
-document.getElementById("start-date").addEventListener("input", fetchFournisseurRecapAchat);
-document.getElementById("end-date").addEventListener("input", fetchFournisseurRecapAchat);
+// Note: Auto-fetch event listeners removed - data will only be fetched when refresh button is clicked
 
 // Fetch data when filters are applied for recap achat
 
@@ -686,11 +711,10 @@ function formatNumber(value) {
 
 // Update table with fetched data for recap achat
 function updateFournisseurRecapAchatTable(data) {
-    const tableBody = document.getElementById("recap-frnsr-table-achat");
-    tableBody.innerHTML = "";
-
     if (!data || data.length === 0) {
+        const tableBody = document.getElementById("recap-frnsr-table-achat");
         tableBody.innerHTML = `<tr><td colspan="2" class="text-center p-4">No data available</td></tr>`;
+        document.getElementById("fournisseur-pagination").innerHTML = '';
         return;
     }
 
@@ -701,36 +725,72 @@ function updateFournisseurRecapAchatTable(data) {
     // 🔽 Sort by CHIFFRE descending
     filteredData.sort((a, b) => b.CHIFFRE - a.CHIFFRE);
 
+    // Store data globally for pagination
+    fournisseurData = filteredData;
+    fournisseurCurrentPage = 1; // Reset to first page
+    
+    // Update display
+    updateFournisseurDisplay();
+}
+
+function renderFournisseurPage(page, totalRow, dataToUse = null) {
+    const tableBody = document.getElementById("recap-frnsr-table-achat");
+    tableBody.innerHTML = "";
+
     // Add the "Total" row with sticky style
     if (totalRow) {
         tableBody.innerHTML += `
-            <tr class="bg-gray-200 font-bold sticky top-0 z-10">
+            <tr class="bg-gray-200 dark:bg-gray-600 font-bold sticky top-0 z-10">
                 <td class="border px-4 py-2 dark:border-gray-600">${totalRow.FOURNISSEUR}</td>
                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.CHIFFRE)}</td>
             </tr>
         `;
     }
 
-    // Add the filtered data rows
-    filteredData.forEach(row => {
+    // Get paginated data
+    const dataSource = dataToUse || fournisseurData;
+    const paginatedData = paginateData(dataSource, page);
+
+    // Add the paginated data rows
+    paginatedData.forEach(row => {
         const tr = document.createElement("tr");
-        tr.className = "dark:bg-gray-700 cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600";
+        // Highlight selected row
+        const isSelected = selectedFournisseur === row.FOURNISSEUR;
+        tr.className = isSelected 
+            ? "bg-blue-100 dark:bg-blue-800 cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-700 border-l-4 border-blue-500"
+            : "dark:bg-gray-700 cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600";
         tr.innerHTML = `
             <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || "N/A"}</td>
             <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.CHIFFRE)}</td>
         `;
 
         tr.addEventListener("click", () => {
-            // Update search input (existing functionality)
-            const searchInput = document.getElementById("recap_fournisseur");
-            if (row.FOURNISSEUR) {
-                searchInput.value = row.FOURNISSEUR;
-                searchInput.dispatchEvent(new Event("input"));
-            }
-
-            // Fetch invoices for this supplier (new functionality)
+            const fournisseurInput = document.getElementById("recap_fournisseur");
+            
             if (row.FOURNISSEUR && row.FOURNISSEUR !== "Total") {
-                fetchSupplierInvoices(row.FOURNISSEUR);
+                // Toggle functionality - if clicking the same fournisseur, clear the filter
+                if (selectedFournisseur === row.FOURNISSEUR) {
+                    // Clear only the fournisseur filter
+                    selectedFournisseur = null;
+                    fournisseurInput.value = '';
+                } else {
+                    // Set new fournisseur filter - don't touch product search
+                    selectedFournisseur = row.FOURNISSEUR;
+                    fournisseurInput.value = row.FOURNISSEUR;
+                }
+                
+                // Reset both tables to first page
+                fournisseurCurrentPage = 1;
+                productCurrentPage = 1;
+                
+                // Fetch fresh data with the new filter (or clear filter)
+                fetchFournisseurRecapAchat();
+                fetchProductRecapAchat();
+                
+                // Fetch invoices for this supplier
+                if (selectedFournisseur) {
+                    fetchSupplierInvoices(selectedFournisseur);
+                }
             }
         });
 
@@ -739,16 +799,7 @@ function updateFournisseurRecapAchatTable(data) {
 }
 
 
-// Event listeners to fetch data when inputs change
-
-
-// Fetch data when filters are applied for product recap achat
-document.getElementById("recap_fournisseur").addEventListener("input", fetchProductRecapAchat);
-document.getElementById("recap_product").addEventListener("input", fetchProductRecapAchat);
-document.getElementById("start-date").addEventListener("input", fetchProductRecapAchat);
-document.getElementById("end-date").addEventListener("input", fetchProductRecapAchat);
-
-// Fetch data when filters are applied for product recap achat
+// Note: Auto-fetch event listeners removed - data will only be fetched when refresh button is clicked or rows are clicked
 async function fetchProductRecapAchat() {
     const startDate = document.getElementById("start-date").value;
     const endDate = document.getElementById("end-date").value;
@@ -848,11 +899,10 @@ function formatNumber(value) {
 //     });
 // }
 function updateProductRecapAchatTable(data) {
-    const tableBody = document.getElementById("recap-prdct-table");
-    tableBody.innerHTML = "";
-
     if (!data || data.length === 0) {
+        const tableBody = document.getElementById("recap-prdct-table");
         tableBody.innerHTML = `<tr><td colspan="3" class="text-center p-4">No data available</td></tr>`;
+        document.getElementById("product-pagination").innerHTML = '';
         return;
     }
 
@@ -863,10 +913,22 @@ function updateProductRecapAchatTable(data) {
     // 🔽 Sort by CHIFFRE descending
     filteredData.sort((a, b) => b.CHIFFRE - a.CHIFFRE);
 
+    // Store data globally for pagination
+    productData = filteredData;
+    productCurrentPage = 1; // Reset to first page
+    
+    // Update display
+    updateProductDisplay();
+}
+
+function renderProductPage(page, totalRow, dataToUse = null) {
+    const tableBody = document.getElementById("recap-prdct-table");
+    tableBody.innerHTML = "";
+
     // Add the "Total" row with sticky style
     if (totalRow) {
         const totalRowElement = document.createElement("tr");
-        totalRowElement.className = "bg-gray-200 font-bold sticky top-0 z-10";
+        totalRowElement.className = "bg-gray-200 dark:bg-gray-600 font-bold sticky top-0 z-10";
         totalRowElement.innerHTML = `
             <td class="border px-4 py-2 dark:border-gray-600">${totalRow.PRODUIT}</td>
             <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(totalRow.QTY)}</td>
@@ -875,10 +937,18 @@ function updateProductRecapAchatTable(data) {
         tableBody.appendChild(totalRowElement);
     }
 
-    // Add the filtered data rows
-    filteredData.forEach(row => {
+    // Get paginated data
+    const dataSource = dataToUse || productData;
+    const paginatedData = paginateData(dataSource, page);
+
+    // Add the paginated data rows
+    paginatedData.forEach(row => {
         const tr = document.createElement("tr");
-        tr.className = "dark:bg-gray-700 cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600";
+        // Highlight selected row
+        const isSelected = selectedProduct === row.PRODUIT;
+        tr.className = isSelected 
+            ? "bg-blue-100 dark:bg-blue-800 cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-700 border-l-4 border-blue-500"
+            : "dark:bg-gray-700 cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-600";
         tr.innerHTML = `
             <td class="border px-4 py-2 dark:border-gray-600">${row.PRODUIT || "N/A"}</td>
             <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
@@ -886,10 +956,27 @@ function updateProductRecapAchatTable(data) {
         `;
 
         tr.addEventListener("click", () => {
-            const searchInput = document.getElementById("recap_product");
-            if (row.PRODUIT) {
-                searchInput.value = row.PRODUIT;
-                searchInput.dispatchEvent(new Event("input"));
+            const productInput = document.getElementById("recap_product");
+            
+            if (row.PRODUIT && row.PRODUIT !== "Total") {
+                // Toggle functionality - if clicking the same product, clear the filter
+                if (selectedProduct === row.PRODUIT) {
+                    // Clear only the product filter
+                    selectedProduct = null;
+                    productInput.value = '';
+                } else {
+                    // Set new product filter - don't touch fournisseur search
+                    selectedProduct = row.PRODUIT;
+                    productInput.value = row.PRODUIT;
+                }
+                
+                // Reset both tables to first page
+                fournisseurCurrentPage = 1;
+                productCurrentPage = 1;
+                
+                // Fetch fresh data with the new filter (or clear filter)
+                fetchFournisseurRecapAchat();
+                fetchProductRecapAchat();
             }
         });
 
@@ -897,11 +984,134 @@ function updateProductRecapAchatTable(data) {
     });
 }
 
-// Event listeners to fetch data when inputs change
-document.getElementById("recap_fournisseur").addEventListener("input", fetchProductRecapAchat);
-document.getElementById("recap_product").addEventListener("input", fetchProductRecapAchat);
-document.getElementById("start-date").addEventListener("input", fetchProductRecapAchat);
-document.getElementById("end-date").addEventListener("input", fetchProductRecapAchat);
+// Pagination variables
+let fournisseurData = [];
+let productData = [];
+let fournisseurCurrentPage = 1;
+let productCurrentPage = 1;
+let fournisseurFilteredData = [];
+let productFilteredData = [];
+const itemsPerPage = 10;
+
+// Track selected rows for toggle functionality
+let selectedFournisseur = null;
+let selectedProduct = null;
+
+// Pagination functions
+function createPagination(totalItems, currentPage, paginationId, tableType) {
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const paginationContainer = document.getElementById(paginationId);
+    paginationContainer.innerHTML = '';
+    paginationContainer.className = 'flex items-center justify-center space-x-4 mt-4';
+
+    if (totalPages <= 1) {
+        paginationContainer.innerHTML = '';
+        return;
+    }
+
+    // Previous button
+    const prevBtn = document.createElement('button');
+    prevBtn.className = `px-4 py-2 rounded-lg font-medium transition-all duration-200 ${currentPage === 1 ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-600 hover:shadow-lg'}`;
+    prevBtn.textContent = 'Previous';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.onclick = () => {
+        if (currentPage > 1) {
+            if (tableType === 'fournisseur') {
+                fournisseurCurrentPage = currentPage - 1;
+                updateFournisseurDisplay();
+            } else if (tableType === 'product') {
+                productCurrentPage = currentPage - 1;
+                updateProductDisplay();
+            }
+        }
+    };
+    paginationContainer.appendChild(prevBtn);
+
+    // Page info (1/22 format) with total items count
+    const pageInfo = document.createElement('div');
+    pageInfo.className = 'flex items-center space-x-3';
+    
+    const pageDisplay = document.createElement('span');
+    pageDisplay.className = 'px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-semibold min-w-[80px] text-center border border-gray-300 dark:border-gray-600';
+    pageDisplay.textContent = `${currentPage}/${totalPages}`;
+    
+    const itemsInfo = document.createElement('span');
+    itemsInfo.className = 'text-sm text-gray-600 dark:text-gray-400';
+    const startItem = (currentPage - 1) * itemsPerPage + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+    itemsInfo.textContent = `(${startItem}-${endItem} of ${totalItems})`;
+    
+    pageInfo.appendChild(pageDisplay);
+    pageInfo.appendChild(itemsInfo);
+    paginationContainer.appendChild(pageInfo);
+
+    // Next button
+    const nextBtn = document.createElement('button');
+    nextBtn.className = `px-4 py-2 rounded-lg font-medium transition-all duration-200 ${currentPage === totalPages ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-600 hover:shadow-lg'}`;
+    nextBtn.textContent = 'Next';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.onclick = () => {
+        if (currentPage < totalPages) {
+            if (tableType === 'fournisseur') {
+                fournisseurCurrentPage = currentPage + 1;
+                updateFournisseurDisplay();
+            } else if (tableType === 'product') {
+                productCurrentPage = currentPage + 1;
+                updateProductDisplay();
+            }
+        }
+    };
+    paginationContainer.appendChild(nextBtn);
+}
+
+// Update display functions
+function updateFournisseurDisplay() {
+    // Only filter by fournisseur search field for local filtering
+    const fournisseurSearch = document.getElementById('recap_fournisseur').value.trim().toUpperCase();
+    let dataToUse = fournisseurData;
+    
+    if (fournisseurSearch) {
+        dataToUse = fournisseurData.filter(row => 
+            row.FOURNISSEUR && row.FOURNISSEUR.toUpperCase().includes(fournisseurSearch)
+        );
+    }
+    
+    fournisseurFilteredData = dataToUse;
+    
+    // Find total row for display
+    const allData = [...fournisseurData];
+    const totalRow = allData.find(row => row.FOURNISSEUR === "Total");
+    
+    renderFournisseurPage(fournisseurCurrentPage, totalRow, dataToUse);
+    createPagination(dataToUse.length, fournisseurCurrentPage, 'fournisseur-pagination', 'fournisseur');
+}
+
+function updateProductDisplay() {
+    // Only filter by product search field for local filtering
+    const productSearch = document.getElementById('recap_product').value.trim().toUpperCase();
+    let dataToUse = productData;
+    
+    if (productSearch) {
+        dataToUse = productData.filter(row => 
+            row.PRODUIT && row.PRODUIT.toUpperCase().includes(productSearch)
+        );
+    }
+    
+    productFilteredData = dataToUse;
+    
+    // Find total row for display
+    const allData = [...productData];
+    const totalRow = allData.find(row => row.PRODUIT === "Total");
+    
+    renderProductPage(productCurrentPage, totalRow, dataToUse);
+    createPagination(dataToUse.length, productCurrentPage, 'product-pagination', 'product');
+}
+
+function paginateData(data, page) {
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return data.slice(startIndex, endIndex);
+}
 
 // New functionality for supplier invoices
 async function fetchSupplierInvoices(supplierName) {
@@ -1209,25 +1419,81 @@ document.getElementById("download-invoice-lines-excel").addEventListener("click"
     }
 });
 
- // Function to handle the click event
+    // Function to handle the click event
     function handleInputClick(event) {
         // Clear the input value
         event.target.value = '';
         
-        // Trigger the input event (or whatever event your filter listens to)
-        // This will simulate the behavior of manually deleting the text
-        event.target.dispatchEvent(new Event('input', { bubbles: true }));
+        // Clear selection states
+        selectedFournisseur = null;
+        selectedProduct = null;
+        
+        // Reset both tables to first page
+        fournisseurCurrentPage = 1;
+        productCurrentPage = 1;
+        
+        // Fetch fresh data with no filters (empty parameters)
+        fetchFournisseurRecapAchat();
+        fetchProductRecapAchat();
     }
+
+    // Local filtering functions for search
+    function filterFournisseurTable() {
+        // Reset to first page when searching
+        fournisseurCurrentPage = 1;
+        // Update display with current search
+        updateFournisseurDisplay();
+    }
+
+    function filterProductTable() {
+        // Reset to first page when searching
+        productCurrentPage = 1;
+        // Update display with current search
+        updateProductDisplay();
+    }
+
+    // Removed old render functions - now using updateFournisseurDisplay() and updateProductDisplay()
 
     // Get the input elements
     const fournisseurInput = document.getElementById('recap_fournisseur');
     const productInput = document.getElementById('recap_product');
 
-    // Add click event listeners
+    // Add click event listeners for clearing search fields
     fournisseurInput.addEventListener('click', handleInputClick);
     productInput.addEventListener('click', handleInputClick);
-
-
+    
+    // Add input event listeners for local filtering
+    fournisseurInput.addEventListener('input', filterFournisseurTable);
+    productInput.addEventListener('input', filterProductTable);
+    
+    // Clear button event listeners
+    document.getElementById('clear-fournisseur').addEventListener('click', function() {
+        document.getElementById('recap_fournisseur').value = '';
+        selectedFournisseur = null;
+        fournisseurCurrentPage = 1;
+        productCurrentPage = 1;
+        // Only fetch data if dates are selected
+        const startDate = document.getElementById("start-date").value;
+        const endDate = document.getElementById("end-date").value;
+        if (startDate && endDate) {
+            fetchFournisseurRecapAchat();
+            fetchProductRecapAchat();
+        }
+    });
+    
+    document.getElementById('clear-product').addEventListener('click', function() {
+        document.getElementById('recap_product').value = '';
+        selectedProduct = null;
+        fournisseurCurrentPage = 1;
+        productCurrentPage = 1;
+        // Only fetch data if dates are selected
+        const startDate = document.getElementById("start-date").value;
+        const endDate = document.getElementById("end-date").value;
+        if (startDate && endDate) {
+            fetchFournisseurRecapAchat();
+            fetchProductRecapAchat();
+        }
+    });
             // Dark Mode Toggle Functionality
             const themeToggle = document.getElementById('themeToggle');
             const htmlElement = document.documentElement;

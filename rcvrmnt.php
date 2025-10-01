@@ -133,10 +133,20 @@ require_once 'check_permission.php';
                     <h2 class="text-2xl font-bold text-gray-700 flex items-center gap-2">
                         <span class="text-3xl">💵</span> Objectif Mensuel
                     </h2>
-                    <button id="refreshBtn" class="refresh-btn text-indigo-600 text-sm flex items-center gap-2 shadow-sm">
-                        <i class="fas fa-sync-alt"></i>
-                        <span>Actualiser</span>
-                    </button>
+                    <!-- Edited -->
+                    <div class="flex items-center gap-2">
+                        <?php if (isset($_SESSION['Role']) && $_SESSION['Role'] === 'Developer'): ?>
+                        <button id="editGoalBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1 transition-colors">
+                            <i class="fas fa-edit"></i>
+                            <span>Modifier</span>
+                        </button>
+                        <?php endif; ?>
+                        <button id="refreshBtn" class="refresh-btn text-indigo-600 text-sm flex items-center gap-2 shadow-sm">
+                            <i class="fas fa-sync-alt"></i>
+                            <span>Actualiser</span>
+                        </button>
+                    </div>
+                <!-- Edited -->
                 </div>
                 <div class="space-y-6">
                     <div>
@@ -172,7 +182,46 @@ require_once 'check_permission.php';
             </div>
         </div>
     </div>
+<!-- Edited -->
+    <!-- Edit Goal Modal -->
+    <div id="editGoalModal" class="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 hidden flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4 shadow-xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Modifier l'Objectif Mensuel</h3>
+                <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100 transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="newGoalInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Nouvelle valeur de l'objectif (DZD)
+                    </label>
+                    <input type="number" 
+                           id="newGoalInput" 
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white dark:focus:ring-indigo-400 dark:focus:border-indigo-400 transition-colors"
+                           placeholder="Entrez la nouvelle valeur"
+                           min="0"
+                           step="1000">
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button id="cancelBtn" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors">
+                        Annuler
+                    </button>
+                    <button id="submitBtn" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        <span id="submitText">Enregistrer</span>
+                        <span id="submitLoading" class="hidden ml-2">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <!-- Edited -->
 <script>
         // DOM Elements
         const refreshBtn = document.getElementById('refreshBtn');
@@ -276,7 +325,112 @@ require_once 'check_permission.php';
 
         // Event Listeners
         refreshBtn.addEventListener('click', refreshData);
+        // Edited -->
         
+        // Edit Goal Modal Elements
+        const editGoalBtn = document.getElementById('editGoalBtn');
+        const editGoalModal = document.getElementById('editGoalModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        const newGoalInput = document.getElementById('newGoalInput');
+        const submitText = document.getElementById('submitText');
+        const submitLoading = document.getElementById('submitLoading');
+        
+        // Modal Functions
+        function openModal() {
+            editGoalModal.classList.remove('hidden');
+            // Pre-fill with current goal value
+            const currentGoalText = monthlyGoal.textContent;
+            // Parse formatted number properly (handles commas, spaces, and decimals)
+            const cleanNumber = currentGoalText.replace(/[^\d.,]/g, '').replace(',', '.');
+            const currentGoalValue = parseFloat(cleanNumber);
+            if (!isNaN(currentGoalValue)) {
+                newGoalInput.value = currentGoalValue;
+            }
+            newGoalInput.focus();
+        }
+        
+        function closeModal() {
+            editGoalModal.classList.add('hidden');
+            newGoalInput.value = '';
+        }
+        
+        // Modal Event Listeners
+        if (editGoalBtn) {
+            editGoalBtn.addEventListener('click', openModal);
+        }
+        closeModalBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+        
+        // Close modal when clicking outside
+        editGoalModal.addEventListener('click', function(e) {
+            if (e.target === editGoalModal) {
+                closeModal();
+            }
+        });
+        
+        // Submit new goal
+        submitBtn.addEventListener('click', async function() {
+            const newValue = parseFloat(newGoalInput.value);
+            
+            if (!newValue || newValue <= 0) {
+                alert('Veuillez entrer une valeur valide supérieure à 0.');
+                return;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitText.classList.add('hidden');
+            submitLoading.classList.remove('hidden');
+            
+            try {
+                const response = await fetch(API_CONFIG.getApiUrl('/update-monthly-goal'), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        new_goal: newValue
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Update the UI with the new value
+                    monthlyGoal.textContent = newValue.toLocaleString('fr-FR') + ' DZD';
+                    
+                    // Refresh data to update percentage
+                    await refreshData();
+                    
+                    // Close modal
+                    closeModal();
+                    
+                    // Show success message
+                    alert('Objectif mensuel mis à jour avec succès!');
+                } else {
+                    throw new Error(result.error || 'Erreur lors de la mise à jour');
+                }
+                
+            } catch (error) {
+                console.error('Error updating goal:', error);
+                alert('Erreur lors de la mise à jour: ' + error.message);
+            } finally {
+                // Hide loading state
+                submitBtn.disabled = false;
+                submitText.classList.remove('hidden');
+                submitLoading.classList.add('hidden');
+            }
+        });
+        
+        // Handle Enter key in input
+        newGoalInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                submitBtn.click();
+            }
+        });
+         // Edited -->
         // Initialize the app
         loadInitialData();
     </script>

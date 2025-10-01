@@ -80,7 +80,7 @@ def get_all_recipients():
 DB_POOL = oracledb.create_pool(
     user="compiere",
     password="compiere",
-    dsn="192.168.1.241/compiere",
+    dsn="192.168.1.213/compiere",
     min=2,
     max=10,
     increment=1
@@ -548,6 +548,8 @@ def save_inventory_data(data):
             if quantity <= 0 or not product_name or item_type not in ['entry', 'sortie']:
                 continue
 
+            quantity = -quantity if item_type == "sortie" else quantity
+            
             cursor.execute(item_query, (
                 inventory_id,
                 product_name,
@@ -1264,6 +1266,59 @@ def delete_inventory_route(inventory_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@app.route('/inventory_product_search', methods=['GET'])
+def inventory_product_search():
+    """Search for inventories containing a specific product, optionally filtered by date"""
+    try:
+        product_name = request.args.get('product_name')
+        date_filter = request.args.get('date')  # Optional date filter
+        
+        if not product_name:
+            return jsonify({"success": False, "error": "product_name is required"}), 400
+        
+        connection = get_localdb_connection()
+        if not connection:
+            return jsonify({"success": False, "error": "Database connection failed"}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            # Build query to find inventories with the product
+            query = """
+                SELECT DISTINCT i.id, i.title, i.status, i.created_at, ii.product_name, ii.date, ii.quantity
+                FROM inventories i
+                JOIN inventory_items ii ON i.id = ii.inventory_id
+                WHERE ii.product_name LIKE %s
+            """
+            params = [f"%{product_name}%"]
+            
+            if date_filter:
+                query += " AND ii.date = %s"
+                params.append(date_filter)
+            
+            query += " ORDER BY i.created_at DESC"
+            
+            cursor.execute(query, params)
+            results = cursor.fetchall()
+            
+            return jsonify({
+                "success": True,
+                "inventories": results,
+                "count": len(results)
+            }), 200
+            
+        except mysql.connector.Error as e:
+            logger.error(f"Error searching inventory products: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
+        finally:
+            cursor.close()
+            connection.close()
+            
+    except Exception as e:
+        logger.error(f"Error in inventory_product_search: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 # Test database connection
 def test_db_connection():
     try:
@@ -1330,6 +1385,7 @@ def listproduct_inv():
             """
             cursor.execute(query)
             rows = cursor.fetchall()
+
             # Return array of objects with id and name
             products = [{"id": row[0], "name": row[1]} for row in rows]
             return jsonify(products)
@@ -1521,25 +1577,27 @@ def inventory_products_updated():
     try:
         product_id = request.args.get("product_id", None)
         category = request.args.get("category", "all")  # Default to "all" if no category provided
+        show_all = request.args.get("show_all", "false").lower() == "true"  # New parameter
+        print("Show all:", show_all)
         
         if not product_id:
             return jsonify({"error": "Product ID is required"}), 400
 
-        data = fetch_inventory_products_data_updated(product_id, category)
+        data = fetch_inventory_products_data_updated(product_id, category, show_all)
         return jsonify(data)
 
     except Exception as e:
-        logger.error(f"Error fetching updated inventory products: {e}")
+        logger.error(f"Error f+etching updated inventory products: {e}")
         return jsonify({"error": "Failed to fetch updated inventory products"}), 500
     
 
 
-
-def fetch_inventory_products_data_updated(product_id, category="all"):
+def fetch_inventory_products_data_updated(product_id, category="all", show_all=False):
     """
     Fetch inventory product data where:
     - ANY of these is non-zero: QTY_ONHAND, QTY_RESERVED, QTY_DISPO, QTYORDERED
     - AND GUARANTEEDATE is NOT NULL
+    If show_all=True, ignore the QTY conditions and show all lots.
     """
     try:
         with DB_POOL.acquire() as connection:
@@ -1551,11 +1609,16 @@ def fetch_inventory_products_data_updated(product_id, category="all"):
                 "preparation": "(1001135, 1000614, 1001128, 1001136, 1001020)",
                 "tempo": "(1000314, 1000210, 1000211, 1000109, 1000209, 1000213, 1000214, 1000414, 1000817, 1001129)"
             }
-            
             locator_list = locator_groups.get(category, locator_groups["all"])
-            
-            logger.info(f"Fetching inventory data for product_id: {product_id}, category: {category}")
-            
+            logger.info(f"Fetching inventory data for product_id: {product_id}, category: {category}, show_all: {show_all}")
+            qty_condition = """
+                AND (
+                    mst.qtyonhand != 0 
+                    OR mst.QTYRESERVED != 0 
+                    OR (mst.qtyonhand - mst.QTYRESERVED) != 0
+                    OR mst.QTYORDERED != 0
+                )
+            """ if not show_all else ""
             query = f"""
             SELECT
                 p.name AS PRODUCT,
@@ -1597,17 +1660,16 @@ def fetch_inventory_products_data_updated(product_id, category="all"):
             WHERE
                 p.m_product_id = :product_id
                 AND mst.m_locator_id IN {locator_list}
+                {qty_condition}
+                AND mats.m_attributesetinstance_id in (select m_attributesetinstance_id from m_attributeinstance where mats.m_attributesetinstance_id=m_attributesetinstance_id and m_attribute_id = 1000502 and valuenumber != 0) 
                 AND (
-                    mst.qtyonhand != 0 
-                    OR mst.QTYRESERVED != 0 
-                    OR (mst.qtyonhand - mst.QTYRESERVED) != 0
-                    OR mst.QTYORDERED != 0
-                )
+                    mst.m_locator_id = 1000210
+                    OR mats.guaranteedate > SYSDATE - 30
+                )  -- Exclude expired lots (assuming 30 days grace period)
                 AND mats.guaranteedate IS NOT NULL  -- NEW: Exclude NULL guarantee dates
             ORDER BY
                 p.name, mats.guaranteedate
             """
-            
             cursor.execute(query, {"product_id": product_id})
             rows = cursor.fetchall()
             columns = [col[0] for col in cursor.description]
@@ -1987,13 +2049,13 @@ def send_info_mail_route():
 
 
 
-
 @app.route('/inventory/insert_inventory', methods=['POST', 'OPTIONS'])
 def insert_inventory():
     if request.method == 'OPTIONS':
         return jsonify({'status': 'ok'}), 200
     
     try:
+        
         # Debug the raw request data
         print("Raw request data:", request.data)
         
@@ -2025,6 +2087,10 @@ def insert_inventory():
         print("------------------------------------------.", item['attributes'])
         print("Attributes for item:", item['product_name'])
         
+
+        #connection_loc = get_localdb_connection()
+        #cursor_loc = connection_loc.cursor()
+
         # Get connection from pool
         connection = DB_POOL.acquire()
         cursor = connection.cursor()
@@ -2051,7 +2117,7 @@ def insert_inventory():
                  FROM AD_Sequence s
                  JOIN C_DocType dt ON s.AD_Sequence_ID = dt.DocNoSequence_ID
                  WHERE dt.C_DocType_ID = 1000021),
-                , 
+                :description,
                 1000000, sysdate, 
                 'N', 'N', 'N', 'N', 'N', 
                 null, null, null, null, 
@@ -2060,7 +2126,7 @@ def insert_inventory():
                 null, 'N', 'N', null, null
             FROM dual
         """, {
-                    'description': item.get('title')
+                    'description': data.get('title')
                 })
 
         # Update document sequence
@@ -2202,9 +2268,9 @@ def insert_inventory():
                     1000000, 1000000, 'Y', 
                     sysdate, 100, sysdate, 100,
                     :new_inventory_id, 1000614, :product_id, :line_number, 
-                    :qty_dispo, :quantity, :description, :m_attributesetinstance_id, 
+                    :qty_dispo,:qty_dispo + :quantity, :description, :m_attributesetinstance_id, 
                     1000028, 'C', 'N', 0, 
-                    'N', null, null, :quantity, 100,
+                    'N', null, null,:qty_dispo + :quantity, 100,
                     null, null, 'N', 'N'
                 )
             """, {
@@ -2224,7 +2290,13 @@ def insert_inventory():
                 'quantity': item['quantity']
             })
 
-            # INSERT INTO M_Transaction after all inventory lines are created
+        # Check if we have any inventory lines before inserting transactions
+        cursor.execute("SELECT COUNT(*) FROM m_inventoryline WHERE m_inventory_id = :inv_id", 
+                    {'inv_id': new_inventory_id})
+        line_count = cursor.fetchone()[0]
+
+        if line_count > 0:
+        # INSERT INTO M_Transaction after all inventory lines are created
             cursor.execute("""
                 INSERT INTO M_Transaction (
                     m_transaction_id, ad_client_id, ad_org_id, isactive, 
@@ -2237,7 +2309,8 @@ def insert_inventory():
                     z_production_outline_id
                 )
                 SELECT 
-                    (SELECT NVL(MAX(m_transaction_id),0) + 1 FROM m_transaction WHERE ad_client_id = 1000000) + ROWNUM,
+                    (SELECT NVL(MAX(m_transaction_id),0) FROM m_transaction WHERE ad_client_id = 1000000) 
+                    + ROW_NUMBER() OVER (ORDER BY ml.m_inventoryline_id),
                     1000000, -- AD_Client_ID
                     1000000, -- AD_Org_ID
                     'Y',
@@ -2246,7 +2319,7 @@ def insert_inventory():
                     ml.m_locator_id, -- M_Locator_ID
                     ml.m_product_id, -- M_Product_ID
                     sysdate, -- MovementDate
-                    ml.qtycount, -- MovementQty
+                    ml.qtycount - ml.qtybook, -- MovementQty
                     ml.m_inventoryline_id, -- M_InventoryLine_ID
                     null, -- M_InOutLine_ID     
                     null, -- M_ProductionLine_ID
@@ -2260,7 +2333,8 @@ def insert_inventory():
                 JOIN m_inventory i ON ml.m_inventory_id = i.m_inventory_id
                 WHERE i.m_inventory_id = :new_inventory_id
             """, {'new_inventory_id': new_inventory_id})
-
+        else:
+            logger.warning("No inventory lines found for transaction creation")
         
 
         # 7. Insert inventory line MA
@@ -2287,29 +2361,29 @@ def insert_inventory():
                 m_inventoryline_id, m_attributesetinstance_id,
                 ad_client_id, ad_org_id, isactive, created,
                 createdby, updated, updatedby, movementqty
-            )
-            SELECT 
-                il.m_inventoryline_id,
-                ms.m_attributesetinstance_id,
-                il.ad_client_id,
-                il.ad_org_id,
-                'Y',
-                il.created,
-                il.createdby,
-                il.updated,
-                il.updatedby,
-                ms.qtyonhand
-            FROM m_inventoryline il
-            JOIN m_inventory i ON il.m_inventory_id = i.m_inventory_id
-            JOIN m_storage ms ON (il.m_product_id = ms.m_product_id)
-            WHERE i.m_inventory_id = :new_inventory_id
-            AND il.m_attributesetinstance_id IS NOT NULL
-            AND i.ad_client_id = 1000000
-            AND ms.qtyonhand > 0
-            AND ms.m_locator_id = 1000614
-            """,{
-                    'new_inventory_id': new_inventory_id
-                })
+                )
+                SELECT 
+                    il.m_inventoryline_id,
+                    ms.m_attributesetinstance_id,
+                    il.ad_client_id,
+                    il.ad_org_id,
+                    'Y',
+                    il.created,
+                    il.createdby,
+                    il.updated,
+                    il.updatedby,
+                    ms.qtyonhand
+                FROM m_inventoryline il
+                JOIN m_inventory i ON il.m_inventory_id = i.m_inventory_id
+                JOIN m_storage ms ON (il.m_product_id = ms.m_product_id)
+                WHERE i.m_inventory_id = :new_inventory_id
+                AND il.m_attributesetinstance_id IS NOT NULL
+                AND i.ad_client_id = 1000000
+                AND ms.qtyonhand > 0
+                AND ms.m_locator_id = 1000614
+                """,{
+                        'new_inventory_id': new_inventory_id
+                    })
 
         # 8. Update inventory status
         cursor.execute(f"""

@@ -1263,6 +1263,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </div>
             
+            <div class="mb-4 flex items-center">
+                <label class="flex items-center cursor-pointer">
+                    <div class="relative">
+                        <input type="checkbox" id="show-all-toggle" class="sr-only">
+                        <div class="block bg-gray-600 w-14 h-8 rounded-full"></div>
+                        <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
+                    </div>
+                    <div class="ml-3 text-gray-700 dark:text-gray-300 font-medium">Show All Lots</div>
+                </label>
+                <div class="ml-2 text-sm text-gray-500 dark:text-gray-400" id="show-all-help">(Including zero quantity)</div>
+            </div>
+            <style>
+            /* Toggle switch styles */
+            .toggle-checkbox:checked ~ .dot {
+                transform: translateX(100%);
+                background-color: #48bb78;
+            }
+            .toggle-checkbox:checked ~ .block {
+                background-color: #48bb78;
+            }
+            </style>
+
             <!-- Product Details Table -->
             <div id="product-details-container" class="hidden">
                 <h3 class="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">Product Details (Select one):</h3>
@@ -1886,6 +1908,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 }
 
+/* Add these styles to your existing CSS */
+#show-all-toggle:checked ~ .dot {
+    transform: translateX(100%);
+}
+#show-all-toggle:checked ~ .block {
+    background-color: #10B981; /* Green color */
+}
+
 </style>        </div>
     </div>
 
@@ -1909,7 +1939,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Load product list from API
         async function loadProductList() {
             try {
-                const response = await fetch("http://192.168.1.94:5003/listproduct_inv");
+                const response = await fetch("http://192.168.1.200:5003/listproduct_inv");
                 if (!response.ok) throw new Error("Failed to load products");
                 
                 const products = await response.json();
@@ -2374,6 +2404,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             selectedProductDetails = null;
         }
         
+        // Show All lot
+        // Add this function to set up the Show All toggle
+        function setupShowAllToggle() {
+            const showAllToggle = document.getElementById('show-all-toggle');
+            const showAllHelp = document.getElementById('show-all-help');
+            let showAll = false;
+    
+           
+    
+            // Toggle change event
+            showAllToggle.addEventListener('change', function() {
+                showAll = this.checked;
+                updateToggleVisuals();
+        
+                // If we have a selected product, refresh its details
+                const productSearch = document.getElementById('product-search');
+                const currentProductName = productSearch.value.trim();
+        
+                if (currentProductName ) {
+                    // Find the product in our list
+                    const product = productList.find(p => 
+                        p && p.name && p.name.toLowerCase().trim() === currentProductName.toLowerCase().trim()
+                    );
+            
+                    if (product) {
+                        console.log(`Refreshing product details with show_all=${showAll}`);
+                        selectProduct(product);
+                    }
+                }
+            });
+    
+            function updateToggleVisuals() {
+                const toggleBlock = document.querySelector('#show-all-toggle ~ .block');
+                const toggleDot = document.querySelector('#show-all-toggle ~ .dot');
+        
+                if (showAll) {
+                    // Update toggle appearance
+                    toggleBlock.style.backgroundColor = '#10B981'; // Green
+                    toggleDot.style.transform = 'translateX(100%)';
+            
+                    // Update help text
+                    showAllHelp.textContent = '(Including zero quantity)';
+                    showAllHelp.className = 'ml-2 text-sm text-green-600 dark:text-green-400';
+                } else {
+                    // Update toggle appearance
+                    toggleBlock.style.backgroundColor = '#4B5563'; // Gray-600
+                    toggleDot.style.transform = 'translateX(0)';
+            
+                    // Update help text
+                    showAllHelp.textContent = '(Only non-zero quantity)';
+                    showAllHelp.className = 'ml-2 text-sm text-gray-500 dark:text-gray-400';
+                }
+            }
+    
+            // Update the initial state
+            updateToggleVisuals();
+        }
+
         // Select product and fetch details
         async function selectProduct(product) {
             document.getElementById("product-search").value = product.name;
@@ -2391,8 +2479,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Get the selected category filter
                 const categoryFilter = document.getElementById('category-filter').value;
                 
+                // Get the show_all toggle state
+                const showAll = document.getElementById('show-all-toggle').checked;
+                
                 // Log for debugging
-                console.log(`Fetching product details for: ${product.name}, category: ${categoryFilter}`);
+                console.log(`Fetching product details for: ${product.name}, category: ${categoryFilter}, show_all: ${showAll}`);
                 
                 // Show loading indicator
                 showLoadingIndicator(`Loading ${product.name} details for ${categoryFilter} category...`);
@@ -2405,7 +2496,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
                 
-                const response = await fetch(`http://192.168.1.94:5003/inventory-products-updated?product_id=${encodeURIComponent(product.id)}&category=${encodeURIComponent(categoryFilter)}`);
+                const response = await fetch(`http://192.168.1.200:5003/inventory-products-updated?product_id=${encodeURIComponent(product.id)}&category=${encodeURIComponent(categoryFilter)}&show_all=${showAll}`);
                 
                 // Hide loading indicator
                 hideLoadingIndicator();
@@ -2615,8 +2706,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             let maid = '';
             if (productDetails.m_attributesetinstance_id) {
                 maid = productDetails.m_attributesetinstance_id;
-            } else if (productDetails.M_ATTRIBUTESSETINSTANCE_ID) {
-                maid = productDetails.M_ATTRIBUTESSETINSTANCE_ID;
             }
             if (maid) {
                 row.setAttribute('data-m_attributesetinstance_id', maid);
@@ -2988,7 +3077,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (qtyDispoInput) {
                     qtyDispoInput.addEventListener('input', function() {
                         // Trigger QTY validation when qty_dispo changes
-                        const qtyInputElement = row.querySelector('input.qty-editable');
+                        const qtyInputElement = -row.querySelector('input.qty-editable');
                         if (qtyInputElement) {
                             qtyInputElement.dispatchEvent(new Event('input'));
                         }
@@ -3360,7 +3449,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (product && qty && qty > 0) {
                     sortieData.push({
                         product: product,
-                        qty: parseInt(qty),
+                        qty: - parseInt(qty),
                         date: dateInput ? new Date(dateInput.value).toLocaleDateString() : '',
                         lot: lotInput ? lotInput.value : '',
                         ppa: ppaInput ? parseFloat(ppaInput.value).toFixed(2) : '0.00',
@@ -3480,7 +3569,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (product && qty && qty > 0) {
                     sortieData.push({
                         product: product,
-                        qty: parseInt(qty),
+                        qty: - parseInt(qty),
                         date: dateInput ? new Date(dateInput.value).toLocaleDateString() : '',
                         lot: lotInput ? lotInput.value : '',
                         ppa: ppaInput ? parseFloat(ppaInput.value).toFixed(2) : '0.00',
@@ -3653,7 +3742,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 console.log('Sending data:', dataToSend);
                 
                 // Send data to Python API
-                const response = await fetch('http://192.168.1.94:5003/inventory/save', {
+                const response = await fetch('http://192.168.1.200:5003/inventory/save', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -3957,7 +4046,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Prepare sortie table data
                 const sortieTableData = sortieData.map(item => [
                     item.product + (item.isManual ? '\n⚠️ No Qty Found in The System' : ''),
-                    item.qty.toString(),
+                    -item.qty.toString(),
                     item.date,
                     item.lot || 'N/A',
                     `${item.ppa} DA`,
@@ -4073,6 +4162,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setupCategoryFilter();
             setupTitleSuggestions();
             setupEventListeners();
+
+            // Setup Show All toggle functionality
+            setupShowAllToggle();
             
             // Don't add initial empty rows - they will be added when products are selected
         });

@@ -1,102 +1,123 @@
-/* Dark mode styles */
+/* Enhanced Input Styling - Professional Design */
+.input-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+}
+
+.input-wrapper input {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 2px solid #e5e7eb;
+    padding: 14px 18px;
+    font-size: 15px;
+    width: 100%;
+    border-radius: 12px;
+    color: #374151;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+    cursor: pointer;
+}
+
+.input-wrapper input:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    transform: translateY(-1px);
+}
+
+.input-wrapper input::placeholder {
+    color: #9ca3af;
+    font-weight: 400;
+}
+
+/* Dark mode for inputs */
+.dark .input-wrapper input {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+    border-color: #4b5563;
+    color: #f9fafb;
+}
+
+.dark .input-wrapper input::placeholder {
+    color: #9ca3af;
+}
+
+/* Dark mode styles - Enhanced */
 .dark body {
-    background-color: #111827;
-    color: #fff;
+    background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+    color: #f9fafb;
 }
 
 .dark .table-container {
-    background-color: #1f2937;
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
     border-color: #374151;
 }
 
 .dark .table-box {
-    background: #1f2937;
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
     border-color: #374151;
     color: #f9fafb;
 }
 
 .dark thead {
-    background-color: #374151;
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
 }
 
 .dark th {
-    color: #e5e7eb;
+    color: #f9fafb;
     border-color: #4b5563;
 }
 
 .dark td {
-    color: #e5e7eb;
+    color: #f9fafb;
     border-color: #4b5563;
 }
 
 .dark tr:nth-child(even) {
-    background-color: #2d3748;
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
 }
 
 .dark tr:nth-child(odd) {
-    background-color: #1f2937;
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
 }
 
 .dark tr:hover {
-    background-color: #374151;
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
 }
 
 .dark .search-container {
-    background-color: #1f2937;
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
     border-color: #374151;
 }
 
 .dark .search-container input {
-    background-color: #374151;
-    color: #fff;
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+    color: #f9fafb;
     border-color: #4b5563;
 }
 
 .dark .dropdown {
-    background-color: #1f2937;
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
     border-color: #374151;
-    color: #fff;
+    color: #f9fafb;
 }
 
 .dark .dropdown-item {
-    color: #fff;
+    color: #f9fafb;
 }
 
 .dark .dropdown-item:hover {
-    background-color: #374151;
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
 }
 
 .dark button, .dark select {
-    background-color: #374151;
-    color: #fff;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: #f9fafb;
     border-color: #4b5563;
 }
 
 .dark button:hover {
-    background-color: #4b5563;
+    background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%);
 }
-
-
-  /* From Uiverse.io by 0xnihilism */ 
-/* Fancy-ass Input Styling 2.0 */
-.input-wrapper {
-    position: relative;
-    width: 80%;
-    max-width: 500px;
-  }
-  
-  .input-wrapper input {
-    background-color: #f5f5f5;
-    border: 2px solid #ddd;
-    padding: 1.2rem 1rem;
-    font-size: 1.1rem;
-    width: 100%;
-    border-radius: 1.5rem;
-    color:rgb(0, 0, 0);
-    box-shadow: 0 0.4rem #dfd9d9, inset 0 0 0 transparent;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  }
   
   .input-wrapper input:focus {
     outline: none;

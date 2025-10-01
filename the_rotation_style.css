@@ -1,80 +1,361 @@
+/* Modern Professional Styling for Rotation Page */
 body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    line-height: 1.6;
+    color: #374151;
+    opacity: 0;
+    animation: fadeIn 0.6s ease-out 0.2s forwards;
 }
 
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Enhanced Table Container Styling */
 .table-container {
     max-height: 400px;
     overflow-y: auto;
-    /* Enables vertical scrolling if needed */
     overflow-x: auto;
-    /* Enables horizontal scrolling if needed */
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    border: none;
+    border-radius: 16px;
     width: 100%;
     display: flex;
     flex-direction: column;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+}
+
+.table-container:hover {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
 }
 
 .table-container table {
     width: 100%;
     table-layout: auto;
-    /* Allows columns to resize dynamically */
     min-width: 100%;
-    /* Ensures the table doesn't shrink too much */
     max-width: 100%;
-    /* Prevents overflow beyond the container */
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 12px;
+    overflow: hidden;
 }
 
+/* Professional Table Header */
 thead {
     position: sticky;
     top: 0;
-    background-color: #f3f4f6;
     z-index: 10;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* Dark Mode for Table Header */
-.dark thead {
-    background-color: #374151;
+thead th {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 12px;
+    padding: 16px 12px;
+    border: none;
+    position: relative;
+    background-color: #f3f4f6; /* Light gray background for light mode */
+    color: #374151 !important; /* Black text for light mode */
 }
 
-th,
-td {
+.dark thead th {
+    background-color: #374151; /* Dark gray background for dark mode */
+    color: white !important; /* White text for dark mode */
+}
+
+thead th::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 2px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 1px;
+}
+
+.dark thead th::after {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Enhanced Table Cells */
+th, td {
     white-space: nowrap;
-    /* Prevents text wrapping */
     text-align: left;
-    padding: 10px;
-    border: 1px solid #ddd;
+    padding: 14px 16px;
+    border: none;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+    transition: all 0.2s ease;
 }
 
-/* Dark Mode for Table Cells */
-.dark th,
-.dark td {
-    border: 1px solid #4b5563;
-    color: white !important;
-    background-color: #374151;
+/* Table Row Styling */
+.table-row {
+    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
 }
 
-.dark .table-container {
-    border-color: #374151;
-    background-color: #1f2937;
+.table-row:nth-child(even) {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
 }
 
-.dark .table-header {
-    background-color: #374151;
+.table-row:hover {
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    border-left: 4px solid #3b82f6;
+}
+
+.table-row:hover td {
+    color: #1e40af;
+    font-weight: 500;
+}
+
+/* Professional Download Button */
+.download-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 14px 28px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+    min-width: 180px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.download-btn:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+}
+
+.download-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.btn-icon {
+    font-size: 18px;
+    transition: transform 0.3s ease;
+}
+
+.btn-text {
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.download-btn:hover .btn-icon {
+    transform: scale(1.1);
+}
+
+/* Loading State */
+.download-btn.loading {
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+.download-btn.loading .btn-icon {
+    animation: spin 1s linear infinite;
+}
+
+.download-btn.loading .btn-text::before {
+    content: 'Downloading...';
+    animation: pulse 1.5s infinite;
+}
+
+/* Success State */
+.download-btn.success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+}
+
+.download-btn.success .btn-icon {
+    content: '✅';
+    animation: none;
+}
+
+.download-btn.success .btn-text::before {
+    content: 'Downloaded!';
+}
+
+/* Dark Mode */
+html.dark .download-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+}
+
+html.dark .download-btn:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+}
+
+html.dark .download-btn.success {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3);
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* Enhanced Products Table Container */
+.products-table-container {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.products-table-container:hover {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+/* Table Pagination Styling */
+.table-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-top: 1px solid #e5e7eb;
+}
+
+.table-pagination button {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 2px solid #d1d5db;
+    border-radius: 8px;
+    color: #374151;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.table-pagination button:hover:not(:disabled) {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-color: #3b82f6;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.table-pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.table-pagination #page-info {
+    font-weight: 600;
+    color: #374151;
+    padding: 8px 16px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark Mode Enhancements */
+html.dark body {
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
     color: #f9fafb;
-    /* White text in dark mode */
 }
 
-.dark .table-row:nth-child(odd) {
-    background-color: #1f2937;
-    color: #f9fafb;
-    /* White text on dark background */
+html.dark .table-container {
+    background: linear-gradient(135deg, #2d3748 0%, #374151 100%);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
 }
 
-.dark .table-row:nth-child(even) {
-    background-color: #374151;
-    color: #ececec;
+html.dark thead {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+}
+
+html.dark th,
+html.dark td {
+    border-bottom: 1px solid #4b5563;
+    color: #e5e7eb;
+}
+
+html.dark .table-row {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+}
+
+html.dark .table-row:nth-child(even) {
+    background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+}
+
+html.dark .table-row:hover {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border-left-color: #60a5fa;
+}
+
+html.dark .table-row:hover td {
+    color: #dbeafe;
+}
+
+html.dark .products-table-container {
+    background: linear-gradient(135deg, #2d3748 0%, #374151 100%);
+}
+
+html.dark .table-pagination {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+    border-top-color: #4b5563;
+}
+
+html.dark .table-pagination button {
+    background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+    border-color: #6b7280;
+    color: #e5e7eb;
+}
+
+html.dark .table-pagination button:hover:not(:disabled) {
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    border-color: #60a5fa;
+    color: white;
+}
+
+html.dark .table-pagination #page-info {
+    background: #374151;
+    border-color: #4b5563;
+    color: #e5e7eb;
 }
 
 
@@ -460,7 +741,6 @@ td {
 }
 
 .table-header {
-    background-color: #f3f4f6;
     text-align: left;
     color: #000;
     /* Default text color */
@@ -470,7 +750,6 @@ td {
 
 /* Dark Mode for Table Header */
 .dark .table-header {
-    background-color: #374151;
     color: white !important;
 }
 

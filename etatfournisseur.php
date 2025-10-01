@@ -38,7 +38,7 @@ require_once 'check_permission.php';
     <script src="theme.js"></script>
     <script src="api_config.js"></script>
 
-    <link rel="stylesheet" href="etatfournisseur.css">
+    <link rel="stylesheet" href="etat_f.css">
 
 
 </head>
@@ -69,23 +69,6 @@ require_once 'check_permission.php';
         <br>
 
 
-
-        <!-- Search Fields -->
-<!-- Search Fields -->
-<!-- Search Fields -->
-
-
- 
-
-
-
-<div class="search-container">
-  <label for="etat_fournisseur">Search :</label>
-  <input type="text" id="etat_fournisseur" placeholder="Search fournisseur...">
-  <div id="suggestions"></div>
-</div>
-
-    
 
         <!-- <button id="downloadExcel_journal"
             class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
@@ -119,6 +102,12 @@ require_once 'check_permission.php';
       <span style="transition-duration: 750ms">l</span>
     </p>
   </button>
+</div>
+
+<div class="search-container">
+  <label for="etat_fournisseur">Search :</label>
+  <input type="text" id="etat_fournisseur" placeholder="Search fournisseur..." disabled>
+  <div id="suggestions"></div>
 </div>
 
 
@@ -312,6 +301,9 @@ async function loadFournisseurData(sortColumn = '', sortOrder = 'desc') {
     fournisseurData = data; // ✅ Store fresh data
     console.log('Data fetched successfully:', fournisseurData); // ✅ Data preview
 
+    // Enable search input after data is loaded
+    document.getElementById('etat_fournisseur').disabled = false;
+
     // Render table with fetched data
     renderFournisseurTable(sortColumn, sortOrder);
   } catch (error) {
@@ -451,16 +443,13 @@ document.getElementById('refresh-btn').addEventListener('click', () => {
     const refreshBtn = document.getElementById('refresh-btn');
     refreshBtn.innerHTML = '⏳ Loading...';
 
+    // Disable search during refresh
+    document.getElementById('etat_fournisseur').disabled = true;
+
     const searchValue = document.getElementById('etat_fournisseur').value.trim().toLowerCase();
     loadFournisseurData().then(() => {
-        if (searchValue) {
-            const filtered = fournisseurData.filter(f =>
-                f["FOURNISSEUR"].toLowerCase().includes(searchValue)
-            );
-            renderFilteredTable(filtered);
-        } else {
-            renderFournisseurTable(currentSortColumn, currentSortOrder);
-        }
+        // Re-apply current filter and sorting after refresh
+        renderFournisseurTable(currentSortColumn, currentSortOrder, searchValue);
 
         refreshBtn.innerHTML = `
             <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -471,33 +460,6 @@ document.getElementById('refresh-btn').addEventListener('click', () => {
 });
 
 
-function renderFilteredTable(filteredData) {
-    const tableBody = document.getElementById('etat-fournisseur-body');
-    tableBody.innerHTML = '';
-
-    filteredData.forEach(row => {
-        const tr = document.createElement('tr');
-        // Add dark mode classes if dark mode is active
-        if (document.body.classList.contains('dark-mode')) {
-            tr.classList.add('dark-mode-row');
-        }
-        tr.innerHTML = `
-            <td class="clickable">${row["FOURNISSEUR"]}</td>
-            <td>${row["TOTAL ECHU"]}</td>
-            <td>${row["TOTAL DETTE"]}</td>
-            <td>${row["TOTAL STOCK"]}</td>
-        `;
-        tableBody.appendChild(tr);
-    });
-
-    // Reattach click events
-    document.querySelectorAll('.clickable').forEach(td => {
-        td.addEventListener('click', () => {
-            document.getElementById('etat_fournisseur').value = td.textContent;
-            triggerSearch();
-        });
-    });
-}
 
 
 // Initial load on page load

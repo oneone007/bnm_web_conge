@@ -1,13 +1,201 @@
+/* ===========================================
+   MODERN PROFESSIONAL TABLE STYLING
+   =========================================== */
+
 body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    line-height: 1.6;
+    color: #374151;
+    opacity: 0;
+    animation: fadeIn 0.6s ease-out 0.2s forwards;
 }
 
-  /* Resizable Columns */
-  th.resizable {
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Enhanced Table Container */
+.table-container {
+    max-height: 500px;
+    overflow-y: auto;
+    overflow-x: auto;
+    border: none;
+    border-radius: 16px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    transition: none !important;
+    backdrop-filter: blur(10px);
+}
+
+.table-container:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transform: none !important;
+}
+
+.table-container table {
+    width: 100%;
+    table-layout: auto;
+    min-width: 100%;
+    max-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Professional Table Header */
+thead {
+    position: sticky;
+    top: 0;
+    background: #f3f4f6;
+    z-index: 10;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+thead th {
+    color: #1f2937 !important; /* Dark gray/black for light mode */
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    font-size: 12px !important;
+    padding: 16px 12px !important;
+    border: none !important;
+    position: relative !important;
+    background: transparent !important;
+}
+
+/* White text for dark mode headers */
+html.dark thead th {
+    color: white !important;
+}
+
+thead th::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 1px;
+}
+
+/* Enhanced Table Cells */
+th, td {
+    white-space: nowrap;
+    text-align: left;
+    padding: 14px 16px;
+    border: none;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+/* Table Row Styling */
+.table-container tbody tr {
+    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+    transition: none;
     position: relative;
-  }
-  
-  th.resizable .resizer {
+}
+
+.table-container tbody tr:nth-child(even) {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.table-container tbody tr:hover {
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+    transition: none;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    border-left: 4px solid #3b82f6;
+}
+
+.table-container tbody tr:hover td {
+    color: #1e40af;
+    font-weight: 500;
+}
+
+/* Client Type Styling */
+.client-para {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+    border-left: 4px solid #3b82f6 !important;
+}
+
+.client-potentiel {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
+    border-left: 4px solid #10b981 !important;
+}
+
+.client-other {
+    background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%) !important;
+    border-left: 4px solid #8b5cf6 !important;
+}
+
+/* Dark Mode Support */
+html.dark body {
+    background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+    color: #f9fafb;
+}
+
+html.dark .table-container {
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+html.dark thead {
+    background: #374151;
+}
+
+html.dark .table-container tbody tr {
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+}
+
+html.dark .table-container tbody tr:nth-child(even) {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+}
+
+html.dark .table-container tbody tr:hover {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    border-left-color: #60a5fa;
+}
+
+html.dark .table-container tbody tr:hover td {
+    color: #dbeafe;
+}
+
+html.dark .client-para {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%) !important;
+    border-left-color: #60a5fa !important;
+}
+
+html.dark .client-potentiel {
+    background: linear-gradient(135deg, #064e3b 0%, #047857 100%) !important;
+    border-left-color: #34d399 !important;
+}
+
+html.dark .client-other {
+    background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%) !important;
+    border-left-color: #a78bfa !important;
+}
+
+/* Resizable Columns */
+th.resizable {
+    position: relative;
+}
+
+th.resizable .resizer {
     position: absolute;
     top: 0;
     right: 0;
@@ -15,68 +203,115 @@ body {
     cursor: col-resize;
     user-select: none;
     height: 100%;
-  }
-  .resizer:hover {
+}
+
+.resizer:hover {
     background-color: rgba(0, 0, 0, 0.1);
 }
 
-.table-container {
-    max-height: 400px;
-    overflow-y: auto;
-    overflow-x: auto;
-    border: 1px solid #e5e7eb;
+html.dark .resizer:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ===========================================
+   MODERN DOWNLOAD BUTTON STYLING
+   =========================================== */
+
+.btn-excel {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
     border-radius: 8px;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    background-color: #ffffff;
-  }
-
-.dark .table-container {
-    border-color: #4b5563 !important;
-    background-color: #1f2937 !important;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    position: relative;
+    overflow: hidden;
 }
-  
-  .table-container table {
-    width: 100%;
-    table-layout: auto;
-    border-collapse: collapse;
-  }
-  
-  thead {
-    position: sticky;
+
+.btn-excel::before {
+    content: '';
+    position: absolute;
     top: 0;
-    background-color: #f3f4f6;
-    z-index: 10;
-  }
-
-.dark thead {
-    background-color: #1f2937 !important;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
 }
-  
-  th,
-  td {
-    text-align: left;
-    padding: 10px;
-    border: 1px solid #ddd;
-    white-space: normal; /* ALLOW MULTILINE */
-    word-break: break-word; /* Wrap long words */
-    line-height: 1.4;
-  }
 
-.dark th,
-.dark td {
-    border: 1px solid #4b5563 !important;
+.btn-excel:hover::before {
+    left: 100%;
 }
-  
-  tbody tr {
-    height: auto; /* Allow row height to adjust */
-  }
-  
-  .table-container.placement-table {
-    flex: 0.5;
-    width: 10px;
-  }
+
+.btn-excel:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+}
+
+.btn-excel:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.btn-excel i {
+    font-size: 16px;
+    transition: transform 0.2s ease;
+}
+
+.btn-excel:hover i {
+    transform: scale(1.1);
+}
+
+.btn-excel:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
+}
+
+/* Dark Mode Support for Download Buttons */
+html.dark .btn-excel {
+    background: linear-gradient(135deg, #065f46 0%, #064e3b 100%);
+    box-shadow: 0 2px 8px rgba(6, 95, 70, 0.3);
+}
+
+html.dark .btn-excel:hover {
+    background: linear-gradient(135deg, #064e3b 0%, #052e23 100%);
+    box-shadow: 0 4px 16px rgba(6, 95, 70, 0.4);
+}
+
+html.dark .btn-excel:focus {
+    box-shadow: 0 0 0 3px rgba(6, 95, 70, 0.4);
+}
+
+/* Loading State for Download Buttons */
+.btn-excel.loading {
+    opacity: 0.7;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.btn-excel.loading::after {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-left: 8px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
 .dark .table-container {
     border-color: #374151;
 }

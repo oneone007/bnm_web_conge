@@ -1,0 +1,496 @@
+/* ===========================================
+   MODERN RETOUR DOCUMENTS PAGE STYLING
+   =========================================== */
+
+body {
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    line-height: 1.6;
+    color: #374151;
+    opacity: 0;
+    animation: fadeIn 0.6s ease-out 0.2s forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Page Header */
+.page-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 2rem 0;
+}
+
+.page-title {
+    font-size: 3rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+    font-size: 1.125rem;
+    color: #64748b;
+    font-weight: 400;
+}
+
+/* ===========================================
+   MODERN SEARCH SECTION STYLING
+   =========================================== */
+
+.search-container {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.search-container:hover {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+.search-form {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    position: relative;
+}
+
+.search-label {
+    font-weight: 600;
+    font-size: 1.1em;
+    color: #374151;
+    white-space: nowrap;
+}
+
+.search-input {
+    width: 16em;
+    border-radius: 12px;
+    outline: none;
+    border: 2px solid #e2e8f0;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    color: #374151;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.search-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: rgba(255, 255, 255, 1);
+}
+
+.date-input {
+    width: 12em;
+    border-radius: 12px;
+    outline: none;
+    border: 2px solid #e2e8f0;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    color: #374151;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.date-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: rgba(255, 255, 255, 1);
+}
+
+/* Modern Search Button */
+.search-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    position: relative;
+    overflow: hidden;
+    min-width: 48px;
+    height: 48px;
+}
+
+.search-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.search-btn:hover::before {
+    left: 100%;
+}
+
+.search-btn:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+}
+
+.search-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.search-btn svg {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.2s ease;
+}
+
+.search-btn:hover svg {
+    transform: scale(1.1);
+}
+
+.search-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+}
+
+.search-btn.loading {
+    opacity: 0.7;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.search-btn.loading::after {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-left: 8px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.search-hint {
+    text-align: center;
+    margin-top: 1rem;
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+/* ===========================================
+   MODERN TABLE STYLING
+   =========================================== */
+
+.table-container {
+    max-height: 70vh;
+    overflow: hidden;
+    border: none;
+    border-radius: 16px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+    margin-bottom: 2rem;
+}
+
+.table-container:hover {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+.table-container table {
+    width: 100%;
+    table-layout: auto;
+    min-width: 100%;
+    max-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Professional Table Header */
+thead {
+    position: sticky;
+    top: 0;
+    background: #f3f4f6;
+    z-index: 10;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+thead th {
+    color: #374151 !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    font-size: 12px !important;
+    padding: 16px 12px !important;
+    border: none !important;
+    position: relative !important;
+    background: transparent !important;
+}
+
+/* Enhanced Table Cells */
+th, td {
+    white-space: nowrap;
+    text-align: left;
+    padding: 14px 16px;
+    border: none;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+/* Table Row Styling */
+.table-container tbody tr {
+    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.table-container tbody tr:nth-child(even) {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.table-container tbody tr:hover {
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    border-left: 4px solid #3b82f6;
+}
+
+.table-container tbody tr:hover td {
+    color: #1e40af;
+    font-weight: 500;
+}
+
+/* Table Section Headers */
+.table-section {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.table-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.table-title svg {
+    color: #3b82f6;
+}
+
+.table-subtitle {
+    margin-left: 1.75rem;
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: #6b7280;
+}
+
+/* ===========================================
+   DARK MODE SUPPORT
+   =========================================== */
+
+html.dark body {
+    background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+    color: #f9fafb;
+}
+
+html.dark .page-title {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+html.dark .page-subtitle {
+    color: #94a3b8;
+}
+
+html.dark .search-container {
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+html.dark .search-label {
+    color: #f1f5f9;
+}
+
+html.dark .search-input,
+html.dark .date-input {
+    background: rgba(55, 65, 81, 0.8);
+    border-color: #4b5563;
+    color: #f9fafb;
+}
+
+html.dark .search-input:focus,
+html.dark .date-input:focus {
+    border-color: #60a5fa;
+    background: rgba(55, 65, 81, 1);
+}
+
+html.dark .search-btn {
+    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+    box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
+}
+
+html.dark .search-btn:hover {
+    background: linear-gradient(135deg, #1e3a8a 0%, #172554 100%);
+    box-shadow: 0 8px 20px rgba(30, 64, 175, 0.4);
+}
+
+html.dark .search-hint {
+    color: #9ca3af;
+}
+
+html.dark .table-container {
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+html.dark thead {
+    background: #374151;
+}
+
+html.dark thead th {
+    color: #f9fafb !important;
+}
+
+html.dark .table-container tbody tr {
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+}
+
+html.dark .table-container tbody tr:nth-child(even) {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+}
+
+html.dark .table-container tbody tr:hover {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    border-left-color: #60a5fa;
+}
+
+html.dark .table-container tbody tr:hover td {
+    color: #dbeafe;
+}
+
+html.dark .table-container tbody td {
+    color: #f9fafb;
+}
+
+html.dark .table-section {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+    border-bottom-color: #4b5563;
+}
+
+html.dark .table-title {
+    color: #f9fafb;
+}
+
+html.dark .table-subtitle {
+    color: #9ca3af;
+}
+
+/* ===========================================
+   RESPONSIVE DESIGN
+   =========================================== */
+
+@media (max-width: 1024px) {
+    .search-form {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+
+    .search-input,
+    .date-input {
+        width: 100% !important;
+    }
+
+    .search-label {
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-title {
+        font-size: 2.5rem;
+    }
+
+    .search-container {
+        padding: 1.5rem;
+    }
+
+    .table-container {
+        max-height: 60vh;
+    }
+
+    .table-section {
+        padding: 1rem 1.5rem;
+    }
+
+    th, td {
+        padding: 10px 8px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 640px) {
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .page-title {
+        font-size: 2rem;
+    }
+
+    .table-container {
+        max-height: 50vh;
+    }
+}

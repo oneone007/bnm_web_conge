@@ -38,6 +38,16 @@ DB_POOL = oracledb.create_pool(
     increment=1
 )
 
+# Default locators mapping
+default_locators = {
+    1000614: 'Préparation',
+    1001135: 'HANGAR',
+    1001128: 'Dépot_réserve',
+    1001136: 'HANGAR_',
+    1001020: 'Depot_Vente',
+    1000717: 'hangar reception'
+}
+
 
 
 # Fetch reserved data from Oracle DB
@@ -88,6 +98,89 @@ def fetch_reserved_data():
         logger.error(f"Error fetching reserved data: {e}")
         return {"error": "An error occurred while fetching reserved data."}
 
+
+@app.route('/reserved_reserved_fromorder', methods=['GET'])
+def reserved_reserved_fromorder():
+    """Return reserved order lines for a given product id (m_product_id).
+
+    Query params:
+      - m_product_id (required): the product id to filter order lines
+
+    Returns JSON list of rows with fields: DocumentNo, DocStatus, docaction, DateOrdered, qtyreserved
+    """
+    # Accept either m_product_id (preferred) or product_id, or fallback to product_name
+    m_product_id = request.args.get('m_product_id') or request.args.get('product_id')
+    product_name = request.args.get('product_name')
+
+    m_product_id_val = None
+    if m_product_id:
+        try:
+            m_product_id_val = int(m_product_id)
+        except Exception:
+            return jsonify({"error": "m_product_id must be an integer"}), 400
+    elif product_name:
+        # Try to resolve product_name -> m_product_id (first match)
+        try:
+            with DB_POOL.acquire() as conn2:
+                cur2 = conn2.cursor()
+                cur2.execute("SELECT M_Product_ID FROM M_Product WHERE name = :name AND ROWNUM = 1", {"name": product_name})
+                row = cur2.fetchone()
+                if row:
+                    m_product_id_val = int(row[0])
+                else:
+                    return jsonify({"error": "No product found with that name"}), 404
+        except Exception as e:
+            logger.error(f"Error resolving product_name to id: {e}")
+            return jsonify({"error": "Failed to resolve product name"}), 500
+    else:
+        return jsonify({"error": "m_product_id or product_name query parameter is required"}), 400
+
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+            SELECT
+                co.DocumentNo,
+                co.DocStatus,
+                co.docaction,
+                co.DateOrdered,
+                CB.name AS client_name,
+                SUM(col.qtyreserved) AS qtyreserved
+            FROM
+                C_OrderLine col
+            INNER JOIN
+                C_Order co ON col.C_Order_ID = co.C_Order_ID
+            INNER JOIN
+                C_BPartner CB ON CO.C_BPartner_ID = CB.C_BPartner_ID
+            WHERE
+                col.qtyreserved > 0
+                AND co.C_DocType_ID = 1000539
+                AND col.m_product_id = :m_product_id
+                AND co.AD_Client_ID = 1000000
+                AND co.AD_Org_ID = 1000000
+            GROUP BY
+                co.DocumentNo,
+                co.DocStatus,
+                co.docaction,
+                co.DateOrdered,
+                CB.name
+            ORDER BY
+                co.DateOrdered DESC
+            FETCH FIRST 1048575 ROWS ONLY
+            """
+
+            cursor.execute(query, {'m_product_id': m_product_id_val})
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+            return jsonify(data)
+    except Exception as e:
+        logger.error(f"Error in reserved_reserved_fromorder: {e}")
+        return jsonify({"error": "An error occurred while fetching reserved orders."}), 500
+
+
+
+
 # Fetch remise data from Oracle DB
 def fetch_remise_data():
     try:
@@ -137,7 +230,8 @@ def fetch_remise_data():
 
 # Fetch marge data from Oracle DB
 
-# Fetch marge data from Oracle DB
+
+
 def fetch_marge_data():
     try:
         with DB_POOL.acquire() as connection:
@@ -162,6 +256,7 @@ FROM
             source.MARGE,
             source.LABO,
             source.LOT,
+            source.LOT_ID,
             source.QTY,
             source.QTY_DISPO,
             source.GUARANTEEDATE,
@@ -184,6 +279,7 @@ FROM
                     LEAST(ROUND(marge, 2), 100) AS marge,
                     labo,
                     lot,
+                    m_attributesetinstance_id AS lot_id,
                     qty,
                     qty_dispo,
                     guaranteedate,
@@ -194,6 +290,7 @@ FROM
                         WHEN m_locator_id = 1001128 THEN 'Dépot_réserve'
                         WHEN m_locator_id = 1001136 THEN 'HANGAR_'
                         WHEN m_locator_id = 1001020 THEN 'Depot_Vente'
+                        WHEN m_locator_id = 1000717 THEN 'hangar reception' 
                     END AS location
                 FROM
                     (
@@ -233,6 +330,7 @@ FROM
                                             mst.qtyonhand AS qty,
                                             (mst.qtyonhand - mst.QTYRESERVED) AS qty_dispo,
                                             mst.m_locator_id,
+                                            mst.m_attributesetinstance_id,
                                             mati.value AS fournisseur,
                                             mats.guaranteedate,
                                             md.name AS remise_auto,
@@ -305,7 +403,7 @@ FROM
                                             LEFT JOIN XX_SalesContext sal ON p.XX_SalesContext_ID = sal.XX_SalesContext_ID
                                         WHERE
                                             mati.m_attribute_id = 1000508
-                                            AND mst.m_locator_id IN (1001135, 1000614, 1001128, 1001136, 1001020)
+                                            AND mst.m_locator_id IN (1001135, 1000614, 1001128, 1001136, 1001020, 1000717)
                                             AND mst.qtyonhand != 0
                                         ORDER BY
                                             p.name
@@ -329,6 +427,7 @@ FROM
                     marge,
                     labo,
                     lot,
+                    m_attributesetinstance_id,
                     qty,
                     qty_dispo,
                     guaranteedate,
@@ -349,6 +448,11 @@ WHERE
     except Exception as e:
         logger.error(f"Error fetching marge data: {e}")
         return {"error": "An error occurred while fetching marge data."}
+
+
+
+
+
 
 # Fetch bonus data from Oracle DB
 def fetch_bonus_data():
@@ -597,6 +701,7 @@ def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None, n
                 SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand) AS prix,
                 SUM(m_storage.qtyonhand - m_storage.QTYRESERVED) AS qty_dispo, 
                 SUM(M_ATTRIBUTEINSTANCE.valuenumber * (m_storage.qtyonhand - m_storage.QTYRESERVED)) AS prix_dispo,
+                SUM(m_storage.QTYRESERVED) AS qty_reserved,
                 ml.M_Locator_ID AS locatorid,
                 m.m_product_id AS productid,
                 1 AS sort_order,
@@ -606,6 +711,8 @@ def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None, n
                     WHEN ml.M_Locator_ID = 1001128 THEN 'Dépot_réserve'
                     WHEN ml.M_Locator_ID = 1001136 THEN 'HANGAR_'
                     WHEN ml.M_Locator_ID = 1001020 THEN 'Depot_Vente'
+                    WHEN ml.M_Locator_ID = 1000717 THEN 'Hangar Reception'
+
                     ELSE 'Unknown' 
                 END AS place
             FROM 
@@ -656,7 +763,7 @@ def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None, n
                     WHERE M_Warehouse_ID IN (
                         SELECT M_Warehouse_ID 
                         FROM M_Warehouse 
-                        WHERE VALUE IN ('HANGAR', '1-Dépôt Principal', '8-Dépot réserve', '88-Dépot Hangar réserve')
+                        WHERE VALUE IN ('HANGAR', '1-Dépôt Principal', '8-Dépot réserve', '88-Dépot Hangar réserve', 'HANGAR RECEPTION')
                     )
                 )
                 """
@@ -693,6 +800,7 @@ def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None, n
                 SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand) AS prix,
                 SUM(m_storage.qtyonhand - m_storage.QTYRESERVED) AS qty_dispo, 
                 SUM(M_ATTRIBUTEINSTANCE.valuenumber * (m_storage.qtyonhand - m_storage.QTYRESERVED)) AS prix_dispo,
+                SUM(m_storage.QTYRESERVED) AS qty_reserved,
                 NULL AS locatorid,
                 NULL AS productid,
                 0 AS sort_order,
@@ -778,6 +886,10 @@ def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None, n
     except Exception as e:
         logger.error(f"Database error: {e}")
         return {"error": "An error occurred while fetching stock data."}
+
+
+
+
 
 def fetch_desactivated_lot_data_from_db(fournisseur=None, magasin=None, emplacement=None, name=None):
     """
@@ -1104,12 +1216,13 @@ def generate_excel_stock(data):
     return output
 
 
- 
 
- 
+
+
 def fetch_product_details_data(product_name):
     """
-    Fetch detailed product information similar to the marge data structure
+    Fetch detailed product information similar to the marge data structure,
+    including lot_id (m_attributesetinstance_id).
     """
     try:
         with DB_POOL.acquire() as connection:
@@ -1136,13 +1249,13 @@ def fetch_product_details_data(product_name):
                         "source"."LABO" "LABO",
                         "source"."LOT" "LOT",
                         "source"."LOT_ACTIVE" "LOT_ACTIVE",
-
+                        "source"."LOT_ID" "LOT_ID",
                         "source"."QTY" "QTY",
                         "source"."QTY_DISPO" "QTY_DISPO",
+                        "source"."QTY_RESERVED" "QTY_RESERVED",
                         "source"."GUARANTEEDATE" "GUARANTEEDATE",
                         "source"."PPA" "PPA",
                         "source"."LOCATION" "LOCATION"
-
                     FROM
                         (
                             SELECT
@@ -1161,8 +1274,10 @@ def fetch_product_details_data(product_name):
                                 labo,
                                 lot,
                                 lot_active,
+                                m_attributesetinstance_id AS lot_id,
                                 qty,
                                 qty_dispo,
+                                qty_reserved,
                                 guaranteedate,
                                 ppa,
                                 CASE 
@@ -1171,6 +1286,7 @@ def fetch_product_details_data(product_name):
                                     WHEN m_locator_id = 1001128 THEN 'Dépot_réserve'
                                     WHEN m_locator_id = 1001136 THEN 'HANGAR_'
                                     WHEN m_locator_id = 1001020 THEN 'Depot_Vente'
+                                    wHEN m_locator_id = 1000717 THEN 'hangar reception'
                                 END AS location
                             FROM
                                 (
@@ -1212,7 +1328,9 @@ def fetch_product_details_data(product_name):
                                                         ) labo,
                                                         mst.qtyonhand qty,
                                                         (mst.qtyonhand - mst.QTYRESERVED) qty_dispo,
+                                                        mst.QTYRESERVED qty_reserved,
                                                         mst.m_locator_id,
+                                                        mst.m_attributesetinstance_id,
                                                         mati.value fournisseur,
                                                         mats.guaranteedate,
                                                         md.name remise_auto,
@@ -1314,7 +1432,7 @@ def fetch_product_details_data(product_name):
                                                         LEFT JOIN XX_SalesContext sal ON p.XX_SalesContext_ID = sal.XX_SalesContext_ID
                                                     WHERE
                                                         mati.m_attribute_id = 1000508
-                                                        AND mst.m_locator_id IN (1001135, 1000614, 1001128, 1001136, 1001020)
+                                                        AND mst.m_locator_id IN (1001135, 1000614, 1001128, 1001136, 1001020, 1000717)
                                                         AND mst.qtyonhand != 0
                                                         AND p.name = :product_name
                                                     ORDER BY
@@ -1340,9 +1458,10 @@ def fetch_product_details_data(product_name):
                                 labo,
                                 lot,
                                 lot_active,
-
+                                m_attributesetinstance_id,
                                 qty,
                                 qty_dispo,
+                                qty_reserved,
                                 guaranteedate,
                                 ppa,
                                 m_locator_id
@@ -1364,6 +1483,8 @@ def fetch_product_details_data(product_name):
     except Exception as e:
         logger.error(f"Error fetching product details: {e}")
         return {"error": "An error occurred while fetching product details."}
+
+
 
 @app.route('/fetch-product-details', methods=['GET'])
 def fetch_product_details():
@@ -2002,6 +2123,8 @@ def generate_excel_bccbf(data, filename):
 
 
 
+ # recap achat part 
+ 
 def fetch_total_recap_achat(start_date, end_date, fournisseur, product):
     try:
         with DB_POOL.acquire() as connection:
@@ -2023,7 +2146,7 @@ def fetch_total_recap_achat(start_date, end_date, fournisseur, product):
                     AND ma.M_Attribute_ID = 1000504
                     AND xf.AD_Org_ID = 1000000
                     AND xf.C_DocType_ID IN (1000013, 1000646)
-                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
+                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725, 1000520)
                     AND (:fournisseur IS NULL OR UPPER(cb.name) LIKE UPPER(:fournisseur) || '%')
                     AND (:product IS NULL OR UPPER(m.name) LIKE UPPER(:product) || '%')
             """
@@ -2042,6 +2165,9 @@ def fetch_total_recap_achat(start_date, end_date, fournisseur, product):
     except Exception as e:
         logger.error(f"Error fetching total recap achat: {e}")
         return {"error": "An error occurred while fetching total recap achat."}
+
+
+
 @app.route('/fetchTotalRecapAchat', methods=['GET'])
 def fetch_total_achat():
     start_date = request.args.get('start_date')
@@ -2351,7 +2477,7 @@ def fetch_fournisseur_recap_achat(start_date, end_date, fournisseur, product):
                     AND ma.M_Attribute_ID=1000504
                     AND xf.AD_Org_ID = 1000000
                     AND xf.C_DocType_ID IN (1000013, 1000646)
-                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
+                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725, 1000520)
                     AND (:fournisseur IS NULL OR UPPER(cb.name) LIKE UPPER(:fournisseur) || '%')
                     AND (:product IS NULL OR UPPER(m.name) LIKE UPPER(:product) || '%')
                 GROUP BY 
@@ -2378,7 +2504,7 @@ def fetch_fournisseur_recap_achat(start_date, end_date, fournisseur, product):
                     AND ma.M_Attribute_ID=1000504
                     AND xf.AD_Org_ID = 1000000
                     AND xf.C_DocType_ID IN (1000013, 1000646)
-                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
+                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725, 1000520)
                     AND (:fournisseur IS NULL OR UPPER(cb.name) LIKE UPPER(:fournisseur) || '%')
                     AND (:product IS NULL OR UPPER(m.name) LIKE UPPER(:product) || '%')
             """
@@ -2456,7 +2582,7 @@ def fetch_product_achat_recap(start_date, end_date, fournisseur, product):
                     AND xf.C_DocType_ID IN (1000013, 1000646)
                     AND ma.M_Attribute_ID = 1000504
                     AND xf.DOCSTATUS = 'CO'
-                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
+                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725, 1000520)
                     AND (:fournisseur IS NULL OR UPPER(cb.name) LIKE UPPER(:fournisseur) || '%')
                     AND (:product IS NULL OR UPPER(m.name) LIKE UPPER(:product) || '%')
                 GROUP BY 
@@ -2488,7 +2614,7 @@ def fetch_product_achat_recap(start_date, end_date, fournisseur, product):
                     AND xf.C_DocType_ID IN (1000013, 1000646)
                     AND ma.M_Attribute_ID = 1000504
                     AND xf.DOCSTATUS = 'CO'
-                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
+                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725, 1000520)
                     AND (:fournisseur IS NULL OR UPPER(cb.name) LIKE UPPER(:fournisseur) || '%')
                     AND (:product IS NULL OR UPPER(m.name) LIKE UPPER(:product) || '%')
             """
@@ -3200,7 +3326,8 @@ def fetch_historique_rotation(product_id):
                     SELECT  
                         m.M_Product_ID as midp,
                         m.name AS product_name,
-                        SUM(s.QTYONHAND) - SUM(s.QTYRESERVED) AS QTYONHAND
+                        SUM(s.QTYONHAND) - SUM(s.QTYRESERVED) AS QTYONHAND,
+                        SUM(s.QTYRESERVED) AS QTYRESERVED
                     FROM 
                         m_product m
                     JOIN m_storage s ON s.M_PRODUCT_ID = m.M_PRODUCT_ID
@@ -3208,7 +3335,7 @@ def fetch_historique_rotation(product_id):
                     WHERE 
                         s.AD_Client_ID = 1000000
                         AND m.AD_Client_ID = 1000000
-                        AND s.M_Locator_ID IN (1001135, 1000614, 1001128, 1001136)
+                        AND s.M_Locator_ID IN (1001135, 1000614, 1001128, 1001136, 1000717)
                         AND (:product_id IS NULL OR m.M_PRODUCT_ID = :product_id)
                     GROUP BY 
                         m.M_Product_ID, m.name
@@ -3222,13 +3349,14 @@ def fetch_historique_rotation(product_id):
                     WHERE 
                         M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
                         AND m_storage.qtyonhand > 0
-                        AND m_storage.M_Locator_ID IN (1001135, 1000614, 1001128, 1001136)
+                        AND m_storage.M_Locator_ID IN (1001135, 1000614, 1001128, 1001136, 1000717)
                         AND (:product_id IS NULL OR m_storage.M_Product_ID = :product_id)
                 )
                 SELECT 
                     oq.midp,
                     oq.product_name,
                     oq.QTYONHAND AS "QTY DISPO",
+                    oq.QTYRESERVED AS "QTY RESERVED",
                     COALESCE(fp.last_purchase_qty, 0) AS "DERNIER ACHAT",
                     fp.dateinvoiced AS "DATE",
                     sp.stock_principale AS "VALEUR"
@@ -3254,9 +3382,10 @@ def fetch_historique_rotation(product_id):
                     "PRODUCT_ID": row[0],
                     "PRODUCT_NAME": row[1],
                     "QTY_DISPO": row[2],
-                    "DERNIER_ACHAT": row[3],
-                    "DATE": row[4],
-                    "VALEUR": row[5]
+                    "QTY_RESERVED": row[3],
+                    "DERNIER_ACHAT": row[4],
+                    "DATE": row[5],
+                    "VALEUR": row[6]
                 }
                 for row in rows
             ]
@@ -3266,6 +3395,8 @@ def fetch_historique_rotation(product_id):
     except Exception as e:
         logger.error(f"Error fetching historique rotation: {e}")
         return {"error": "An error occurred while fetching historique rotation."}
+
+
 
 @app.route('/fetchHistoriqueRotation', methods=['GET'])
 def fetch_historique():
@@ -4772,7 +4903,7 @@ def fetch_fournisseur_recap_achat_data_by_year(fournisseur=None, product=None, y
                     AND ma.M_Attribute_ID=1000504
                     AND xf.AD_Org_ID = 1000000
                     AND xf.C_DocType_ID IN (1000013, 1000646)
-                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
+                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725, 1000520)
                     AND (:fournisseur IS NULL OR UPPER(cb.name) LIKE UPPER(:fournisseur) || '%')
                     AND (:product IS NULL OR UPPER(m.name) LIKE UPPER(:product) || '%')
                 GROUP BY ROLLUP(TO_CHAR(xf.MOVEMENTDATE, 'YYYY'), TO_CHAR(xf.MOVEMENTDATE, 'MM'))
@@ -6911,7 +7042,7 @@ def fetch_rotation_monthly_achat(year_list, fournisseurs, product_id=None):
                         AND xf.C_DocType_ID IN (1000013, 1000646)
                         AND ma.M_Attribute_ID = 1000504
                         AND xf.DOCSTATUS = 'CO'
-                        AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
+                        AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725, 1000520)
                         AND (""" + supplier_condition + """)
                         AND (:product_id IS NULL OR m.M_PRODUCT_ID = :product_id)
                     GROUP BY 
@@ -7012,7 +7143,7 @@ def fetch_fournisseur_by_product(product_id):
                     m.M_PRODUCT_ID = :product_id
                     AND xf.AD_Org_ID = 1000000
                     AND xf.C_DocType_ID IN (1000013, 1000646)
-                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725)
+                    AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725, 1000520)
                 ORDER BY 
                     FOURNISSEUR
             """
@@ -8928,55 +9059,6 @@ def retour_documents():
         return jsonify({'error': str(e)}), 500
 
 
-def fetch_facture_recap_achat(start_date, end_date, partner_name):
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-
-            query = """
-                SELECT 
-                    i.documentno, 
-                    i.totallines, 
-                    i.description, 
-                    i.dateinvoiced, 
-                    i.c_bpartner_id, 
-                    i.C_Invoice_ID
-                FROM C_Invoice i
-                JOIN C_BPartner cb ON i.c_bpartner_id = cb.c_bpartner_id
-                WHERE (:partner_name IS NULL OR UPPER(cb.name) LIKE UPPER(:partner_name) || '%')
-                  AND i.dateinvoiced BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                and i.docstatus IN ('CO', 'CL')
-                AND i.issotrx = 'N'
-                ORDER BY i.dateinvoiced DESC
-            """
-
-            params = {
-                'start_date': start_date,
-                'end_date': end_date,
-                'partner_name': partner_name or None
-            }
-
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-
-            data = [
-                {
-                    "documentno": row[0],
-                    "totallines": row[1],
-                    "description": row[2],
-                    "dateinvoiced": row[3],
-                    "c_bpartner_id": row[4],
-                    "c_invoice_id": row[5]
-                }
-                for row in rows
-            ]
-
-            return data
-
-    except Exception as e:
-        logger.error(f"Error fetching facture recap achat: {e}")
-        return {"error": "An error occurred while fetching facture recap achat."}
-
 # Helper function to generate Excel file for invoices
 def generate_excel_invoices(data, filename):
     if not data or "error" in data:
@@ -9184,6 +9266,63 @@ def fetch_facture_achat():
 
     data = fetch_facture_recap_achat(start_date, end_date, partner_name)
     return jsonify(data)
+
+
+
+def fetch_facture_recap_achat(start_date, end_date, partner_name):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+                SELECT DISTINCT
+                    i.documentno, 
+                    i.totallines, 
+                    i.description, 
+                    i.dateinvoiced, 
+                    i.c_bpartner_id, 
+                    i.C_Invoice_ID
+                FROM C_Invoice i
+                JOIN C_BPartner cb ON i.c_bpartner_id = cb.c_bpartner_id
+                JOIN C_Order co ON i.c_order_id = co.c_order_id
+                JOIN M_InOut xf ON xf.c_order_id = co.c_order_id
+                WHERE (:partner_name IS NULL OR UPPER(cb.name) LIKE UPPER(:partner_name) || '%')
+                  AND xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                  AND i.docstatus IN ('CO', 'CL')
+                  AND i.issotrx = 'N'
+                  AND xf.AD_Org_ID = 1000000
+                  AND xf.C_DocType_ID IN (1000013, 1000646)
+                  AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725, 1000520)
+                ORDER BY i.dateinvoiced DESC
+            """
+
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'partner_name': partner_name or None
+            }
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+
+            data = [
+                {
+                    "documentno": row[0],
+                    "totallines": row[1],
+                    "description": row[2],
+                    "dateinvoiced": row[3],
+                    "c_bpartner_id": row[4],
+                    "c_invoice_id": row[5]
+                }
+                for row in rows
+            ]
+
+            return data
+
+    except Exception as e:
+        logger.error(f"Error fetching facture recap achat: {e}")
+        return {"error": "An error occurred while fetching facture recap achat."}
+
 
 
 def BCF_product(invoice_id):
@@ -11905,6 +12044,9 @@ def delete_fake_reception(record_id):
 
 # simulation part
 
+
+
+
 @app.route('/simulation_fetchBCCBProduct', methods=['GET'])
 def simulation_fetch_bccb_p():
     bccb = request.args.get('bccb')
@@ -11913,6 +12055,70 @@ def simulation_fetch_bccb_p():
     data = simulation_fetch_bccb_product(bccb, ad_org_id)
     return jsonify(data)
 
+
+
+def merge_free_products_with_normal(data):
+    """
+    Merge products with same name where one has margin 0 or -100 (free products).
+    Free products are excluded from margin calculation but their quantity is added to normal products.
+    """
+    if not data:
+        return data
+    
+    # Group products by name
+    product_groups = {}
+    for item in data:
+        product_name = item.get('PRODUCT', '').strip()
+        if product_name not in product_groups:
+            product_groups[product_name] = []
+        product_groups[product_name].append(item)
+    
+    merged_results = []
+    
+    for product_name, products in product_groups.items():
+        if len(products) == 1:
+            # Single product, add as is
+            merged_results.append(products[0])
+        else:
+            # Multiple products with same name, need to merge
+            normal_products = []
+            free_products = []
+            
+            for product in products:
+                marge = float(product.get('MARGE', 0))
+                # Consider margin <= 0 or == -100 as free products
+                if marge <= 0 or marge == -100:
+                    free_products.append(product)
+                else:
+                    normal_products.append(product)
+            
+            if normal_products:
+                # Use the first normal product as base
+                base_product = normal_products[0].copy()
+                
+                # Add quantities from all free products to the normal product
+                total_added_qty = 0
+                for free_product in free_products:
+                    free_qty = float(free_product.get('QTY', 0))
+                    total_added_qty += free_qty
+                    print(f"🎁 Merging free product qty {free_qty} into {product_name}")
+                
+                # Update the base product's quantity
+                base_qty = float(base_product.get('QTY', 0))
+                base_product['QTY'] = base_qty + total_added_qty
+                
+                print(f"📦 Merged {product_name}: {base_qty} + {total_added_qty} = {base_product['QTY']} qty")
+                merged_results.append(base_product)
+                
+                # Add any additional normal products (if more than one normal product exists)
+                for normal_product in normal_products[1:]:
+                    merged_results.append(normal_product)
+            else:
+                # Only free products exist, keep the first one
+                if free_products:
+                    merged_results.append(free_products[0])
+    
+    return merged_results
 
 
 def simulation_fetch_bccb_product(bccb, ad_org_id):
@@ -11961,7 +12167,13 @@ def simulation_fetch_bccb_product(bccb, ad_org_id):
             cursor.execute(query, params)
             rows = cursor.fetchall()
             columns = [col[0] for col in cursor.description]  # Get column names
-            return [dict(zip(columns, row)) for row in rows]
+            data = [dict(zip(columns, row)) for row in rows]
+            
+            # Process data to merge free products with normal products
+            logger.info(f"Original data count: {len(data)}")
+            merged_data = merge_free_products_with_normal(data)
+            logger.info(f"Merged data count: {len(merged_data)}")
+            return merged_data
     except Exception as e:
         logger.error(f"Error fetching BCCB product data: {e}")
         return {"error": "An error occurred while fetching BCCB product data."}
@@ -12038,11 +12250,12 @@ def simulation_fetch_simulation_by_ndocument(ndocument):
 def simulation_fetch_product_details():
     try:
         product_name = request.args.get("product_name", None)
+        client_type = request.args.get("client_type", None)
         
         if not product_name:
             return jsonify({"error": "Product name is required"}), 400
 
-        data = simulation_fetch_product_details_data(product_name)
+        data = simulation_fetch_product_details_data(product_name, client_type)
         return jsonify(data)
 
     except Exception as e:
@@ -12053,7 +12266,7 @@ def simulation_fetch_product_details():
 
 
  
-def simulation_fetch_product_details_data(product_name):
+def simulation_fetch_product_details_data(product_name, client_type=None):
     """
     Fetch detailed product information similar to the marge data structure
     """
@@ -12082,12 +12295,14 @@ def simulation_fetch_product_details_data(product_name):
                         "source"."LABO" "LABO",
                         "source"."LOT" "LOT",
                         "source"."LOT_ACTIVE" "LOT_ACTIVE",
+                        "source"."LOT_ID" "LOT_ID",
 
                         "source"."QTY" "QTY",
                         "source"."QTY_DISPO" "QTY_DISPO",
                         "source"."GUARANTEEDATE" "GUARANTEEDATE",
                         "source"."PPA" "PPA",
-                        "source"."LOCATION" "LOCATION"
+                        "source"."LOCATION" "LOCATION",
+                        "source"."CLIENT_TYPE" "CLIENT_TYPE"
 
                     FROM
                         (
@@ -12107,6 +12322,7 @@ def simulation_fetch_product_details_data(product_name):
                                 labo,
                                 lot,
                                 lot_active,
+                                lot_id,
                                 qty,
                                 qty_dispo,
                                 guaranteedate,
@@ -12117,7 +12333,14 @@ def simulation_fetch_product_details_data(product_name):
                                     WHEN m_locator_id = 1001128 THEN 'Dépot_réserve'
                                     WHEN m_locator_id = 1001136 THEN 'HANGAR_'
                                     WHEN m_locator_id = 1001020 THEN 'Depot_Vente'
-                                END AS location
+                                    WHEN m_locator_id = 1000717 THEN 'hangar reception'
+                                END AS location,
+                                c_bp_group_id,
+                                CASE 
+                                    WHEN c_bp_group_id = 1001330 THEN 'Client Potentiel'
+                                    WHEN c_bp_group_id = 1000003 THEN 'Client Para'
+                                    ELSE 'Other'
+                                END AS client_type
                             FROM
                                 (
                                     SELECT
@@ -12170,6 +12393,7 @@ def simulation_fetch_product_details_data(product_name):
                                                                 ELSE NULL
                                                             END
                                                         ) AS bna,
+                                                        mst.m_attributesetinstance_id AS lot_id,
                                                         (
                                                             SELECT
                                                                 valuenumber
@@ -12248,7 +12472,8 @@ def simulation_fetch_product_details_data(product_name):
                                                             WHERE
                                                                 m_attributesetinstance_id = mst.m_attributesetinstance_id
                                                                 AND m_attribute_id = 1000503
-                                                        ) ppa
+                                                        ) ppa,
+                                                        NVL(cp.C_BP_Group_ID, 0) AS c_bp_group_id
                                                     FROM
                                                         m_product p
                                                         INNER JOIN m_storage mst ON p.m_product_id = mst.m_product_id
@@ -12260,9 +12485,12 @@ def simulation_fetch_product_details_data(product_name):
                                                         LEFT JOIN XX_SalesContext sal ON p.XX_SalesContext_ID = sal.XX_SalesContext_ID
                                                     WHERE
                                                         mati.m_attribute_id = 1000508
-                                                        AND mst.m_locator_id IN (1001135, 1000614, 1001128, 1001136, 1001020)
+                                                        AND mst.m_locator_id IN (1001135, 1000614, 1001128, 1001136, 1001020, 1000717)
                                                         AND mst.qtyonhand != 0
                                                         AND p.name = :product_name
+                                                        AND (:client_type IS NULL OR 
+                                                             (:client_type = 'Client Potentiel' AND cp.C_BP_Group_ID = 1001330) OR
+                                                             (:client_type = 'Client Para' AND cp.C_BP_Group_ID = 1000003))
                                                     ORDER BY
                                                         p.name
                                                 ) det
@@ -12286,21 +12514,25 @@ def simulation_fetch_product_details_data(product_name):
                                 labo,
                                 lot,
                                 lot_active,
+                                lot_id,
 
                                 qty,
                                 qty_dispo,
                                 guaranteedate,
                                 ppa,
-                                m_locator_id
+                                m_locator_id,
+                                c_bp_group_id
                             ORDER BY
-                                fournisseur
+                                
+                                lot_id
+
                         ) "source"
                 )
             WHERE
                 rownum <= 1048575
             """
 
-            cursor.execute(query, {"product_name": product_name})
+            cursor.execute(query, {"product_name": product_name, "client_type": client_type})
             rows = cursor.fetchall()
             columns = [col[0] for col in cursor.description]
             data = [dict(zip(columns, row)) for row in rows]
@@ -12310,6 +12542,9 @@ def simulation_fetch_product_details_data(product_name):
     except Exception as e:
         logger.error(f"Error fetching product details: {e}")
         return {"error": "An error occurred while fetching product details."}
+
+
+
 
 
 @app.route('/simulation_listproduct')
@@ -12331,11 +12566,11 @@ def simulation_fetch_all_products():
             query = """
                 SELECT DISTINCT
                     mp.name AS NAME,
-                    mp.value AS CODE,
-                    mp.m_product_id AS PRODUCT_ID
+                    MIN(mp.m_product_id) AS PRODUCT_ID
                 FROM m_product mp
                 WHERE mp.isactive = 'Y'
                 AND mp.issold = 'Y'
+                GROUP BY mp.name
                 ORDER BY mp.name
             """
             cursor.execute(query)
@@ -12347,6 +12582,168 @@ def simulation_fetch_all_products():
         return []
     
 
+
+
+@app.route('/orders_from_facture', methods=['GET'])
+def get_orders_from_facture():
+    """
+    Get all orders related to a specific facture (invoice)
+    
+    Query Parameters:
+    - facture_number: The invoice document number (required)
+    
+    Example: /orders_from_facture?facture_number=15933/2025
+    """
+    facture_number = request.args.get('facture_number')
+    
+    if not facture_number:
+        return jsonify({'error': 'Missing facture_number parameter'}), 400
+    
+    try:
+        result = fetch_orders_from_facture(facture_number)
+        if result:
+            return jsonify({
+                'success': True,
+                'facture_number': facture_number,
+                'orders_count': len(result),
+                'orders': result
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'facture_number': facture_number,
+                'orders_count': 0,
+                'orders': [],
+                'message': 'No orders found for this facture'
+            })
+    except Exception as e:
+        logger.error(f"Error in get_orders_from_facture: {e}")
+        return jsonify({'error': 'An error occurred while fetching orders from facture'}), 500
+
+
+def fetch_orders_from_facture(facture_number):
+    """
+    Fetch orders related to a specific facture (invoice) using the invoice document number
+    
+    Args:
+        facture_number (str): The invoice document number
+    
+    Returns:
+        list: List of dictionaries containing order information
+    """
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT DISTINCT
+                    o.DocumentNo as OrderNumber,
+                    o.GrandTotal as OrderTotal,
+                    bp.Name as BusinessPartnerName
+                FROM 
+                    C_Invoice i
+                    INNER JOIN C_InvoiceLine il ON i.C_Invoice_ID = il.C_Invoice_ID
+                    INNER JOIN C_OrderLine ol ON il.C_OrderLine_ID = ol.C_OrderLine_ID
+                    INNER JOIN C_Order o ON ol.C_Order_ID = o.C_Order_ID
+                    LEFT JOIN C_BPartner bp ON o.C_BPartner_ID = bp.C_BPartner_ID
+                WHERE 
+                    i.DocumentNo = :invoice_document_no
+                    AND i.DocStatus IN ('CO', 'CL')
+                    AND i.IsActive = 'Y'
+                    AND il.IsActive = 'Y'
+                    AND ol.IsActive = 'Y'
+                    AND o.IsActive = 'Y'
+                ORDER BY 
+                    o.DocumentNo
+            """
+            
+            params = {
+                'invoice_document_no': facture_number
+            }
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            
+            # Convert rows to dictionaries
+            result = [dict(zip(columns, row)) for row in rows]
+            
+            return result
+            
+    except Exception as e:
+        logger.error(f"Error fetching orders from facture {facture_number}: {e}")
+        raise e
+
+
+
+
+
+@app.route('/update-monthly-goal', methods=['POST'])
+def update_monthly_goal():
+    """Update the monthly goal value in the database"""
+    try:
+        # Get the new goal value from the request
+        data = request.get_json()
+        if not data or 'new_goal' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Missing new_goal parameter'
+            }), 400
+        
+        new_goal = float(data['new_goal'])
+        if new_goal <= 0:
+            return jsonify({
+                'success': False,
+                'error': 'Goal value must be greater than 0'
+            }), 400
+        
+        # Connect to MySQL database
+        conn = get_localdb_connection()
+        if not conn:
+            return jsonify({
+                'success': False,
+                'error': 'Database connection failed'
+            }), 500
+        
+        cursor = conn.cursor()
+        
+        try:
+            # Insert the new goal value with current timestamp
+            cursor.execute("""
+                INSERT INTO recouvrement (value, date) 
+                VALUES (%s, NOW())
+            """, (new_goal,))
+            
+            conn.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Monthly goal updated successfully',
+                'new_goal': new_goal
+            })
+            
+        except Exception as e:
+            conn.rollback()
+            logger.error(f"Error updating monthly goal: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Database error: {str(e)}'
+            }), 500
+            
+        finally:
+            cursor.close()
+            conn.close()
+            
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'error': 'Invalid goal value format'
+        }), 400
+    except Exception as e:
+        logger.error(f"Error in update_monthly_goal: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Server error occurred'
+        }), 500
 
 
 if __name__ == "__main__":

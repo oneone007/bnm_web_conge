@@ -24,179 +24,94 @@ require_once 'check_permission.php';
     <title>Retour Documents</title>
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="confirm_order.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="retour_documents.css">
     <script src="theme.js"></script>
     <script src="api_config.js"></script>
-    <style>
-        .input__container--variant {
-            background: linear-gradient(to bottom, #F3FFF9, #F3FFF9);
-            border-radius: 30px;
-            max-width: 100%;
-            padding: 1em;
-            box-shadow: 0em 1em 3em #beecdc64;
-            display: flex;
-            align-items: center;
-            position: relative;
-            margin: 0 auto 2rem auto;
-            flex-wrap: wrap;
-            gap: 1em;
-        }
-        .shadow__input--variant {
-            filter: blur(25px);
-            border-radius: 30px;
-            background-color: #F3FFF9;
-            opacity: 0.5;
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            z-index: 0;
-        }
-        .input__search--variant {
-            width: 16em;
-            border-radius: 13em;
-            outline: none;
-            border: none;
-            padding: 0.8em;
-            font-size: 1em;
-            color: #002019;
-            background-color: transparent;
-            z-index: 1;
-            margin-right: 1em;
-        }
-        .input__date--variant {
-            width: 12em;
-            border-radius: 13em;
-            outline: none;
-            border: none;
-            padding: 0.8em;
-            font-size: 1em;
-            color: #002019;
-            background-color: transparent;
-            z-index: 1;
-            margin-right: 1em;
-        }
-        .input__button__shadow--variant {
-            border-radius: 15px;
-            background-color: #07372C;
-            padding: 10px;
-            border: none;
-            cursor: pointer;
-            z-index: 1;
-            transition: background-color 0.3s ease;
-            margin-left: 0.5em;
-        }
-        .input__button__shadow--variant:hover {
-            background-color: #3C6659;
-        }
-        .input__button__shadow--variant svg {
-            width: 1.5em;
-            height: 1.5em;
-        }
-        .table-container {
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            max-height: 70vh;
-        }
-        .fade-in {
-            animation: fadeIn 0.3s ease-in;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @media (max-width: 900px) {
-            .input__container--variant {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 0.5em;
-            }
-            .input__search--variant, .input__date--variant {
-                width: 100%;
-                margin-right: 0;
-            }
-        }
-    </style>
 </head>
-<body class="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+<body class="min-h-screen transition-colors duration-300">
     <div class="container mx-auto px-4 py-8">
-        <div class="text-center mb-8">
-            <h1 class="text-5xl font-bold dark:text-white mb-2">Retour Documents</h1>
-            <p class="text-gray-600 dark:text-gray-400">Recherche des documents ORM et simulation des produits</p>
+        <div class="page-header">
+            <h1 class="page-title">Retour Documents</h1>
+            <p class="page-subtitle">Recherche des documents ORM et simulation des produits</p>
         </div>
+
         <!-- Search Section -->
-        <div class="mb-8">
-            <div class="input__container--variant">
-                <div class="shadow__input--variant"></div>
-                <span style="font-weight:600; font-size:1.1em; margin-right:0.5em;">N° Document</span>
-                <input type="text" id="orm_search" class="input__search--variant" placeholder="Entrer le numéro du document..." autocomplete="off" style="margin-right:1em;">
-                <span style="font-weight:600; font-size:1.1em; margin-right:0.5em;">Du</span>
-                <input type="date" id="start_date" class="input__date--variant" style="margin-right:0.5em;">
-                <span style="font-weight:600; font-size:1.1em; margin-right:0.5em;">Au</span>
-                <input type="date" id="end_date" class="input__date--variant" style="margin-right:1em;">
-                <button id="orm-search-btn" class="input__button__shadow--variant" type="button" style="margin-left:0.5em;">
+        <div class="search-container">
+            <form class="search-form">
+                <span class="search-label">N° Document</span>
+                <input type="text" id="orm_search" class="search-input" placeholder="Entrer le numéro du document..." autocomplete="off">
+                <span class="search-label">Du</span>
+                <input type="date" id="start_date" class="date-input">
+                <span class="search-label">Au</span>
+                <input type="date" id="end_date" class="date-input">
+                <button id="orm-search-btn" class="search-btn" type="button">
                     <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                         <path d="M4 9a5 5 0 1110 0A5 5 0 014 9zm5-7a7 7 0 104.2 12.6.999.999 0 00.093.107l3 3a1 1 0 001.414-1.414l-3-3a.999.999 0 00-.107-.093A7 7 0 009 2z" fill-rule="evenodd" fill="#FFF"></path>
                     </svg>
                 </button>
-            </div>
-            <div class="text-center mb-2 text-sm text-gray-700 dark:text-gray-300">
+            </form>
+            <div class="search-hint">
                 <span>🔎 Saisissez un numéro ORM et/ou sélectionnez les dates pour voir les documents.</span>
             </div>
         </div>
         <!-- Main Table -->
-        <div class="table-container bg-white shadow-lg dark:bg-gray-800 mb-8 fade-in">
-            <div class="p-6">
-                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Documents ORM</h2>
-                <div class="overflow-x-auto" style="max-height:55vh;overflow-y:auto;">
-                    <table class="min-w-full border-collapse text-sm">
-                        <thead>
-                            <tr class="table-header bg-gray-50 dark:bg-gray-700">
-                                <th class="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-gray-900 dark:text-white font-medium">N° Document</th>
-                                <th class="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-gray-900 dark:text-white font-medium">Tiers</th>
-                                <th class="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-gray-900 dark:text-white font-medium">Date Commande</th>
-                                <th class="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-gray-900 dark:text-white font-medium">Vendeur</th>
-                                <th class="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-gray-900 dark:text-white font-medium">Marge</th>
-                                <th class="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-gray-900 dark:text-white font-medium">Montant</th>
-                                <th class="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-gray-900 dark:text-white font-medium">Organisation</th>
-                                <th class="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-gray-900 dark:text-white font-medium">Description</th>
-                            </tr>
-                        </thead>
-                        <tbody id="orm-documents-table" class="divide-y divide-gray-200 dark:divide-gray-700">
-                            <!-- Data rows will be inserted here dynamically -->
-                        </tbody>
-                    </table>
-                </div>
+        <div class="table-container fade-in">
+            <div class="table-section">
+                <h2 class="table-title">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2v1a1 1 0 001 1h6a1 1 0 001-1V3a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h2a1 1 0 100-2H7z"/>
+                    </svg>
+                    Documents ORM
+                </h2>
+            </div>
+            <div class="overflow-x-auto" style="max-height:55vh;overflow-y:auto;">
+                <table class="min-w-full border-collapse text-sm">
+                    <thead>
+                        <tr>
+                            <th>N° Document</th>
+                            <th>Tiers</th>
+                            <th>Date Commande</th>
+                            <th>Vendeur</th>
+                            <th>Marge</th>
+                            <th>Montant</th>
+                            <th>Organisation</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orm-documents-table">
+                        <!-- Data rows will be inserted here dynamically -->
+                    </tbody>
+                </table>
             </div>
         </div>
         <!-- ORM Product Details Table -->
-        <div id="orm-product-container" class="table-container bg-white shadow-lg dark:bg-gray-800 fade-in" style="display: none;">
-            <div class="p-6">
-                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                    <svg class="w-5 h-5 mr-2 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+        <div id="orm-product-container" class="table-container fade-in" style="display: none;">
+            <div class="table-section">
+                <h2 class="table-title">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
                         <path fill-rule="evenodd" d="M4 5a2 2 0 012-2v1a1 1 0 001 1h6a1 1 0 001-1V3a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h2a1 1 0 100-2H7z"/>
                     </svg>
                     Détails du Produit ORM
-                    <span id="selected-orm-summary" class="ml-4 text-base font-normal text-gray-700 dark:text-gray-300"></span>
+                    <span id="selected-orm-summary" class="table-subtitle"></span>
                 </h2>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full border-collapse text-sm">
-                        <thead>
-                            <tr class="table-header bg-gray-50 dark:bg-gray-700">
-                                <th class="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-gray-900 dark:text-white font-medium">Produit</th>
-                                <th class="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-gray-900 dark:text-white font-medium">Quantité</th>
-                                <th class="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-gray-900 dark:text-white font-medium">Remise</th>
-                                <th class="border border-gray-200 dark:border-gray-600 px-4 py-3 text-left text-gray-900 dark:text-white font-medium">Marge</th>
-                            </tr>
-                        </thead>
-                        <tbody id="orm-product-table" class="divide-y divide-gray-200 dark:divide-gray-700">
-                            <!-- Product data will be inserted here -->
-                        </tbody>
-                    </table>
-                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full border-collapse text-sm">
+                    <thead>
+                        <tr>
+                            <th>Produit</th>
+                            <th>Quantité</th>
+                            <th>Remise</th>
+                            <th>Marge</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orm-product-table">
+                        <!-- Product data will be inserted here -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

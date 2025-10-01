@@ -1,0 +1,1345 @@
+/* Modern Professional Styling for Product Page */
+body {
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    line-height: 1.6;
+    color: #374151;
+    opacity: 0;
+    animation: fadeIn 0.6s ease-out 0.2s forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Page Header */
+.flex.justify-center.items-center.mb-6 h1 {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 2px 4px rgba(107, 114, 128, 0.1);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+}
+
+/* Search and Filter Section */
+.grid.grid-cols-4.gap-4.mb-4 {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    margin-bottom: 24px;
+    transition: all 0.3s ease;
+}
+
+.grid.grid-cols-4.gap-4.mb-4:hover {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+/* Enhanced Input Styling */
+.input-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.input {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 2px solid #e5e7eb;
+    padding: 14px 18px;
+    font-size: 15px;
+    width: 100%;
+    border-radius: 12px;
+    color: #374151;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+}
+
+.input:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    transform: translateY(-1px);
+}
+
+.input::placeholder {
+    color: #9ca3af;
+    font-weight: 400;
+}
+
+/* Marge Condition Section */
+.w-96.mx-auto.flex.items-center.gap-3.p-4.bg-white.rounded-lg.shadow-md {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.8) !important;
+    transition: all 0.3s ease !important;
+}
+
+.w-96.mx-auto.flex.items-center.gap-3.p-4.bg-white.rounded-lg.shadow-md:hover {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* Marge Input Styling */
+#margeInput {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+#margeInput:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    transform: translateY(-1px);
+}
+
+/* Color Picker Styling */
+#margeColorPicker {
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+#margeColorPicker:hover {
+    border-color: #4f46e5;
+    transform: scale(1.05);
+}
+
+/* ===========================================
+   EXCEL DOWNLOAD BUTTONS - COMPLETELY NEW STYLE
+   =========================================== */
+
+/* Excel Download Button Base */
+.excel-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 16px 24px;
+    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+    border: 2px solid #e5e7eb;
+    border-radius: 16px;
+    color: #059669;
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 8px 25px rgba(5, 150, 105, 0.15);
+    overflow: hidden;
+    min-width: 200px;
+    backdrop-filter: blur(10px);
+}
+
+.excel-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(16, 185, 129, 0.1),
+        rgba(5, 150, 105, 0.2),
+        rgba(16, 185, 129, 0.1),
+        transparent);
+    transition: left 0.6s ease;
+    z-index: 1;
+}
+
+.excel-btn:hover::before {
+    left: 100%;
+}
+
+.excel-btn:hover {
+    background: linear-gradient(145deg, #f0fdf4 0%, #dcfce7 100%);
+    border-color: #10b981;
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 15px 35px rgba(16, 185, 129, 0.25);
+    color: #047857;
+}
+
+.excel-btn:active {
+    transform: translateY(-1px) scale(1.01);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.2);
+}
+
+/* Excel Icon Container */
+.excel-icon {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-radius: 10px;
+    z-index: 2;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.excel-btn:hover .excel-icon {
+    transform: rotate(5deg) scale(1.1);
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+.excel-icon img {
+    width: 20px;
+    height: 20px;
+    filter: brightness(0) invert(1);
+    transition: all 0.3s ease;
+}
+
+.excel-btn:hover .excel-icon img {
+    transform: scale(1.1);
+}
+
+/* Excel Button Text */
+.excel-text {
+    position: relative;
+    z-index: 2;
+    font-weight: 800;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.excel-btn:hover .excel-text {
+    text-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+    letter-spacing: 1.5px;
+}
+
+/* Excel Button Variants */
+.excel-btn-primary {
+    background: linear-gradient(145deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: 2px solid #059669;
+}
+
+.excel-btn-primary:hover {
+    background: linear-gradient(145deg, #059669 0%, #047857 100%);
+    border-color: #047857;
+    color: white;
+}
+
+.excel-btn-primary .excel-icon {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.excel-btn-primary:hover .excel-icon {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.excel-btn-primary .excel-icon img {
+    filter: none;
+}
+
+/* Pulsing Animation for Special Buttons */
+@keyframes excel-pulse {
+    0%, 100% {
+        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.15);
+    }
+    50% {
+        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+    }
+}
+
+.excel-btn-pulse {
+    animation: excel-pulse 2s infinite;
+}
+
+/* ===========================================
+   DARK MODE EXCEL BUTTONS
+   =========================================== */
+
+html.dark .excel-btn {
+    background: linear-gradient(145deg, #1f2937 0%, #374151 100%);
+    border-color: #4b5563;
+    color: #10b981;
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.1);
+}
+
+html.dark .excel-btn:hover {
+    background: linear-gradient(145deg, #064e3b 0%, #065f46 100%);
+    border-color: #10b981;
+    color: #f0fdf4;
+    box-shadow: 0 15px 35px rgba(16, 185, 129, 0.2);
+}
+
+html.dark .excel-btn-primary {
+    background: linear-gradient(145deg, #10b981 0%, #059669 100%);
+    color: white;
+    border-color: #059669;
+}
+
+html.dark .excel-btn-primary:hover {
+    background: linear-gradient(145deg, #059669 0%, #047857 100%);
+    border-color: #047857;
+}
+
+/* ===========================================
+   RESPONSIVE EXCEL BUTTONS
+   =========================================== */
+
+@media (max-width: 768px) {
+    .excel-btn {
+        padding: 14px 20px;
+        font-size: 14px;
+        min-width: 180px;
+    }
+
+    .excel-icon {
+        width: 28px;
+        height: 28px;
+    }
+
+    .excel-icon img {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .excel-btn {
+        padding: 12px 16px;
+        font-size: 13px;
+        min-width: 160px;
+    }
+
+    .excel-icon {
+        width: 24px;
+        height: 24px;
+    }
+
+    .excel-icon img {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+/* Base Button Styles */
+.btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    overflow: hidden;
+    min-width: 120px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.btn:hover::before {
+    left: 100%;
+}
+
+.btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3);
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Primary Button (Purple/Blue) */
+.btn-primary {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
+}
+
+.btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+/* Secondary Button (Gray) */
+.btn-secondary {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(107, 114, 128, 0.4);
+}
+
+.btn-secondary:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+}
+
+/* Success Button (Green) */
+.btn-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-success:hover:not(:disabled) {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+}
+
+.btn-success:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Danger Button (Red) */
+.btn-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
+}
+
+.btn-danger:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* Warning Button (Orange) */
+.btn-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-warning:hover:not(:disabled) {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(245, 158, 11, 0.4);
+}
+
+.btn-warning:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+/* Info Button (Blue) */
+.btn-info {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-info:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+}
+
+.btn-info:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Outline Button Variants */
+.btn-outline-primary {
+    background: transparent;
+    color: #4f46e5;
+    border: 2px solid #4f46e5;
+    box-shadow: none;
+}
+
+.btn-outline-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
+}
+
+.btn-outline-secondary {
+    background: transparent;
+    color: #6b7280;
+    border: 2px solid #6b7280;
+    box-shadow: none;
+}
+
+.btn-outline-secondary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(107, 114, 128, 0.4);
+}
+
+/* Button Sizes */
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 12px;
+    min-width: 100px;
+}
+
+.btn-lg {
+    padding: 16px 32px;
+    font-size: 16px;
+    min-width: 140px;
+}
+
+.btn-xl {
+    padding: 18px 36px;
+    font-size: 18px;
+    min-width: 160px;
+}
+
+/* Button with Icons */
+.btn .icon {
+    transition: transform 0.3s ease;
+}
+
+.btn:hover .icon {
+    transform: scale(1.1);
+}
+
+/* Loading State */
+.btn-loading {
+    position: relative;
+    color: transparent !important;
+}
+
+.btn-loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ===========================================
+   LEGACY BUTTON STYLES (Updated to use new system)
+   =========================================== */
+
+/* Professional Buttons - Updated */
+#margeConditionBtn, #refresh-btn {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 14px rgba(107, 114, 128, 0.3);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 120px;
+    position: relative;
+    overflow: hidden;
+}
+
+#margeConditionBtn::before, #refresh-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+#margeConditionBtn:hover, #refresh-btn:hover {
+    background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(107, 114, 128, 0.4);
+}
+
+#margeConditionBtn:hover::before, #refresh-btn:hover::before {
+    left: 100%;
+}
+
+#margeConditionBtn:active, #refresh-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3);
+}
+
+/* Download Button Container */
+.container {
+    display: flex;
+    justify-content: center;
+    margin: 24px 0;
+}
+
+/* Professional Download Button - Updated */
+.button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 14px 28px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+    min-width: 180px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.button:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+}
+
+.button:hover::before {
+    left: 100%;
+}
+
+.button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.button .icon {
+    transition: transform 0.3s ease;
+}
+
+.button:hover .icon {
+    transform: scale(1.1);
+}
+
+.button .text {
+    display: flex;
+    gap: 1px;
+}
+
+.button .text span {
+    transition: all 0.3s ease;
+}
+
+.button:hover .text span {
+    transform: translateY(-1px);
+}
+
+/* Enhanced Table Container */
+.table-container {
+    max-height: 500px;
+    overflow-y: auto;
+    overflow-x: auto;
+    border: none;
+    border-radius: 16px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+}
+
+.table-container:hover {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+.table-container table {
+    width: 100%;
+    table-layout: auto;
+    min-width: 100%;
+    max-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Professional Table Header */
+thead {
+    position: sticky;
+    top: 0;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    z-index: 10;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+thead th {
+    color: #1f2937 !important; /* Dark gray/black for light mode */
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    font-size: 12px !important;
+    padding: 16px 12px !important;
+    border: none !important;
+    position: relative !important;
+    background: transparent !important;
+}
+
+/* White text for dark mode headers */
+html.dark thead th {
+    color: white !important;
+}
+
+thead th::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 1px;
+}
+
+/* Enhanced Table Cells */
+th, td {
+    white-space: nowrap;
+    text-align: left;
+    padding: 14px 16px;
+    border: none;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+/* Table Row Styling */
+.table-container tbody tr {
+    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.table-container tbody tr:nth-child(even) {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.table-container tbody tr:hover {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.table-container tbody tr:hover td {
+    color: inherit;
+}
+
+/* Client Type Styling */
+.client-para {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+    border-left: 4px solid #3b82f6 !important;
+}
+
+.client-potentiel {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
+    border-left: 4px solid #10b981 !important;
+}
+
+.client-other {
+    background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%) !important;
+    border-left: 4px solid #8b5cf6 !important;
+}
+
+/* Dark Mode Support */
+html.dark body {
+    background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+    color: #f9fafb;
+}
+
+html.dark .flex.justify-center.items-center.mb-6 h1 {
+    background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+html.dark .grid.grid-cols-4.gap-4.mb-4 {
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+html.dark .input {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+    border-color: #4b5563;
+    color: #f9fafb;
+}
+
+html.dark .input::placeholder {
+    color: #9ca3af;
+}
+
+html.dark .w-96.mx-auto.flex.items-center.gap-3.p-4.bg-white.rounded-lg.shadow-md {
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+html.dark #margeInput {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+    border-color: #4b5563;
+    color: #f9fafb;
+}
+
+html.dark #margeConditionBtn, html.dark #refresh-btn {
+    background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+    box-shadow: 0 4px 14px rgba(75, 85, 99, 0.3);
+}
+
+html.dark #margeConditionBtn:hover, html.dark #refresh-btn:hover {
+    background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+    box-shadow: 0 8px 20px rgba(75, 85, 99, 0.4);
+}
+
+html.dark .button {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3);
+}
+
+html.dark .button:hover {
+    background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+    box-shadow: 0 8px 20px rgba(5, 150, 105, 0.4);
+}
+
+/* ===========================================
+   DARK MODE BUTTON SUPPORT
+   =========================================== */
+
+html.dark .btn-primary {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+}
+
+html.dark .btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%);
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+}
+
+html.dark .btn-secondary {
+    background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+}
+
+html.dark .btn-secondary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+    box-shadow: 0 8px 20px rgba(75, 85, 99, 0.4);
+}
+
+html.dark .btn-success {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+html.dark .btn-success:hover:not(:disabled) {
+    background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+    box-shadow: 0 8px 20px rgba(5, 150, 105, 0.4);
+}
+
+html.dark .btn-danger {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+}
+
+html.dark .btn-danger:hover:not(:disabled) {
+    background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+    box-shadow: 0 8px 20px rgba(220, 38, 38, 0.4);
+}
+
+html.dark .btn-warning {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+}
+
+html.dark .btn-warning:hover:not(:disabled) {
+    background: linear-gradient(135deg, #b45309 0%, #92400e 100%);
+    box-shadow: 0 8px 20px rgba(217, 119, 6, 0.4);
+}
+
+html.dark .btn-info {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+html.dark .btn-info:hover:not(:disabled) {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+}
+
+html.dark .btn-outline-primary {
+    color: #a78bfa;
+    border-color: #a78bfa;
+}
+
+html.dark .btn-outline-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+}
+
+html.dark .btn-outline-secondary {
+    color: #9ca3af;
+    border-color: #9ca3af;
+}
+
+html.dark .btn-outline-secondary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+    color: white;
+}
+
+html.dark .table-container {
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+html.dark thead {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+}
+
+html.dark .table-container tbody tr {
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+}
+
+html.dark .table-container tbody tr:nth-child(even) {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+}
+
+html.dark .table-container tbody tr:hover {
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+}
+
+html.dark .table-container tbody tr:hover td {
+    color: inherit;
+}
+
+html.dark .client-para {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%) !important;
+    border-left-color: #60a5fa !important;
+}
+
+html.dark .client-potentiel {
+    background: linear-gradient(135deg, #064e3b 0%, #047857 100%) !important;
+    border-left-color: #34d399 !important;
+}
+
+html.dark .client-other {
+    background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%) !important;
+    border-left-color: #a78bfa !important;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .grid.grid-cols-4.gap-4.mb-4 {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+
+    .table-container {
+        max-height: 400px;
+    }
+
+    th, td {
+        padding: 10px 8px;
+        font-size: 12px;
+    }
+
+    thead th {
+        font-size: 11px;
+        padding: 12px 8px;
+    }
+}
+
+@media (max-width: 768px) {
+    .grid.grid-cols-4.gap-4.mb-4 {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .w-96.mx-auto.flex.items-center.gap-3.p-4 {
+        width: 100% !important;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .table-container {
+        max-height: 300px;
+    }
+
+    th, td {
+        padding: 8px 6px;
+        font-size: 11px;
+        white-space: normal;
+        word-break: break-word;
+    }
+
+    thead th {
+        font-size: 10px;
+        padding: 10px 6px;
+    }
+
+    .button, #margeConditionBtn, #refresh-btn, .btn {
+        padding: 12px 16px;
+        font-size: 14px;
+        min-width: 160px;
+    }
+}
+
+@media (max-width: 480px) {
+    .flex.justify-center.items-center.mb-6 h1 {
+        font-size: 2.5rem;
+    }
+
+    .table-container {
+        max-height: 250px;
+    }
+
+    .input {
+        padding: 12px 16px;
+        font-size: 14px;
+    }
+
+    .button, #margeConditionBtn, #refresh-btn, .btn {
+        padding: 10px 14px;
+        font-size: 13px;
+        min-width: 140px;
+    }
+}
+
+.dark input::placeholder {
+    color: #111827 !important;
+    opacity: 0.8;
+}
+
+.dark h2,
+.dark th {
+    color: #ffffff !important;
+}
+
+
+
+
+
+
+  .table-container.placement-table {
+    flex: 0.5;
+    width: 10px;
+  }
+  
+.dark .table-container {
+border-color: #374151;
+}
+
+.dark .table-header {
+background-color: #374151;
+color: #f9fafb; /* White text in dark mode */
+}
+
+.dark .table-row:nth-child(odd) {
+background-color: #1f2937;
+color: #f9fafb; /* White text on dark background */
+}
+
+.dark .table-row:nth-child(even) {
+background-color: #474d53;
+color: #ececec;
+}
+
+
+.table-wrapper {
+display: flex;
+justify-content: space-between; /* Ensures tables are spaced apart */
+gap: 20px; /* Adds spacing between tables */
+}
+
+.paginatio-wrapper {
+display: flex;
+justify-content: center; 
+/* Ensures tables are spaced apart */
+gap: 250px; /* Adds spacing between tables */
+}
+/* .download-wrapper {
+display: flex;
+
+gap: 550px; /* Adds spacing between tables 
+} */
+.title-wrapper{
+display: flex;
+
+/* Ensures tables are spaced apart */
+gap: 730px; /* Adds spacing between tables */
+}
+
+
+
+
+
+
+.content-full {
+    margin-left: 0;
+    width: 100%;
+}
+
+.table-header {
+    background-color: #f3f4f6;
+    text-align: left;
+    color: #000; /* Default text color */
+    position: sticky; top: 0;
+}
+
+.table-row {
+    color: #000; /* Default black text */
+}
+
+.table-row:nth-child(odd) {
+    background-color: #f9fafb;
+}
+
+
+
+
+.dark body {
+    background-color: #111827;
+    color: #010911;
+}
+
+
+
+html.dark body {
+background-color: #111827;
+color: white;
+}
+
+/* Dark Mode Toggle - Styled Checkbox */
+.checkbox {
+display: none;
+}
+
+/* Toggle Background */
+.checkbox-label {
+width: 60px;
+height: 30px;
+background: #ddd;
+display: flex;
+border-radius: 50px;
+align-items: center;
+position: relative;
+cursor: pointer;
+padding: 5px;
+transition: background 0.3s ease-in-out;
+}
+
+/* Ball as Sun (Default) */
+.ball {
+width: 22px;
+height: 22px;
+background: #facc15; /* Sun color (yellow) */
+position: absolute;
+border-radius: 50%;
+transition: transform 0.3s ease-in-out, background 0.3s ease-in-out;
+left: 5px;
+box-shadow: 0 0 5px 2px #facc15; /* Sun glow effect */
+}
+
+/* Add Sun Rays */
+.ball::before {
+content: "";
+position: absolute;
+width: 100%;
+height: 100%;
+background: inherit;
+border-radius: 50%;
+transform: scale(1.4);
+opacity: 0.5;
+}
+
+/* Moon Shape */
+html.dark .ball {
+transform: translateX(30px);
+background: #1e40af; /* Moon color (blue) */
+box-shadow: none; /* Remove glow */
+}
+
+/* Crescent Moon Effect */
+html.dark .ball::before {
+content: "";
+position: absolute;
+width: 100%;
+height: 100%;
+background: white;
+border-radius: 50%;
+left: 5px; /* Shift left to create crescent effect */
+}
+
+/* Dark Mode Background */
+html.dark .checkbox-label {
+background: #333;
+}
+
+/* Positioning the Dark Mode Toggle on Top Right */
+#themeSwitcher {
+position: fixed;
+top: 10px;
+right: 20px;
+z-index: 50;
+}
+
+
+/* Hide Default Checkbox */
+.checkbox {
+display: none;
+}
+
+/* Toggle Background */
+.checkbox-label {
+width: 60px;
+height: 30px;
+background: #f97316; /* Light Mode Orange */
+display: flex;
+align-items: center;
+border-radius: 50px;
+position: relative;
+cursor: pointer;
+padding: 5px;
+transition: background 0.3s ease-in-out;
+}
+
+/* Ball */
+.ball {
+width: 24px;
+height: 24px;
+background: white;
+position: absolute;
+border-radius: 50%;
+transition: transform 0.3s ease-in-out;
+left: 5px;
+}
+
+/* Icons */
+.icon {
+font-size: 16px;
+position: absolute;
+top: 50%;
+transform: translateY(-50%);
+transition: opacity 0.3s ease-in-out;
+}
+
+/* Sun (Left) */
+.sun {
+left: 10px;
+color: white;
+}
+
+/* Moon (Right) */
+.moon {
+right: 10px;
+color: white;
+opacity: 0; /* Hidden in Light Mode */
+}
+
+/* Dark Mode */
+html.dark .checkbox-label {
+background: #1f2937; /* Dark Mode Gray */
+}
+
+html.dark .ball {
+transform: translateX(30px);
+}
+
+html.dark .sun {
+opacity: 0; /* Hide Sun */
+}
+
+html.dark .moon {
+opacity: 1; /* Show Moon */
+}
+
+/* Theme Switcher Position */
+#themeSwitcher {
+position: sticky;
+top: 10px;
+right: 10px;
+padding: 10px;
+z-index: 50;
+}
+
+
+
+
+

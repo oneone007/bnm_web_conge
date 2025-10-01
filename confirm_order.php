@@ -35,14 +35,14 @@ Order a Confirmer
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
-    <link rel="stylesheet" href="confirm_order.css">
+    <link rel="stylesheet" href="confirm_orderv2.css">
         <script src="api_config.js"></script>
 
     <script src="theme.js"></script>
 
 </head>
 
-<body class="flex h-screen bg-gray-100 dark:bg-gray-900">
+<body class="transition-colors duration-300">
     <!-- Sidebar Toggle Button -->
  <!-- Include SweetAlert2 Library (Add this to your HTML head if not already included) -->
 
@@ -128,6 +128,44 @@ Order a Confirmer
 .sidebar-hidden {
   display: none !important;
 }
+/* Disable table lift/hover animations on this page */
+table tr,
+table tbody tr,
+.table-container,
+.table-container:hover,
+.table-container *,
+.row-selectable {
+    -webkit-transition: none !important;
+    -o-transition: none !important;
+    transition: none !important;
+    -webkit-transform: none !important;
+    -moz-transform: none !important;
+    -ms-transform: none !important;
+    -o-transform: none !important;
+    transform: none !important;
+    -webkit-box-shadow: none !important;
+    box-shadow: none !important;
+}
+/* Also disable hover transforms on search and refresh controls */
+.search-container,
+.search-container *,
+.search-btn,
+.search-btn *,
+.search-btn::before,
+.refresh-btn,
+.refresh-btn * {
+    -webkit-transition: none !important;
+    -o-transition: none !important;
+    transition: none !important;
+    -webkit-transform: none !important;
+    -moz-transform: none !important;
+    -ms-transform: none !important;
+    -o-transform: none !important;
+    transform: none !important;
+    -webkit-box-shadow: none !important;
+    box-shadow: none !important;
+}
+.search-btn::before { left: 0 !important; }
 </style>
 
 
@@ -148,14 +186,9 @@ Order a Confirmer
 
 
 
-    <!-- Main Content -->
-    <div id="content" class="content flex-grow p-4">
-
-
-    <div class="flex justify-center items-center mb-6">
-        <h1 class="text-5xl font-bold dark:text-white text-center  ">
-        Order a Confirmer 
-            </h1>
+    <div class="container mx-auto px-4 py-8">
+        <div class="page-header">
+            <h1 class="page-title">Order a Confirmer</h1>
         </div>
         <!-- Filters -->
    
@@ -176,20 +209,20 @@ Order a Confirmer
 <br>
 
 <!-- 💻 Your new search bar styled like the example -->
-<div class="input__container--variant">
-  <div class="shadow__input--variant"></div>
-  <input type="text" id="bccb_confirm" class="input__search--variant" placeholder="Search for BCCB ...">
-  <button class="input__button__shadow--variant">
-    <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-      <path d="M4 9a5 5 0 1110 0A5 5 0 014 9zm5-7a7 7 0 104.2 12.6.999.999 0 00.093.107l3 3a1 1 0 001.414-1.414l-3-3a.999.999 0 00-.107-.093A7 7 0 009 2z" fill-rule="evenodd" fill="#FFF"></path>
-    </svg>
-  </button>
-
+<div class="search-container">
+  <form class="search-form">
+    <input type="text" id="bccb_confirm" class="search-input" placeholder="Search for BCCB ...">
+    <button class="search-btn" type="button">
+      <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+        <path d="M4 9a5 5 0 1110 0A5 5 0 014 9zm5-7a7 7 0 104.2 12.6.999.999 0 00.093.107l3 3a1 1 0 001.414-1.414l-3-3a.999.999 0 00-.107-.093A7 7 0 009 2z" fill-rule="evenodd" fill="#FFF"></path>
+      </svg>
+    </button>
+  </form>
 </div>
 
-<div class="flex justify-center w-full">
-    <button id="refresh-btn" class="p-3 bg-white dark:bg-gray-700 text-blue-500 dark:text-blue-400 rounded-full shadow-lg hover:shadow-xl border border-blue-500 dark:border-blue-400 transition duration-200 flex items-center justify-center">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+<div class="flex justify-center w-full mb-4">
+    <button id="refresh-btn" class="refresh-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75a7.5 7.5 0 0 0 12.755 4.652M4.5 15.75H9m-4.5 0v4.5m15-7.5a7.5 7.5 0 0 0-12.755-4.652M19.5 8.25H15m4.5 0V3.75" />
         </svg>
     </button>
@@ -199,61 +232,76 @@ Order a Confirmer
 
 
 
-        <div id="order-update-info" class="mb-4 text-sm text-gray-700 dark:text-gray-300">
-  Dernière mise à jour : <span id="last-update">--:--:--</span> |
-  Actualisation dans : <span id="countdown">30</span>s
-</div>
+        <div id="order-update-info" class="update-info">
+            Dernière mise à jour : <span id="last-update">--:--:--</span> |
+            Actualisation dans : <span id="countdown">30</span>s
+        </div>
 
         <br>
         
         <!-- Table -->
-    <!-- Table -->
-    <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 p-6 text-center">
-    <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Ordre a confirmer</h2>
+        <div class="table-container">
+            <div class="table-section">
+                <h2 class="table-title">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2v1a1 1 0 001 1h6a1 1 0 001-1V3a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h2a1 1 0 100-2H7z"/>
+                    </svg>
+                    Ordre a confirmer
+                </h2>
+            </div>
 
-    <!-- Row count fixed header -->
-    <div id="row-count" class="font-semibold mb-4 text-center text-gray-900 dark:text-white">
-        Total Rows: 0
-    </div>
+            <!-- Row count fixed header -->
+            <div id="row-count" class="row-count">
+                Total Rows: 0
+            </div>
 
-    <div class="overflow-x-auto">
-        <table class="min-w-full border-collapse text-sm text-left dark:text-white">
-            <thead>
-                <tr class="table-header bg-gray-100 dark:bg-gray-700">
-                    <th data-column="NDOCUMENT" onclick="sortorderconfirmedTable('NDOCUMENT')" class="border px-4 py-2 text-gray-900 dark:text-white">NDocument</th>
-                    <th data-column="TIER" onclick="sortorderconfirmedTable('TIER')" class="border px-4 py-2 text-gray-900 dark:text-white">Tiers</th>
-                    <th data-column="DATECOMMANDE" onclick="sortorderconfirmedTable('DATECOMMANDE')" class="border px-4 py-2 text-gray-900 dark:text-white">Date Commande</th>
-                    <th data-column="VENDEUR" onclick="sortorderconfirmedTable('VENDEUR')" class="border px-4 py-2 text-gray-900 dark:text-white">Vendeur</th>
-                    <th data-column="MARGE" onclick="sortorderconfirmedTable('MARGE')" class="border px-4 py-2 text-gray-900 dark:text-white">Marge</th>
-                    <th data-column="MONTANT" onclick="sortorderconfirmedTable('MONTANT')" class="border px-4 py-2 text-gray-900 dark:text-white">Montant</th>
-                    <th data-column="ORGANISATION" onclick="sortorderconfirmedTable('ORGANISATION')" class="border px-4 py-2 text-gray-900 dark:text-white">Organization</th>
-                </tr>
-            </thead>
-            <tbody id="order-confirmer-table" class="dark:bg-gray-800">
-                <!-- Data rows will be inserted here dynamically -->
-            </tbody>
-        </table>
-    </div>
-</div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full border-collapse text-sm">
+                    <thead>
+                        <tr>
+                            <th data-column="NDOCUMENT" onclick="sortorderconfirmedTable('NDOCUMENT')">NDocument</th>
+                            <th data-column="TIER" onclick="sortorderconfirmedTable('TIER')">Tiers</th>
+                            <th data-column="DATECOMMANDE" onclick="sortorderconfirmedTable('DATECOMMANDE')">Date Commande</th>
+                            <th data-column="VENDEUR" onclick="sortorderconfirmedTable('VENDEUR')">Vendeur</th>
+                            <th data-column="MARGE" onclick="sortorderconfirmedTable('MARGE')">Marge</th>
+                            <th data-column="MONTANT" onclick="sortorderconfirmedTable('MONTANT')">Montant</th>
+                            <th data-column="ORGANISATION" onclick="sortorderconfirmedTable('ORGANISATION')">Organization</th>
+                        </tr>
+                    </thead>
+                    <tbody id="order-confirmer-table">
+                        <!-- Data rows will be inserted here dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
 <br><br>
 
 <!-- Add margin top to create space between tables -->
-<div id="bccb-product-container" class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 mt-6" style="display: none;">
-    <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 p-6 text-center">
-        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">BCCB Product</h2>
+<div id="bccb-product-container" class="table-container" style="display: none;">
+    <div class="table-section">
+        <h2 class="table-title">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                <path fill-rule="evenodd" d="M4 5a2 2 0 012-2v1a1 1 0 001 1h6a1 1 0 001-1V3a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h2a1 1 0 100-2H7z"/>
+            </svg>
+            BCCB Product
+        </h2>
+    </div>
 
-        <table class="min-w-full border-collapse text-sm text-left dark:text-white">
+    <div class="overflow-x-auto">
+        <table class="min-w-full border-collapse text-sm">
             <thead>
-                <tr class="table-header bg-gray-100 dark:bg-gray-700">
-                    <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 text-gray-900 dark:text-white">PRODUCT</th>
-                    <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 text-gray-900 dark:text-white">QTY</th>
-                    <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 text-gray-900 dark:text-white">REMISE</th>
-                    <th class="border border-gray-300 px-4 py-2 dark:border-gray-600 text-gray-900 dark:text-white">MARGE</th>
+                <tr>
+                    <th>PRODUCT</th>
+                    <th>QTY</th>
+                    <th>REMISE</th>
+                    <th>MARGE</th>
                 </tr>
             </thead>
-            <tbody id="confirmed-bccb-product-table" class="dark:bg-gray-800">
-            
+            <tbody id="confirmed-bccb-product-table">
+                <!-- Product data will be inserted here -->
             </tbody>
         </table>
     </div>

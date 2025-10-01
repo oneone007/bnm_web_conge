@@ -17,7 +17,7 @@ from threading import Thread
 import calendar
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)  # Allow your DDNS domains and ports
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -189,6 +189,88 @@ def paiment():
 
 
 
+def fetch_credit_client_this_month():
+    try:
+        # Get current month date range
+        today = datetime.now()
+        year = today.year
+        month = today.month
+        
+        start_date = f"{year}-{month:02d}-01"
+        last_day = calendar.monthrange(year, month)[1]
+        end_date = f"{year}-{month:02d}-{last_day}"
+        
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+
+            query = """
+                SELECT 
+                    ROUND(SUM(SoldeFact + SoldeBL), 2) AS credit_client
+                FROM (
+                    SELECT 
+                        bp.c_bpartner_id, 
+                        (
+                            SELECT COALESCE(SUM(invoiceOpen(inv.C_Invoice_ID, 0)), 0) 
+                            FROM C_Invoice inv 
+                            INNER JOIN C_PaymentTerm pt ON inv.C_PaymentTerm_ID = pt.C_PaymentTerm_ID
+                            WHERE bp.c_bpartner_id = inv.c_bpartner_id 
+                            AND paymentTermDueDays(inv.C_PAYMENTTERM_ID, inv.DATEINVOICED, TO_DATE('01/01/3000', 'DD/MM/YYYY')) >= 0
+                            AND inv.docstatus IN ('CO', 'CL') 
+                            AND inv.AD_ORGTRX_ID = inv.ad_org_id 
+                            AND inv.ad_client_id = 1000000
+                            AND inv.C_PaymentTerm_ID != 1000000
+                            
+                            AND (inv.dateinvoiced + pt.netdays) <= TO_DATE(:end_date, 'YYYY-MM-DD')
+                        ) AS SoldeFact,
+                        (
+                            SELECT COALESCE(SUM(invoiceOpen(inv.C_Invoice_ID, 0)), 0) 
+                            FROM C_Invoice inv 
+                            INNER JOIN C_PaymentTerm pt ON inv.C_PaymentTerm_ID = pt.C_PaymentTerm_ID
+                            WHERE bp.c_bpartner_id = inv.c_bpartner_id 
+                            AND paymentTermDueDays(inv.C_PAYMENTTERM_ID, inv.DATEINVOICED, TO_DATE('01/01/3000', 'DD/MM/YYYY')) >= 0
+                            AND inv.docstatus IN ('CO', 'CL') 
+                            AND inv.AD_ORGTRX_ID <> inv.ad_org_id 
+                            AND inv.ad_client_id = 1000000
+                            AND inv.C_PaymentTerm_ID != 1000000
+                           
+                            AND (inv.dateinvoiced + pt.netdays) <= TO_DATE(:end_date, 'YYYY-MM-DD')
+                        ) AS SoldeBL
+                    FROM 
+                        c_bpartner bp 
+                        INNER JOIN C_BPartner_Location bpl ON bp.C_BPartner_id = bpl.C_BPartner_id
+                        INNER JOIN ad_user u ON bp.salesrep_id = u.ad_user_id
+                        LEFT OUTER JOIN AD_User u2 ON u2.AD_User_ID = bp.XX_TempSalesRep_ID
+                        LEFT OUTER JOIN C_SalesRegion sr ON sr.C_SalesRegion_id = bpl.C_SalesRegion_id
+                        LEFT OUTER JOIN C_City sr2 ON sr2.C_City_id = bpl.C_City_id
+                    WHERE 
+                        bp.iscustomer = 'Y' 
+                        AND bp.C_BP_Group_ID IN (1000003, 1000926, 1001330)
+                        AND bp.isactive = 'Y' 
+                        AND bp.NAME not like '%MBN%'
+
+                        AND sr.isactive = 'Y'
+                        AND bp.C_PaymentTerm_ID != 1000000
+                        AND bpl.c_salesregion_id IN (
+                            101, 102, 1000032, 1001776, 1001777, 1001778, 1001779, 1001780, 1001781,
+                            1001782, 1001783, 1001784, 1001785, 1001786, 1001787, 1001788, 1001789,
+                            1001790, 1001791, 1001792, 1001793, 1001794, 1002076, 1002077, 1002078,
+                            1002079, 1002080, 1002176, 1002177, 1002178, 1002179, 1002180, 1002181,
+                            1002283, 1002285, 1002286, 1002287, 1002288
+                        )
+                ) subquery
+            """
+
+            cursor.execute(query, {
+                'end_date': end_date
+            })
+            
+            row = cursor.fetchone()
+            credit_client = row[0] if row else 0.0
+            return {"credit_client": credit_client}
+
+    except Exception as e:
+        logger.error(f"Error in credit client processing: {e}")
+        return {"error": "An error occurred while processing credit client data."}
 
 
 
@@ -200,9 +282,9 @@ def get_localdb_connection():
     try:
         return mysql.connector.connect(
             host="localhost",
-            user="root",
-            password="",
-            database="bnm",
+            user="bmk",
+            password="sudo911",
+            database="bnm_web",
             charset="utf8",
             use_unicode=True,
             autocommit=False
@@ -223,57 +305,37 @@ def get_total_checks():
         
         cursor = conn.cursor(dictionary=True)
         
-        # Updated query to work with normalized bank structure
         query = """
             SELECT 
-                bt.bank_id, 
-                b.bank_name, 
-                b.bank_code,
-                SUM(bt.check_amount) as total_checks,
-                MAX(bt.creation_time) as creation_time
-            FROM bank_transactions bt
-            JOIN banks b ON bt.bank_id = b.id_bank
-            WHERE DATE(bt.creation_time) = (
-                SELECT DATE(MAX(creation_time)) FROM bank_transactions
-            )
-            AND bt.creation_time = (
-                SELECT MAX(creation_time) FROM bank_transactions bt2 
-                WHERE DATE(bt2.creation_time) = DATE(bt.creation_time)
-            )
-            AND b.is_active = TRUE
-            GROUP BY bt.bank_id, b.bank_name, b.bank_code
-            ORDER BY b.bank_name
+                bna_check, baraka_check, total_checks, creation_time 
+            FROM bank 
+            ORDER BY creation_time DESC 
+            LIMIT 1
         """
         cursor.execute(query)
-        results = cursor.fetchall()
+        latest_entry = cursor.fetchone()
         
-        if not results:
+        if not latest_entry:
             logger.error("No bank data found")
             return {"error": "No bank data available"}
-        
-        total_checks = 0
-        bank_details = {}
-        creation_time = None
-        
-        for row in results:
-            bank_name = row['bank_name']
-            bank_code = row['bank_code']
-            checks = float(row['total_checks'] or 0)
-            total_checks += checks
             
-            bank_details[bank_code] = {
-                "checks": checks
-            }
-            
-            if not creation_time or row['creation_time'] > creation_time:
-                creation_time = row['creation_time']
+        bna_checks = float(latest_entry['bna_check'] or 0)
+        baraka_checks = float(latest_entry['baraka_check'] or 0)
+        total_checks = float(latest_entry['total_checks'] or 0)
         
-        creation_time_str = creation_time.strftime('%Y-%m-%d %H:%M') if creation_time else None
+        creation_time = latest_entry['creation_time'].strftime('%Y-%m-%d %H:%M') if latest_entry['creation_time'] else None
         
         return {
             "total_checks": total_checks,
-            "creation_time": creation_time_str,
-            "details": bank_details
+            "creation_time": creation_time,
+            "details": {
+                "BNA": {
+                    "checks": bna_checks
+                },
+                "Baraka": {
+                    "checks": baraka_checks
+                }
+            }
         }
     except Exception as e:
         logger.error(f"Error calculating total checks: {e}")
@@ -304,64 +366,46 @@ def get_total_bank():
         
         cursor = conn.cursor(dictionary=True)
         
-        # Updated query to work with normalized bank structure
         query = """
             SELECT 
-                bt.bank_id, 
-                b.bank_name, 
-                b.bank_code,
-                SUM(bt.remise) as total_remise,
-                SUM(bt.sold) as total_sold,
-                SUM(bt.remise + bt.sold) as total_bank,
-                MAX(bt.creation_time) as creation_time
-            FROM bank_transactions bt
-            JOIN banks b ON bt.bank_id = b.id_bank
-            WHERE DATE(bt.creation_time) = (
-                SELECT DATE(MAX(creation_time)) FROM bank_transactions
-            )
-            AND bt.creation_time = (
-                SELECT MAX(creation_time) FROM bank_transactions bt2 
-                WHERE DATE(bt2.creation_time) = DATE(bt.creation_time)
-            )
-            AND b.is_active = TRUE
-            GROUP BY bt.bank_id, b.bank_name, b.bank_code
-            ORDER BY b.bank_name
+                bna_remise, bna_sold,
+                baraka_remise, baraka_sold,
+                total_bank, creation_time
+            FROM bank 
+            ORDER BY creation_time DESC 
+            LIMIT 1
         """
         
         cursor.execute(query)
-        results = cursor.fetchall()
+        latest_entry = cursor.fetchone()
         
-        if not results:
+        if not latest_entry:
             logger.error("No bank data found")
             return {"error": "No bank data available"}
-        
-        total_bank = 0
-        bank_details = {}
-        creation_time = None
-        
-        for row in results:
-            bank_name = row['bank_name']
-            bank_code = row['bank_code']
-            sold = float(row['total_sold'] or 0)
-            remise = float(row['total_remise'] or 0)
-            bank_total = float(row['total_bank'] or 0)
-            total_bank += bank_total
             
-            bank_details[bank_code] = {
-                "sold": sold,
-                "remise": remise,
-                "total": bank_total
-            }
-            
-            if not creation_time or row['creation_time'] > creation_time:
-                creation_time = row['creation_time']
+        bna_sold = float(latest_entry['bna_sold'] or 0)
+        bna_remise = float(latest_entry['bna_remise'] or 0)
+        baraka_sold = float(latest_entry['baraka_sold'] or 0)
+        baraka_remise = float(latest_entry['baraka_remise'] or 0)
+        total_bank = float(latest_entry['total_bank'] or 0)
         
-        creation_time_str = creation_time.strftime('%Y-%m-%d %H:%M') if creation_time else None
+        creation_time = latest_entry['creation_time'].strftime('%Y-%m-%d %H:%M') if latest_entry['creation_time'] else None
         
         return {
             "total_bank": total_bank,
-            "creation_time": creation_time_str,
-            "details": bank_details
+            "creation_time": creation_time,
+            "details": {
+                "BNA": {
+                    "sold": bna_sold,
+                    "remise": bna_remise,
+                    "total": bna_sold + bna_remise
+                },
+                "Baraka": {
+                    "sold": baraka_sold,
+                    "remise": baraka_remise,
+                    "total": baraka_sold + baraka_remise
+                }
+            }
         }
     except Exception as e:
         logger.error(f"Error calculating total bank: {str(e)}")
@@ -586,97 +630,6 @@ def total_dette():
     except Exception as e:
         logger.error(f"Error in dette route: {e}")
         return jsonify({"error": "Failed to get total dette"}), 500
-
-
-
-
-def fetch_credit_client_this_month():
-    try:
-        # Get current month date range
-        today = datetime.now()
-        year = today.year
-        month = today.month
-        
-        start_date = f"{year}-{month:02d}-01"
-        last_day = calendar.monthrange(year, month)[1]
-        end_date = f"{year}-{month:02d}-{last_day}"
-        
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-
-            query = """
-                SELECT 
-                    ROUND(SUM(SoldeFact + SoldeBL), 2) AS credit_client
-                FROM (
-                    SELECT 
-                        bp.c_bpartner_id, 
-                        (
-                            SELECT COALESCE(SUM(invoiceOpen(inv.C_Invoice_ID, 0)), 0) 
-                            FROM C_Invoice inv 
-                            INNER JOIN C_PaymentTerm pt ON inv.C_PaymentTerm_ID = pt.C_PaymentTerm_ID
-                            WHERE bp.c_bpartner_id = inv.c_bpartner_id 
-                            AND paymentTermDueDays(inv.C_PAYMENTTERM_ID, inv.DATEINVOICED, TO_DATE('01/01/3000', 'DD/MM/YYYY')) >= 0
-                            AND inv.docstatus IN ('CO', 'CL') 
-                            AND inv.AD_ORGTRX_ID = inv.ad_org_id 
-                            AND inv.ad_client_id = 1000000
-                            AND inv.C_PaymentTerm_ID != 1000000
-                            
-                            AND (inv.dateinvoiced + pt.netdays) <= TO_DATE(:end_date, 'YYYY-MM-DD')
-                        ) AS SoldeFact,
-                        (
-                            SELECT COALESCE(SUM(invoiceOpen(inv.C_Invoice_ID, 0)), 0) 
-                            FROM C_Invoice inv 
-                            INNER JOIN C_PaymentTerm pt ON inv.C_PaymentTerm_ID = pt.C_PaymentTerm_ID
-                            WHERE bp.c_bpartner_id = inv.c_bpartner_id 
-                            AND paymentTermDueDays(inv.C_PAYMENTTERM_ID, inv.DATEINVOICED, TO_DATE('01/01/3000', 'DD/MM/YYYY')) >= 0
-                            AND inv.docstatus IN ('CO', 'CL') 
-                            AND inv.AD_ORGTRX_ID <> inv.ad_org_id 
-                            AND inv.ad_client_id = 1000000
-                            AND inv.C_PaymentTerm_ID != 1000000
-                           
-                            AND (inv.dateinvoiced + pt.netdays) <= TO_DATE(:end_date, 'YYYY-MM-DD')
-                        ) AS SoldeBL
-                    FROM 
-                        c_bpartner bp 
-                        INNER JOIN C_BPartner_Location bpl ON bp.C_BPartner_id = bpl.C_BPartner_id
-                        INNER JOIN ad_user u ON bp.salesrep_id = u.ad_user_id
-                        LEFT OUTER JOIN AD_User u2 ON u2.AD_User_ID = bp.XX_TempSalesRep_ID
-                        LEFT OUTER JOIN C_SalesRegion sr ON sr.C_SalesRegion_id = bpl.C_SalesRegion_id
-                        LEFT OUTER JOIN C_City sr2 ON sr2.C_City_id = bpl.C_City_id
-                    WHERE 
-                        bp.iscustomer = 'Y' 
-                        AND bp.C_BP_Group_ID IN (1000003, 1000926, 1001330)
-                        AND bp.isactive = 'Y' 
-                        AND bp.NAME not like '%MBN%'
-
-                        AND sr.isactive = 'Y'
-                        AND bp.C_PaymentTerm_ID != 1000000
-                        AND bpl.c_salesregion_id IN (
-                            101, 102, 1000032, 1001776, 1001777, 1001778, 1001779, 1001780, 1001781,
-                            1001782, 1001783, 1001784, 1001785, 1001786, 1001787, 1001788, 1001789,
-                            1001790, 1001791, 1001792, 1001793, 1001794, 1002076, 1002077, 1002078,
-                            1002079, 1002080, 1002176, 1002177, 1002178, 1002179, 1002180, 1002181,
-                            1002283, 1002285, 1002286, 1002287, 1002288
-                        )
-                ) subquery
-            """
-
-            cursor.execute(query, {
-                'end_date': end_date
-            })
-            
-            row = cursor.fetchone()
-            credit_client = row[0] if row else 0.0
-            return {"credit_client": credit_client}
-
-    except Exception as e:
-        logger.error(f"Error in credit client processing: {e}")
-        return {"error": "An error occurred while processing credit client data."}
-
-
-
-
-
 
 
 def fetch_credit_client():
@@ -954,7 +907,6 @@ def get_total_profit_page():
         logger.error(f"Error in total profit page route: {e}")
         return jsonify({"error": "Failed to get total profit"}), 500
 
-
 def run_scheduler():
     def job():
         try:
@@ -1167,4 +1119,3 @@ if __name__ == "__main__":
     # Run the Flask app
     app.run(host='0.0.0.0', port=4999)
 
-  

@@ -48,7 +48,8 @@
         "recap_achat_facturation"
     ],
     "gestion stock": [
-        "inventory\/inv"
+        "inventory\/inv",
+        "expire"
     ],
     "stock": [
         "inventory\/inv"

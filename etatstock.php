@@ -143,12 +143,16 @@ require_once 'check_permission.php';
                 QTY
                 <div class="resizer"></div>
             </th>
-            <th data-column="PRIX" onclick="sortTable('PRIX')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                PRIX
-                <div class="resizer"></div>
-            </th>
             <th data-column="QTY_DISPO" onclick="sortTable('QTY_DISPO')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
                 QTY_DISPO
+                <div class="resizer"></div>
+            </th>
+            <th data-column="QTY_RESERVED" onclick="sortTable('QTY_RESERVED')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                QTY_RESERVED
+                <div class="resizer"></div>
+            </th>
+            <th data-column="PRIX" onclick="sortTable('PRIX')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
+                PRIX
                 <div class="resizer"></div>
             </th>
             <th data-column="PRIX_DISPO" onclick="sortTable('PRIX_DISPO')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
@@ -188,6 +192,10 @@ require_once 'check_permission.php';
                 <button id="downloadProductDetailsExcel" class="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600" style="display: none;">
                     Download Excel
                 </button>
+                <!-- See reserved product button (hidden/shown dynamically) -->
+                <button id="seeReservedProductBtn" class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600" style="display: none;">
+                    See reserved product
+                </button>
                 <button id="closeProductDetails" class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600" onclick="closeProductDetails()">
                     Close
                 </button>
@@ -205,6 +213,7 @@ require_once 'check_permission.php';
         .product-details-table th[data-column="MARGE"],
         .product-details-table th[data-column="QTY"],
         .product-details-table th[data-column="QTY_DISPO"],
+        .product-details-table th[data-column="QTY_RESERVED"],
         .product-details-table th[data-column="P_ACHAT"],
         .product-details-table th[data-column="REM_ACHAT"],
         .product-details-table th[data-column="BON_ACHAT"],
@@ -258,6 +267,10 @@ require_once 'check_permission.php';
                     </th>
                     <th data-column="QTY_DISPO" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
                         Qty_Dispo
+                        <div class="resizer"></div>
+                    </th>
+                    <th data-column="QTY_RESERVED" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
+                        Qty_Reserved
                         <div class="resizer"></div>
                     </th>
                     <th data-column="P_ACHAT" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600">
@@ -358,9 +371,65 @@ require_once 'check_permission.php';
 
  <script>
   let allData = [];
+let sortOrders = {}; // track asc/desc per column
 let selectedMagasin = null;
 let selectedEmplacement = null;
 let useDesactivatedLotEndpoint = false;
+
+// Sort table by column (toggles asc/desc). Keeps 'Total' row at top.
+function sortTable(column) {
+    if (!allData || allData.length === 0) return;
+
+    // Toggle order
+    if (!sortOrders[column]) sortOrders[column] = 'asc';
+    else sortOrders[column] = sortOrders[column] === 'asc' ? 'desc' : 'asc';
+
+    const totalRow = allData.find(r => r.FOURNISSEUR && r.FOURNISSEUR.toString().toLowerCase() === 'total');
+    const regular = allData.filter(r => !(r.FOURNISSEUR && r.FOURNISSEUR.toString().toLowerCase() === 'total'));
+
+    regular.sort((a, b) => {
+        let aVal = a[column];
+        let bVal = b[column];
+
+        // Normalize undefined/null
+        if (aVal === undefined || aVal === null) aVal = '';
+        if (bVal === undefined || bVal === null) bVal = '';
+
+        // Try numeric compare first
+        const aNum = parseFloat(aVal);
+        const bNum = parseFloat(bVal);
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+            return sortOrders[column] === 'asc' ? aNum - bNum : bNum - aNum;
+        }
+
+        // Fallback to string compare
+        return sortOrders[column] === 'asc' ? aVal.toString().localeCompare(bVal.toString()) : bVal.toString().localeCompare(aVal.toString());
+    });
+
+    allData = totalRow ? [totalRow, ...regular] : regular;
+
+    updateSortIndicators(column, sortOrders[column]);
+    currentPage = 1; // reset to first page when sorting
+    renderTable();
+}
+
+function updateSortIndicators(activeColumn, order) {
+    // Remove existing indicators
+    document.querySelectorAll('th[data-column]').forEach(th => {
+        let indicator = th.querySelector('.sort-indicator');
+        if (indicator) indicator.remove();
+    });
+
+    // Add indicator to active column
+    const th = document.querySelector(`th[data-column="${activeColumn}"]`);
+    if (th) {
+        const span = document.createElement('span');
+        span.className = 'sort-indicator ml-2';
+        span.style.fontSize = '0.8rem';
+        span.textContent = order === 'asc' ? '▲' : '▼';
+        th.appendChild(span);
+    }
+}
 
 function updateDesactivatedLotBtn() {
     const btn = document.getElementById("showDesactivatedLotBtn");
@@ -683,10 +752,11 @@ function createTableRow(row, isTotal = false) {
         <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || ''}</td>
         <td class="border px-4 py-2 dark:border-gray-600">${row.NAME || ''}</td>
         <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
-        <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.PRIX)}</td>
         <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY_DISPO)}</td>
+        <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY_RESERVED)}</td>
+        <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.PRIX)}</td>
         <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.PRIX_DISPO)}</td>
-        <td class="border px-4 py-2 dark:border-gray-600">${row.PLACE || ''}</td>  <!-- New place column -->
+        <td class="border px-4 py-2 dark:border-gray-600">${row.PLACE || ''}</td>
     `;
     return tr;
 }
@@ -699,6 +769,8 @@ function setupProductSearch() {
     function clearProductSearch() {
         productInput.value = "";
         productDropdown.style.display = "none";
+        // Clear any previously shown reserved results when product filter is removed
+        clearReservedResults();
         fetchFilteredData(); // Re-fetch data without product filter
     }
 
@@ -802,6 +874,8 @@ function filterByProduct(product) {
 // Fetch and display product details
 async function fetchProductDetails(productName) {
     try {
+        // Clear previously displayed reserved results immediately when fetching a new product
+        clearReservedResults();
         const url = API_CONFIG.getApiUrl(`/fetch-product-details?product_name=${encodeURIComponent(productName)}`);
         const response = await fetch(url);
         
@@ -840,7 +914,7 @@ function displayProductDetails(productName, data) {
     if (!data || data.length === 0) {
         tableBody.innerHTML = `
             <tr>
-                <td colspan="18" class="border px-4 py-2 text-center dark:border-gray-600">
+                <td colspan="19" class="border px-4 py-2 text-center dark:border-gray-600">
                     No details found for this product
                 </td>
             </tr>
@@ -877,6 +951,7 @@ function displayProductDetails(productName, data) {
                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.MARGE)}</td>
                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY, true)}</td>
                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY_DISPO, true)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY_RESERVED, true)}</td>
                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.P_ACHAT)}</td>
                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.REM_ACHAT)}</td>
                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.BON_ACHAT)}</td>
@@ -915,6 +990,193 @@ function displayProductDetails(productName, data) {
     
     // Scroll to the product details table
     container.scrollIntoView({ behavior: 'smooth' });
+
+    // After rendering details, decide whether to show "See reserved product" button
+    showReservedButtonIfNeeded(data, productName);
+}
+
+// Show the reserved button only if any row has QTY_RESERVED > 0
+function showReservedButtonIfNeeded(data, productName) {
+    const btn = document.getElementById('seeReservedProductBtn');
+    if (!btn) return;
+
+    const hasReserved = Array.isArray(data) && data.some(r => {
+        const val = r.QTY_RESERVED || r.qty_reserved || r.qtyReserved || r.QTYRESERVED;
+        return val !== null && val !== undefined && Number(val) > 0;
+    });
+
+    if (hasReserved) {
+        btn.style.display = 'inline-block';
+        // attach handler
+        btn.onclick = () => fetchAndShowReserved(productName, data);
+    } else {
+        btn.style.display = 'none';
+        btn.onclick = null;
+    }
+}
+
+// Fetch reserved orders from backend and render them below product details
+async function fetchAndShowReserved(productName, productData) {
+    try {
+        // Try to find m_product_id in productData rows if present
+        let m_product_id = null;
+        if (Array.isArray(productData)) {
+            for (const r of productData) {
+                if (r.M_PRODUCT_ID || r.productid || r.M_PRODUCTID || r.M_PRODUCT) {
+                    m_product_id = r.M_PRODUCT_ID || r.productid || r.M_PRODUCTID || r.M_PRODUCT;
+                    break;
+                }
+            }
+        }
+
+        // Build URL: prefer m_product_id, otherwise pass product_name
+        const url = new URL(API_CONFIG.getApiUrl('/reserved_reserved_fromorder'));
+        if (m_product_id) url.searchParams.append('m_product_id', m_product_id);
+        else url.searchParams.append('product_name', productName);
+
+        // Show loading indicator on button
+        const btn = document.getElementById('seeReservedProductBtn');
+        const oldText = btn.textContent;
+        btn.textContent = 'Loading...';
+        btn.disabled = true;
+
+        const resp = await fetch(url);
+        btn.textContent = oldText;
+        btn.disabled = false;
+
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            alert('Failed to fetch reserved orders: ' + (err.error || resp.statusText));
+            return;
+        }
+
+        const data = await resp.json();
+        if (!Array.isArray(data) || data.length === 0) {
+            renderReservedResults([]); // show none found
+        } else {
+            renderReservedResults(data);
+        }
+
+    } catch (e) {
+        console.error('Error fetching reserved:', e);
+        alert('Error fetching reserved orders');
+        const btn = document.getElementById('seeReservedProductBtn');
+        if (btn) { btn.textContent = 'See reserved product'; btn.disabled = false; }
+    }
+}
+
+// Render the reserved orders table below the product details
+function renderReservedResults(rows) {
+    // Create/replace a container under productDetailsContainer
+    let container = document.getElementById('reservedResultsContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'reservedResultsContainer';
+        container.className = 'table-container rounded-lg bg-white shadow-md dark:bg-gray-800 mt-4 p-4';
+        const parent = document.getElementById('productDetailsContainer');
+        parent.appendChild(container);
+    }
+
+    if (!rows || rows.length === 0) {
+        container.innerHTML = '<h3 class="text-md font-semibold">Reserved Orders</h3><p>No reserved orders found for this product.</p>';
+        return;
+    }
+
+    let html = '<h3 class="text-md font-semibold mb-2">Reserved Orders</h3>';
+    html += '<div class="overflow-x-auto"><table class="min-w-full text-sm"><thead><tr>';
+
+    // We'll compute a friendly DocumentStatus and hide raw DOCACTION/DOCSTATUS fields
+    const srcCols = Object.keys(rows[0]);
+    // Build display columns: include all except DOCACTION and DOCSTATUS, and insert DocumentStatus
+    const displayCols = srcCols.filter(c => c.toUpperCase() !== 'DOCACTION' && c.toUpperCase() !== 'DOCSTATUS');
+    // Ensure DocumentStatus is shown near the end
+    displayCols.push('DocumentStatus');
+
+    // If backend returned client_name (alias CB.name AS client_name), move it to the front and show a friendly header
+    const clientIdx = displayCols.findIndex(c => String(c).toLowerCase() === 'client_name' || String(c).toLowerCase() === 'client');
+    if (clientIdx > -1) {
+        const clientCol = displayCols.splice(clientIdx, 1)[0];
+        displayCols.unshift(clientCol);
+    }
+
+    displayCols.forEach(c => {
+        // Friendly label for client_name
+        const label = (String(c).toLowerCase() === 'client_name' || String(c).toLowerCase() === 'client') ? 'Client' : c;
+        html += `<th class="border px-2 py-1">${label}</th>`
+    });
+    html += '</tr></thead><tbody>';
+
+    // helper: format reserved date strings to French weekday (4 letters) + day + short month + year
+    function formatReservedDate(dateString) {
+        if (!dateString) return '';
+        try {
+            const d = new Date(dateString);
+            if (isNaN(d.getTime())) return dateString;
+            const weekdaysFr = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+            const monthsShort = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+            const wd = (weekdaysFr[d.getDay()] || '').substring(0,4); // e.g. 'jeud'
+            const day = String(d.getDate()).padStart(2, '0');
+            const mon = monthsShort[d.getMonth()];
+            const year = d.getFullYear();
+            return `${wd} ${day} ${mon} ${year}`;
+        } catch (e) {
+            return dateString;
+        }
+    }
+
+    rows.forEach(r => {
+        // compute document status
+        const docAction = (r.DOCACTION || r.docaction || '').toString();
+        const docStatus = (r.DOCSTATUS || r.docstatus || '').toString();
+        let documentStatus = 'unknown';
+        const checkVal = (s) => s && ['PR', 'IP'].includes(s.toString().toUpperCase());
+        if (checkVal(docAction) || checkVal(docStatus)) {
+            documentStatus = 'reserved';
+        } else if ((docAction && ['CO','CL'].includes(docAction.toString().toUpperCase())) || (docStatus && ['CO','CL'].includes(docStatus.toString().toUpperCase()))) {
+            documentStatus = 'clotured';
+        }
+
+        html += '<tr class="hover:bg-gray-100 dark:hover:bg-gray-600">';
+        // render all display columns except the synthetic one
+        for (const c of displayCols) {
+            if (c === 'DocumentStatus') {
+                html += `<td class="border px-2 py-1">${documentStatus}</td>`;
+                continue;
+            }
+            let v = r[c];
+            if (v === null || v === undefined) v = '';
+            // If column name contains DATE or value looks like a date, format it to French weekday + dd mmm yyyy
+            const colNameUpper = String(c).toUpperCase();
+            const isDateCol = colNameUpper.includes('DATE') || colNameUpper.includes('DATEORDER') || colNameUpper.includes('DATE_ORDER') || colNameUpper.includes('DATEORDERED');
+            const looksLikeDate = typeof v === 'string' && /\b\d{1,2}\s+[A-Za-z]{3,}\s+\d{4}\b/.test(v) || typeof v === 'string' && v.includes('GMT');
+            if (isDateCol || looksLikeDate) {
+                try {
+                    v = formatReservedDate(v);
+                } catch (e) {
+                    // keep original if formatting fails
+                }
+            }
+            html += `<td class="border px-2 py-1">${v}</td>`;
+        }
+        html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+
+    container.innerHTML = html;
+    container.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Remove/hide reserved results and the reserved button
+function clearReservedResults() {
+    const container = document.getElementById('reservedResultsContainer');
+    if (container) container.remove();
+    const btn = document.getElementById('seeReservedProductBtn');
+    if (btn) {
+        btn.style.display = 'none';
+        btn.onclick = null;
+        btn.disabled = false;
+        btn.textContent = 'See reserved product';
+    }
 }
 
 // Close product details

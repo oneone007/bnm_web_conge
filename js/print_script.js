@@ -61,6 +61,14 @@ document.addEventListener('DOMContentLoaded', function() {
             date: { top: 170, left: 550 },
             place: { top: 170, left: 450 },
             payTo: { top: 140, left: 350 }
+        },
+        agb: {
+            amount: { top: 100, left: 600 },
+            amountText: { top: 140, left: 200 },
+            amountTextLine2: { top: 160, left: 200 },
+            date: { top: 170, left: 550 },
+            place: { top: 170, left: 450 },
+            payTo: { top: 140, left: 350 }
         }
     };
 
@@ -170,6 +178,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 payTo: { top: 140, left: 350 }
             },
             sg: {
+                amount: { top: 100, left: 600 },
+                amountText: { top: 140, left: 200 },
+                amountTextLine2: { top: 160, left: 200 },
+                date: { top: 170, left: 550 },
+                place: { top: 170, left: 450 },
+                payTo: { top: 140, left: 350 }
+            },
+            agb: {
                 amount: { top: 100, left: 600 },
                 amountText: { top: 140, left: 200 },
                 amountTextLine2: { top: 160, left: 200 },

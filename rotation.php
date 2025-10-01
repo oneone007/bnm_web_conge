@@ -8,7 +8,6 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-
 // Restrict access for 'vente' and 'achat'
 // if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Comptable'])) {
 //     header("Location: Acess_Denied");    exit();
@@ -43,8 +42,10 @@ require_once 'check_permission.php';
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="api_config.js"></script>
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-    <link rel="stylesheet" href="rotation.css">
+    <link rel="stylesheet" href="the_rotation_style.css">
     <style>
     /* Chart container improvements */
     #chartContainer.canvas-container {
@@ -186,6 +187,25 @@ require_once 'check_permission.php';
     .leaflet-control-attribution a {
         display: none !important;
     }
+
+    /* Table row hover effects */
+    .table-row:hover {
+        background-color: #f3f4f6;
+    }
+    
+    .dark .table-row:hover {
+        background-color: #374151;
+    }
+    
+    /* Disable ALL transitions and animations for table rows */
+    .table-row,
+    .table-row *,
+    .table-row:hover,
+    .table-row:hover * {
+        transition: none !important;
+        animation: none !important;
+        transform: none !important;
+    }
     </style>
 
 
@@ -258,6 +278,9 @@ require_once 'check_permission.php';
         <input type="text" id="product-search" placeholder="Search product...">
         <button id="clear-search" class="clear-btn" style="display: none;">Clear</button>
     </div>
+    <div class="product-actions mt-2">
+        <button id="viewProductDetailsBtn" class="px-3 py-1 bg-indigo-600 text-white rounded">View Product Details</button>
+    </div>
     
     <div class="products-table-container" id="products-table-container">
         <table class="products-table" id="products-table">
@@ -281,15 +304,9 @@ require_once 'check_permission.php';
 
 
 
-<button id="downloadExcel_rotation" class="loader">
-  <div class="loader-bg">
-    <span>Download</span>
-  </div>
-  <div class="drops">
-    <div class="drop1"></div>
-    <div class="drop2"></div>
-    <div class="drop3"></div>
-  </div>
+<button id="downloadExcelBtn" class="download-btn">
+    <span class="btn-icon">📊</span>
+    <span class="btn-text">Download Excel</span>
 </button>
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" style="position: absolute; width: 0; height: 0;">
   <defs>
@@ -311,11 +328,48 @@ require_once 'check_permission.php';
 
        
 
-
+<!-- Product Details Container (moved up near product search) -->
+<div id="productDetailsContainer" class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 mt-6 mb-16 pb-16" style="display: none;">
+    <div class="overflow-x-auto">
+        <div class="flex justify-between items-center mb-4 p-4">
+            <h2 id="productDetailsTitle" class="text-lg font-semibold text-gray-900 dark:text-white">Product Details</h2>
+            <div class="flex gap-2">
+                <button id="downloadProductDetailsExcel_rot" class="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600" style="display: none;">
+                    Download Excel
+                </button>
+                <button id="closeProductDetails_rot" class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">
+                    Close
+                </button>
+            </div>
+        </div>
+        <table class="product-details-table min-w-full border-collapse text-sm text-left dark:text-white">
+            <thead>
+                <tr class="table-header dark:bg-gray-700">
+                    <th>P_Achat</th>
+                    <th>Rem_Achat</th>
+                    <th>Bon_Achat</th>
+                    <th>P_Revient</th>
+                    <th>P_Vente</th>
+                    <th>Rem_Vente</th>
+                    <th>Bon_Vente</th>
+                    <th>Remise_Auto</th>
+                    <th>Bonus_Auto</th>
+                    <th>PPA</th>
+                    <th>Location</th>
+                    <th>Lot</th>
+                </tr>
+            </thead>
+            <tbody id="product-details-table-rot" class="dark:bg-gray-800">
+                <!-- Dynamic Product Details Rows -->
+            </tbody>
+        </table>
+    </div>
+</div>
  
 <!-- Tables Section - Full Width -->
 <div class="w-full mb-8">
     <div class="flex gap-6">
+        
         <!-- First Table: HISTORIQUE -->
         <div class="w-1/2">
             <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
@@ -325,13 +379,16 @@ require_once 'check_permission.php';
                 <div class="overflow-x-auto">
                     <table class="w-full border-collapse text-sm text-left dark:text-white">
                         <thead>
-                            <tr class="table-header dark:bg-gray-700">
-                                <th class="border px-3 py-2">QTY DISPO</th>
-                                <th class="border px-3 py-2">DERNIER ACHAT</th>
-                                <th class="border px-3 py-2">DATE</th>
+                            <tr class="table-header">
+                                <th>QTY DISPO</th>
+                                <th>QTY RESERVED</th>
+                                <th>DERNIER ACHAT</th>
+                                <th>DATE</th>
                             </tr>
                         </thead>
-                        <tbody id="historique-table" class="dark:bg-gray-800"></tbody>
+                        <tbody id="historique-table" class="dark:bg-gray-800">
+                            <!-- Rows will be dynamically added with table-row class -->
+                        </tbody>
                     </table>
                 </div>
             </div>
@@ -344,7 +401,7 @@ require_once 'check_permission.php';
                 <div class="overflow-x-auto">
                     <table class="w-full border-collapse text-sm text-left dark:text-white">
                         <thead>
-                            <tr id="this-week-header" class="table-header dark:bg-gray-700"></tr>
+                            <tr id="this-week-header" class="table-header"></tr>
                         </thead>
                         <tbody id="this-week-table" class="dark:bg-gray-800"></tbody>
                     </table>
@@ -359,7 +416,7 @@ require_once 'check_permission.php';
                 <div class="overflow-x-auto">
                     <table class="w-full border-collapse text-sm text-left dark:text-white">
                         <thead>
-                            <tr id="last-week-header" class="table-header dark:bg-gray-700"></tr>
+                            <tr id="last-week-header" class="table-header"></tr>
                         </thead>
                         <tbody id="last-week-table" class="dark:bg-gray-800"></tbody>
                     </table>
@@ -381,11 +438,12 @@ require_once 'check_permission.php';
                 <div class="overflow-x-auto">
                     <table class="w-full border-collapse text-sm text-left dark:text-white">
                         <thead>
-                            <tr class="table-header dark:bg-gray-700">
-                                <th class="border px-3 py-2">PERIOD</th>
-                                <th class="border px-3 py-2">QTY_VENDU</th>
-                                <th class="border px-3 py-2">QTY_ACHETE</th>
-                                <th class="border px-3 py-2">QTY_INITIAL</th>
+                            <tr class="table-header">
+                                <th>PERIOD</th>
+                                <th>QTY_VENDU</th>
+                                <th>QTY_ACHETE</th>
+                                <th>QTY_INITIAL</th>
+                                <th>ACTIONS</th>
                             </tr>
                         </thead>
                         <tbody id="rotation-table" class="dark:bg-gray-800"></tbody>
@@ -498,7 +556,72 @@ require_once 'check_permission.php';
 </div>
   <br>
   <br>
-  
+<!-- Product Details Container (moved up near product search) -->
+<div id="productDetailsContainer" class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 mt-6 mb-16 pb-16" style="display: none;">
+    <div class="overflow-x-auto">
+        <div class="flex justify-between items-center mb-4 p-4">
+            <h2 id="productDetailsTitle" class="text-lg font-semibold text-gray-900 dark:text-white">Product Details</h2>
+            <div class="flex gap-2">
+                <button id="downloadProductDetailsExcel_rot" class="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600" style="display: none;">
+                    Download Excel
+                </button>
+                <button id="closeProductDetails_rot" class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">
+                    Close
+                </button>
+            </div>
+        </div>
+        <table class="product-details-table min-w-full border-collapse text-sm text-left dark:text-white">
+            <thead>
+                <tr class="table-header dark:bg-gray-700">
+                    <th>P_Achat</th>
+                    <th>Rem_Achat</th>
+                    <th>Bon_Achat</th>
+                    <th>P_Revient</th>
+                    <th>P_Vente</th>
+                    <th>Rem_Vente</th>
+                    <th>Bon_Vente</th>
+                    <th>Remise_Auto</th>
+                    <th>Bonus_Auto</th>
+                    <th>PPA</th>
+                    <th>Location</th>
+                    <th>Lot</th>
+                </tr>
+            </thead>
+            <tbody id="product-details-table-rot" class="dark:bg-gray-800">
+                <!-- Dynamic Product Details Rows -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Client Recap Modal -->
+<div id="clientRecapModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-11/12 max-w-2xl p-4">
+        <div class="flex justify-between items-center mb-3">
+            <h3 id="clientRecapTitle" class="text-lg font-semibold dark:text-white">Clients for period</h3>
+            <button id="closeClientRecap" class="text-gray-600 dark:text-gray-300">✖</button>
+        </div>
+        <div class="overflow-y-auto max-h-80">
+            <table class="min-w-full text-sm text-left dark:text-white">
+                <thead>
+                    <tr>
+                        <th class="border px-3 py-2">Client</th>
+                        <th class="border px-3 py-2">QTY</th>
+                    </tr>
+                </thead>
+                <tbody id="clientRecapBody">
+                    <tr><td colspan="2" class="p-4 text-center">No data</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-3 text-right">
+            <button id="downloadClientRecapCsv" class="px-3 py-1 bg-green-600 text-white rounded">Download Excel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Product Details Container (copied/adapted from etatstock) -->
+ 
 <script>
 
 
@@ -716,6 +839,99 @@ document.addEventListener("DOMContentLoaded", async function() {
     });
 });
 
+// --- Product Details (rotation) ---
+document.getElementById('viewProductDetailsBtn')?.addEventListener('click', function() {
+    const productInput = document.getElementById('product-search');
+    const productName = productInput?.dataset?.selectedProductName || productInput?.value?.trim();
+    if (!productName) {
+        alert('Please select a product first');
+        return;
+    }
+    fetchProductDetails_rot(productName);
+});
+
+document.getElementById('closeProductDetails_rot')?.addEventListener('click', function() {
+    const c = document.getElementById('productDetailsContainer');
+    if (c) c.style.display = 'none';
+});
+
+document.getElementById('downloadProductDetailsExcel_rot')?.addEventListener('click', function() {
+    const title = document.getElementById('productDetailsTitle').textContent || '';
+    const productName = title.replace('Product Details - ', '');
+    if (productName) {
+        const url = API_CONFIG.getApiUrl(`/download-product-details-excel?product_name=${encodeURIComponent(productName)}`);
+        window.location.href = url;
+    }
+});
+
+async function fetchProductDetails_rot(productName) {
+    try {
+        const url = API_CONFIG.getApiUrl(`/fetch-product-details?product_name=${encodeURIComponent(productName)}`);
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        if (data.error) {
+            alert('Error: ' + data.error);
+            return;
+        }
+        displayProductDetails_rot(productName, data);
+    } catch (err) {
+        console.error('Error fetching product details:', err);
+        alert('Failed to fetch product details');
+    }
+}
+
+function displayProductDetails_rot(productName, data) {
+    const container = document.getElementById('productDetailsContainer');
+    const title = document.getElementById('productDetailsTitle');
+    const tableBody = document.getElementById('product-details-table-rot');
+    const downloadBtn = document.getElementById('downloadProductDetailsExcel_rot');
+
+    title.textContent = `Product Details - ${productName}`;
+    tableBody.innerHTML = '';
+
+    if (!data || data.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="12" class="border px-4 py-2 text-center dark:border-gray-600">No details found for this product</td></tr>`;
+        downloadBtn.style.display = 'none';
+    } else {
+        const formatNumber = (num, isInt = false) => {
+            if (num === null || num === undefined || num === '') return 0;
+            if (isInt) return parseInt(num, 10).toLocaleString('en-US');
+            return parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
+        const formatDate = dateString => {
+            if (!dateString) return '';
+            try { return new Date(dateString).toLocaleDateString('fr-FR'); } catch(e) { return dateString; }
+        };
+
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.classList.add('table-row','dark:bg-gray-700','hover:bg-gray-100','dark:hover:bg-gray-600');
+            if (row.LOT_ACTIVE === 'N') tr.classList.add('lot-inactive');
+            tr.innerHTML = `
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.P_ACHAT)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.REM_ACHAT)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.BON_ACHAT)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.P_REVIENT)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.P_VENTE)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.REM_VENTE)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.BON_VENTE)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${row.REMISE_AUTO || ''}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${row.BONUS_AUTO || ''}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.PPA)}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${row.LOCATION || ''}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${row.LOT || ''}</td>
+            `;
+            tableBody.appendChild(tr);
+        });
+        downloadBtn.style.display = 'inline-block';
+        downloadBtn.onclick = () => { const url = API_CONFIG.getApiUrl(`/download-product-details-excel?product_name=${encodeURIComponent(productName)}`); window.location.href = url; };
+    }
+
+    container.style.display = 'block';
+    container.scrollIntoView({ behavior: 'smooth' });
+}
+
 function setupDateInputs() {
     const productSearch = document.getElementById("product-search");
     const startDate = document.getElementById("start-date");
@@ -739,6 +955,23 @@ function setupDateInputs() {
         }
     });
 
+    // Whenever the product input changes, clear/hide any shown product details
+    productSearch.addEventListener('input', function() {
+        clearProductDetails_rot();
+    });
+
+
+// Hide and clear the product details rotation panel
+function clearProductDetails_rot() {
+    const container = document.getElementById('productDetailsContainer');
+    if (container) container.style.display = 'none';
+    const tableBody = document.getElementById('product-details-table-rot');
+    if (tableBody) tableBody.innerHTML = '';
+    const title = document.getElementById('productDetailsTitle');
+    if (title) title.textContent = 'Product Details';
+    const downloadBtn = document.getElementById('downloadProductDetailsExcel_rot');
+    if (downloadBtn) downloadBtn.style.display = 'none';
+}
     // When start date changes, set end date to today if not already set
     startDate.addEventListener("change", function() {
         if (!endDate.value) {
@@ -794,6 +1027,161 @@ async function fetchProducts(forceRefresh = false) {
         console.error("❌ Error fetching products:", error);
     }
 }
+
+// --- Client Recap functions (inserted into client-side script) ---
+// Fetch clients for a given period (period may be a single day or a month like YYYY-MM)
+async function fetchClientsForPeriod(period) {
+    const productInput = document.getElementById('product-search');
+    const productId = productInput?.dataset?.productId;
+
+    if (!productId) {
+        alert('Please select a product first');
+        return;
+    }
+
+    // Determine if period looks like a month (YYYY-MM) or a full date (YYYY-MM-DD)
+    let start_date = '';
+    let end_date = '';
+
+    if (/^\d{4}-\d{2}$/.test(period)) {
+        // month format
+        start_date = period + '-01';
+        // compute last day of month
+        const [y, m] = period.split('-').map(Number);
+        const lastDay = new Date(y, m, 0).getDate();
+        end_date = `${y}-${String(m).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(period)) {
+        start_date = period;
+        end_date = period;
+    } else {
+        // fallback: use visible start/end inputs
+        start_date = document.getElementById('start-date')?.value || '';
+        end_date = document.getElementById('end-date')?.value || '';
+    }
+
+    if (!start_date || !end_date) {
+        alert('Cannot determine start/end dates for the selected period');
+        return;
+    }
+
+    try {
+    const url = new URL(API_CONFIG.getApiUrl('/fetchClientRecap'));
+    url.searchParams.append('start_date', start_date);
+    url.searchParams.append('end_date', end_date);
+    url.searchParams.append('ad_org_id', '1000000');
+    // The backend expects a product name for the `product` filter (xf.product LIKE :product||'%').
+    // Provide both the product name and the id to be safe.
+    const productName = productInput?.dataset?.selectedProductName || productInput?.value || '';
+    if (productName) url.searchParams.append('product', productName);
+    if (productId) url.searchParams.append('product_id', productId);
+
+        const resp = await fetch(url.toString());
+        if (!resp.ok) throw new Error('Network response not ok');
+        const data = await resp.json();
+
+        const clients = Array.isArray(data) ? data : [];
+        showClientRecapModal(period, clients);
+    } catch (err) {
+        console.error('Error fetching client recap:', err);
+        alert('Failed to fetch clients for the selected period');
+    }
+}
+
+function showClientRecapModal(period, clients) {
+    const modal = document.getElementById('clientRecapModal');
+    const title = document.getElementById('clientRecapTitle');
+    const body = document.getElementById('clientRecapBody');
+
+    title.textContent = `Clients for ${period}`;
+    if (!clients || clients.length === 0) {
+        body.innerHTML = '<tr><td colspan="2" class="p-4 text-center">No clients found</td></tr>';
+    } else {
+        body.innerHTML = clients.map(c => {
+            const name = c.CLIENT || c.client || c.name || c.CLIENT_NAME || '';
+            const qty = c.QTY || c.qty || c.QTY_VENDU || c.QUANTITY || 0;
+            return `<tr><td class="border px-3 py-2">${name}</td><td class="border px-3 py-2">${formatNumberWithSpace(qty)}</td></tr>`;
+        }).join('');
+    }
+
+    modal.dataset.clients = JSON.stringify(clients || []);
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+}
+
+// Modal close handlers
+document.getElementById('closeClientRecap')?.addEventListener('click', function() {
+    const modal = document.getElementById('clientRecapModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
+});
+
+document.getElementById('clientRecapModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        this.classList.add('hidden');
+        this.style.display = 'none';
+    }
+});
+
+// CSV download for clients
+document.getElementById('downloadClientRecapCsv')?.addEventListener('click', function() {
+    const modal = document.getElementById('clientRecapModal');
+    if (!modal) return;
+    const clients = JSON.parse(modal.dataset.clients || '[]');
+    if (!clients || clients.length === 0) {
+        alert('No data to download');
+        return;
+    }
+    // Prefer generating an Excel file using SheetJS (XLSX). If not available, fall back to CSV.
+    try {
+        if (typeof XLSX !== 'undefined') {
+            // Map client objects to a simple array of plain objects
+            const rows = clients.map(c => {
+                const name = c.CLIENT || c.client || c.name || c.CLIENT_NAME || '';
+                const qty = c.QTY || c.qty || c.QTY_VENDU || c.QUANTITY || 0;
+                return { Client: name, QTY: qty };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Clients');
+
+            const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([wbout], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `clients_${Date.now()}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            return;
+        }
+    } catch (e) {
+        console.warn('SheetJS export failed, falling back to CSV:', e);
+    }
+
+    // Fallback CSV
+    const rows = [['Client','QTY']];
+    clients.forEach(c => {
+        const name = c.CLIENT || c.client || c.name || c.CLIENT_NAME || '';
+        const qty = c.QTY || c.qty || c.QTY_VENDU || c.QUANTITY || 0;
+        rows.push([`"${name.replace(/"/g,'""') }"`, qty]);
+    });
+
+    const csvContent = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `clients_${Date.now()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+});
 
 function setupProductSearch() {
     const productSearch = document.getElementById("product-search");
@@ -1005,7 +1393,7 @@ async function selectProduct(product) {
 // Function to clear all data
 function clearAllData() {
     // Clear tables
-    document.getElementById("historique-table").innerHTML = "<tr><td colspan='3' class='text-center text-gray-500'>Select a product</td></tr>";
+    document.getElementById("historique-table").innerHTML = "<tr><td colspan='4' class='text-center text-gray-500'>Select a product</td></tr>";
     document.getElementById("rotation-table").innerHTML = "<tr><td colspan='4' class='text-center text-gray-500'>Select a product</td></tr>";
     document.getElementById("this-week-table").innerHTML = "<tr><td colspan='4' class='text-center text-gray-500'>Select a product</td></tr>";
     document.getElementById("last-week-table").innerHTML = "<tr><td colspan='4' class='text-center text-gray-500'>Select a product</td></tr>";
@@ -1095,7 +1483,7 @@ async function fetchHistoriqueRotation() {
         updateHistoriqueTable(data);
     } catch (error) {
         console.error("Error fetching data:", error);
-        document.getElementById('historique-table').innerHTML = "<tr><td colspan='3' class='text-center text-red-500'>Failed to load data</td></tr>";
+        document.getElementById('historique-table').innerHTML = "<tr><td colspan='4' class='text-center text-red-500'>Failed to load data</td></tr>";
     }
 }
 
@@ -1112,7 +1500,7 @@ function updateHistoriqueTable(data) {
     tableBody.innerHTML = "";
 
     if (!data || data.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="3" class="text-center p-4">No data available</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">No data available</td></tr>`;
         return;
     }
 
@@ -1124,10 +1512,11 @@ function updateHistoriqueTable(data) {
         : 'N/A';
 
     tableBody.innerHTML = `
-        <tr class="dark:bg-gray-700">
-            <td class="border px-3 py-2 dark:border-gray-600">${formatNumberWithSpace(row.QTY_DISPO ?? 0)}</td>
-            <td class="border px-3 py-2 dark:border-gray-600">${formatNumberWithSpace(row.DERNIER_ACHAT ?? 0)}</td>
-            <td class="border px-3 py-2 dark:border-gray-600">${formattedDate}</td>
+        <tr class="table-row">
+            <td>${formatNumberWithSpace(row.QTY_DISPO ?? 0)}</td>
+            <td>${formatNumberWithSpace(row.QTY_RESERVED ?? 0)}</td>
+            <td>${formatNumberWithSpace(row.DERNIER_ACHAT ?? 0)}</td>
+            <td>${formattedDate}</td>
         </tr>
     `;
 }
@@ -1360,12 +1749,21 @@ async function updateRotationTable(data) {
         let normalRows = "";
 
         dataWithInitial.forEach(row => {
+            // Determine a safe period label for use in data attributes
+            const periodLabel = String(row.PERIOD ?? 'N/A');
+            const isSpecial = (row.PERIOD === "TOTAL" || row.PERIOD === "MOYENNE");
+
+            // Only show "View Clients" for non-special rows that have QTY_VENDU > 0
+            const qtyVenduNum = Number(row.QTY_VENDU ?? 0);
+            const viewBtn = (isSpecial || qtyVenduNum === 0) ? '' : `<button class="view-clients-btn px-2 py-1 bg-blue-600 text-white rounded text-xs" data-period="${periodLabel}">View Clients</button>`;
+
             const rowHTML = `
-                <tr class="dark:bg-gray-700 ${row.PERIOD === "TOTAL" || row.PERIOD === "MOYENNE" ? "font-bold" : ""}">
-                    <td class="border px-3 py-2 dark:border-gray-600">${row.PERIOD ?? 'N/A'}</td>
-                    <td class="border px-3 py-2 dark:border-gray-600">${formatNumberWithSpace(row.QTY_VENDU ?? 0)}</td>
-                    <td class="border px-3 py-2 dark:border-gray-600">${formatNumberWithSpace(row.QTY_ACHETÉ ?? 0)}</td>
-                    <td class="border px-3 py-2 dark:border-gray-600">${(row.PERIOD === "TOTAL" || row.PERIOD === "MOYENNE") ? '' : formatNumberWithSpace(row.QTY_INITIAL ?? 0)}</td>
+                <tr class="table-row ${isSpecial ? "font-bold" : ""}">
+                    <td>${row.PERIOD ?? 'N/A'}</td>
+                    <td>${formatNumberWithSpace(row.QTY_VENDU ?? 0)}</td>
+                    <td>${formatNumberWithSpace(row.QTY_ACHETÉ ?? 0)}</td>
+                    <td>${isSpecial ? '' : formatNumberWithSpace(row.QTY_INITIAL ?? 0)}</td>
+                    <td>${viewBtn}</td>
                 </tr>
             `;
 
@@ -1380,6 +1778,15 @@ async function updateRotationTable(data) {
         // Append special rows first, followed by normal rows
         tableBody.innerHTML = specialRows + normalRows;
 
+        // Attach click handlers to all view buttons
+        Array.from(document.querySelectorAll('.view-clients-btn')).forEach(btn => {
+            btn.addEventListener('click', async function(e) {
+                e.stopPropagation();
+                const period = this.dataset.period;
+                await fetchClientsForPeriod(period);
+            });
+        });
+
         console.log("✅ Table updated successfully with QTY_INITIAL calculations from API.");
     } catch (error) {
         console.error("❌ Error updating rotation table with QTY_INITIAL:", error);
@@ -1390,11 +1797,11 @@ async function updateRotationTable(data) {
 
         data.forEach(row => {
             const rowHTML = `
-                <tr class="dark:bg-gray-700 ${row.PERIOD === "TOTAL" || row.PERIOD === "MOYENNE" ? "font-bold" : ""}">
-                    <td class="border px-3 py-2 dark:border-gray-600">${row.PERIOD ?? 'N/A'}</td>
-                    <td class="border px-3 py-2 dark:border-gray-600">${formatNumberWithSpace(row.QTY_VENDU ?? 0)}</td>
-                    <td class="border px-3 py-2 dark:border-gray-600">${formatNumberWithSpace(row.QTY_ACHETÉ ?? 0)}</td>
-                    <td class="border px-3 py-2 dark:border-gray-600">Error</td>
+                <tr class="table-row ${row.PERIOD === "TOTAL" || row.PERIOD === "MOYENNE" ? "font-bold" : ""}">
+                    <td>${row.PERIOD ?? 'N/A'}</td>
+                    <td>${formatNumberWithSpace(row.QTY_VENDU ?? 0)}</td>
+                    <td>${formatNumberWithSpace(row.QTY_ACHETÉ ?? 0)}</td>
+                    <td>Error</td>
                 </tr>
             `;
 
@@ -1411,14 +1818,14 @@ async function updateRotationTable(data) {
 
 // Function to initialize empty tables
 function initializeEmptyTables() {
-    document.getElementById("historique-table").innerHTML = "<tr><td colspan='3' class='text-center text-gray-500'>Select a product to view data</td></tr>";
+    document.getElementById("historique-table").innerHTML = "<tr><td colspan='4' class='text-center text-gray-500'>Select a product to view data</td></tr>";
     document.getElementById("rotation-table").innerHTML = "<tr><td colspan='4' class='text-center text-gray-500'>Select a product to view data</td></tr>";
     document.getElementById("this-week-table").innerHTML = "<tr><td colspan='4' class='text-center text-gray-500'>Select a product to view data</td></tr>";
     document.getElementById("last-week-table").innerHTML = "<tr><td colspan='4' class='text-center text-gray-500'>Select a product to view data</td></tr>";
     
     // Initialize headers for weekly tables
-    document.getElementById("this-week-header").innerHTML = "<th class='border px-3 py-2'></th><th class='border px-3 py-2'>Select Product</th>";
-    document.getElementById("last-week-header").innerHTML = "<th class='border px-3 py-2'></th><th class='border px-3 py-2'>Select Product</th>";
+    document.getElementById("this-week-header").innerHTML = "<th></th><th>Select Product</th>";
+    document.getElementById("last-week-header").innerHTML = "<th></th><th>Select Product</th>";
 }
 
 // Set up event listeners for product and date inputs
@@ -1438,7 +1845,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-document.getElementById("downloadExcel_rotation").addEventListener("click", async () => {
+document.getElementById("downloadExcelBtn").addEventListener("click", async () => {
+    const button = document.getElementById("downloadExcelBtn");
     const productInput = document.getElementById("product-search");
     const productName = productInput.dataset.selectedProductName || productInput.value.trim();
     const productId = productInput.dataset.productId;
@@ -1450,16 +1858,39 @@ document.getElementById("downloadExcel_rotation").addEventListener("click", asyn
         return;
     }
 
-    const url = API_CONFIG.getApiUrl(`/download-rotation-par-mois-excel?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}&product_id=${productId}`);
-    console.log("🔗 Download URL:", url); // ✅ Debugging
+    // Add loading state
+    button.classList.add('loading');
 
-    // Create a hidden link and trigger download
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", ""); // Allow browser to determine filename
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+        const url = API_CONFIG.getApiUrl(`/download-rotation-par-mois-excel?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}&product_id=${productId}`);
+        console.log("🔗 Download URL:", url); // ✅ Debugging
+
+        // Create a hidden link and trigger download
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", ""); // Allow browser to determine filename
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Show success state
+        button.classList.remove('loading');
+        button.classList.add('success');
+
+        // Reset after 3 seconds
+        setTimeout(() => {
+            button.classList.remove('success');
+        }, 3000);
+
+    } catch (error) {
+        console.error("❌ Download failed:", error);
+        button.classList.remove('loading');
+
+        // Reset after 2 seconds
+        setTimeout(() => {
+            // Button automatically resets via CSS
+        }, 2000);
+    }
 });
 
 // --- WEEKLY TABLES LOGIC ---
@@ -1523,18 +1954,18 @@ function updateWeekTable(weekType, data) {
     }
     // Build header: first cell empty, then PERIODs
     let periods = data.map(row => row.PERIOD ?? 'N/A');
-    tableHeader.innerHTML = `<th class='border px-3 py-2'></th>` + periods.map(p => {
+    tableHeader.innerHTML = `<th></th>` + periods.map(p => {
         const isSpecial = p === 'TOTAL' || p === 'MOYENNE';
-        return `<th class='border px-3 py-2${isSpecial ? ' bg-yellow-200 text-yellow-900 dark:bg-yellow-600 dark:text-white' : ''}'>${p}</th>`;
+        return `<th${isSpecial ? ' class="bg-yellow-200 text-yellow-900 dark:bg-yellow-600 dark:text-white"' : ''}>${p}</th>`;
     }).join("");
     // Build rows: QTY_VENDU, QTY_ACHETE
-    let qtyVenduRow = `<tr><td class='border px-3 py-2 font-bold'>QTY_VENDU</td>` + data.map(row => {
+    let qtyVenduRow = `<tr class="table-row"><td class="font-bold">QTY_VENDU</td>` + data.map(row => {
         const isSpecial = row.PERIOD === 'TOTAL' || row.PERIOD === 'MOYENNE';
-        return `<td class='border px-3 py-2${isSpecial ? ' bg-yellow-100 text-yellow-900 dark:bg-yellow-700 dark:text-white font-bold' : ''}'>${formatNumber(row.QTY_VENDU ?? 0)}</td>`;
+        return `<td${isSpecial ? ' class="bg-yellow-100 text-yellow-900 dark:bg-yellow-700 dark:text-white font-bold"' : ''}>${formatNumber(row.QTY_VENDU ?? 0)}</td>`;
     }).join("") + `</tr>`;
-    let qtyAcheteRow = `<tr><td class='border px-3 py-2 font-bold'>QTY_ACHETE</td>` + data.map(row => {
+    let qtyAcheteRow = `<tr class="table-row"><td class="font-bold">QTY_ACHETE</td>` + data.map(row => {
         const isSpecial = row.PERIOD === 'TOTAL' || row.PERIOD === 'MOYENNE';
-        return `<td class='border px-3 py-2${isSpecial ? ' bg-yellow-100 text-yellow-900 dark:bg-yellow-700 dark:text-white font-bold' : ''}'>${formatNumber(row.QTY_ACHETÉ ?? 0)}</td>`;
+        return `<td${isSpecial ? ' class="bg-yellow-100 text-yellow-900 dark:bg-yellow-700 dark:text-white font-bold"' : ''}>${formatNumber(row.QTY_ACHETÉ ?? 0)}</td>`;
     }).join("") + `</tr>`;
     tableBody.innerHTML = qtyVenduRow + qtyAcheteRow;
 }

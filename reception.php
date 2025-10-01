@@ -1570,13 +1570,24 @@ $(document).ready(function () {
           
           // Collect products for summary
           const allProducts = [];
+          const productMap = new Map();
           mergedDataState.forEach(supplier => {
             if (supplier.PRODUCTS && supplier.PRODUCTS.length > 0) {
               supplier.PRODUCTS.forEach(product => {
                 if (product.PRODUCT_NAME) {
-                  allProducts.push(product.PRODUCT_NAME);
+                  if (!productMap.has(product.PRODUCT_NAME)) {
+                    productMap.set(product.PRODUCT_NAME, { hasQuota: false, name: product.PRODUCT_NAME });
+                  }
+                  if (product.BONUS === "Quota") {
+                    productMap.get(product.PRODUCT_NAME).hasQuota = true;
+                  }
                 }
               });
+            }
+          });
+          productMap.forEach((value, key) => {
+            if (!value.hasQuota) {
+              allProducts.push(value.name);
             }
           });
           

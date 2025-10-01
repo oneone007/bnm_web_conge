@@ -31,8 +31,8 @@ require_once 'check_permission.php';
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <link rel="stylesheet" href="product.css">
-    <link rel="stylesheet" href="prdct.css">
+    <link rel="stylesheet" href="product_marge.css">
+    <link rel="stylesheet" href="prdct_marge.css">
     <script src="theme.js"></script>
             <script src="api_config.js"></script>
 
@@ -217,7 +217,7 @@ tr:nth-child(even) {
 
     .selected-row {
     background-color: #3b82f6 !important; /* Blue background */
-    color: white !important;
+    color: black !important;
 }
 
     .selected-row:hover {
