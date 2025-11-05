@@ -26,12 +26,12 @@ require_once 'check_permission.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Products data</title>
+    <title>Products Data</title>
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="product_marge.css">
+    <link rel="stylesheet" href="marge_.css">
     <link rel="stylesheet" href="prdct_marge.css">
         <script src="api_config.js"></script>
 
@@ -86,23 +86,7 @@ require_once 'check_permission.php';
 
 
         <!-- Filters -->
-        <div class="grid grid-cols-4 gap-4 mb-4">
-        <div class="input-wrapper">
-        <!-- <input type="text" id="search-product" placeholder="Search Produit..." class="border px-3 py-2 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white" oninput="filterDropdown('product')"> -->
-
-  <input type="text" id="search-product" placeholder="Search Produit..." name="text" class="input dark:bg-gray-800 dark:text-white dark:placeholder-gray-900" oninput="filterDropdown('product')" >
-
-</div>
-<div class="input-wrapper">
-        <!-- <input type="text" id="search-product" placeholder="Search Produit..." class="border px-3 py-2 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white" oninput="filterDropdown('product')"> -->
-
-  <input type="text" id="search-supplier" placeholder="Search Fournisseur..." class="input"  oninput="filterDropdown('supplier')">
-
-</div>
-
-            <!-- <input type="text" id="search-product" placeholder="Search Produit..." class="border px-3 py-2 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white" oninput="filterDropdown('product')"> -->
-            <!-- <input type="text" id="search-supplier" placeholder="Search Fournisseur..." class="border px-3 py-2 w-full dark:bg-gray-700 dark:border-gray-600 dark:text-white" oninput="filterDropdown('supplier')"> -->
-        </div>
+    
         <div class="w-96 mx-auto flex items-center gap-3 p-4 bg-white rounded-lg shadow-md">
     <button id="margeConditionBtn" class="btn btn-primary">
          Condition
@@ -142,6 +126,42 @@ require_once 'check_permission.php';
         <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
     <div class="overflow-x-auto">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center font-bold">MARGE Table</h2>
+        
+        <!-- Enhanced Search Section -->
+        <div class="search-section p-4 bg-gray-50 dark:bg-gray-700 rounded-lg mb-4">
+            <div class="flex flex-col md:flex-row gap-4 items-center">
+                <div class="flex-1 relative">
+                    <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <input type="text" id="search-product" placeholder="       Search Produit..." 
+                           class="input pl-10 pr-10 w-full" oninput="filterDropdown('product')">
+                    <button id="clear-product" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="flex-1 relative">
+                    <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                    </svg>
+                    <input type="text" id="search-supplier" placeholder="    Search Fournisseur..." 
+                           class="input pl-10 pr-10 w-full" oninput="filterDropdown('supplier')">
+                    <button id="clear-supplier" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <button id="search-btn" class="btn btn-primary flex items-center gap-2 px-6 py-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    Search
+                </button>
+            </div>
+        </div>
         
         <table class="min-w-full border-collapse text-sm text-left dark:text-white">
     <thead>
@@ -293,158 +313,7 @@ require_once 'check_permission.php';
 
 
 
-<!-- second table remise aauto  -->
-
-
-        <!-- Pagination -->
-        <!--       
-        <button id="downloadExcel_REMISE" class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
-            <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
-            <span>Download remise Auto Table</span>
-        </button>  -->
-        <br>
-        <div class="download-wrapper">
-
-    
-  <button id="downloadExcel_REMISE" class="excel-btn excel-btn-primary">
-        <div class="excel-icon">
-            <img src="assets/excel.png" alt="Excel Icon" />
-        </div>
-        <span class="excel-text">Download Remise</span>
-  </button>
-<button id="downloadExcel_BONUS" class="excel-btn excel-btn-primary">
-        <div class="excel-icon">
-            <img src="assets/excel.png" alt="Excel Icon" />
-        </div>
-        <span class="excel-text">Download Bonus</span>
-  </button>
-
-        </div>
-
-
-        <!-- <button id="downloadExcel_BONUS" class="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out transform hover:scale-105 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-700">
-            <img src="assets/excel.png" alt="Excel Icon" class="w-6 h-6">
-            <span>Download bonus Auto Table</span>
-        </button> -->
-        <br>
-        <div class="title-wrapper">
-
-        </div>
-        <div class="table-wrapper">
-            <!-- First Table -->
-            <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
-
-                <div class="overflow-x-auto">
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">REMISE AUTO </h2>
-
-
-                    <table class="min-w-full border-collapse text-sm text-left dark:text-white">
-                        <thead>
-                            <tr class="table-header dark:bg-gray-700">
-                                <th data-column="FOURNISSEUR" onclick="sortRemiseTable('FOURNISSEUR')" class="resizable border px-4 py-2 cursor-pointer">
-                                    Fournisseur <div class="resizer"></div>
-                                </th>
-                                <th data-column="LABORATORY_NAME" onclick="sortRemiseTable('LABORATORY_NAME')" class="resizable border px-4 py-2 cursor-pointer">
-                                    Laboratory Name <div class="resizer"></div>
-                                </th>
-                                <th data-column="PRODUCT" onclick="sortRemiseTable('PRODUCT')" class="resizable border px-4 py-2 cursor-pointer">
-                                    Produit <div class="resizer"></div>
-                                </th>
-                                <th data-column="REWARD" onclick="sortRemiseTable('REWARD')" class="resizable border px-4 py-2 cursor-pointer">
-                                    Reward <div class="resizer"></div>
-                                </th>
-                                <th data-column="TYPE_CLIENT" onclick="sortRemiseTable('TYPE_CLIENT')" class="resizable border px-4 py-2 cursor-pointer">
-                                    Type Client <div class="resizer"></div>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody id="remise-table" class="dark:bg-gray-800">
-                            <tr id="loading-row">
-                                <td colspan="5" class="text-center p-4">
-                                    <div id="lottie-container-a" style="width: 290px; height: 310px; margin: auto;"></div>
-                                </td>
-                            </tr>
-                        </tbody>
-                                            </table>
-                                            <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
-<script>
-    // Initialize Lottie animation
-// First animation
-var loadingAnimation = lottie.loadAnimation({
-        container: document.getElementById('lottie-container-a'),  // ID of the first container
-        renderer: 'svg',
-        loop: true,
-        autoplay: true,
-        path: 'json_files/load.json'  // Path to your first JSON file
-    });
-
-    async function fetchRemiseData() {
-        try {
-            const response = await fetch(API_CONFIG.getApiUrl('/fetch-remise-data'));
-            if (!response.ok) throw new Error('Network response was not ok');
-
-            remiseData = await response.json();
-
-            // Hide loader once data is fetched
-            hideLoader();
-            updateRemiseTableAndPagination();
-        } catch (error) {
-            console.error("Error fetching remise data:", error);
-        }
-    }
-
-    function hideLoader() {
-        const loaderRow = document.getElementById('loading-row');
-        if (loaderRow) {
-            loaderRow.remove();
-        }
-    }
-
-    // Call the function to fetch data when the page loads
-    fetchRemiseData();
-</script>
-
-
-
-                </div>
-                <!-- Pagination for First Table -->
-            </div>
-   
-            <!-- Second Table -->
-
-            <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
-            
-                <div class="overflow-x-auto">
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">BONUS AUTO </h2>
-
-                    <table class="min-w-full border-collapse text-sm text-left dark:text-white">
-                        <thead>
-                            <tr class="table-header dark:bg-gray-700">
-                                <th data-column="PRODUCT" onclick="sortBonusTable('PRODUCT')" class="resizable border px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                                    Product <div class="resizer"></div>
-                                </th>
-                                <th data-column="BONUS" onclick="sortBonusTable('BONUS')" class="resizable border px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                                    Bonus <div class="resizer"></div>
-                                </th>
-                                <th data-column="LABORATORY_NAME" onclick="sortBonusTable('LABORATORY_NAME')" class="resizable border px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                                    Laboratory Name <div class="resizer"></div>
-                                </th>
-                                <th data-column="FOURNISSEUR" onclick="sortBonusTable('FOURNISSEUR')" class="resizable border px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                                    Fournisseur <div class="resizer"></div>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody id="bonus-table" class="dark:bg-gray-800"></tbody>
-                    </table>
-                </div>
-                <!-- Pagination for Second Table -->
-            </div>
-        </div>
-        <div class="paginatio-wrapper">
-
-        <div class="mt-4 flex justify-center space-x-2" id="pagination-remise"></div>
-        <div class="mt-4 flex justify-center space-x-2" id="pagination-bonus"></div>
-</div>
+<!-- 
 
 
 <!-- 
@@ -467,6 +336,30 @@ var loadingAnimation = lottie.loadAnimation({
 <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
     <div class="overflow-x-auto">
     <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">Produit Réservé </h2>
+    
+    <!-- Enhanced Search Section for Reserved Products -->
+    <div class="search-section p-4 bg-gray-50 dark:bg-gray-700 rounded-lg mb-4">
+        <div class="flex flex-col md:flex-row gap-4 items-center">
+            <div class="flex-1 relative">
+                <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <input type="text" id="search-reserved-product" placeholder="     Search Produit..." 
+                       class="input pl-10 pr-10 w-full" oninput="filterReservedDropdown('product')">
+                <button id="clear-reserved-product" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <button id="search-reserved-btn" class="btn btn-primary flex items-center gap-2 px-6 py-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                Search
+            </button>
+        </div>
+    </div>
 
         <table class="min-w-full border-collapse text-sm text-left dark:text-white">
             <thead>
@@ -508,50 +401,7 @@ var loadingAnimation = lottie.loadAnimation({
 <div class="mt-4 flex justify-center space-x-2" id="pagination-reserved"></div>
 
 
-<br>
-<div class="chart-controls mb-4 p-4 bg-gray-100 rounded-lg dark:bg-gray-700">
-    <h2 class="text-lg font-semibold mb-4 dark:text-white">Chart Visualization</h2>
-    
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        <!-- Filter Selection -->
-        <div>
-            <label class="block text-sm font-medium mb-1 dark:text-gray-300">Filter By:</label>
-            <div class="relative">
-                <select id="chartFilterType" class="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white">
-                    <option value="FOURNISSEUR">Fournisseur</option>
-                    <option value="LABO">Labo</option>
-                    <option value="PRODUCT">Product</option>
-                </select>
-            </div>
-        </div>
-        
-        <!-- Value Selection with Search - Improved Dropdown -->
-        <div>
-            <label class="block text-sm font-medium mb-1 dark:text-gray-300">Select Value:</label>
-            <div class="relative">
-                <input type="text" id="filterValueSearch" placeholder="Search..." 
-                       class="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-                       autocomplete="off">
-                <div id="filterValueDropdown" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg dark:bg-gray-800 dark:border-gray-600 hidden max-h-60 overflow-y-auto">
-                    <!-- Options will be populated dynamically -->
-                </div>
-            </div>
-        </div>
-        
-        <!-- Metric Toggle -->
-        <div>
-            <label class="block text-sm font-medium mb-1 dark:text-gray-300">Toggle Metrics:</label>
-          
-            <div id="metricToggles" class="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1">
-                <!-- Metric toggles will be added here dynamically -->
-            </div>
-        </div>
-    </div>
-    
-    <div class="mt-4">
-        <canvas id="dataChart" class="w-full h-96"></canvas>
-    </div>
-</div>
+
 <script >
 
 let currentPage = 1;
@@ -570,8 +420,6 @@ let sortDirection = 'asc';
 // Fetch data on page load
 window.onload = () => {
     fetchData();
-    fetchRemiseData();
-    fetchBonusData();
     fetchReservedData();
 };
 document.getElementById("refresh-btn").addEventListener("click", function() {
@@ -581,8 +429,6 @@ document.getElementById("refresh-btn").addEventListener("click", function() {
 
         // Fetch new data
         fetchData();
-        fetchRemiseData();
-        fetchBonusData();
         fetchReservedData();
 
         // Restore input values after data refresh
@@ -607,208 +453,39 @@ document.getElementById("downloadExcel").addEventListener("click", function () {
     window.open(url, "_blank");
 });
 
-document.getElementById("downloadExcel_REMISE").addEventListener("click", function () {
-    window.open(API_CONFIG.getApiUrl('/download-remise-excel'), "_blank"); 
-});
-document.getElementById("downloadExcel_BONUS").addEventListener("click", function () {
-    window.open(API_CONFIG.getApiUrl('/download-bonus-excel'), "_blank"); 
-});
 document.getElementById("downloadExcel_RESERVE").addEventListener("click", function () {
     window.open(API_CONFIG.getApiUrl('/download-reserved-excel'), "_blank"); 
 });
 
+// Clear button functionality
+document.getElementById("clear-product").addEventListener("click", function() {
+    document.getElementById("search-product").value = "";
+    filterDropdown('product');
+});
 
-let dataChart = null;
-const availableMetrics = [
-    { id: 'P_VENTE', name: 'Prix Vente', color: 'rgba(54, 162, 235, 0.7)' },
-    { id: 'P_ACHAT', name: 'Prix Achat', color: 'rgba(255, 99, 132, 0.7)' },
-    { id: 'MARGE', name: 'Marge', color: 'rgba(75, 192, 192, 0.7)' },
-    { id: 'P_REVIENT', name: 'Prix Revient', color: 'rgba(255, 159, 64, 0.7)' },
-    { id: 'REM_ACHAT', name: 'Remise Achat', color: 'rgba(153, 102, 255, 0.7)' },
-    { id: 'REM_VENTE', name: 'Remise Vente', color: 'rgba(255, 205, 86, 0.7)' },
-    { id: 'PPA', name: 'PPA', color: 'rgba(255, 102, 0, 0.7)' }
-];
-const activeMetrics = new Set(availableMetrics.map(m => m.id));
-let currentFilterValue = '';
+document.getElementById("clear-supplier").addEventListener("click", function() {
+    document.getElementById("search-supplier").value = "";
+    filterDropdown('supplier');
+});
 
-// Initialize chart controls
-function initChartControls() {
-    const filterTypeSelect = document.getElementById('chartFilterType');
-    const filterValueSearch = document.getElementById('filterValueSearch');
-    const filterValueDropdown = document.getElementById('filterValueDropdown');
-    const metricSearch = document.getElementById('metricSearch');
-    
-    // Create metric toggle buttons
-    setupMetricToggles();
-    
-    // Set up search functionality for filter values
-    filterValueSearch.addEventListener('focus', () => {
-        filterValueDropdown.classList.remove('hidden');
-        updateFilterValueOptions(filterTypeSelect.value);
-    });
-    
-    filterValueSearch.addEventListener('blur', () => {
-        // Small timeout to allow click events to register
-        setTimeout(() => {
-            filterValueDropdown.classList.add('hidden');
-        }, 200);
-    });
-    
-    filterValueSearch.addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        const options = filterValueDropdown.querySelectorAll('.dropdown-option');
-        
-        options.forEach(option => {
-            const text = option.textContent.toLowerCase();
-            option.style.display = text.includes(searchTerm) ? '' : 'none';
-        });
-    });
-    
-    // Set up search functionality for metrics
-    metricSearch.addEventListener('input', () => {
-        const searchTerm = metricSearch.value.toLowerCase();
-        const metricButtons = document.querySelectorAll('#metricToggles button');
-        
-        metricButtons.forEach(button => {
-            const metricName = button.textContent.toLowerCase();
-            button.style.display = metricName.includes(searchTerm) ? '' : 'none';
-        });
-    });
-    
-    // Function to handle all changes that should trigger chart update
-    const handleChange = () => {
-        updateFilterValueOptions(filterTypeSelect.value);
-        generateChart();
-    };
-    
-    // Set up event listeners
-    filterTypeSelect.addEventListener('change', handleChange);
-    
-    // Initial population and chart generation
-    updateFilterValueOptions(filterTypeSelect.value);
-    generateChart();
-}
+// Search button functionality
+document.getElementById("search-btn").addEventListener("click", function() {
+    filterDropdown('product');
+    filterDropdown('supplier');
+});
 
-// Set up metric toggle buttons
-function setupMetricToggles() {
-    const container = document.getElementById('metricToggles');
-    container.innerHTML = '';
-    
-    availableMetrics.forEach(metric => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = `px-3 py-1 rounded-full text-xs font-medium ${activeMetrics.has(metric.id) ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-white'}`;
-        button.textContent = metric.name;
-        button.style.borderColor = metric.color.replace('0.7', '1');
-        button.style.borderWidth = '2px';
-        button.dataset.metric = metric.id;
-        
-        button.addEventListener('click', () => {
-            if (activeMetrics.has(metric.id)) {
-                activeMetrics.delete(metric.id);
-                button.classList.remove('bg-blue-500', 'text-white');
-                button.classList.add('bg-gray-200', 'text-gray-800', 'dark:bg-gray-600', 'dark:text-white');
-            } else {
-                activeMetrics.add(metric.id);
-                button.classList.add('bg-blue-500', 'text-white');
-                button.classList.remove('bg-gray-200', 'text-gray-800', 'dark:bg-gray-600', 'dark:text-white');
-            }
-            generateChart();
-        });
-        
-        container.appendChild(button);
-    });
-}
+// Clear and search functionality for reserved products
+document.getElementById("clear-reserved-product").addEventListener("click", function() {
+    document.getElementById("search-reserved-product").value = "";
+    filterReservedDropdown('product');
+});
 
-// Update the filter value dropdown
-function updateFilterValueOptions(filterType) {
-    const filterValueDropdown = document.getElementById('filterValueDropdown');
-    const filterValueSearch = document.getElementById('filterValueSearch');
-    
-    filterValueDropdown.innerHTML = '';
-    
-    const uniqueValues = [...new Set(allData.map(item => item[filterType]))];
-    
-    uniqueValues.forEach(value => {
-        if (value) {
-            const option = document.createElement('div');
-            option.className = 'dropdown-option p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer';
-            option.textContent = value;
-            
-            option.addEventListener('click', () => {
-                currentFilterValue = value;
-                filterValueSearch.value = value;
-                filterValueDropdown.classList.add('hidden');
-                generateChart();
-            });
-            
-            filterValueDropdown.appendChild(option);
-        }
-    });
-}
+document.getElementById("search-reserved-btn").addEventListener("click", function() {
+    filterReservedDropdown('product');
+});
 
-// Generate the chart with selected metrics
-function generateChart() {
-    if (!allData || allData.length === 0 || activeMetrics.size === 0) {
-        if (dataChart) {
-            dataChart.destroy();
-            dataChart = null;
-        }
-        return;
-    }
-    
-    const filterType = document.getElementById('chartFilterType').value;
-    const filterValue = currentFilterValue;
-    
-    if (!filterValue) return;
-    
-    const filteredData = allData.filter(item => item[filterType] === filterValue);
-    if (filteredData.length === 0) {
-        if (dataChart) {
-            dataChart.destroy();
-            dataChart = null;
-        }
-        return;
-    }
-    
-    const labels = filteredData.map(item => item.PRODUCT);
-    const ctx = document.getElementById('dataChart').getContext('2d');
-    
-    if (dataChart) dataChart.destroy();
-    
-    // Create datasets for each active metric
-    const datasets = availableMetrics
-        .filter(metric => activeMetrics.has(metric.id))
-        .map(metric => ({
-            label: `${metric.name} for ${filterValue}`,
-            data: filteredData.map(item => parseFloat(item[metric.id]) || 0),
-            backgroundColor: metric.color,
-            borderColor: metric.color.replace('0.7', '1'),
-            borderWidth: 1
-        }));
-    
-    dataChart = new Chart(ctx, {
-        type: 'bar',
-        data: { labels, datasets },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { position: 'top' },
-                tooltip: {
-                    callbacks: {
-                        label: context => `${context.dataset.label}: ${context.raw.toFixed(2)}`
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { callback: value => value.toFixed(2) }
-                }
-            }
-        }
-    });
-}
+
+
 
 // Fetch data function
 async function fetchData() {
@@ -818,7 +495,6 @@ async function fetchData() {
 
         allData = await response.json();
         updateTableAndPagination();
-        initChartControls();
     } catch (error) {
         console.error("Error fetching data:", error);
     }
@@ -831,6 +507,13 @@ function filterDropdown(type) {
     filters[type] = searchValue;
     currentPage = 1;
     updateTableAndPagination();
+}
+
+function filterReservedDropdown(type) {
+    const searchValue = document.getElementById(`search-reserved-${type}`).value.toLowerCase();
+    filtersReserved[type] = searchValue;
+    currentPageReserved = 1;
+    updateReservedTableAndPagination();
 }
 
 function filterData(data) {
@@ -969,7 +652,7 @@ function renderTablePage(page) {
                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.P_VENTE)}</td>
                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.REM_VENTE)}</td>
                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.BON_VENTE)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${row.REMISE_AUTO || ''}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${row.REMISE_AUTO ?? 0}</td>
                 <td class="border px-4 py-2 dark:border-gray-600">${row.BONUS_AUTO || ''}</td>
                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.PPA)}</td>
                 <td class="border px-4 py-2 dark:border-gray-600">${row.LOCATION || ''}</td>

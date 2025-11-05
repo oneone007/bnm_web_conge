@@ -6,7 +6,7 @@ error_reporting(E_ALL);
 
 // Check if the user is logged in and has admin privileges
 session_start();
-if (!isset($_SESSION['user_id']) || $_SESSION['Role'] !== 'Developer') {
+if (!isset($_SESSION['user_id']) || !in_array($_SESSION['Role'], ['Developer', 'Admin'])) {
     header("HTTP/1.1 403 Forbidden");
     echo json_encode(['success' => false, 'message' => 'Access denied']);
     exit();

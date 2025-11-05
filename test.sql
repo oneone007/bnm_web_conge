@@ -347,7 +347,7 @@ SELECT *
 
 ------------------------ Pour Ouvrir Un Extrait de Caisse -----------------------------------------------------
 -----------------------------------------------------------------
-DEFINE BankStatement = 1019580;
+DEFINE BankStatement = 1028584;
 UPDATE C_BankStatement 
 SET  processed = 'N',docstatus = 'DR', docaction = 'CO'
 WHERE C_BankStatement_id = &BankStatement;
@@ -5459,3 +5459,189 @@ WHERE
   AND co.AD_Org_ID = 1000000
 ORDER BY 
     co.DateOrdered DESC, col.Line;
+
+
+
+           SELECT ml.value AS EMPLACEMENT,
+           m.value AS magasin
+           , ml.M_Locator_ID as emplacement_id
+           , m.M_Warehouse_ID as magasin_id
+                FROM M_Locator ml
+                JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
+                WHERE m.ISACTIVE = 'Y'
+                  AND m.AD_Client_ID = 1000000
+                  AND ml.ISACTIVE = 'Y'
+                  AND ml.AD_Client_ID = 1000000;
+
+
+SELECT M_Warehouse_ID ,value, name
+                        FROM M_Warehouse;
+
+
+
+
+                        select M_Locator_ID 
+                        FROM M_Locator;
+
+--------------------------------- sql of nazim----------------------------------
+
+
+-------------------------------
+-- Query to get C_BPartner records with more than 2 consecutive spaces
+SELECT
+    C_BPartner_ID,
+    Name,
+    Description
+FROM
+    C_BPartner
+WHERE
+    (REGEXP_LIKE(Name,'[[:space:]]{2,}')
+     OR REGEXP_LIKE(Name, '^ ')
+     OR REGEXP_LIKE(Name, ' $'))
+    AND AD_Client_ID = 1000000
+    AND AD_Org_ID = 1000000
+ORDER BY
+    Name;
+
+-------------------------------
+-- Query to get C_BPartner records that start with a space or plus sign
+SELECT
+    C_BPartner_ID,
+    Name
+FROM
+    C_BPartner
+WHERE
+    (REGEXP_LIKE(Name, '^ ')
+     OR REGEXP_LIKE(Name, '^\+'))
+    AND AD_Client_ID = 1000000
+    AND AD_Org_ID = 1000000
+ORDER BY
+    Name;
+
+-------------------------------
+-- UPDATE query to remove leading spaces from C_BPartner Name field
+-- WARNING: This will modify data! Run with caution and backup first.
+UPDATE C_BPartner
+SET Name = LTRIM(Name)
+WHERE REGEXP_LIKE(Name, '^ ')
+    AND AD_Client_ID = 1000000
+    AND AD_Org_ID = 1000000;
+
+-------------------------------
+-- Query to get C_BPartner records that end with spaces
+SELECT
+    C_BPartner_ID,
+    Name
+FROM
+    C_BPartner
+WHERE
+    REGEXP_LIKE(Name, ' $')
+    AND AD_Client_ID = 1000000
+    AND AD_Org_ID = 1000000
+ORDER BY
+    Name;
+
+-------------------------------
+-- UPDATE query to remove trailing spaces from C_BPartner Name field
+-- WARNING: This will modify data! Use transaction for rollback capability.
+BEGIN
+    UPDATE C_BPartner
+    SET Name = RTRIM(Name)
+    WHERE REGEXP_LIKE(Name, ' $')
+        AND AD_Client_ID = 1000000
+        AND AD_Org_ID = 1000000;
+    
+    -- If data is incorrect, run: ROLLBACK;
+    -- If data is correct, run: COMMIT;
+END;
+/
+-------------------------------
+-- Query to get C_BPartner records with 2 or more consecutive spaces
+SELECT
+    C_BPartner_ID,
+    Value,
+    Name,
+    Description
+FROM
+    C_BPartner
+WHERE
+    REGEXP_LIKE(Name, '[[:space:]]{2,}')
+    AND AD_Client_ID = 1000000
+    AND AD_Org_ID = 1000000
+ORDER BY
+    Name;
+
+-------------------------------
+-- UPDATE query to replace multiple consecutive spaces with single space in C_BPartner Name field
+-- WARNING: This will modify data! Use transaction for rollback capability.
+
+    UPDATE C_BPartner
+    SET Name = REGEXP_REPLACE(Name, '[[:space:]]{2,}', ' ')
+    WHERE REGEXP_LIKE(Name, '[[:space:]]{2,}')
+        AND AD_Client_ID = 1000000
+        AND AD_Org_ID = 1000000;
+    
+    -- If data is incorrect, run: ROLLBACK;
+    -- If data is correct, run: COMMIT;
+
+;
+---------------------------------------------------------------------------------------
+
+
+SELECT
+    invl.C_InvoiceLine_ID,
+    invl.QTYINVOICED AS QTY_FACTURE,
+    invl.PRICEENTERED AS PRIX_UNITAIRE,
+    inv.DOCUMENTNO AS DOCUMENTT
+FROM C_InvoiceLine invl
+JOIN C_Invoice inv ON inv.C_Invoice_ID = invl.C_Invoice_ID
+
+WHERE invl.M_Product_ID = :m_product_id
+ORDER BY inv.DATEINVOICED DESC, inv.DOCUMENTNO;
+
+
+
+
+SELECT
+    invl.QTYINVOICED   AS QTY_FACTURE,
+     invl.PRICEENTERED  AS PRIX_UNITAIRE,
+    inv.DOCUMENTNO     AS DOCUMENT,
+    dt.name AS DOCUMENT_TYPE,
+    bp.name as tiers,
+    invl.pricelist
+   FROM C_InvoiceLine invl
+JOIN C_Invoice inv ON inv.C_Invoice_ID = invl.C_Invoice_ID
+JOIN M_Product   p   ON p.M_PRODUCT_ID = invl.M_PRODUCT_ID
+JOIN C_DocType dt ON dt.C_DocType_ID = inv.C_DocType_ID
+JOIN C_BPartner bp ON bp.C_BPartner_ID = inv.C_BPartner_ID
+WHERE UPPER(p.NAME) = UPPER(:product_name) 
+ORDER BY inv.DATEINVOICED DESC, inv.DOCUMENTNO
+;
+
+
+
+
+SELECT
+    invl.QTYINVOICED      AS QTY_FACTURE,
+    ROUND(invl.PRICEENTERED, 2) AS PRIX_UNITAIRE,
+    invl.PRICELIST        AS PRICELIST,
+    CASE 
+      WHEN invl.PRICELIST IS NULL OR invl.PRICELIST = 0 THEN NULL
+      ELSE ROUND(((invl.PRICELIST - ROUND(invl.PRICEENTERED,2)) / invl.PRICELIST) * 100, 2)
+    END AS DISCOUNT_PCT,
+    inv.DOCUMENTNO        AS DOCUMENT,
+    dt.NAME               AS DOCUMENT_TYPE,
+    bp.NAME               AS TIERS,
+    invl.PRICEENTERED,
+    mast.lot AS LOT
+FROM C_InvoiceLine invl
+JOIN C_Invoice     inv ON inv.C_Invoice_ID = invl.C_Invoice_ID
+JOIN M_Product     p   ON p.M_PRODUCT_ID   = invl.M_PRODUCT_ID
+JOIN C_DocType     dt  ON dt.C_DocType_ID  = inv.C_DocType_ID
+JOIN C_BPartner    bp  ON bp.C_BPartner_ID = inv.C_BPartner_ID
+JOIN M_AttributeSetInstance mast ON mast.M_AttributeSetInstance_ID = invl.M_AttributeSetInstance_ID
+WHERE UPPER(p.NAME) = UPPER(:product_name)
+ORDER BY inv.DATEINVOICED DESC, inv.DOCUMENTNO;
+
+
+

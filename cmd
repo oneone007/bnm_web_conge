@@ -31,3 +31,9 @@ sudo apt upgrade code
 
 the key:
 a4ce35cc82619c081cdf79177228c3a493972d12a360c33d6c5003316ff1027c
+
+
+
+
+python3 /opt/lampp/htdocs/bnm_web/add_excel_header.py /opt/lampp/htdocs/bnm_web/JournalVente__TOTAL.xlsx /opt/lampp/htdocs/bnm_web/Jour
+nalVente__TOTAL_with_header.xlsx --logo /opt/lampp/htdocs/bnm_web/log.png

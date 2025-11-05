@@ -1076,6 +1076,12 @@ require_once 'check_permission.php';
                     <td class="border px-4 py-2 dark:border-gray-600">${formatMargin(row.MARGE)}</td>
                 `;
                 
+                // Check if this row should be marked as selected
+                const searchInput = document.getElementById('search-bccb');
+                if (searchInput && searchInput.value && row.DOCUMENTNO === searchInput.value) {
+                    tr.classList.add('row-selected');
+                }
+                
                 // Add click event for row selection
                 tr.addEventListener('click', function() {
                     selectTableRow('bccb', row, tr);
@@ -1413,6 +1419,12 @@ require_once 'check_permission.php';
                     <td class="border px-4 py-2 dark:border-gray-600">${formatMargin(row.MARGE)}</td>
                 `;
                 
+                // Check if this row should be marked as selected
+                const searchInput = document.getElementById('search-fournisseur');
+                if (searchInput && searchInput.value && row.FOURNISSEUR === searchInput.value) {
+                    tr.classList.add('row-selected');
+                }
+                
                 // Add click event for row selection
                 tr.addEventListener('click', function() {
                     selectTableRow('fournisseur', row, tr);
@@ -1467,6 +1479,12 @@ require_once 'check_permission.php';
                     <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
                     <td class="border px-4 py-2 dark:border-gray-600">${formatMargin(row.MARGE)}</td>
                 `;
+                
+                // Check if this row should be marked as selected
+                const searchInput = document.getElementById('search-product');
+                if (searchInput && searchInput.value && (row.PRODUIT === searchInput.value || row.PRODUCT === searchInput.value)) {
+                    tr.classList.add('row-selected');
+                }
                 
                 // Add click event for row selection
                 tr.addEventListener('click', function() {
@@ -1523,6 +1541,12 @@ require_once 'check_permission.php';
                     <td class="border px-4 py-2 dark:border-gray-600">${formatMargin(row.MARGE)}</td>
                 `;
                 
+                // Check if this row should be marked as selected
+                const searchInput = document.getElementById('search-zone');
+                if (searchInput && searchInput.value && row.ZONE === searchInput.value) {
+                    tr.classList.add('row-selected');
+                }
+                
                 // Add click event for row selection
                 tr.addEventListener('click', function() {
                     selectTableRow('zone', row, tr);
@@ -1578,6 +1602,12 @@ require_once 'check_permission.php';
                     <td class="border px-4 py-2 dark:border-gray-600">${formatMargin(row.MARGE)}</td>
                 `;
                 
+                // Check if this row should be marked as selected
+                const searchInput = document.getElementById('search-client');
+                if (searchInput && searchInput.value && row.CLIENT === searchInput.value) {
+                    tr.classList.add('row-selected');
+                }
+                
                 // Add click event for row selection
                 tr.addEventListener('click', function() {
                     selectTableRow('client', row, tr);
@@ -1632,6 +1662,12 @@ require_once 'check_permission.php';
                     <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
                     <td class="border px-4 py-2 dark:border-gray-600">${formatMargin(row.MARGE)}</td>
                 `;
+                
+                // Check if this row should be marked as selected
+                const searchInput = document.getElementById('search-operateur');
+                if (searchInput && searchInput.value && row.OPERATEUR === searchInput.value) {
+                    tr.classList.add('row-selected');
+                }
                 
                 // Add click event for row selection
                 tr.addEventListener('click', function() {
@@ -1692,6 +1728,12 @@ require_once 'check_permission.php';
                     <td class="border px-4 py-2 dark:border-gray-600">${formatMargin(row.MARGE)}</td>
                 `;
                 
+                // Check if this row should be marked as selected
+                const searchInput = document.getElementById('search-bccb');
+                if (searchInput && searchInput.value && row.DOCUMENTNO === searchInput.value) {
+                    tr.classList.add('row-selected');
+                }
+                
                 // Add click event for row selection
                 tr.addEventListener('click', function() {
                     selectTableRow('bccb', row, tr);
@@ -1750,6 +1792,13 @@ require_once 'check_permission.php';
                     <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.REMISE * 100)}</td>
                     <td class="border px-4 py-2 dark:border-gray-600">${formatMargin(row.MARGE)}</td>
                 `;
+                
+                // Check if this row should be marked as selected
+                const searchInput = document.getElementById('search-bccb-product');
+                const productValue = row.PRODUCT || row.PRODUIT;
+                if (searchInput && searchInput.value && productValue === searchInput.value) {
+                    tr.classList.add('row-selected');
+                }
                 
                 // Add click event for row selection
                 tr.addEventListener('click', function() {
@@ -2256,19 +2305,12 @@ require_once 'check_permission.php';
         }
 
         function selectTableRow(tableType, rowData, rowElement) {
-            // Remove previous selection in this table
+            // Check if clicking on an already selected row (to toggle/clear filter)
+            const isAlreadySelected = rowElement.classList.contains('row-selected');
+            
             const tableBody = rowElement.closest('tbody');
-            tableBody.querySelectorAll('.row-selected').forEach(row => {
-                row.classList.remove('row-selected');
-            });
             
-            // Add selection to current row
-            rowElement.classList.add('row-selected');
-            
-            // Store selected row data
-            selectedRows[tableType] = rowData;
-            
-            // Update the corresponding search input
+            // Determine the search value and input ID
             let searchValue = '';
             let inputId = '';
             
@@ -2296,10 +2338,6 @@ require_once 'check_permission.php';
                 case 'bccb':
                     searchValue = rowData.DOCUMENTNO;
                     inputId = 'search-bccb';
-                    // For BCCB, also fetch products
-                    if (searchValue && searchValue !== 'Total') {
-                        fetchBccbProductWithSpecificBccb(searchValue);
-                    }
                     break;
                 case 'bccbProduct':
                     searchValue = rowData.PRODUCT || rowData.PRODUIT;
@@ -2307,13 +2345,67 @@ require_once 'check_permission.php';
                     break;
             }
             
-            // Update search input if we have a valid value
-            if (searchValue && searchValue !== 'Total' && inputId) {
-                document.getElementById(inputId).value = searchValue;
+            if (isAlreadySelected) {
+                // Clear the filter (same behavior as clicking the clear button)
+                tableBody.querySelectorAll('.row-selected').forEach(row => {
+                    row.classList.remove('row-selected');
+                });
+                
+                // Clear the search input
+                if (inputId) {
+                    const input = document.getElementById(inputId);
+                    if (input) {
+                        input.value = '';
+                    }
+                }
+                
+                // Clear selected row data
+                delete selectedRows[tableType];
+                
+                // Reset pagination for this table type
+                const mapping = {
+                    'search-fournisseur': 'fournisseur',
+                    'search-product': 'product',
+                    'search-zone': 'zone',
+                    'search-client': 'client',
+                    'search-operateur': 'operateur',
+                    'search-bccb': 'bccb',
+                    'search-bccb-product': 'bccbProduct'
+                };
+                
+                const tableTypeForPagination = mapping[inputId];
+                if (tableTypeForPagination && pagination[tableTypeForPagination]) {
+                    pagination[tableTypeForPagination].currentPage = 1;
+                }
+                
+                // Reapply filters
+                autoApplyFilters();
+            } else {
+                // Apply the filter (original behavior)
+                // Remove previous selection in this table
+                tableBody.querySelectorAll('.row-selected').forEach(row => {
+                    row.classList.remove('row-selected');
+                });
+                
+                // Add selection to current row
+                rowElement.classList.add('row-selected');
+                
+                // Store selected row data
+                selectedRows[tableType] = rowData;
+                
+                // For BCCB, also fetch products
+                if (tableType === 'bccb' && searchValue && searchValue !== 'Total') {
+                    fetchBccbProductWithSpecificBccb(searchValue);
+                }
+                
+                // Update search input if we have a valid value
+                if (searchValue && searchValue !== 'Total' && inputId) {
+                    document.getElementById(inputId).value = searchValue;
+                }
+                
+                // Auto-apply filters
+                autoApplyFilters();
             }
-            
-            // Auto-apply filters
-            autoApplyFilters();
         }
 
         function applySearchFilter(tableType, searchValue) {

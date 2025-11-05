@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Scripts Collection</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Times New Roman', serif;
+            background-color: #f0f0f0;
+        }
+        
+        .download-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #2196F3;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        
+        .download-btn:hover {
+            background-color: #0b7dda;
+        }
+        
+        .page {
+            width: 21cm;
+            min-height: 29.7cm;
+            padding: 1.5cm;
+            margin: 0 auto 30px;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            box-sizing: border-box;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            page-break-after: always;
+        }
+        
+        .script-box {
+            border: 2px solid #000;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+        
+        .script-title {
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            text-decoration: underline;
+            margin-bottom: 12px;
+        }
+        
+        .script-content {
+            text-align: justify;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+        
+        .script-content p {
+            margin: 10px 0;
+        }
+        
+        .bold {
+            font-weight: bold;
+        }
+        
+        .italic {
+            font-style: italic;
+        }
+        
+        .dialogue-header {
+            font-style: italic;
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        .dialogue-line {
+            margin: 8px 0;
+        }
+        
+        .speaker {
+            font-weight: bold;
+            font-style: italic;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            
+            .download-btn {
+                display: none;
+            }
+            
+            .page {
+                margin: 0;
+                box-shadow: none;
+                page-break-after: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="download-btn" onclick="downloadPDF()">📄 Download PDF</button>
+
+    <div id="printArea">
+        <!-- PAGE 1: Script 1 (6 copies) -->
+   
+
+        <!-- PAGE 2: Personal Habits Script (6 copies) -->
+    
+
+        <!-- PAGE 3: The Listening Script (6 copies) -->
+        <div class="page">
+            <div class="script-box">
+                <div class="script-title">The Listening Script</div>
+                <div class="script-content">
+                    <div class="dialogue-line"><span class="speaker">Emma:</span> Jack! What do you do every day?</div>
+                    <div class="dialogue-line"><span class="speaker">Jack:</span> Well, I always wake up at 7 o'clock. First, I get ready for school and then I have my breakfast.</div>
+                    <div class="dialogue-line"><span class="speaker">Emma:</span> Me too! But I sometimes wake up late. After that, I eat breakfast. <span class="italic">I always</span> eat toast. I don't like milk. I prefer drinking juice. What about you?</div>
+                    <div class="dialogue-line"><span class="speaker">Jack:</span> <span class="italic">I always</span> have cereals with milk. After that, I pack my school bag and ride my bike to school.</div>
+                    <div class="dialogue-line"><span class="speaker">Emma:</span> <span class="italic">I never</span> go to school by bus. I enjoy walking. It's fun!</div>
+                    <div class="dialogue-line"><span class="speaker">Jack:</span> Nice! Maybe I will walk sometimes, too!</div>
+                </div>
+            </div>
+            
+            <div class="script-box">
+                <div class="script-title">The Listening Script</div>
+                <div class="script-content">
+                    <div class="dialogue-line"><span class="speaker">Emma:</span> Jack! What do you do every day?</div>
+                    <div class="dialogue-line"><span class="speaker">Jack:</span> Well, I always wake up at 7 o'clock. First, I get ready for school and then I have my breakfast.</div>
+                    <div class="dialogue-line"><span class="speaker">Emma:</span> Me too! But I sometimes wake up late. After that, I eat breakfast. <span class="italic">I always</span> eat toast. I don't like milk. I prefer drinking juice. What about you?</div>
+                    <div class="dialogue-line"><span class="speaker">Jack:</span> <span class="italic">I always</span> have cereals with milk. After that, I pack my school bag and ride my bike to school.</div>
+                    <div class="dialogue-line"><span class="speaker">Emma:</span> <span class="italic">I never</span> go to school by bus. I enjoy walking. It's fun!</div>
+                    <div class="dialogue-line"><span class="speaker">Jack:</span> Nice! Maybe I will walk sometimes, too!</div>
+                </div>
+            </div>
+            
+            <div class="script-box">
+                <div class="script-title">The Listening Script</div>
+                <div class="script-content">
+                    <div class="dialogue-line"><span class="speaker">Emma:</span> Jack! What do you do every day?</div>
+                    <div class="dialogue-line"><span class="speaker">Jack:</span> Well, I always wake up at 7 o'clock. First, I get ready for school and then I have my breakfast.</div>
+                    <div class="dialogue-line"><span class="speaker">Emma:</span> Me too! But I sometimes wake up late. After that, I eat breakfast. <span class="italic">I always</span> eat toast. I don't like milk. I prefer drinking juice. What about you?</div>
+                    <div class="dialogue-line"><span class="speaker">Jack:</span> <span class="italic">I always</span> have cereals with milk. After that, I pack my school bag and ride my bike to school.</div>
+                    <div class="dialogue-line"><span class="speaker">Emma:</span> <span class="italic">I never</span> go to school by bus. I enjoy walking. It's fun!</div>
+                    <div class="dialogue-line"><span class="speaker">Jack:</span> Nice! Maybe I will walk sometimes, too!</div>
+                </div>
+            </div>
+            
+            <div class="script-box">
+                <div class="script-title">The Listening Script</div>
+                <div class="script-content">
+                    <div class="dialogue-line"><span class="speaker">Emma:</span> Jack! What do you do every day?</div>
+                    <div class="dialogue-line"><span class="speaker">Jack:</span> Well, I always wake up at 7 o'clock. First, I get ready for school and then I have my breakfast.</div>
+                    <div class="dialogue-line"><span class="speaker">Emma:</span> Me too! But I sometimes wake up late. After that, I eat breakfast. <span class="italic">I always</span> eat toast. I don't like milk. I prefer drinking juice. What about you?</div>
+                    <div class="dialogue-line"><span class="speaker">Jack:</span> <span class="italic">I always</span> have cereals with milk. After that, I pack my school bag and ride my bike to school.</div>
+                    <div class="dialogue-line"><span class="speaker">Emma:</span> <span class="italic">I never</span> go to school by bus. I enjoy walking. It's fun!</div>
+                    <div class="dialogue-line"><span class="speaker">Jack:</span> Nice! Maybe I will walk sometimes, too!</div>
+                </div>
+            </div>
+            
+            <div class="script-box">
+                <div class="script-title">The Listening Script</div>
+                <div class="script-content">
+                    <div class="dialogue-line"><span class="speaker">Emma:</span> Jack! What do you do every day?</div>
+                    <div class="dialogue-line"><span class="speaker">Jack:</span> Well, I always wake up at 7 o'clock. First, I get ready for school and then I have my breakfast.</div>
+                    <div class="dialogue-line"><span class="speaker">Emma:</span> Me too! But I sometimes wake up late. After that, I eat breakfast. <span class="italic">I always</span> eat toast. I don't like milk. I prefer drinking juice. What about you?</div>
+                    <div class="dialogue-line"><span class="speaker">Jack:</span> <span class="italic">I always</span> have cereals with milk. After that, I pack my school bag and ride my bike to school.</div>
+                    <div class="dialogue-line"><span class="speaker">Emma:</span> <span class="italic">I never</span> go to school by bus. I enjoy walking. It's fun!</div>
+                    <div class="dialogue-line"><span class="speaker">Jack:</span> Nice! Maybe I will walk sometimes, too!</div>
+                </div>
+            </div>
+            
+            <div class="script-box">
+                <div class="script-title">The Listening Script</div>
+                <div class="script-content">
+                    <div class="dialogue-line"><span class="speaker">Emma:</span> Jack! What do you do every day?</div>
+                    <div class="dialogue-line"><span class="speaker">Jack:</span> Well, I always wake up at 7 o'clock. First, I get ready for school and then I have my breakfast.</div>
+                    <div class="dialogue-line"><span class="speaker">Emma:</span> Me too! But I sometimes wake up late. After that, I eat breakfast. <span class="italic">I always</span> eat toast. I don't like milk. I prefer drinking juice. What about you?</div>
+                    <div class="dialogue-line"><span class="speaker">Jack:</span> <span class="italic">I always</span> have cereals with milk. After that, I pack my school bag and ride my bike to school.</div>
+                    <div class="dialogue-line"><span class="speaker">Emma:</span> <span class="italic">I never</span> go to school by bus. I enjoy walking. It's fun!</div>
+                    <div class="dialogue-line"><span class="speaker">Jack:</span> Nice! Maybe I will walk sometimes, too!</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 4: Emma's Script (6 copies) -->
+        <div class="page">
+            <div class="script-box">
+                <div class="script-title">Script</div>
+                <div class="script-content">
+                    <p><span class="italic">Emma:</span> Hi! I'm Emma from London.</p>
+                    <p>I always wake up at 7:00 and eat breakfast.</p>
+                    <p>Then I go to school. At lunch, I usually share sandwiches with my friend.</p>
+                    <p>In the afternoon, I return home and do my homework. After that, I watch TV.</p>
+                    <p>At 9:00, I have dinner with my family, brush my teeth and write in my diary.</p>
+                    <p>I can't skip this habit. Finally, I go to bed.</p>
+                    <p>On weekends sometimes I go to the park with my family.</p>
+                </div>
+            </div>
+            
+            <div class="script-box">
+                <div class="script-title">Script</div>
+                <div class="script-content">
+                    <p><span class="italic">Emma:</span> Hi! I'm Emma from London.</p>
+                    <p>I always wake up at 7:00 and eat breakfast.</p>
+                    <p>Then I go to school. At lunch, I usually share sandwiches with my friend.</p>
+                    <p>In the afternoon, I return home and do my homework. After that, I watch TV.</p>
+                    <p>At 9:00, I have dinner with my family, brush my teeth and write in my diary.</p>
+                    <p>I can't skip this habit. Finally, I go to bed.</p>
+                    <p>On weekends sometimes I go to the park with my family.</p>
+                </div>
+            </div>
+            
+            <div class="script-box">
+                <div class="script-title">Script</div>
+                <div class="script-content">
+                    <p><span class="italic">Emma:</span> Hi! I'm Emma from London.</p>
+                    <p>I always wake up at 7:00 and eat breakfast.</p>
+                    <p>Then I go to school. At lunch, I usually share sandwiches with my friend.</p>
+                    <p>In the afternoon, I return home and do my homework. After that, I watch TV.</p>
+                    <p>At 9:00, I have dinner with my family, brush my teeth and write in my diary.</p>
+                    <p>I can't skip this habit. Finally, I go to bed.</p>
+                    <p>On weekends sometimes I go to the park with my family.</p>
+                </div>
+            </div>
+             <div class="script-box">
+                <div class="script-title">Script</div>
+                <div class="script-content">
+                    <p><span class="italic">Emma:</span> Hi! I'm Emma from London.</p>
+                    <p>I always wake up at 7:00 and eat breakfast.</p>
+                    <p>Then I go to school. At lunch, I usually share sandwiches with my friend.</p>
+                    <p>In the afternoon, I return home and do my homework. After that, I watch TV.</p>
+                    <p>At 9:00, I have dinner with my family, brush my teeth and write in my diary.</p>
+                    <p>I can't skip this habit. Finally, I go to bed.</p>
+                    <p>On weekends sometimes I go to the park with my family.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function downloadPDF() {
+            const element = document.getElementById('printArea');
+            // Remove A4 sizing and padding for export
+            const pages = element.querySelectorAll('.page');
+            const originalStyles = [];
+            pages.forEach(page => {
+                originalStyles.push(page.getAttribute('style') || '');
+                page.style.width = 'auto';
+                page.style.minHeight = 'auto';
+                page.style.padding = '0.2cm';
+                page.style.margin = '0 auto 5px';
+            });
+            const opt = {
+                margin: 0,
+                filename: 'English-Scripts-Collection.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2,
+                    useCORS: true,
+                    letterRendering: true
+                },
+                jsPDF: { 
+                    unit: 'mm', 
+                    format: 'a4', 
+                    orientation: 'portrait'
+                },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+            html2pdf().set(opt).from(element).save().then(() => {
+                // Restore original styles
+                pages.forEach((page, i) => {
+                    page.setAttribute('style', originalStyles[i]);
+                });
+            });
+        }
+    </script>
+</body>
+</html>

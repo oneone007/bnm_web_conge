@@ -39,7 +39,8 @@ function checkUserLogin() {
  * Load permissions - hardcoded permissions array
  */
 function loadPermissions() {
-    return [
+    // Default hardcoded permissions
+    $defaults = [
         "Admin" => "all",
         "Developer" => "all",
         "DRH" => "all",
@@ -102,6 +103,23 @@ function loadPermissions() {
             "inventory/inv_saisie"
         ]
     ];
+
+    // Try to load permissions from permissions.json if it exists
+    $jsonPath = __DIR__ . '/permissions.json';
+    if (file_exists($jsonPath) && is_readable($jsonPath)) {
+        $json = file_get_contents($jsonPath);
+        if ($json !== false) {
+            $data = json_decode($json, true);
+            if (is_array($data)) {
+                // Merge JSON permissions over defaults; JSON can add new roles or override existing ones
+                return array_replace_recursive($defaults, $data);
+            }
+            // If JSON is malformed, fall back to defaults but log an error
+            @error_log(date('Y-m-d H:i:s') . " - permissions.json is present but invalid JSON\n", 3, __DIR__ . '/access_denied.log');
+        }
+    }
+
+    return $defaults;
 }
 
 /**
@@ -170,8 +188,10 @@ function getPageIdentifier() {
         'mony' => 'mony',
         'moneyv2' => 'mony',
         'print' => 'print',
+        'rot_men_global' => 'rot_men_global',
     'Arrivage' => 'Arrivage',
     'reception' => 'Arrivage',
+    'analyse_client' => 'analyse_client',
         'recap_achat_facturation' => 'recap_achat_facturation'
     ];
     

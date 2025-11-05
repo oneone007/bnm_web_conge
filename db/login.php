@@ -9,15 +9,27 @@ error_reporting(E_ALL);
 // Include database connection
 include 'db_connect.php';
 
+// Check if this is an AJAX request
+$isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
 // Verify connection was successful
 if ($conn->connect_error) {
+    if ($isAjax) {
+        echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+        exit();
+    }
     die("Database connection failed: " . $conn->connect_error);
 }
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     // Verify required fields exist
     if (empty($_POST['username']) || empty($_POST['password'])) {
-        $_SESSION['login_error'] = "Username and password are required";
+        $errorMsg = "Username and password are required";
+        if ($isAjax) {
+            echo json_encode(['success' => false, 'message' => $errorMsg]);
+            exit();
+        }
+        $_SESSION['login_error'] = $errorMsg;
         header("Location: ../BNM");
         exit();
     }
@@ -29,41 +41,51 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         // Get user from database
         $sql = "SELECT id, username, password, Role FROM users WHERE username = ?";
         $stmt = $conn->prepare($sql);
-        
+
         if (!$stmt) {
+            $errorMsg = "System error: Please try again later";
+            if ($isAjax) {
+                echo json_encode(['success' => false, 'message' => $errorMsg]);
+                exit();
+            }
             throw new Exception("Prepare failed: " . $conn->error);
         }
-        
+
         $stmt->bind_param("s", $username);
-        
+
         if (!$stmt->execute()) {
+            $errorMsg = "System error: Please try again later";
+            if ($isAjax) {
+                echo json_encode(['success' => false, 'message' => $errorMsg]);
+                exit();
+            }
             throw new Exception("Execute failed: " . $stmt->error);
         }
-        
+
         $result = $stmt->get_result();
-        
+
         if ($result->num_rows === 1) {
             $user = $result->fetch_assoc();
-            
+
             // Verify password using password_verify for hashed passwords
             if (password_verify($password, $user['password'])) {
                 // Set session variables
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['Role'] = $user['Role']; // Case matches your database
-                
+
                 // Log session information
                 $ip_address = $_SERVER['REMOTE_ADDR'];
                 $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
                 $login_time = date('Y-m-d H:i:s');
-                
+
                 // Check if this specific IP already has an active session for this user
                 $check_sql = "SELECT id FROM user_sessions WHERE username = ? AND ip_address = ? AND logout_time IS NULL";
                 $check_stmt = $conn->prepare($check_sql);
                 $check_stmt->bind_param("ss", $username, $ip_address);
                 $check_stmt->execute();
                 $check_result = $check_stmt->get_result();
-                
+
                 if ($check_result->num_rows > 0) {
                     // This IP already has an active session - update it
                     $row = $check_result->fetch_assoc();
@@ -82,28 +104,50 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     $_SESSION['session_log_id'] = $insert_stmt->insert_id;
                     $insert_stmt->close();
                 }
-                
+
                 $check_stmt->close();
-                
+
+                // AJAX response for success
+                if ($isAjax) {
+                    echo json_encode(['success' => true, 'message' => 'Authentication successful. Redirecting...', 'redirect' => 'Main']);
+                    exit();
+                }
+
                 // Redirect based on role
-                header("Location: ../Main");
+                header("Location: Main");
                 exit();
             } else {
-                $_SESSION['login_error'] = "Incorrect password";
+                $errorMsg = "Incorrect password";
+                if ($isAjax) {
+                    echo json_encode(['success' => false, 'message' => $errorMsg]);
+                    exit();
+                }
+                $_SESSION['login_error'] = $errorMsg;
             }
         } else {
-            $_SESSION['login_error'] = "Username not found";
+            $errorMsg = "Username not found";
+            if ($isAjax) {
+                echo json_encode(['success' => false, 'message' => $errorMsg]);
+                exit();
+            }
+            $_SESSION['login_error'] = $errorMsg;
         }
-        
+
         $stmt->close();
     } catch (Exception $e) {
+        $errorMsg = "System error: Please try again later";
+        if ($isAjax) {
+            echo json_encode(['success' => false, 'message' => $errorMsg]);
+            exit();
+        }
         $_SESSION['login_error'] = "System error: Please try again later";
         error_log("Login error: " . $e->getMessage());
     }
 }
 
-// Close connection and redirect on failure
+// Close connection and redirect on failure (non-AJAX)
 $conn->close();
-header("Location: ../BNM");
+if (!$isAjax) {
+    header("Location: ../BNM");
+}
 exit();
-?>

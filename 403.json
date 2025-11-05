@@ -304,5 +304,257 @@
         "referer": "DIRECT",
         "request_uri": "/bnm_web/403",
         "server_name": "localhost"
+    },
+    {
+        "session_id": "q05vpo2r68v4kb44okqqld7qs1",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-09 09:59:52",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "DIRECT",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "rda8oeao5lhq2p9o5jn559jhej",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-09 16:24:51",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "rda8oeao5lhq2p9o5jn559jhej",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-09 16:24:51",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "rda8oeao5lhq2p9o5jn559jhej",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-09 16:24:51",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "rda8oeao5lhq2p9o5jn559jhej",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-09 16:25:10",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "rda8oeao5lhq2p9o5jn559jhej",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-09 16:25:10",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "rda8oeao5lhq2p9o5jn559jhej",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-09 16:25:10",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "rda8oeao5lhq2p9o5jn559jhej",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-09 16:27:03",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "rda8oeao5lhq2p9o5jn559jhej",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-09 16:27:03",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "rda8oeao5lhq2p9o5jn559jhej",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-09 16:27:03",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "rda8oeao5lhq2p9o5jn559jhej",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-09 16:27:11",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "rda8oeao5lhq2p9o5jn559jhej",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-09 16:27:11",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "rda8oeao5lhq2p9o5jn559jhej",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-09 16:27:11",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "rda8oeao5lhq2p9o5jn559jhej",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-09 16:27:17",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "rda8oeao5lhq2p9o5jn559jhej",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-09 16:27:17",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "rda8oeao5lhq2p9o5jn559jhej",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-09 16:27:17",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "lj688ldhn33pbuco4pqnvifi5c",
+        "ip_address": "192.168.1.10",
+        "timestamp": "2025-10-12 11:54:39",
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+        "referer": "DIRECT",
+        "request_uri": "/bnm_web/403",
+        "server_name": "192.168.1.94"
+    },
+    {
+        "session_id": "ncumsasvpiqr192iboo2tnvroj",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-15 09:38:03",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "ncumsasvpiqr192iboo2tnvroj",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-15 09:38:03",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "ncumsasvpiqr192iboo2tnvroj",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-15 09:38:03",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "ncumsasvpiqr192iboo2tnvroj",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-15 09:38:19",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "ncumsasvpiqr192iboo2tnvroj",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-15 09:38:19",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "ncumsasvpiqr192iboo2tnvroj",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-15 09:38:19",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+        "referer": "https://localhost/bnm_web/sudo",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "cu68lj4saa7rpv2jrb3tgpkvk6",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-19 11:25:39",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0",
+        "referer": "https://localhost/bnm_web/Main",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "ispuhbb9jocji2muuj11ct3rjr",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-19 11:53:35",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.105.1 Chrome/138.0.7204.251 Electron/37.6.0 Safari/537.36",
+        "referer": "DIRECT",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "4fbgt7et20fre7i8mcttsfkcra",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-19 11:57:50",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.105.1 Chrome/138.0.7204.251 Electron/37.6.0 Safari/537.36",
+        "referer": "DIRECT",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "e6g1ua5ktes0a6iv1udk0omtii",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-19 12:48:15",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.105.1 Chrome/138.0.7204.251 Electron/37.6.0 Safari/537.36",
+        "referer": "DIRECT",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
+    },
+    {
+        "session_id": "arq1hjhq7dol02umob7kl12mhf",
+        "ip_address": "127.0.0.1",
+        "timestamp": "2025-10-22 12:32:51",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0",
+        "referer": "https://localhost/bnm_web/Main",
+        "request_uri": "/bnm_web/403",
+        "server_name": "localhost"
     }
 ]

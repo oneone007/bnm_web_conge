@@ -32,6 +32,18 @@
             "Admin",
             "Developer"
           ]
+        },
+        {
+          "id": "default_emplacements",
+          "type": "page",
+          "title": "Gestion Emplacements",
+          "icon": "fas fa-warehouse",
+          "page": "manage_default_emplacements",
+          "permissionPage": "manage_default_emplacements",
+          "roleRequired": [
+            "Admin",
+            "Developer"
+          ]
         }
       ]
     },
@@ -176,6 +188,14 @@
           "permissionPage": "Rotation"
         },
         {
+          "id": "rot_men_global",
+          "type": "page",
+          "title": "Rotation Globale",
+          "icon": "fas fa-globe",
+          "page": "rot_men_global",
+          "permissionPage": "rot_men_global"
+        },
+        {
           "id": "quota",
           "type": "page",
           "title": "Quota Produit",
@@ -207,7 +227,7 @@
     {
       "id": "recaps_achat",
       "type": "section",
-      "title": "RECAPS ACHAT",
+      "title": "ACHAT",
       "icon": "fas fa-cart-plus",
       "submenu": [
         {
@@ -225,29 +245,13 @@
           "icon": "fas fa-file-invoice",
           "page": "recap_achat_facturation",
           "permissionPage": "recap_achat_facturation"
-        },
-        {
-          "id": "annual_recap_a",
-          "type": "page",
-          "title": "Annual Recap",
-          "icon": "fas fa-calendar-alt",
-          "page": "Annual_Recap_A",
-          "permissionPage": "Annual_Recap_A"
-        },
-        {
-          "id": "rot_men_achat",
-          "type": "page",
-          "title": "rot_men_achat",
-          "icon": "fas fa-calendar-alt",
-          "page": "rot_men_achat",
-          "permissionPage": "rot_men_achat"
         }
       ]
     },
     {
       "id": "recaps_vente",
       "type": "section",
-      "title": "RECAPS VENTE",
+      "title": "VENTE",
       "icon": "fas fa-cash-register",
       "submenu": [
         {
@@ -257,6 +261,14 @@
           "icon": "fas fa-money-bill-wave",
           "page": "Recap_Vente",
           "permissionPage": "Recap_Vente"
+        },
+        {
+          "id": "analyse_client",
+          "type": "page",
+          "title": "Analyse Client",
+          "icon": "fas fa-users",
+          "page": "analyse_client",
+          "permissionPage": "analyse_client"
         },
         {
           "id": "portf",
@@ -275,28 +287,12 @@
           "permissionPage": "Recap_Vente_Facturation"
         },
         {
-          "id": "annual_recap_v",
-          "type": "page",
-          "title": "Annual Recap",
-          "icon": "fas fa-calendar-check",
-          "page": "Annual_Recap_V",
-          "permissionPage": "Annual_Recap_V"
-        },
-        {
           "id": "confirmed_orders",
           "type": "page",
           "title": "Confirm Order",
           "icon": "fas fa-check-circle",
           "page": "CONFIRMED_ORDERS",
           "permissionPage": "CONFIRMED_ORDERS"
-        },
-        {
-          "id": "rot_men_vente",
-          "type": "page",
-          "title": "rot_men_vente",
-          "icon": "fas fa-calendar-alt",
-          "page": "rot_men_vente",
-          "permissionPage": "rot_men_vente"
         },
         {
           "id": "retour_orm",

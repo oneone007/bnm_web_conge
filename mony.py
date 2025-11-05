@@ -483,6 +483,18 @@ def fetch_total_stock_by_location():
                         M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
                         AND m_storage.qtyonhand > 0
                         AND m_storage.m_locator_id = 1001128
+                ),
+                hangar_reception_data AS (
+                    SELECT 
+                        ROUND(SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand), 2) AS hangar_reception
+                    FROM 
+                        M_ATTRIBUTEINSTANCE
+                    JOIN 
+                        m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
+                    WHERE 
+                        M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
+                        AND m_storage.qtyonhand > 0
+                        AND m_storage.m_locator_id = 1000717
                 )
 
                 SELECT 
@@ -490,18 +502,21 @@ def fetch_total_stock_by_location():
                     ROUND(SUM(h.hangar), 2) AS hangar,
                     ROUND(SUM(hr.hangarresrev), 2) AS hangarréserve,
                     ROUND(SUM(dr.depot_reserver), 2) AS depot_reserver,
+                    ROUND(SUM(hrec.hangar_reception), 2) AS hangar_reception,
                     ROUND(
                         NVL(SUM(sp.stock_principale), 0) + 
                         NVL(SUM(h.hangar), 0) + 
                         NVL(SUM(hr.hangarresrev), 0) + 
-                        NVL(SUM(dr.depot_reserver), 0), 
+                        NVL(SUM(dr.depot_reserver), 0) + 
+                        NVL(SUM(hrec.hangar_reception), 0), 
                         2
                     ) AS total_stock
                 FROM 
                     stock_principale_data sp,
                     hangar_data h,
                     hangarresrev_data hr,
-                    depot_reserver_data dr
+                    depot_reserver_data dr,
+                    hangar_reception_data hrec
             """
 
             cursor.execute(query)
@@ -512,12 +527,15 @@ def fetch_total_stock_by_location():
                 "hangar": result[1] or 0,
                 "hangarréserve": result[2] or 0,
                 "depot_reserver": result[3] or 0,
-                "total_stock": result[4] or 0
+                "hangar_reception": result[4] or 0,
+                "total_stock": result[5] or 0
             }
 
     except Exception as e:
         logger.error(f"Database error: {e}")
         return {"error": "An error occurred while fetching stock data."}
+
+
 
 @app.route('/stock-summary', methods=['GET'])
 def get_stock_summary():
@@ -807,14 +825,15 @@ def calculate_total_profit():
             cursor.execute("""
                 INSERT INTO stock (
                     total_stock, principal, hangar, 
-                    depot_reserver, hangar_reserver, time
-                ) VALUES (%s, %s, %s, %s, %s, SYSDATE())
+                    depot_reserver, hangar_reserver, hangar_reception, time
+                ) VALUES (%s, %s, %s, %s, %s, %s, SYSDATE())
             """, (
                 stock_data['total_stock'],
                 stock_data['STOCK_principale'],
                 stock_data['hangar'],
                 stock_data['depot_reserver'],
-                stock_data['hangarréserve']
+                stock_data['hangarréserve'],
+                stock_data['hangar_reception']
             ))
             
             # Insert tresorie data

@@ -146,6 +146,19 @@ table tbody tr,
     -webkit-box-shadow: none !important;
     box-shadow: none !important;
 }
+
+/* Disable table row hover effects */
+.table-container tbody tr:hover {
+    background: transparent !important;
+    transform: none !important;
+    box-shadow: none !important;
+    border-left: none !important;
+}
+
+.table-container tbody tr:hover td {
+    color: inherit !important;
+    font-weight: normal !important;
+}
 /* Also disable hover transforms on search and refresh controls */
 .search-container,
 .search-container *,
@@ -266,7 +279,7 @@ table tbody tr,
                             <th data-column="VENDEUR" onclick="sortorderconfirmedTable('VENDEUR')">Vendeur</th>
                             <th data-column="MARGE" onclick="sortorderconfirmedTable('MARGE')">Marge</th>
                             <th data-column="MONTANT" onclick="sortorderconfirmedTable('MONTANT')">Montant</th>
-                            <th data-column="ORGANISATION" onclick="sortorderconfirmedTable('ORGANISATION')">Organization</th>
+                            <th data-column="DESCRIPTION" onclick="sortorderconfirmedTable('DESCRIPTION')">Description</th>
                         </tr>
                     </thead>
                     <tbody id="order-confirmer-table">
@@ -403,9 +416,9 @@ async function fetchOrderConfirmed() {
 
         data.forEach(row => {
             const tr = document.createElement('tr');
-            tr.classList.add("cursor-pointer", "hover:bg-gray-200", "dark:hover:bg-gray-700");
+            tr.classList.add("cursor-pointer");
 
-            if (row.ORGANISATION === 'Total') {
+            if (row.DESCRIPTION === 'Total') {
                 tr.style.fontWeight = 'bold';
                 totalRow = tr;
             }
@@ -428,7 +441,7 @@ async function fetchOrderConfirmed() {
                 <td class="border px-4 py-2">${row.VENDEUR || ''}</td>
                 <td class="border px-4 py-2">${row.MARGE !== null ? formatNumber(row.MARGE) + ' %' : ''}</td>
                 <td class="border px-4 py-2">${formatNumber(row.MONTANT)}</td>
-                <td class="border px-4 py-2">${row.ORGANISATION || ''}</td>
+                <td class="border px-4 py-2">${row.DESCRIPTION || ''}</td>
             `;
 
             // Increment row count
@@ -444,7 +457,7 @@ async function fetchOrderConfirmed() {
                 searchInput.dispatchEvent(new Event("input")); // Trigger search event
             });
 
-            if (row.ORGANISATION === 'Total') {
+            if (row.DESCRIPTION === 'Total') {
                 totalRow = tr;
             } else {
                 tableBody.appendChild(tr);

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mossaab Raed Kassir - CV</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 0.75in;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 11px;
+            line-height: 1.5;
+            color: #333;
+            background: white;
+        }
+        .container {
+            width: 100%;
+            max-width: 8.5in;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid #333;
+        }
+        .name {
+            font-size: 22px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        .title {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        .contact {
+            font-size: 10px;
+            color: #555;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 14px;
+        }
+        .left-column, .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .section {
+            margin-bottom: 4px;
+        }
+        .section-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+            border-bottom: 1px solid #ccc;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+        .profile-text {
+            font-size: 10.5px;
+            color: #444;
+            text-align: justify;
+        }
+        .job, .education-item {
+            margin-bottom: 8px;
+        }
+        .job-header, .education-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .job-title, .degree {
+            font-weight: bold;
+            font-size: 11px;
+        }
+        .company, .university {
+            font-size: 10px;
+            color: #666;
+        }
+        .date {
+            font-size: 9px;
+            color: #888;
+            font-style: italic;
+        }
+        .job-desc li {
+            margin-bottom: 4px;
+            list-style-type: disc;
+            margin-left: 15px;
+        }
+        .languages div {
+            font-size: 10px;
+            color: #555;
+        }
+        @media print {
+            #download-pdf-btn { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <button id="download-pdf-btn" style="position: fixed; top: 20px; right: 20px; padding: 7px 18px; background: #2c3e50; color: #fff; border: none; border-radius: 4px; font-size: 11px; cursor: pointer;">Télécharger en PDF</button>
+
+    <div class="container">
+        <div class="header">
+            <div class="name">Mossaab Raed Kassir</div>
+            <div class="title">Mécanicien Automobile</div>
+            <div class="contact">
+                <div>📱 +213 XX XXX XXXX</div>
+                <div>📧 exemple@email.com</div>
+                <div>📍 Algérie</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="left-column">
+                <div class="section">
+                    <div class="section-title">Profil</div>
+                    <div class="profile-text">
+                        Mécanicien automobile compétent et motivé, avec une expérience dans l’entretien, la réparation et le diagnostic des véhicules légers. Capable d’identifier rapidement les pannes mécaniques et électriques et d’effectuer les réparations nécessaires avec rigueur. Sérieux, ponctuel et passionné par la mécanique, je sais travailler efficacement seul ou en équipe.
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Expérience Professionnelle</div>
+                    <div class="job">
+                        <div class="job-header">
+                            <div>
+                                <div class="job-title">Mécanicien Automobile</div>
+                                <div class="company">Atelier privé de réparation</div>
+                            </div>
+                            <div class="date">2022 – 2024</div>
+                        </div>
+                        <ul class="job-desc">
+                            <li>Diagnostic et réparation des pannes mécaniques sur différents types de véhicules.</li>
+                            <li>Réalisation de la maintenance préventive et corrective (freins, moteur, suspension, climatisation).</li>
+                            <li>Accueil et conseil des clients sur l’entretien et la sécurité automobile.</li>
+                            <li>Application stricte des normes de sécurité et de qualité.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Compétences</div>
+                    <ul class="job-desc">
+                        <li>Diagnostic et réparation mécanique.</li>
+                        <li>Bonnes connaissances des systèmes automobiles (freinage, refroidissement, transmission).</li>
+                        <li>Utilisation des outils et équipements de maintenance.</li>
+                        <li>Esprit d’équipe et gestion du temps.</li>
+                        <li>Sens de l’organisation et rigueur professionnelle.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="right-column">
+                <div class="section">
+                    <div class="section-title">Formation</div>
+                    <div class="education-item">
+                        <div class="education-header">
+                            <div>
+                                <div class="degree">Première année secondaire</div>
+                                <div class="university">Lycée général</div>
+                            </div>
+                            <div class="date">2018</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Langues</div>
+                    <div class="languages">
+                        <div><strong>Arabe :</strong> Langue maternelle</div>
+                        <div><strong>Français :</strong> Bon niveau</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Centres d’intérêt</div>
+                    <ul class="job-desc">
+                        <li>Restauration de voitures anciennes.</li>
+                        <li>Lecture de revues techniques automobiles.</li>
+                        <li>Travaux manuels et bricolage mécanique.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('download-pdf-btn').onclick = function() {
+            const title = document.title;
+            document.title = 'CV_Mossaab_Raed_Kassir';
+            window.print();
+            setTimeout(() => { document.title = title; }, 1000);
+        };
+    </script>
+</body>
+</html>

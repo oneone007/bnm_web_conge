@@ -45,7 +45,7 @@ require_once 'check_permission.php';
     <!-- SheetJS for Excel export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-    <link rel="stylesheet" href="the_rotation_style.css">
+    <link rel="stylesheet" href="rotation.css">
     <style>
     /* Chart container improvements */
     #chartContainer.canvas-container {
@@ -286,8 +286,8 @@ require_once 'check_permission.php';
         <table class="products-table" id="products-table">
             <thead>
                 <tr>
-                    <th>#</th>
-                    <th>Product Name</th>
+                    <th style="width:60px;">#</th>
+                    <th>Product</th>
                 </tr>
             </thead>
             <tbody id="products-table-body">
@@ -329,8 +329,8 @@ require_once 'check_permission.php';
        
 
 <!-- Product Details Container (moved up near product search) -->
-<div id="productDetailsContainer" class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 mt-6 mb-16 pb-16" style="display: none;">
-    <div class="overflow-x-auto">
+<div id="productDetailsContainer" class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800 mt-6 mb-16 pb-16 w-full max-w-full" style="display: none;">
+    <div class="overflow-auto w-full" style="max-width:98vw;">
         <div class="flex justify-between items-center mb-4 p-4">
             <h2 id="productDetailsTitle" class="text-lg font-semibold text-gray-900 dark:text-white">Product Details</h2>
             <div class="flex gap-2">
@@ -342,7 +342,7 @@ require_once 'check_permission.php';
                 </button>
             </div>
         </div>
-        <table class="product-details-table min-w-full border-collapse text-sm text-left dark:text-white">
+        <table class="product-details-table w-full border-collapse text-sm text-left dark:text-white" style="max-width:100vw;">
             <thead>
                 <tr class="table-header dark:bg-gray-700">
                     <th>P_Achat</th>
@@ -357,6 +357,7 @@ require_once 'check_permission.php';
                     <th>PPA</th>
                     <th>Location</th>
                     <th>Lot</th>
+                    <th>Péremption</th>
                 </tr>
             </thead>
             <tbody id="product-details-table-rot" class="dark:bg-gray-800">
@@ -573,6 +574,10 @@ require_once 'check_permission.php';
         <table class="product-details-table min-w-full border-collapse text-sm text-left dark:text-white">
             <thead>
                 <tr class="table-header dark:bg-gray-700">
+                    <th>Fournisseur</th>
+                    <th>Marge</th>
+                    <th>Qty</th>
+                    <th>QTY_DISPO</th>
                     <th>P_Achat</th>
                     <th>Rem_Achat</th>
                     <th>Bon_Achat</th>
@@ -585,6 +590,7 @@ require_once 'check_permission.php';
                     <th>PPA</th>
                     <th>Location</th>
                     <th>Lot</th>
+                    <th>Exp_Date</th>
                 </tr>
             </thead>
             <tbody id="product-details-table-rot" class="dark:bg-gray-800">
@@ -810,7 +816,7 @@ const CACHE_DURATION = 5 * 60 * 1000;
 
 document.addEventListener("DOMContentLoaded", async function() {
     updateToggleButtonText();
-    await fetchProducts();
+    // Do not fetch the full product list on load. We'll fetch suggestions as the user types.
     setupProductSearch();
     setupDateInputs();
     setupV2Toggle();
@@ -890,14 +896,52 @@ function displayProductDetails_rot(productName, data) {
     title.textContent = `Product Details - ${productName}`;
     tableBody.innerHTML = '';
 
+    // Find the table and its thead
+    const table = tableBody.closest('table');
+    const thead = table.querySelector('thead tr');
+
     if (!data || data.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="12" class="border px-4 py-2 text-center dark:border-gray-600">No details found for this product</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="100" class="border px-4 py-2 text-center dark:border-gray-600">No details found for this product</td></tr>`;
         downloadBtn.style.display = 'none';
+        // Clear thead
+        if (thead) thead.innerHTML = '';
     } else {
+        // Map JSON keys to display columns
+        const keyMap = {
+            'FOURNISSEUR': 'Fournisseur',
+            
+            'MARGE': 'Marge',
+            'QTY': 'Qty',
+            'QTY_DISPO': 'QTY_DISPO',
+            'P_ACHAT': 'P_Achat',
+            'REM_ACHAT': 'Rem_Achat',
+            'BON_ACHAT': 'Bon_Achat',
+            'P_REVIENT': 'P_Revient',
+            'P_VENTE': 'P_Vente',
+            'REM_VENTE': 'Rem_Vente',
+            'BON_VENTE': 'Bon_Vente',
+            'REMISE_AUTO': 'Remise_Auto',
+            'BONUS_AUTO': 'Bonus_Auto',
+            'PPA': 'PPA',
+            'LOCATION': 'Location',
+            'LOT': 'Lot',
+            'GUARANTEEDATE': 'Exp_Date',
+        };
+        const columnOrder = [
+            'Fournisseur', 'Marge', 'Qty', 'QTY_DISPO', 'P_Achat', 'Rem_Achat', 'Bon_Achat',
+            'P_Revient', 'P_Vente', 'Rem_Vente', 'Bon_Vente', 'Remise_Auto', 'Bonus_Auto',
+            'PPA', 'Location', 'Lot', 'Exp_Date'
+        ];
+        // Build table header dynamically in the specified order
+        if (thead) {
+            thead.innerHTML = columnOrder.map(key => `<th class="table-header dark:bg-gray-700">${key}</th>`).join('');
+        }
+
+        // Helper formatters
         const formatNumber = (num, isInt = false) => {
             if (num === null || num === undefined || num === '') return 0;
             if (isInt) return parseInt(num, 10).toLocaleString('en-US');
-            return parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return isNaN(num) ? num : parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         };
         const formatDate = dateString => {
             if (!dateString) return '';
@@ -907,21 +951,22 @@ function displayProductDetails_rot(productName, data) {
         data.forEach(row => {
             const tr = document.createElement('tr');
             tr.classList.add('table-row','dark:bg-gray-700','hover:bg-gray-100','dark:hover:bg-gray-600');
-            if (row.LOT_ACTIVE === 'N') tr.classList.add('lot-inactive');
-            tr.innerHTML = `
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.P_ACHAT)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.REM_ACHAT)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.BON_ACHAT)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.P_REVIENT)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.P_VENTE)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.REM_VENTE)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.BON_VENTE)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${row.REMISE_AUTO || ''}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${row.BONUS_AUTO || ''}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.PPA)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${row.LOCATION || ''}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${row.LOT || ''}</td>
-            `;
+            tr.innerHTML = columnOrder.map(col => {
+                // Find the JSON key for this column
+                const jsonKey = Object.keys(keyMap).find(k => keyMap[k] === col);
+                let val = jsonKey ? row[jsonKey] : '';
+                // Format QTY, QTY_DISPO as int
+                if (["Qty","QTY_DISPO","QTY_RESERVED"].includes(col)) {
+                    val = formatNumber(val, true);
+                } else if (typeof val === 'number') {
+                    val = formatNumber(val);
+                } else if (col === 'Exp_Date' && val) {
+                    val = formatDate(val);
+                } else if (val === null || val === undefined) {
+                    val = '';
+                }
+                return `<td class="border px-4 py-2 dark:border-gray-600">${val}</td>`;
+            }).join('');
             tableBody.appendChild(tr);
         });
         downloadBtn.style.display = 'inline-block';
@@ -999,32 +1044,32 @@ function clearProductDetails_rot() {
     });
 }
 async function fetchProducts(forceRefresh = false) {
-    const currentTime = Date.now();
-    if (!forceRefresh && allProducts.length && (currentTime - lastFetchTime) < CACHE_DURATION) {
-        console.log("✅ Using cached product data");
-        return;
-    }
+    // Deprecated: we no longer fetch all products at once for rotation suggestions.
+    return;
+}
 
+// Fetch products from server using the incremental name search (returns aggregated qty fields)
+async function fetchProductsByName(name) {
     try {
-        const response = await fetch(API_CONFIG.getApiUrl("/fetch-rotation-product-data"));
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-
-        allProducts = await response.json();
-        lastFetchTime = currentTime;
-        filteredProducts = [...allProducts];
-        
-        // Log basic info and sample structure for debugging
-        if (allProducts.length > 0) {
-            console.log("✅ Loaded", allProducts.length, "products");
-            // Only log structure if there are issues
-            if (!allProducts[0].NAME) {
-                console.warn("⚠️ Product structure may be incorrect:", allProducts[0]);
-            }
+        if (!name || !name.trim()) {
+            filteredProducts = [];
+            renderTable();
+            return;
         }
-        
+
+        const url = API_CONFIG.getApiUrl(`/fetch-rotation-product-data-with-qty?name=${encodeURIComponent(name)}`);
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+
+        // Replace filteredProducts with server result
+        filteredProducts = Array.isArray(data) ? data : [];
+        currentPage = 1;
         renderTable();
-    } catch (error) {
-        console.error("❌ Error fetching products:", error);
+    } catch (err) {
+        console.error('Error fetching products by name:', err);
+        filteredProducts = [];
+        renderTable();
     }
 }
 
@@ -1065,12 +1110,11 @@ async function fetchClientsForPeriod(period) {
     }
 
     try {
-    const url = new URL(API_CONFIG.getApiUrl('/fetchClientRecap'));
+    const url = new URL(API_CONFIG.getApiUrl('/fetchInvoiceSales'));
     url.searchParams.append('start_date', start_date);
     url.searchParams.append('end_date', end_date);
-    url.searchParams.append('ad_org_id', '1000000');
-    // The backend expects a product name for the `product` filter (xf.product LIKE :product||'%').
-    // Provide both the product name and the id to be safe.
+    
+    // Add product filtering
     const productName = productInput?.dataset?.selectedProductName || productInput?.value || '';
     if (productName) url.searchParams.append('product', productName);
     if (productId) url.searchParams.append('product_id', productId);
@@ -1098,14 +1142,38 @@ function showClientRecapModal(period, clients) {
     } else {
         body.innerHTML = clients.map(c => {
             const name = c.CLIENT || c.client || c.name || c.CLIENT_NAME || '';
+            const warehouse = c.WAREHOUSE || '';
             const qty = c.QTY || c.qty || c.QTY_VENDU || c.QUANTITY || 0;
-            return `<tr><td class="border px-3 py-2">${name}</td><td class="border px-3 py-2">${formatNumberWithSpace(qty)}</td></tr>`;
+            // Don't show warehouse if it's "1-Dépôt Principal", just show client name
+            const displayName = warehouse && warehouse !== '1-Dépôt Principal' ? `${name} (${warehouse})` : name;
+            return `<tr><td class="border px-3 py-2">${displayName}</td><td class="border px-3 py-2">${formatNumberWithSpace(qty)}</td></tr>`;
         }).join('');
     }
 
     modal.dataset.clients = JSON.stringify(clients || []);
-    modal.classList.remove('hidden');
+    
+    // Position modal at current viewport center
+    const scrollY = window.scrollY || window.pageYOffset;
+    const viewportHeight = window.innerHeight;
+    
+    modal.style.position = 'absolute';
+    modal.style.top = scrollY + 'px';
+    modal.style.left = '0';
+    modal.style.width = '100%';
+    modal.style.minHeight = viewportHeight + 'px';
     modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.zIndex = '9999';
+    
+    // Make modal content scrollable with max height
+    const modalContent = modal.querySelector('.bg-white, [class*="bg-"]');
+    if (modalContent) {
+        modalContent.style.maxHeight = '80vh';
+        modalContent.style.overflowY = 'auto';
+    }
+    
+    modal.classList.remove('hidden');
 }
 
 // Modal close handlers
@@ -1215,35 +1283,27 @@ function setupProductSearch() {
     productSearch.addEventListener("focus", function() {
         const searchValue = this.value.trim();
         if (searchValue) {
-            // Re-filter products based on current input value
-            filteredProducts = allProducts.filter(product => 
-                product.NAME.toLowerCase().includes(searchValue.toLowerCase())
-            );
-            
+            // Fetch suggestions from server for current input
+            fetchProductsByName(searchValue);
             productsTableContainer.style.display = "block";
-            renderTable();
         }
     });
     
     productSearch.addEventListener("input", debounce(function(e) {
-        const searchValue = e.target.value.toLowerCase().trim();
-        
+        const searchValue = e.target.value.trim();
+
         // Show/hide clear button
         clearBtn.style.display = searchValue ? "block" : "none";
-        
+
         if (!searchValue) {
-            filteredProducts = [...allProducts];
+            filteredProducts = [];
             productsTableContainer.style.display = "none";
+            renderTable();
         } else {
-            filteredProducts = allProducts.filter(product => 
-                product.NAME.toLowerCase().includes(searchValue)
-            );
-            
+            // Fetch suggestions from server (debounced)
             productsTableContainer.style.display = "block";
+            fetchProductsByName(searchValue);
         }
-        
-        currentPage = 1;
-        renderTable();
     }, 300));
     
     // Hide table when clicking outside the wrapper
@@ -1422,26 +1482,75 @@ function renderTable() {
     const paginationInfo = document.getElementById("page-info");
     const prevBtn = document.getElementById("prev-page");
     const nextBtn = document.getElementById("next-page");
-    
+
     tableBody.innerHTML = "";
-    
+
     const startIndex = (currentPage - 1) * rowsPerPage;
     const endIndex = Math.min(startIndex + rowsPerPage, filteredProducts.length);
     const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
-    
+
     paginatedProducts.forEach((product, index) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-            <td>${startIndex + index + 1}</td>
-            <td>${product.NAME}</td>
-        `;
-        row.addEventListener("click", function() {
-            selectProduct(product);
-        });
+        const row = document.createElement('tr');
+        row.classList.add('table-row','dark:bg-gray-700','hover:bg-gray-100','dark:hover:bg-gray-600');
+
+        // Index cell
+        const indexCell = document.createElement('td');
+        indexCell.className = 'border px-4 py-2 dark:border-gray-600';
+        indexCell.textContent = startIndex + index + 1;
+
+        // Name + badges cell — layout with space between left (name) and right (badges)
+        const nameCell = document.createElement('td');
+        nameCell.className = 'border px-4 py-2 dark:border-gray-600';
+        nameCell.style.display = 'flex';
+        nameCell.style.alignItems = 'center';
+        nameCell.style.justifyContent = 'space-between';
+        const productName = product.NAME || product.name || '';
+    const nameDiv = document.createElement('div');
+    nameDiv.textContent = productName;
+    // left side: allow truncation if name is long
+    nameDiv.style.flex = '1 1 auto';
+    nameDiv.style.whiteSpace = 'nowrap';
+    nameDiv.style.overflow = 'hidden';
+    nameDiv.style.textOverflow = 'ellipsis';
+    nameDiv.style.marginRight = '12px';
+
+    const badgesDiv = document.createElement('div');
+    // right side: badges inline and compact
+    badgesDiv.style.display = 'inline-flex';
+    badgesDiv.style.alignItems = 'center';
+    badgesDiv.style.gap = '6px';
+
+        const qty = product.QTY ?? product.qty ?? 0;
+        const qtyDispo = product.QTY_DISPO ?? product.qty_dispo ?? product.QTY_DISPONIBLE ?? 0;
+        const qtyReserved = product.QTY_RESERVED ?? product.qty_reserved ?? 0;
+
+        const createBadge = (label, val, extraClass = '') => {
+            const b = document.createElement('span');
+            b.className = `qty-badge ${extraClass}`;
+            b.textContent = `${label}: ${val}`;
+            // remove right margin so labels appear compact (we'll control spacing via parent)
+            b.style.marginRight = '4px';
+            return b;
+        };
+
+    // append labeled badges inline without extra separators so they read like: QTY: 64DISP: 44RES: 20
+    badgesDiv.appendChild(createBadge('QTY', qty));
+    badgesDiv.appendChild(createBadge('DISP', qtyDispo, 'qty-badge--dispo'));
+    badgesDiv.appendChild(createBadge('RES', qtyReserved, 'qty-badge--reserved'));
+    // append name and badges inline
+    nameCell.appendChild(nameDiv);
+    nameCell.appendChild(badgesDiv);
+
+    // Make the whole row clickable instead of adding a separate Select button
+    row.classList.add('cursor-pointer');
+    row.onclick = () => selectProduct(product);
+
+    row.appendChild(indexCell);
+    row.appendChild(nameCell);
         tableBody.appendChild(row);
     });
-    
-    const totalPages = Math.ceil(filteredProducts.length / rowsPerPage);
+
+    const totalPages = Math.max(1, Math.ceil(filteredProducts.length / rowsPerPage));
     paginationInfo.textContent = `Page ${currentPage} of ${totalPages}`;
     prevBtn.disabled = currentPage <= 1;
     nextBtn.disabled = currentPage >= totalPages;

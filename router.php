@@ -38,9 +38,10 @@ $pages = [
         "print" => "printing.php",
     "manage" => "fil_manage/manage.php",
     "upload" => "fil_manage/upload.php",
+    "rot_men_global" => "rot_men_global.php",
+    "manage_default_emplacements" => "manage_default_emplacements.php",
 
-
-  
+    "analyse_client" => "analyse_client.php",
 
     "recap_achat_facturation" => "recap_achat_facturation.php",
     "Rotation" => "rotation.php",
@@ -50,6 +51,7 @@ $pages = [
     "sess" => "session.php",
     "draft" => "draft.php",
     "sudo" => "sudo.php",
+    "space_cleaner" => "space_cleaner.php",
 
     "Mouvement_Stock"=> "mouvementstock.php",
     
@@ -60,12 +62,12 @@ $pages = [
     "signup" => "signup.html",
     "monyold" => "moneyold.php",
  "mony" => "moneyv2.php",
-
+    "en" => "english.html",
 
     "Acess_Denied" => "access_denied.html",
     "view_data" => "view_data.php",
 
-    "side" => "sidebar.php",
+    "side" => "sidebarv2.php",
     "Quota" => "quota.php",
     "bank" => "bank_improved.php",
 
@@ -73,12 +75,12 @@ $pages = [
     "login" => "login.php",
     "c" => "arrowgame.html",
     "403" => "403.php",
-    "t" => "tes.php",
+    "t" => "test.html",
     "403_viewer" => "403_log_viewer.php",
     "build" =>"work.html",
     "secure_login" => "secure_login.html",
 
-
+    "articles" => "articles.php",
 
     // Mail Management Pages
      "mail_dashboard" => "mail/dashboard.php",

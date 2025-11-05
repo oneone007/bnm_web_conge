@@ -29,7 +29,112 @@ require_once 'check_permission.php';
         <script src="api_config.js"></script>
 
     <style>
-        
+        /* Dark mode styles for Search & Filter container */
+        .dark-mode .search-filter-container {
+            background-color: #1f2937 !important;
+            border-color: #374151 !important;
+        }
+
+        /* Search input dark mode */
+        .dark-mode input[id="recap_fournisseur"],
+        .dark-mode input[id="recap_product"] {
+            background-color: #374151 !important;
+            color: #ffffff !important;
+            border-color: #4b5563 !important;
+        }
+
+        .dark-mode input[id="recap_fournisseur"]:focus,
+        .dark-mode input[id="recap_product"]:focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5) !important;
+        }
+
+        /* Label dark mode */
+        .dark-mode label[for="recap_fournisseur"],
+        .dark-mode label[for="recap_product"] {
+            color: #d1d5db !important;
+        }
+
+        /* Dropdown dark mode */
+        .dark-mode .dropdown {
+            background-color: #374151 !important;
+            border-color: #4b5563 !important;
+        }
+
+        .dark-mode .dropdown-item {
+            color: #ffffff !important;
+        }
+
+        .dark-mode .dropdown-item:hover {
+            background-color: #4b5563 !important;
+        }
+
+        /* Active filters dark mode */
+        .dark-mode #active-filters {
+            color: #d1d5db !important;
+        }
+
+        /* Clear button dark mode */
+        .dark-mode #clear-fournisseur:hover,
+        .dark-mode #clear-product:hover {
+            background-color: #4b5563 !important;
+        }
+
+        /* Search icon dark mode */
+        .dark-mode .search-icon svg {
+            color: #9ca3af !important;
+        }
+
+        .dark-mode input[id="recap_fournisseur"]:focus ~ .search-icon svg,
+        .dark-mode input[id="recap_product"]:focus ~ .search-icon svg {
+            color: #60a5fa !important;
+        }
+
+        /* Filter tags dark mode */
+        .dark-mode .bg-blue-100 {
+            background-color: #1e3a8a !important;
+        }
+
+        .dark-mode .text-blue-800 {
+            color: #bfdbfe !important;
+        }
+
+        .dark-mode .bg-green-100 {
+            background-color: #14532d !important;
+        }
+
+        .dark-mode .text-green-800 {
+            color: #bbf7d0 !important;
+        }
+
+        /* Download button text dark mode */
+        .dark-mode #stock_excel span {
+            color: #ffffff !important;
+        }
+
+        /* Search & Filter heading dark mode */
+        .dark-mode h2[class*="text-xl"][class*="font-semibold"] {
+            color: #ffffff !important;
+        }
+        /* Quantity badges for product suggestions */
+        .qty-badge {
+            display: inline-block;
+            font-size: 0.72rem;
+            padding: 0.12rem 0.35rem;
+            border-radius: 0.35rem;
+            margin-left: 0.35rem;
+            color: #111827; /* dark text */
+            background: #f3f4f6; /* subtle neutral */
+            border: 1px solid #e5e7eb;
+        }
+        /* DISP remains blue (informational), RES switched to neutral gray to avoid strong red/green) */
+        .qty-badge--dispo { background: #eef2ff; border-color: #e0e7ff; color: #1e3a8a; }
+        .qty-badge--reserved { background: #f3f4f6; border-color: #e5e7eb; color: #374151; }
+
+        /* Dark mode for badges */
+        .dark .qty-badge { color: #e5e7eb; background: #374151; border-color: rgba(255,255,255,0.06); }
+        .dark .qty-badge--dispo { background: #374151; color: #e6eefc; }
+        .dark .qty-badge--reserved { background: #4b5563; color: #e5e7eb; }
     </style>
 </head>
 <body class="flex h-screen bg-gray-100 dark:bg-gray-900">
@@ -51,14 +156,75 @@ require_once 'check_permission.php';
         
 
 
-<div class="search-container relative">
-    <input type="text" id="recap_fournisseur" placeholder="Search Fournisseur">
-    <div id="fournisseur-dropdown" class="dropdown"></div>
-</div>
-<br>
-<div class="search-container relative">
-    <input type="text" id="recap_product" placeholder="Search Product">
-    <div id="product-dropdown" class="dropdown"></div>
+
+<div class="search-filter-container bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
+    <div class="flex items-center justify-center mb-4">
+        <div class="flex items-center space-x-2">
+            <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Search & Filter</h2>
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Product Search -->
+        <div class="relative">
+            <label for="recap_product" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                </svg>
+                Search Product
+            </label>
+            <div class="relative">
+                <input type="text" id="recap_product" placeholder="Type to search products..." 
+                       class="w-full pl-10 pr-10 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm transition-all duration-200" />
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none search-icon">
+                    <svg class="w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+                <button id="clear-product" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors duration-200" style="display: none;">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="product-dropdown" class="dropdown absolute left-0 right-0 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-b-lg shadow-xl mt-1 hidden max-h-60 overflow-y-auto"></div>
+        </div>
+        <!-- Fournisseur Search -->
+        <div class="relative">
+            <label for="recap_fournisseur" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                Search Fournisseur
+            </label>
+            <div class="relative">
+                <input type="text" id="recap_fournisseur" placeholder="Type to search fournisseurs..." 
+                       class="w-full pl-10 pr-10 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm transition-all duration-200" />
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none search-icon">
+                    <svg class="w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+                <button id="clear-fournisseur" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors duration-200" style="display: none;">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="fournisseur-dropdown" class="dropdown absolute left-0 right-0 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-b-lg shadow-xl mt-1 hidden max-h-60 overflow-y-auto"></div>
+        </div>
+
+
+    </div>
+
+    <!-- Active Filters Display -->
+    <div id="active-filters" class="mt-4 flex flex-wrap gap-2" style="display: none;">
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Active filters:</span>
+        <div id="filter-tags" class="flex flex-wrap gap-2"></div>
+    </div>
 </div>
 
 
@@ -69,117 +235,113 @@ require_once 'check_permission.php';
         <br>
         <br>
         <!-- Data Table -->
-        <div class="table-wrapper">
-        <div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
-            <div class="overflow-x-auto">
-               
-            </div>
-        </div>
 
-<!-- second table remise aauto  -->
-
-
-        </div>
+                <div class="table-wrapper">
+                    <div class="table-container rounded-2xl bg-white shadow-lg dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                        <div class="overflow-x-auto">
+                            <!-- Table will be rendered here by JS -->
+                        </div>
+                    </div>
+                </div>
 
         <!-- Pagination -->
 
-        <div class="tables-wrapper flex space-x-4">
-    <!-- Magasins Dropdown -->
-    <div class="dropdown-container flex-1 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
-        <label for="magasinDropdown" class="block text-sm font-semibold text-gray-900 dark:text-white mb-2">Magasin</label>
-        <select id="magasinDropdown" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-            <option value="">Loading magasins...</option>
-        </select>
-    </div>
 
-    <!-- Emplacements Dropdown -->
-    <div class="dropdown-container flex-1 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
-        <label for="emplacementDropdown" class="block text-sm font-semibold text-gray-900 dark:text-white mb-2">Emplacement</label>
-        <select id="emplacementDropdown" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white" disabled>
-            <option value="">Select magasin first</option>
-        </select>
-    </div>
-</div>
+                <div class="tables-wrapper flex flex-col md:flex-row gap-4">
+                    <!-- Magasins Dropdown -->
+                    <div class="dropdown-container flex-1 bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
+                        <label for="magasinDropdown" class="block text-sm font-semibold text-gray-900 dark:text-white mb-2">Magasin</label>
+                        <select id="magasinDropdown" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:outline-none transition-all">
+                            <option value="">Loading magasins...</option>
+                        </select>
+                    </div>
+                    <!-- Emplacements Dropdown -->
+                    <div class="dropdown-container flex-1 bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
+                        <label for="emplacementDropdown" class="block text-sm font-semibold text-gray-900 dark:text-white mb-2">Emplacement</label>
+                        <select id="emplacementDropdown" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-400 focus:outline-none transition-all" disabled>
+                            <option value="">Select magasin first</option>
+                        </select>
+                    </div>
+                </div>
 
 
         <br>
-            <div class="flex flex-wrap gap-2 mb-4">
-            <button id="refreshButton" class="p-2 bg-gray-200 text-gray-900 rounded hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600">
-                🔄 Refresh
-            </button>
-            <button id="showDesactivatedLotBtn" class="p-2 bg-orange-200 text-orange-900 rounded hover:bg-orange-300 dark:bg-orange-700 dark:text-white dark:hover:bg-orange-600">
-                🟧 Show Desactivated Lot
-            </button>
-            <div >
-  <button class="Btn center-btn" id="stock_excel">
-    <div class="svgWrapper">
-      <img src="assets/excel.png" alt="Excel Icon" class="excelIcon" />
-      <div class="text">&nbsp;Download</div>
-      </div>
-  </button>
-</div>
+
+                <div class="flex flex-wrap gap-3 mb-6 mt-4">
+                    <button id="refreshButton" class="px-4 py-2 bg-gray-100 text-gray-900 rounded-lg shadow hover:bg-blue-100 dark:bg-gray-700 dark:text-white dark:hover:bg-blue-900 border border-gray-300 dark:border-gray-600 transition-all">
+                        🔄 Refresh
+                    </button>
+                    <button id="showDesactivatedLotBtn" class="px-4 py-2 bg-orange-100 text-orange-900 rounded-lg shadow hover:bg-orange-200 dark:bg-orange-700 dark:text-white dark:hover:bg-orange-600 border border-orange-300 dark:border-orange-600 transition-all">
+                        🟧 Show Desactivated Lot
+                    </button>
+                    <button id="stock_excel" class="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-900 rounded-lg shadow hover:bg-green-200 dark:bg-green-700 dark:text-white dark:hover:bg-green-600 border border-green-300 dark:border-green-600 transition-all">
+                        <img src="assets/excel.png" alt="Excel Icon" class="w-5 h-5" />
+                        <span>Download</span>
+                    </button>
+                </div>
 
 
 
 
 
-<div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800">
+<div class="table-container rounded-lg bg-white shadow-md dark:bg-gray-800" style="max-height:528px;">
     <div class="overflow-x-auto">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">ETAT DE STOCK</h2>
         <p class="text-sm text-gray-600 dark:text-gray-400 mb-4 text-center">Click on any row to view detailed product information</p>
 
-        <table class="min-w-full border-collapse text-sm text-left dark:text-white">
-    <thead>
-        <tr class="table-header dark:bg-gray-700">
-            <th data-column="FOURNISSEUR" onclick="sortTable('FOURNISSEUR')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                Fournisseur
-                <div class="resizer"></div>
-            </th>
-            <th data-column="NAME" onclick="sortTable('NAME')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                NAME
-                <div class="resizer"></div>
-            </th>
-            <th data-column="QTY" onclick="sortTable('QTY')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                QTY
-                <div class="resizer"></div>
-            </th>
-            <th data-column="QTY_DISPO" onclick="sortTable('QTY_DISPO')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                QTY_DISPO
-                <div class="resizer"></div>
-            </th>
-            <th data-column="QTY_RESERVED" onclick="sortTable('QTY_RESERVED')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                QTY_RESERVED
-                <div class="resizer"></div>
-            </th>
-            <th data-column="PRIX" onclick="sortTable('PRIX')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                PRIX
-                <div class="resizer"></div>
-            </th>
-            <th data-column="PRIX_DISPO" onclick="sortTable('PRIX_DISPO')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                PRIX_DISPO
-                <div class="resizer"></div>
-            </th>
-            <th data-column="PLACE" onclick="sortTable('PLACE')" class="resizable border border-gray-300 px-4 py-2 dark:border-gray-600 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600">
-                PLACE
-                <div class="resizer"></div>
-            </th>
-        </tr>
-    </thead>
-    <tbody id="data-table" class="dark:bg-gray-800">
-        <!-- Dynamic Rows -->
-    </tbody>
-</table>
+
+                <table class="min-w-full border-collapse text-sm text-left dark:text-white">
+                    <thead class="sticky top-0 z-20">
+                        <tr class="table-header dark:bg-gray-700 bg-gray-100">
+                            <th data-column="FOURNISSEUR" onclick="sortTable('FOURNISSEUR')" class="resizable border border-gray-300 px-4 py-3 dark:border-gray-600 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900 transition-all">
+                                Fournisseur
+                                <div class="resizer"></div>
+                            </th>
+                            <th data-column="NAME" onclick="sortTable('NAME')" class="resizable border border-gray-300 px-4 py-3 dark:border-gray-600 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900 transition-all">
+                                NAME
+                                <div class="resizer"></div>
+                            </th>
+                            <th data-column="QTY" onclick="sortTable('QTY')" class="resizable border border-gray-300 px-4 py-3 dark:border-gray-600 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900 transition-all">
+                                QTY
+                                <div class="resizer"></div>
+                            </th>
+                            <th data-column="QTY_DISPO" onclick="sortTable('QTY_DISPO')" class="resizable border border-gray-300 px-4 py-3 dark:border-gray-600 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900 transition-all">
+                                QTY_DISPO
+                                <div class="resizer"></div>
+                            </th>
+                            <th data-column="QTY_RESERVED" onclick="sortTable('QTY_RESERVED')" class="resizable border border-gray-300 px-4 py-3 dark:border-gray-600 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900 transition-all">
+                                QTY_RESERVED
+                                <div class="resizer"></div>
+                            </th>
+                            <th data-column="PRIX" onclick="sortTable('PRIX')" class="resizable border border-gray-300 px-4 py-3 dark:border-gray-600 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900 transition-all">
+                                PRIX
+                                <div class="resizer"></div>
+                            </th>
+                            <th data-column="PRIX_DISPO" onclick="sortTable('PRIX_DISPO')" class="resizable border border-gray-300 px-4 py-3 dark:border-gray-600 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900 transition-all">
+                                PRIX_DISPO
+                                <div class="resizer"></div>
+                            </th>
+                            <th data-column="PLACE" onclick="sortTable('PLACE')" class="resizable border border-gray-300 px-4 py-3 dark:border-gray-600 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900 transition-all">
+                                PLACE
+                                <div class="resizer"></div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-table" class="dark:bg-gray-800">
+                        <!-- Dynamic Rows -->
+                    </tbody>
+                </table>
 
     </div>
 </div>
 <div class="w-full flex justify-center">
-    <div id="pagination" class="mt-4 flex justify-center items-center gap-4 text-sm dark:text-white">
-        <button id="firstPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">First</button>
-        <button id="prevPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Previous</button>
-        <span id="pageIndicator"></span>
-        <button id="nextPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Next</button>
-        <button id="lastPage" class="px-3 py-1 border rounded dark:border-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">Last</button>
-    </div>
+        <div id="pagination" class="mt-4 flex justify-center items-center gap-4 text-sm dark:text-white">
+            <button id="firstPage" class="px-4 py-1 border rounded-lg dark:border-gray-500 hover:bg-blue-100 dark:hover:bg-blue-900 transition-all">First</button>
+            <button id="prevPage" class="px-4 py-1 border rounded-lg dark:border-gray-500 hover:bg-blue-100 dark:hover:bg-blue-900 transition-all">Previous</button>
+            <span id="pageIndicator"></span>
+            <button id="nextPage" class="px-4 py-1 border rounded-lg dark:border-gray-500 hover:bg-blue-100 dark:hover:bg-blue-900 transition-all">Next</button>
+            <button id="lastPage" class="px-4 py-1 border rounded-lg dark:border-gray-500 hover:bg-blue-100 dark:hover:bg-blue-900 transition-all">Last</button>
+        </div>
 </div>
 
 
@@ -375,6 +537,7 @@ let sortOrders = {}; // track asc/desc per column
 let selectedMagasin = null;
 let selectedEmplacement = null;
 let useDesactivatedLotEndpoint = false;
+let cachedProducts = []; // Store products locally for suggestions
 
 // Sort table by column (toggles asc/desc). Keeps 'Total' row at top.
 function sortTable(column) {
@@ -477,6 +640,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('stock_excel').addEventListener('click', exportToExcel);
     setupFournisseurSearch();
     setupProductSearch();
+    updateActiveFilters();
     setupThemeToggle();
     
     // Add close button event listener for product details
@@ -583,11 +747,44 @@ async function fetchData(fournisseur = "", magasin = null, emplacement = null, n
         if (!response.ok) throw new Error('Network response was not ok');
 
         allData = await response.json();
+        
+        // Cache products locally for suggestions (only when no product filter is applied)
+        if (!name) {
+            cacheProductsLocally(allData);
+        }
+        
         currentPage = 1; // Reset to first page
         renderTable();
     } catch (error) {
         console.error("Error fetching data:", error);
     }
+}
+
+// Cache unique products with their quantities for dropdown suggestions
+function cacheProductsLocally(data) {
+    const productMap = new Map();
+    
+    data.forEach(row => {
+        if (!row.NAME || row.FOURNISSEUR?.toLowerCase() === 'total') return;
+        
+        const productName = row.NAME;
+        if (!productMap.has(productName)) {
+            productMap.set(productName, {
+                name: productName,
+                qty: 0,
+                qty_dispo: 0,
+                qty_reserved: 0
+            });
+        }
+        
+        const product = productMap.get(productName);
+        product.qty += Number(row.QTY || 0);
+        product.qty_dispo += Number(row.QTY_DISPO || 0);
+        product.qty_reserved += Number(row.QTY_RESERVED || 0);
+    });
+    
+    cachedProducts = Array.from(productMap.values());
+    console.log(`Cached ${cachedProducts.length} unique products locally`);
 }
 
 
@@ -680,23 +877,39 @@ function exportToExcel() {
 function setupFournisseurSearch() {
     const fournisseurInput = document.getElementById("recap_fournisseur");
     const fournisseurDropdown = document.getElementById("fournisseur-dropdown");
+    const clearButton = document.getElementById("clear-fournisseur");
 
     function clearSearch() {
         fournisseurInput.value = "";
         fournisseurDropdown.style.display = "none";
+        clearButton.style.display = "none";
+        updateActiveFilters();
         fetchData("", selectedMagasin, selectedEmplacement);
+    }
+
+    function updateClearButton() {
+        clearButton.style.display = fournisseurInput.value.trim() ? "flex" : "none";
     }
 
     fournisseurInput.addEventListener("input", debounce(function() {
         const searchValue = this.value.trim().toLowerCase();
+        updateClearButton();
+        updateActiveFilters();
         if (searchValue) {
             showFournisseurDropdown(searchValue);
         } else {
-            clearSearch();
+            fournisseurDropdown.style.display = "none";
+            fetchData("", selectedMagasin, selectedEmplacement);
         }
     }, 300));
 
-    fournisseurInput.addEventListener("click", clearSearch);
+    fournisseurInput.addEventListener("click", function() {
+        if (!this.value.trim()) {
+            clearSearch();
+        }
+    });
+
+    clearButton.addEventListener("click", clearSearch);
 }
 
 // Show fournisseur dropdown
@@ -720,6 +933,7 @@ function showFournisseurDropdown(searchValue) {
         option.addEventListener("click", () => {
             document.getElementById("recap_fournisseur").value = fournisseur;
             dropdown.style.display = "none";
+            updateActiveFilters();
             fetchData(fournisseur, selectedMagasin, selectedEmplacement);
         });
         dropdown.appendChild(option);
@@ -746,14 +960,21 @@ function createTableRow(row, isTotal = false) {
         });
     }
 
-    const formatNumber = (num) => num ? parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+    const formatNumber = (num, isInt = false) => {
+        // Show 0 (zero) explicitly. Only return empty for null/undefined/empty-string
+        if (num === null || num === undefined || num === '') return '';
+        const n = Number(num);
+        if (isNaN(n)) return '';
+        if (isInt) return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+        return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
 
     tr.innerHTML = `
         <td class="border px-4 py-2 dark:border-gray-600">${row.FOURNISSEUR || ''}</td>
         <td class="border px-4 py-2 dark:border-gray-600">${row.NAME || ''}</td>
-        <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY)}</td>
-        <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY_DISPO)}</td>
-        <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY_RESERVED)}</td>
+    <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY, true)}</td>
+    <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY_DISPO, true)}</td>
+    <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.QTY_RESERVED, true)}</td>
         <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.PRIX)}</td>
         <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.PRIX_DISPO)}</td>
         <td class="border px-4 py-2 dark:border-gray-600">${row.PLACE || ''}</td>
@@ -765,17 +986,26 @@ function createTableRow(row, isTotal = false) {
 function setupProductSearch() {
     const productInput = document.getElementById("recap_product");
     const productDropdown = document.getElementById("product-dropdown");
+    const clearButton = document.getElementById("clear-product");
 
     function clearProductSearch() {
         productInput.value = "";
         productDropdown.style.display = "none";
+        clearButton.style.display = "none";
         // Clear any previously shown reserved results when product filter is removed
         clearReservedResults();
+        updateActiveFilters();
         fetchFilteredData(); // Re-fetch data without product filter
+    }
+
+    function updateClearButton() {
+        clearButton.style.display = productInput.value.trim() ? "flex" : "none";
     }
 
     productInput.addEventListener("input", debounce(function () {
         const searchValue = this.value.trim().toLowerCase();
+        updateClearButton();
+        updateActiveFilters();
         if (searchValue) {
             showProductDropdown(searchValue);
         } else {
@@ -783,27 +1013,89 @@ function setupProductSearch() {
         }
     }, 300));
 
-    productInput.addEventListener("click", clearProductSearch);
+    productInput.addEventListener("click", function() {
+        if (!this.value.trim()) {
+            clearProductSearch();
+        }
+    });
+
+    clearButton.addEventListener("click", clearProductSearch);
 
     function showProductDropdown(searchValue) {
         productDropdown.innerHTML = "";
         productDropdown.style.display = "block";
 
-        const uniqueProducts = [...new Set(allData.map(row => row.NAME))]
-            .filter(p => p && p.toLowerCase().includes(searchValue));
+        // Use cached products if available, otherwise fall back to allData
+        let productsToShow = [];
+        
+        if (cachedProducts.length > 0) {
+            // Filter cached products based on search value
+            productsToShow = cachedProducts.filter(p => 
+                p.name && p.name.toLowerCase().includes(searchValue)
+            );
+        } else {
+            // Fallback: compute from allData if cache is empty
+            const uniqueProducts = [...new Set(allData.map(row => row.NAME))]
+                .filter(p => p && p.toLowerCase().includes(searchValue));
+            
+            productsToShow = uniqueProducts.map(productName => {
+                let totalQty = 0, totalDispo = 0, totalReserved = 0;
+                for (const r of allData) {
+                    if (!r.NAME) continue;
+                    if (r.NAME.toString().toLowerCase() === productName.toString().toLowerCase()) {
+                        totalQty += Number(r.QTY || 0);
+                        totalDispo += Number(r.QTY_DISPO || 0);
+                        totalReserved += Number(r.QTY_RESERVED || 0);
+                    }
+                }
+                return {
+                    name: productName,
+                    qty: totalQty,
+                    qty_dispo: totalDispo,
+                    qty_reserved: totalReserved
+                };
+            });
+        }
 
-        if (uniqueProducts.length === 0) {
+        if (productsToShow.length === 0) {
             productDropdown.style.display = "none";
             return;
         }
 
-        uniqueProducts.forEach(product => {
+        productsToShow.forEach(product => {
             const option = document.createElement("div");
-            option.classList.add("dropdown-item");
-            option.textContent = product;
+            option.classList.add("dropdown-item", "flex", "justify-between", "items-center");
+
+            const left = document.createElement('div');
+            left.textContent = product.name;
+
+            const right = document.createElement('div');
+            right.className = 'flex items-center';
+            
+            const b1 = document.createElement('span'); 
+            b1.className = 'qty-badge'; 
+            b1.textContent = 'QTY: ' + (isNaN(product.qty) ? 0 : parseInt(product.qty));
+            
+            const b2 = document.createElement('span'); 
+            b2.className = 'qty-badge qty-badge--dispo'; 
+            b2.textContent = 'DISP: ' + (isNaN(product.qty_dispo) ? 0 : parseInt(product.qty_dispo));
+            
+            const b3 = document.createElement('span'); 
+            b3.className = 'qty-badge qty-badge--reserved'; 
+            b3.textContent = 'RES: ' + (isNaN(product.qty_reserved) ? 0 : parseInt(product.qty_reserved));
+            
+            right.appendChild(b1); 
+            right.appendChild(b2); 
+            right.appendChild(b3);
+
+            option.appendChild(left);
+            option.appendChild(right);
+
             option.addEventListener("click", () => {
-                productInput.value = product;
+                productInput.value = product.name;
                 productDropdown.style.display = "none";
+                updateClearButton();
+                updateActiveFilters();
                 fetchFilteredData(); // ✅ Fetch with backend param
             });
             productDropdown.appendChild(option);
@@ -816,22 +1108,76 @@ function showProductDropdown(searchValue) {
     dropdown.innerHTML = "";
     dropdown.style.display = "block";
 
-    const uniqueProducts = [...new Set(allData.map(row => row.NAME))]
-        .filter(p => p && p.toLowerCase().includes(searchValue));
+    // Use cached products if available, otherwise fall back to allData
+    let productsToShow = [];
+    
+    if (cachedProducts.length > 0) {
+        // Filter cached products based on search value
+        productsToShow = cachedProducts.filter(p => 
+            p.name && p.name.toLowerCase().includes(searchValue)
+        );
+    } else {
+        // Fallback: compute from allData if cache is empty
+        const uniqueProducts = [...new Set(allData.map(row => row.NAME))]
+            .filter(p => p && p.toLowerCase().includes(searchValue));
+        
+        productsToShow = uniqueProducts.map(productName => {
+            let totalQty = 0, totalDispo = 0, totalReserved = 0;
+            for (const r of allData) {
+                if (!r.NAME) continue;
+                if (r.NAME.toString().toLowerCase() === productName.toString().toLowerCase()) {
+                    totalQty += Number(r.QTY || 0);
+                    totalDispo += Number(r.QTY_DISPO || 0);
+                    totalReserved += Number(r.QTY_RESERVED || 0);
+                }
+            }
+            return {
+                name: productName,
+                qty: totalQty,
+                qty_dispo: totalDispo,
+                qty_reserved: totalReserved
+            };
+        });
+    }
 
-    if (uniqueProducts.length === 0) {
+    if (productsToShow.length === 0) {
         dropdown.style.display = "none";
         return;
     }
 
-    uniqueProducts.forEach(product => {
+    productsToShow.forEach(product => {
         const option = document.createElement("div");
-        option.classList.add("dropdown-item");
-        option.textContent = product;
+        option.classList.add("dropdown-item", "flex", "justify-between", "items-center");
+
+        const left = document.createElement('div');
+        left.textContent = product.name;
+
+        const right = document.createElement('div');
+        right.className = 'flex items-center';
+        
+        const b1 = document.createElement('span'); 
+        b1.className = 'qty-badge'; 
+        b1.textContent = 'QTY: ' + (isNaN(product.qty) ? 0 : parseInt(product.qty));
+        
+        const b2 = document.createElement('span'); 
+        b2.className = 'qty-badge qty-badge--dispo'; 
+        b2.textContent = 'DISP: ' + (isNaN(product.qty_dispo) ? 0 : parseInt(product.qty_dispo));
+        
+        const b3 = document.createElement('span'); 
+        b3.className = 'qty-badge qty-badge--reserved'; 
+        b3.textContent = 'RES: ' + (isNaN(product.qty_reserved) ? 0 : parseInt(product.qty_reserved));
+        
+        right.appendChild(b1); 
+        right.appendChild(b2); 
+        right.appendChild(b3);
+
+        option.appendChild(left);
+        option.appendChild(right);
+
         option.addEventListener("click", () => {
-            document.getElementById("recap_product").value = product;
+            document.getElementById("recap_product").value = product.name;
             dropdown.style.display = "none";
-            filterByProduct(product);
+            filterByProduct(product.name);
         });
         dropdown.appendChild(option);
     });
@@ -842,6 +1188,64 @@ function fetchFilteredData() {
     const fournisseur = document.getElementById("recap_fournisseur").value.trim();
     const name = document.getElementById("recap_product").value.trim();
     fetchData(fournisseur, selectedMagasin, selectedEmplacement, name || null);
+}
+
+function updateActiveFilters() {
+    const activeFiltersDiv = document.getElementById("active-filters");
+    const filterTagsDiv = document.getElementById("filter-tags");
+    const fournisseurValue = document.getElementById("recap_fournisseur").value.trim();
+    const productValue = document.getElementById("recap_product").value.trim();
+
+    filterTagsDiv.innerHTML = "";
+
+    if (fournisseurValue || productValue) {
+        activeFiltersDiv.style.display = "flex";
+
+        if (fournisseurValue) {
+            const tag = document.createElement("span");
+            tag.className = "inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+            tag.innerHTML = `
+                Fournisseur: ${fournisseurValue}
+                <button class="ml-2 inline-flex items-center justify-center w-4 h-4 rounded-full bg-blue-200 hover:bg-blue-300 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-600 dark:text-blue-300" onclick="clearFournisseurFilter()">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            `;
+            filterTagsDiv.appendChild(tag);
+        }
+
+        if (productValue) {
+            const tag = document.createElement("span");
+            tag.className = "inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+            tag.innerHTML = `
+                Product: ${productValue}
+                <button class="ml-2 inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-200 hover:bg-green-300 dark:bg-green-800 dark:hover:bg-green-700 text-green-600 dark:text-green-300" onclick="clearProductFilter()">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            `;
+            filterTagsDiv.appendChild(tag);
+        }
+    } else {
+        activeFiltersDiv.style.display = "none";
+    }
+}
+
+function clearFournisseurFilter() {
+    document.getElementById("recap_fournisseur").value = "";
+    document.getElementById("clear-fournisseur").style.display = "none";
+    updateActiveFilters();
+    fetchData("", selectedMagasin, selectedEmplacement);
+}
+
+function clearProductFilter() {
+    document.getElementById("recap_product").value = "";
+    document.getElementById("clear-product").style.display = "none";
+    clearReservedResults();
+    updateActiveFilters();
+    fetchFilteredData();
 }
 
 function filterByProduct(product) {
@@ -941,7 +1345,7 @@ function displayProductDetails(productName, data) {
             tr.classList.add('table-row', 'dark:bg-gray-700', 'hover:bg-gray-100', 'dark:hover:bg-gray-600');
             
             // Check if lot is inactive and apply orange styling
-            if (row.LOT_ACTIVE === "N") {
+            if (row.LOT_ACTIVE === "N") { 
                 tr.classList.add('lot-inactive');
             }
             
@@ -959,7 +1363,7 @@ function displayProductDetails(productName, data) {
                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.P_VENTE)}</td>
                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.REM_VENTE)}</td>
                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.BON_VENTE)}</td>
-                <td class="border px-4 py-2 dark:border-gray-600">${row.REMISE_AUTO || ''}</td>
+                <td class="border px-4 py-2 dark:border-gray-600">${row.REMISE_AUTO ?? 0}</td>
                 <td class="border px-4 py-2 dark:border-gray-600">${row.BONUS_AUTO || ''}</td>
                 <td class="border px-4 py-2 dark:border-gray-600">${formatNumber(row.PPA)}</td>
                 <td class="border px-4 py-2 dark:border-gray-600">${row.LOCATION || ''}</td>

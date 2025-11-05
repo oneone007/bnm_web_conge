@@ -712,7 +712,7 @@ html.dark .excel-btn-primary:hover {
 
 /* Enhanced Table Container */
 .table-container {
-    max-height: 500px;
+    max-height: 800px;
     overflow-y: auto;
     overflow-x: auto;
     border: none;
@@ -1318,7 +1318,63 @@ padding: 10px;
 z-index: 50;
 }
 
+/* Enhanced Search Section */
+.search-section {
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
 
+.search-section:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.dark .search-section {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+    border-color: #4b5563;
+}
+
+/* Search Input Enhancements */
+.input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    transform: translateY(-1px);
+}
+
+/* Clear Button Styling */
+#clear-product, #clear-supplier {
+    transition: all 0.2s ease;
+    opacity: 0.6;
+}
+
+#clear-product:hover, #clear-supplier:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* Search Button Enhancement */
+#search-btn {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+#search-btn:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+}
+
+#search-btn:active {
+    transform: translateY(0);
+}
 
 
 
