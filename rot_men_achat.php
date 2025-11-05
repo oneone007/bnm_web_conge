@@ -28,7 +28,7 @@ require_once 'check_permission.php';
     <title>Product Purchase Recap</title>
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="recap_achat_original.css">
+    <link rel="stylesheet" href="recap_achat.css">
     <script src="theme.js"></script>
     <script src="api_config.js"></script>
     <style>
@@ -107,6 +107,9 @@ require_once 'check_permission.php';
             color: #000;
             background-color: white;
         }
+        .autocomplete-suggestions div:hover {
+            background-color: #f3f4f6;
+        }
         .dark .autocomplete-suggestions {
             background-color: #374151;
             border-color: #4b5563;
@@ -116,9 +119,15 @@ require_once 'check_permission.php';
             color: #f9fafb;
             padding: 8px 12px;
         }
+        .dark .autocomplete-suggestions div:hover {
+            background-color: #4b5563;
+        }
         .dark .autocomplete-suggestions div {
             background-color: white;
             color: #000;
+        }
+        .dark .autocomplete-suggestions div:hover {
+            background-color: #f3f4f6;
         }
         /* New styles for product supplier dropdown */
         #productSupplierContainer {
@@ -157,6 +166,10 @@ require_once 'check_permission.php';
             cursor: pointer;
             transition: all 0.2s ease;
             min-width: 140px;
+        }
+        .pdf-download-btn:hover {
+            background-color: #c0392b;
+            transform: translateY(-1px);
         }
         .pdf-download-btn:active {
             transform: translateY(0);
@@ -206,46 +219,33 @@ require_once 'check_permission.php';
         /* Compact table cell styling */
         .compact-cell {
             padding: 4px 8px;
-            font-size: 1rem;
+            font-size: 0.8rem;
             line-height: 1.2;
-            font-weight: 600;
         }
         
         /* Month data formatting */
         .month-data {
             display: flex;
             flex-direction: column;
-            gap: 2px;
-            min-width: 100px;
-            white-space: nowrap;
+            align-items: center;
+            min-height: 20px;
         }
         
         .month-data-item {
-            font-size: 1rem;
-            padding: 1px 4px;
-            border-radius: 2px;
-            text-align: center;
-            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            font-size: 0.75rem;
         }
         
         .qty-item {
-            background-color: rgba(59, 130, 246, 0.1);
-            color: #000000;
-            font-weight: 600;
-            font-size: 1rem;
+            color: #1e40af;
+            font-weight: 500;
         }
         
         .total-item {
-            background-color: rgba(37, 99, 235, 0.1);
-            color: #000000;
-            font-weight: 600;
-            font-size: 1rem;
-        }
-        
-        .product-name {
-            color: #000000;
-            font-weight: 600;
-            font-size: 1rem;
+            color: #059669;
+            font-weight: 500;
         }
         
         .separator {
@@ -254,19 +254,11 @@ require_once 'check_permission.php';
         }
         
         .dark .qty-item {
-            background-color: rgba(59, 130, 246, 0.2);
-            color: white;
-            font-size: 1rem;
+            color: #93c5fd;
         }
         
         .dark .total-item {
-            background-color: rgba(96, 165, 250, 0.2);
-            color: white;
-            font-size: 1rem;
-        }
-        
-        .dark .product-name {
-            color: white;
+            color: #34d399;
         }
         
         /* Sticky headers for better navigation */
@@ -348,10 +340,10 @@ require_once 'check_permission.php';
                 </div>
             </div>
             
-            <button id="applyFilters" class="bg-blue-600 text-white font-medium py-2 px-4 rounded transition">
+            <button id="applyFilters" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition">
                 Apply Filters
             </button>
-            <button id="resetFilters" class="ml-2 bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded transition hidden">
+            <button id="resetFilters" class="ml-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded transition hidden">
                 Reset
             </button>
         </div>
@@ -528,7 +520,7 @@ require_once 'check_permission.php';
                     const monthData = yearData[monthNum] || { total: { QTY: 0, CHIFFRE: 0 } };
                     
                     tableHTML += `
-                        <tr>
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
                             <td class="border px-2 py-1">${monthNames[month - 1]}</td>
                             <td class="border px-2 py-1 text-right">${formatNumber(monthData.total.QTY)}</td>
                             <td class="border px-2 py-1 text-right">${formatNumber(monthData.total.CHIFFRE)}</td>
@@ -711,7 +703,7 @@ async function loadData() {
                 separateTab.onclick = () => switchView('separate', year);
                 
                 const combinedTab = document.createElement('button');
-                combinedTab.className = 'px-4 py-2 border-b-2 border-transparent text-gray-500';
+                combinedTab.className = 'px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700';
                 combinedTab.textContent = 'Combined View';
                 combinedTab.onclick = () => switchView('combined', year);
                 
@@ -778,11 +770,11 @@ function switchView(view, year) {
         separateView.classList.remove('hidden');
         combinedView.classList.add('hidden');
         separateTab.className = 'px-4 py-2 border-b-2 border-blue-500 text-blue-600 font-medium';
-        combinedTab.className = 'px-4 py-2 border-b-2 border-transparent text-gray-500';
+        combinedTab.className = 'px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700';
     } else {
         separateView.classList.add('hidden');
         combinedView.classList.remove('hidden');
-        separateTab.className = 'px-4 py-2 border-b-2 border-transparent text-gray-500';
+        separateTab.className = 'px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700';
         combinedTab.className = 'px-4 py-2 border-b-2 border-blue-500 text-blue-600 font-medium';
     }
 }
@@ -824,11 +816,11 @@ function createCombinedMonthlyTable(products, year) {
     const tbody = document.createElement('tbody');
     products.forEach(product => {
         const row = document.createElement('tr');
-        row.className = 'product-row';
+        row.className = 'hover:bg-gray-50 dark:hover:bg-gray-700 product-row';
 
         // Product name cell
         const nameCell = document.createElement('td');
-        nameCell.className = 'sticky-left bg-white dark:bg-gray-800 border px-4 py-2 z-10 product-name';
+        nameCell.className = 'sticky-left bg-white dark:bg-gray-800 border px-4 py-2 z-10';
         nameCell.textContent = product.name;
         row.appendChild(nameCell);
 
@@ -842,8 +834,11 @@ function createCombinedMonthlyTable(products, year) {
             
             dataCell.innerHTML = `
                 <div class="month-data">
-                    <div class="month-data-item qty-item">${qty}</div>
-                    <div class="month-data-item total-item">${amount}</div>
+                    <div class="month-data-item">
+                        <span class="qty-item">${qty}</span>
+                        <span class="separator"> | </span>
+                        <span class="total-item">${amount}</span>
+                    </div>
                 </div>
             `;
             row.appendChild(dataCell);
@@ -872,8 +867,11 @@ function createCombinedMonthlyTable(products, year) {
         
         totalCell.innerHTML = `
             <div class="month-data">
-                <div class="month-data-item qty-item font-bold">${formatNumber(monthQtyTotal)}</div>
-                <div class="month-data-item total-item font-bold">${formatNumber(monthAmtTotal)}</div>
+                <div class="month-data-item">
+                    <span class="qty-item">${formatNumber(monthQtyTotal)}</span>
+                    <span class="separator"> | </span>
+                    <span class="total-item">${formatNumber(monthAmtTotal)}</span>
+                </div>
             </div>
         `;
         totalsRow.appendChild(totalCell);
@@ -938,19 +936,19 @@ elements.suggestionBoxes.fournisseur.addEventListener('click', function(e) {
                 
                 if (paginatedItems.length > 0) {
                     suggestionBox.innerHTML = paginatedItems.map(item => 
-                        `<div class="p-2 cursor-pointer">${item}</div>`
+                        `<div class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">${item}</div>`
                     ).join('');
                     
                     if (filteredItems.length > ITEMS_PER_PAGE) {
                         const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
                         suggestionBox.innerHTML += `
                             <div class="flex justify-between p-2 border-t border-gray-200 dark:border-gray-600">
-                                <button class="pagination-prev px-2 py-1 rounded ${currentPage === 0 ? 'opacity-50 cursor-not-allowed' : ''}" 
+                                <button class="pagination-prev px-2 py-1 rounded ${currentPage === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}" 
                                         ${currentPage === 0 ? 'disabled' : ''}>
                                     Previous
                                 </button>
                                 <span class="px-2 py-1">Page ${currentPage + 1} of ${totalPages}</span>
-                                <button class="pagination-next px-2 py-1 rounded ${startIdx + ITEMS_PER_PAGE >= filteredItems.length ? 'opacity-50 cursor-not-allowed' : ''}" 
+                                <button class="pagination-next px-2 py-1 rounded ${startIdx + ITEMS_PER_PAGE >= filteredItems.length ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}" 
                                         ${startIdx + ITEMS_PER_PAGE >= filteredItems.length ? 'disabled' : ''}>
                                     Next
                                 </button>

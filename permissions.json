@@ -3,13 +3,11 @@
     "Developer": "all",
     "DRH": "all",
     "Vente": [
-        "Arrivage",
-        "analyse_client"
+        "Arrivage"
     ],
     "Sup Achat": [
         "Annual_Recap_A",
         "Annual_Recap_V",
-        "Arrivage",
         "DETTE_F",
         "ETAT_F",
         "ETAT_F_CUMULE",
@@ -20,12 +18,12 @@
         "Rotation",
         "inventory\/inv",
         "rot_men_achat",
+        "Arrivage",
         "rot_men_vente"
     ],
     "Sup Vente": [
         "Annual_Recap_A",
         "Annual_Recap_V",
-        "Arrivage",
         "CONFIRMED_ORDERS",
         "Etatstock",
         "Product",
@@ -33,8 +31,8 @@
         "Recap_Achat",
         "Recap_Vente",
         "Rotation",
-        "rot_men_global",
         "rot_men_vente",
+        "Arrivage",
         "simuler"
     ],
     "Comptable": [
@@ -50,8 +48,8 @@
         "recap_achat_facturation"
     ],
     "gestion stock": [
-        "expire",
-        "inventory\/inv"
+        "inventory\/inv",
+        "expire"
     ],
     "stock": [
         "inventory\/inv"

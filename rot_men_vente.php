@@ -26,7 +26,7 @@ require_once 'check_permission.php';
     <title>Product Sales Recap</title>
     <link rel="icon" href="assets/tab.png" sizes="128x128" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="recap_achat_original.css">
+    <link rel="stylesheet" href="recap_achat.css">
     <script src="theme.js"></script>
     <script src="api_config.js"></script>
     <style>
@@ -84,7 +84,7 @@ require_once 'check_permission.php';
             grid-template-columns: repeat(4, 1fr);
             gap: 1rem;
             margin-bottom: 2rem;
-            height: 600px;
+            height: 400px;
             overflow: visible;
         }
         #yearSummaryContainer .table-container {
@@ -318,7 +318,7 @@ require_once 'check_permission.php';
         }
         
         .month-data-item {
-            font-size: 0.875rem;
+            font-size: 0.8rem;
             padding: 1px 4px;
             border-radius: 2px;
             text-align: right;
@@ -326,48 +326,32 @@ require_once 'check_permission.php';
         
         .qty-item {
             background-color: rgba(59, 130, 246, 0.1);
-            color: #000000;
-            font-weight: bold;
+            color: #1e40af;
         }
         
         .total-item {
-            background-color: rgba(37, 99, 235, 0.1);
-            color: #000000;
-            font-weight: bold;
+            background-color: rgba(34, 197, 94, 0.1);
+            color: #166534;
         }
         
         .marge-item {
             background-color: rgba(245, 158, 11, 0.1);
-            color: #000000;
-            font-weight: bold;
+            color: #92400e;
         }
         
         .dark .qty-item {
             background-color: rgba(59, 130, 246, 0.2);
-            color: white;
-            font-weight: bold;
+            color: #93c5fd;
         }
         
         .dark .total-item {
-            background-color: rgba(96, 165, 250, 0.2);
-            color: white;
-            font-weight: bold;
+            background-color: rgba(34, 197, 94, 0.2);
+            color: #86efac;
         }
         
         .dark .marge-item {
             background-color: rgba(245, 158, 11, 0.2);
-            color: white;
-            font-weight: bold;
-        }
-        
-        .product-name {
-            color: #000000;
-            font-weight: 600;
-            font-size: 0.875rem;
-        }
-        
-        .dark .product-name {
-            color: white;
+            color: #fbbf24;
         }
         
         /* Sticky headers for better navigation */
@@ -1443,7 +1427,7 @@ function createProductSupplierTable(products, year) {
         nameCell.className = 'sticky-left bg-white dark:bg-gray-800 border px-4 py-2 z-10';
         nameCell.style.minWidth = '200px';
         nameCell.innerHTML = `
-            <div class="product-name">
+            <div class="text-gray-900 dark:text-gray-100 font-medium">
                 ${product.name}
             </div>
         `;

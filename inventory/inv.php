@@ -192,7 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-radius: 6px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             z-index: 1000;
-            max-height: 250px;
+            max-height: 200px;
             overflow-y: auto;
             display: none;
         }
@@ -1232,7 +1232,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 >
                     <option value="preparation">Preparation</option>
                     <option value="tempo">Tempo</option>
-                    <option value="comp">Compensation</option>
                 </select>
             </div>
             
@@ -1940,7 +1939,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Load product list from API
         async function loadProductList() {
             try {
-                const response = await fetch("http://192.168.1.94:5003/listproduct_inv");
+                const response = await fetch("http://192.168.1.200:5003/listproduct_inv");
                 if (!response.ok) throw new Error("Failed to load products");
                 
                 const products = await response.json();
@@ -2143,8 +2142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "PERMUTATION",
                 "MOUVEMENT STOCK",
                 "CORRECTION INV ",
-                "INV TEMPORAIRE ",
-                "INV COMPENSATION "
+                "INV TEMPORAIRE "
             ];
             
             // Show suggestions when input is focused or clicked
@@ -2498,7 +2496,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
                 
-                const response = await fetch(`http://192.168.1.94:5003/inventory-products-updated?product_id=${encodeURIComponent(product.id)}&category=${encodeURIComponent(categoryFilter)}&show_all=${showAll}`);
+                const response = await fetch(`http://192.168.1.200:5003/inventory-products-updated?product_id=${encodeURIComponent(product.id)}&category=${encodeURIComponent(categoryFilter)}&show_all=${showAll}`);
                 
                 // Hide loading indicator
                 hideLoadingIndicator();
@@ -3725,9 +3723,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Check if tempo category is selected to set casse field
                 const categoryFilter = document.getElementById('category-filter').value;
-                const isCasse = categoryFilter === 'tempo'
-                    ? 'casse' : categoryFilter === 'comp'
-                    ? 'compensation' : null;
+                const isCasse = categoryFilter === 'tempo' ? 'yes' : null;
                 
                 // Prepare data object
                 const dataToSend = {
@@ -3738,15 +3734,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 };
                 
                 // Add casse field if tempo is selected
-                if (isCasse === 'casse' || isCasse === 'compensation') {
-                    dataToSend.casse = isCasse; 
+                if (isCasse) {
+                    dataToSend.casse = isCasse;
                 }
                 
                 // Debug: log the data being sent
                 console.log('Sending data:', dataToSend);
                 
                 // Send data to Python API
-                const response = await fetch('http://192.168.1.94:5003/inventory/save', {
+                const response = await fetch('http://192.168.1.200:5003/inventory/save', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

@@ -527,11 +527,10 @@ tables.forEach((table) => makeTableColumnsResizable(table));
                 }
             });
 
-            // Set dates to today on page load
+            // Ensure dates clear on refresh
             window.onload = () => {
-                const today = new Date().toISOString().split("T")[0];
-                document.getElementById("start-date").value = today;
-                document.getElementById("end-date").value = today;
+                document.getElementById("start-date").value = "";
+                document.getElementById("end-date").value = "";
                 document.getElementById("recap_fournisseur").value = "";
                 document.getElementById("recap_product").value = "";
             };
@@ -543,9 +542,8 @@ tables.forEach((table) => makeTableColumnsResizable(table));
 
         
 
-        // Set default value for both start and end date to today
+        // Set default value for end date to today
         const today = new Date().toISOString().split("T")[0];
-        startDate.value = today;
         endDate.value = today;
 
         function triggerChangeEvent(inputElement) {

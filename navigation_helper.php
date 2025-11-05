@@ -25,39 +25,6 @@ function loadNavigationData() {
 }
 
 /**
- * Load permissions from permissions.json and return role_allowed_pages array
- * Returns array with role => allowed pages or 'all'
- */
-function load_permissions() {
-    static $cached = null;
-    if ($cached !== null) {
-        return $cached;
-    }
-
-    $role_allowed_pages = [];
-    $permissionsJsonPath = __DIR__ . '/permissions.json';
-    if (file_exists($permissionsJsonPath)) {
-        $jsonContent = @file_get_contents($permissionsJsonPath);
-        if ($jsonContent !== false) {
-            $decoded = json_decode($jsonContent, true);
-            if (is_array($decoded)) {
-                $role_allowed_pages = $decoded;
-            }
-        }
-    }
-
-    if (empty($role_allowed_pages)) {
-        $role_allowed_pages = [
-            'Admin' => 'all',
-            'Developer' => 'all',
-        ];
-    }
-
-    $cached = $role_allowed_pages;
-    return $cached;
-}
-
-/**
  * Check if user has required role for navigation item
  */
 function hasRequiredRole($item, $userRole) {

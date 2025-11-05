@@ -1,6 +1,5 @@
 
 
-
 import oracledb
 from flask import Flask, jsonify, request, send_file, make_response
 from flask_cors import CORS
@@ -11,21 +10,13 @@ import io
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font
 from openpyxl.worksheet.table import Table, TableStyleInfo
-from openpyxl.cell.cell import MergedCell
 from datetime import datetime
 import os
 import json
+
 import calendar
 import mysql.connector
 
-from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib import colors
-
-
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.units import mm
 
 
 
@@ -46,950 +37,1601 @@ DB_POOL = oracledb.create_pool(
     increment=1
 )
 
-# MySQL connection for local database
-def get_localdb_connection():
-    """
-    Get MySQL database connection for local configuration tables.
-    """
+
+
+
+
+def fetch_fournisseur_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label=None):
     try:
-        connection = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="",  # Update with your MySQL password if needed
-            database="bnm"
-        )
-        return connection
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT * FROM (
+                    SELECT 
+                        CAST(xf.name AS VARCHAR2(300)) AS FOURNISSEUR,   
+                        SUM(xf.TOTALLINE) AS total, 
+                        SUM(xf.qtyentered) AS QTY,
+                        ROUND(
+                            CASE 
+                                WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                                WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1) * 100
+                                ELSE ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION)) * 100
+                            END, 4) AS marge,
+                        0 AS sort_order
+                    FROM xx_ca_fournisseur xf
+                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    JOIN C_ORDER C ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                        AND xf.AD_Org_ID = :ad_org_id
+                        AND xf.DOCSTATUS != 'RE'
+                        AND (:fournisseur IS NULL OR xf.name LIKE :fournisseur || '%')
+                        AND (:product IS NULL OR xf.product LIKE :product || '%')
+                        AND (:client IS NULL OR cb.name LIKE :client || '%')
+                        AND (:operateur IS NULL OR au.name LIKE :operateur || '%')
+                        AND (:bccb IS NULL OR C.DOCUMENTNO LIKE :bccb || '%')
+                        AND (:zone IS NULL OR sr.name LIKE :zone || '%')
+                        AND (
+                            :group_label IS NULL OR
+                            (CASE 
+                                WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                ELSE 'autre'
+                            END = :group_label)
+                        )
+                    GROUP BY xf.name
+                    UNION ALL
+                    SELECT 
+                        CAST('Total' AS VARCHAR2(300)) AS name, 
+                        SUM(xf.TOTALLINE) AS total, 
+                        SUM(xf.qtyentered) AS QTY,
+                        ROUND(
+                            CASE 
+                                WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                                WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1) * 100
+                                ELSE ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION)) * 100
+                            END, 4) AS marge,
+                        1 AS sort_order
+                    FROM xx_ca_fournisseur xf
+                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    JOIN C_ORDER C ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                        AND xf.AD_Org_ID = :ad_org_id
+                        AND xf.DOCSTATUS != 'RE'
+                        AND (:fournisseur IS NULL OR xf.name LIKE :fournisseur || '%')
+                        AND (:product IS NULL OR xf.product LIKE :product || '%')
+                        AND (:client IS NULL OR cb.name LIKE :client || '%')
+                        AND (:operateur IS NULL OR au.name LIKE :operateur || '%')
+                        AND (:bccb IS NULL OR C.DOCUMENTNO LIKE :bccb || '%')
+                        AND (:zone IS NULL OR sr.name LIKE :zone || '%')
+                        AND (
+                            :group_label IS NULL OR
+                            (CASE 
+                                WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                ELSE 'autre'
+                            END = :group_label)
+                        )
+                )
+                ORDER BY sort_order, total DESC
+            """
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'fournisseur': fournisseur or None,
+                'product': product or None,
+                'client': client or None,
+                'operateur': operateur or None,
+                'bccb': bccb or None,
+                'zone': zone or None,
+                'ad_org_id': ad_org_id,
+                'group_label': group_label
+            }
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            data = [dict(zip(columns, row)) for row in rows]
+            return data
     except Exception as e:
-        logger.error(f"Error connecting to local MySQL database: {e}")
-        return None
+        logger.error(f"Error fetching fournisseur data: {e}")
+        return {"error": "An error occurred while fetching fournisseur data."}
+
+@app.route('/fetchFournisseurData', methods=['GET'])
+def fetch_fournisseur():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    if not ad_org_id:
+        return jsonify({"error": "Missing ad_org_id parameter"}), 400  # Ensure ad_org_id is provided
+
+    try:
+        ad_org_id = int(ad_org_id)  # Convert to integer
+    except ValueError:
+        return jsonify({"error": "Invalid ad_org_id format"}), 400
+
+    data = fetch_fournisseur_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label)
+    return jsonify(data)
 
 
 
 
-@app.route('/factures', methods=['GET'])
-def factures():
-    """Return invoice (facture) details by DOCUMENTNO.
 
-    Query params:
-      - documentno (required): the invoice/document number to fetch
+def fetch_product_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label=None):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT * FROM (
+                    -- Main Product Breakdown
+                    SELECT 
+                        CAST(xf.product AS VARCHAR2(400)) AS "PRODUIT",
+                        SUM(xf.TOTALLINE) AS "TOTAL",
+                        SUM(xf.qtyentered) AS "QTY",
+                        CASE 
+                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                            ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
+                        END AS "MARGE",
+                        0 AS "SORT_ORDER"
+                    FROM xx_ca_fournisseur xf
+                    LEFT JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                    LEFT JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                    LEFT JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                    LEFT JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    LEFT JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    LEFT JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                          AND xf.AD_Org_ID = :ad_org_id
+                          AND xf.DOCSTATUS != 'RE'
+                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
+                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
+                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
+                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
+                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
+                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
+                          AND (
+                              :group_label IS NULL OR
+                              (CASE 
+                                  WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                  WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                  ELSE 'autre'
+                              END = :group_label)
+                          )
+                    GROUP BY xf.product
 
-    Returns JSON list (usually single object) with the selected invoice fields.
-    """
-    documentno = request.args.get('documentno')
-    if not documentno:
-        return jsonify({"error": "documentno query parameter is required"}), 400
+                    UNION ALL
+
+                    -- Total Row
+                    SELECT 
+                        'Total' AS "PRODUIT",
+                        SUM(xf.TOTALLINE) AS "TOTAL",
+                        SUM(xf.qtyentered) AS "QTY",
+                        CASE 
+                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                            ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
+                        END AS "MARGE",
+                        1 AS "SORT_ORDER"
+                    FROM xx_ca_fournisseur xf
+                    LEFT JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                    LEFT JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                    LEFT JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                    LEFT JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    LEFT JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    LEFT JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                          AND xf.AD_Org_ID = :ad_org_id
+                          AND xf.DOCSTATUS != 'RE'
+                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
+                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
+                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
+                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
+                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
+                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
+                          AND (
+                              :group_label IS NULL OR
+                              (CASE 
+                                  WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                  WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                  ELSE 'autre'
+                              END = :group_label)
+                          )
+                ) ORDER BY "SORT_ORDER", "TOTAL" DESC
+            """
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'fournisseur': fournisseur or None,
+                'product': product or None,
+                'client': client or None,
+                'operateur': operateur or None,
+                'bccb': bccb or None,
+                'zone': zone or None,
+                'ad_org_id': ad_org_id,
+                'group_label': group_label
+            }
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            return [dict(zip(columns, row)) for row in rows]
+
+    except Exception as e:
+        logger.error(f"Error fetching product data: {e}")
+        return {"error": "An error occurred while fetching product data."}
+
+@app.route('/fetchProductData', methods=['GET'])
+def fetch_product():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get("product", "").strip()
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date or not ad_org_id:
+        return jsonify({"error": "Missing start_date, end_date, or ad_org_id parameters"}), 400
+
+    data = fetch_product_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label)
+    return jsonify(data)
+
+
+
+
+
+
+# Fetch total recap data
+def fetch_rcap_data(start_date, end_date, ad_org_id, group_label=None):
 
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
             query = """
-SELECT
-    orgtrx.NAME                                 AS Organisation_Trx,
-    c.TOTALLINES,
-    c.GRANDTOTAL,
-    doctype.NAME                                AS Code_journal,
-    c.DOCSTATUS,
-    c.C_BPartner_ID,
-    CASE c.DOCSTATUS
-        WHEN 'CL' THEN 'Clôturé'
-        WHEN 'CO' THEN 'Achevé'
-        WHEN 'DR' THEN 'Brouillon'
-        WHEN 'IN' THEN 'Inactif'
-        WHEN 'RE' THEN 'Extourné'
-        WHEN 'VO' THEN 'Annulé'
-        ELSE c.DOCSTATUS
-    END                                          AS Statut_document,
-    c.DOCACTION,
-    c.ISPAID,
-    c.C_INVOICE_ID,
-    client.NAME                                  AS Société,
-    org.NAME                                     AS Organisation,
-    ord.DOCUMENTNO                               AS Ordre_de_vente,
-    c.DATEORDERED,
-    c.DOCUMENTNO,
-    c.POREFERENCE,
-    c.DESCRIPTION,
-    doctypetarget.NAME                           AS Type_document,
-    c.DATEINVOICED,
-    c.DATEACCT,
-    partner.NAME                                 AS Client,
-    usr.NAME                                     AS Contact,
-    pricelist.NAME                               AS Tarif,
-    curr.ISO_CODE                                AS Devise,
-    bploc.NAME                                   AS Adresse_du_tiers,
-    salesrep.NAME                                AS Vendeur,
-    c.PAYMENTRULE,
-    CASE c.PAYMENTRULE
-        WHEN 'P' THEN 'A credit'
-        WHEN 'B' THEN 'Espece'
-        WHEN 'S' THEN 'Cheque'
-        WHEN 'D' THEN 'Debit immediat'
-        WHEN 'T' THEN 'Virement'
-        WHEN 'K' THEN 'Carte de credit'
-        WHEN 'V' THEN 'Versement'
-        ELSE c.PAYMENTRULE
-    END                                          AS PaymentRuleLabel,
-    c.DOCACTION,
-    CASE UPPER(NVL(c.DOCACTION,'-'))
-        WHEN 'VO' THEN 'Annuler'
-        WHEN 'RC' THEN 'Corriger'
-        WHEN 'PR' THEN 'Réserver'
-        WHEN 'CO' THEN 'Traiter'
-        WHEN 'CL' THEN 'Clôturer'
-        WHEN '--'  THEN 'Pas d_action'
-        ELSE c.DOCACTION
-    END                                          AS Action_Status,
-    zsub.NAME                                    AS Sous_methode_de_paiement,
-    c.ISSELFSERVICE,
-    payterm.NAME                                 AS Delai_de_paiement
-FROM C_Invoice c
-LEFT JOIN AD_Client client               ON client.AD_Client_ID = c.AD_CLIENT_ID
-LEFT JOIN AD_Org org                     ON org.AD_Org_ID = c.AD_ORG_ID
-LEFT JOIN AD_Org orgtrx                  ON orgtrx.AD_Org_ID = c.AD_ORGTRX_ID
-LEFT JOIN C_Order ord                    ON ord.C_Order_ID = c.C_ORDER_ID
-LEFT JOIN C_DocType doctype              ON doctype.C_DocType_ID = c.C_DOCTYPE_ID
-LEFT JOIN C_DocType doctypetarget        ON doctypetarget.C_DocType_ID = c.C_DOCTYPETARGET_ID
-LEFT JOIN C_BPartner partner             ON partner.C_BPartner_ID = c.C_BPARTNER_ID
-LEFT JOIN AD_User usr                    ON usr.AD_User_ID = c.AD_USER_ID
-LEFT JOIN AD_User salesrep               ON salesrep.AD_User_ID = c.SALESREP_ID
-LEFT JOIN M_PriceList pricelist          ON pricelist.M_PriceList_ID = c.M_PRICELIST_ID
-LEFT JOIN C_Currency curr                ON curr.C_Currency_ID = c.C_CURRENCY_ID
-LEFT JOIN C_PaymentTerm payterm          ON payterm.C_PaymentTerm_ID = c.C_PAYMENTTERM_ID
-LEFT JOIN ZSubPaymentRule zsub           ON zsub.ZSubPaymentRule_ID = c.ZSUBPAYMENTRULE_ID
-LEFT JOIN C_BPartner_Location bploc ON bploc.C_BPartner_Location_ID = c.C_BPartner_Location_ID
-
-WHERE c.DOCUMENTNO = :documentno
-"""
-
-            cursor.execute(query, {"documentno": documentno})
+                SELECT 
+                    SUM(xf.TOTALLINE) AS CHIFFRE, 
+                    SUM(xf.qtyentered) AS QTY,
+                    SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION) AS MARGE,
+                    SUM(xf.CONSOMATION) AS CONSOMATION,
+                    CASE 
+                        WHEN SUM(xf.CONSOMATION) < 0 
+                        THEN ROUND(((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / (SUM(xf.CONSOMATION) * -1)), 4)
+                        ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
+                    END AS POURCENTAGE
+                FROM xx_ca_fournisseur xf
+                JOIN C_BPartner cb ON cb.C_BPARTNER_ID = xf.CLIENTID
+                WHERE 
+                    xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                    AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                    AND xf.AD_Org_ID = :ad_org_id
+                    AND xf.DOCSTATUS != 'RE'
+                    AND cb.ISCUSTOMER = 'Y'
+                    AND cb.AD_Client_ID = 1000000
+                    AND cb.AD_Org_ID = 1000000
+                    AND (
+                        :group_label IS NULL OR
+                        (CASE 
+                            WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                            WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                            ELSE 'autre'
+                        END = :group_label)
+                    )
+            """
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'ad_org_id': ad_org_id,
+                'group_label': group_label
+            }
+            cursor.execute(query, params)
             rows = cursor.fetchall()
             columns = [col[0] for col in cursor.description]
             data = [dict(zip(columns, row)) for row in rows]
-            return jsonify(data)
+            return data
     except Exception as e:
-        logger.error(f"Error in /factures: {e}")
-        return jsonify({"error": "An error occurred while fetching facture."}), 500
+        logger.error(f"Error fetching data: {e}")
+        return {"error": "An error occurred while fetching data."}
+    
 
 
 
 
-@app.route('/facture-lines', methods=['GET'])
-def facture_lines_route():
-    """Return invoice lines for a given invoice.
 
-    Query params:
-      - invoiceid : C_Invoice_ID (preferred)
-      - documentno: invoice DOCUMENTNO (optional, will be resolved to invoice id)
-    """
-    invoiceid = request.args.get('invoiceid')
-    documentno = request.args.get('documentno')
+@app.route('/fetchTotalrecapData', methods=['GET'])
+def fetch_recap():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    ad_org_id = request.args.get('ad_org_id')  # Get ad_org_id from request
+    group_label = request.args.get('group_label')  # Optional group_label (para, potentiel, autre)
 
-    if not invoiceid and not documentno:
-        return jsonify({"error": "invoiceid or documentno query parameter is required"}), 400
+    if not start_date or not end_date or not ad_org_id:
+        return jsonify({"error": "Missing start_date, end_date, or ad_org_id parameters"}), 400
 
     try:
-        logger.info(f"/facture-lines called with invoiceid={invoiceid} documentno={documentno}")
+        ad_org_id = int(ad_org_id)  # Convert to integer
+    except ValueError:
+        return jsonify({"error": "ad_org_id must be an integer"}), 400
+
+    data = fetch_rcap_data(start_date, end_date, ad_org_id, group_label)
+    return jsonify(data)
+
+
+
+
+
+@app.route('/fetchZoneRecap', methods=['GET'])
+def fetch_zone():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+    if not ad_org_id:
+        return jsonify({"error": "Missing ad_org_id parameter"}), 400
+
+    data = fetch_zone_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label)
+    return jsonify(data)
+
+
+def fetch_zone_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label=None):
+    try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
-
-            # If documentno provided, resolve to invoice id
-            if not invoiceid and documentno:
-                cursor.execute("SELECT C_Invoice_ID FROM C_Invoice WHERE DOCUMENTNO = :doc", {"doc": documentno})
-                row = cursor.fetchone()
-                if not row:
-                    logger.info("No invoice found for documentno=%s", documentno)
-                    return jsonify({"error": "No invoice found with that documentno"}), 404
-                invoiceid = row[0]
-
-            # Try to coerce invoiceid to integer if possible
-            try:
-                invoiceid_param = int(invoiceid)
-            except Exception:
-                invoiceid_param = invoiceid  # leave as-is; the DB driver can accept string binds
-
             query = """
-SELECT
-    il.C_InvoiceLine_ID,
-    il.A_Asset_ID,
-    asset.NAME                             AS Immobilisation,
-    il.AD_Client_ID,
-    cli.NAME                                AS Société,
-    il.AD_Org_ID,
-    org.NAME                                AS Organisation,
-    il.C_Invoice_ID,
-    inv.DOCUMENTNO                          AS Facture,
-        il.Line,
+                SELECT * FROM (
+                    -- Recap by Zone
+                    SELECT 
+                        CAST(sr.name AS VARCHAR2(100)) AS "ZONE",
+                        SUM(xf.TOTALLINE) AS "TOTAL",
+                        SUM(xf.qtyentered) AS "QTY",
+                        CASE 
+                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                            ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
+                        END AS "MARGE",
+                        0 AS "SORT_ORDER"
+                    FROM C_SalesRegion sr
+                    JOIN C_BPartner_Location bpl ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    JOIN xx_ca_fournisseur xf ON bpl.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                          AND xf.AD_Org_ID = :ad_org_id
+                          AND xf.DOCSTATUS != 'RE'
+                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
+                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
+                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
+                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
+                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
+                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
+                          AND (
+                              :group_label IS NULL OR
+                              (CASE 
+                                  WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                  WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                  ELSE 'autre'
+                              END = :group_label)
+                          )
+                    GROUP BY sr.name
 
-        -- Replaced M_InOutLine_ID with composed delivery info
-        NVL(TO_CHAR(iol.Line), '')
-            || '_' || NVL(TO_CHAR(iol.MovementQty), '')
-            || '_' || NVL(prod.NAME, '')
-            || '_' || NVL(io.DOCUMENTNO, '')
-            || ' - ' || NVL(TO_CHAR(io.MovementDate, 'DD/MM/YYYY'), '')
-            || ' - ' || NVL(ord.DOCUMENTNO, '')
-            || ' - ' || NVL(TO_CHAR(ord.DateOrdered, 'DD/MM/YYYY'), '')
-            || ' - ' || NVL(bp.NAME, '')
-            AS Ligne_livraison,
+                    UNION ALL
 
-    -- Replaced il.C_OrderLine_ID with composed field
-    NVL(TO_CHAR(col.Line),'')
-        || '_' || NVL(prod.NAME,'')
-        || '_' || NVL(ord.DOCUMENTNO,'')
-        || ' - ' || NVL(TO_CHAR(ord.DATEORDERED,'DD/MM/YYYY'),'')
-        || '_' || NVL(TO_CHAR(il.LineNetAmt,'FM999G999G999D00','NLS_NUMERIC_CHARACTERS = ''.,'''),'0,00')
-        AS Ligne_commande_de_vente,
+                    -- Total Row
+                    SELECT 
+                        'Total' AS "ZONE",
+                        SUM(xf.TOTALLINE) AS "TOTAL",
+                        SUM(xf.qtyentered) AS "QTY",
+                        CASE 
+                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                            ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
+                        END AS "MARGE",
+                        1 AS "SORT_ORDER"
+                    FROM C_SalesRegion sr
+                    JOIN C_BPartner_Location bpl ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    JOIN xx_ca_fournisseur xf ON bpl.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                          AND xf.AD_Org_ID = :ad_org_id
+                          AND xf.DOCSTATUS != 'RE'
+                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
+                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
+                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
+                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
+                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
+                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
+                          AND (
+                              :group_label IS NULL OR
+                              (CASE 
+                                  WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                  WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                  ELSE 'autre'
+                              END = :group_label)
+                          )
+                ) ORDER BY "SORT_ORDER", "TOTAL" DESC
+            """
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'fournisseur': fournisseur or None,
+                'product': product or None,
+                'client': client or None,
+                'operateur': operateur or None,
+                'bccb': bccb or None,
+                'zone': zone or None,
+                'ad_org_id': ad_org_id,
+                'group_label': group_label
+            }
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            return [dict(zip(columns, row)) for row in rows]
+    except Exception as e:
+        logger.error(f"Error fetching zone recap: {e}")
+        return {"error": "An error occurred while fetching zone recap."}
 
-    il.M_Product_ID,
-    prod.NAME                               AS Article,
-    il.C_Charge_ID,
-    chg.NAME                                AS Charge,
-    il.M_AttributeSetInstance_ID,
-    masi.DESCRIPTION                        AS Lot,
-    il.S_ResourceAssignment_ID,
-    il.DESCRIPTION,
-    il.QtyInvoiced,
-    il.QtyEntered,
-    il.C_UOM_ID,
-    uom_trl.NAME                            AS Unité,
-    il.PriceEntered,
-    il.PriceActual,
-    il.PriceList,
-    il.C_Tax_ID,
-    tx.NAME                                 AS TVA,
-    il.AD_OrgTrx_ID,
-    orgtrx.NAME                             AS Organisation_Trx,
-    il.LineNetAmt,
-    il.IsDescription,
-    il.IsPrinted,
-    il.Repricing,
-    il.XX_BLInvoiceLine_ID
-FROM C_InvoiceLine il
-LEFT JOIN C_Invoice                   inv    ON inv.C_Invoice_ID   = il.C_Invoice_ID
-LEFT JOIN A_Asset                     asset  ON asset.A_Asset_ID    = il.A_Asset_ID
-LEFT JOIN AD_Client                   cli    ON cli.AD_Client_ID   = il.AD_Client_ID
-LEFT JOIN AD_Org                      org    ON org.AD_Org_ID      = il.AD_Org_ID
-LEFT JOIN M_Product                   prod   ON prod.M_Product_ID  = il.M_Product_ID
-LEFT JOIN C_Charge                    chg    ON chg.C_Charge_ID    = il.C_Charge_ID
-LEFT JOIN M_AttributeSetInstance      masi   ON masi.M_AttributeSetInstance_ID = il.M_AttributeSetInstance_ID
-LEFT JOIN C_UOM                       uom    ON uom.C_UOM_ID      = il.C_UOM_ID
-LEFT JOIN C_UOM_TRL                   uom_trl ON uom_trl.C_UOM_ID  = uom.C_UOM_ID
-LEFT JOIN C_Tax                       tx     ON tx.C_Tax_ID       = il.C_Tax_ID
-LEFT JOIN AD_Org                      orgtrx ON orgtrx.AD_Org_ID   = il.AD_OrgTrx_ID
-LEFT JOIN C_OrderLine                 col    ON col.C_OrderLine_ID = il.C_OrderLine_ID
-LEFT JOIN C_Order                     ord    ON ord.C_Order_ID     = col.C_Order_ID
-LEFT JOIN M_InOutLine                 iol    ON iol.M_InOutLine_ID = il.M_InOutLine_ID
-LEFT JOIN M_InOut                     io     ON io.M_InOut_ID      = iol.M_InOut_ID
-LEFT JOIN C_BPartner                  bp     ON bp.C_BPartner_ID   = io.C_BPartner_ID
-WHERE il.C_Invoice_ID = :invoiceid
-ORDER BY il.Line
-"""
 
-            logger.info("Executing facture-lines query for invoiceid=%s", invoiceid_param)
-            cursor.execute(query, {"invoiceid": invoiceid_param})
+
+def fetch_client_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label=None):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT * FROM (
+                    -- Recap by Client
+                    SELECT 
+                        CAST(cb.name AS VARCHAR2(100)) AS "CLIENT",
+                        SUM(xf.TOTALLINE) AS "TOTAL",
+                        SUM(xf.qtyentered) AS "QTY",
+                        CASE 
+                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                            ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
+                        END AS "MARGE",
+                        0 AS "SORT_ORDER"
+                    FROM C_BPartner cb
+                    JOIN xx_ca_fournisseur xf ON cb.C_BPartner_ID = xf.CLIENTID
+                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                          AND xf.AD_Org_ID = :ad_org_id
+                          AND xf.DOCSTATUS != 'RE'
+                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
+                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
+                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
+                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
+                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
+                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
+                          AND (
+                              :group_label IS NULL OR
+                              (CASE 
+                                  WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                  WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                  ELSE 'autre'
+                              END = :group_label)
+                          )
+                    GROUP BY cb.name
+
+                    UNION ALL
+
+                    -- Total Row
+                    SELECT 
+                        'Total' AS "CLIENT",
+                        SUM(xf.TOTALLINE) AS "TOTAL",
+                        SUM(xf.qtyentered) AS "QTY",
+                        CASE 
+                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                            ELSE ROUND((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / NULLIF(SUM(xf.CONSOMATION), 0), 4)
+                        END AS "MARGE",
+                        1 AS "SORT_ORDER"
+                    FROM C_BPartner cb
+                    JOIN xx_ca_fournisseur xf ON cb.C_BPartner_ID = xf.CLIENTID
+                    JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                          AND xf.AD_Org_ID = :ad_org_id
+                          AND xf.DOCSTATUS != 'RE'
+                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
+                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
+                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
+                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
+                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
+                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
+                          AND (
+                              :group_label IS NULL OR
+                              (CASE 
+                                  WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                  WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                  ELSE 'autre'
+                              END = :group_label)
+                          )
+                ) ORDER BY "SORT_ORDER", "TOTAL" DESC
+            """
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'fournisseur': fournisseur or None,
+                'product': product or None,
+                'client': client or None,
+                'operateur': operateur or None,
+                'bccb': bccb or None,
+                'zone': zone or None,
+                'ad_org_id': ad_org_id,
+                'group_label': group_label
+            }
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            return [dict(zip(columns, row)) for row in rows]
+    except Exception as e:
+        logger.error(f"Error fetching client recap: {e}")
+        return {"error": "An error occurred while fetching client recap."}
+
+
+@app.route('/fetchClientRecap', methods=['GET'])
+def fetch_client():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+    if not ad_org_id:
+        return jsonify({"error": "Missing ad_org_id parameter"}), 400
+
+    data = fetch_client_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label)
+    return jsonify(data)
+
+def fetch_operator_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label=None):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT * FROM (
+                    SELECT CAST(au.name AS VARCHAR2(100)) AS "OPERATEUR", 
+                           SUM(xf.TOTALLINE) AS "TOTAL", 
+                           SUM(xf.qtyentered) AS "QTY",
+                           CASE 
+                               WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                               WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1)
+                               ELSE (SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION)
+                           END AS "MARGE",
+                           0 AS "SORT_ORDER"
+                    FROM AD_User au
+                    JOIN xx_ca_fournisseur xf ON au.AD_User_ID = xf.SALESREP_ID
+                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                          AND xf.AD_Org_ID = :ad_org_id
+                          AND xf.DOCSTATUS != 'RE'
+                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
+                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
+                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
+                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
+                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
+                          AND (
+                              :group_label IS NULL OR
+                              (CASE 
+                                  WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                  WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                  ELSE 'autre'
+                              END = :group_label)
+                          )
+                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
+                    GROUP BY au.name
+
+                    UNION ALL
+
+                    SELECT 'Total' AS "OPERATEUR", 
+                           SUM(xf.TOTALLINE) AS "TOTAL", 
+                           SUM(xf.qtyentered) AS "QTY",
+                           CASE 
+                               WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                               WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1)
+                               ELSE (SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION)
+                           END AS "MARGE",
+                           1 AS "SORT_ORDER"
+                    FROM AD_User au
+                    JOIN xx_ca_fournisseur xf ON au.AD_User_ID = xf.SALESREP_ID
+                    JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                    JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                    JOIN M_InOut mi ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                    JOIN C_ORDER c ON mi.C_ORDER_ID = c.C_ORDER_ID
+                    WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                          AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                          AND xf.AD_Org_ID = :ad_org_id
+                          AND xf.DOCSTATUS != 'RE'
+                          AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
+                          AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
+                          AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
+                          AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
+                          AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
+                          AND (
+                              :group_label IS NULL OR
+                              (CASE 
+                                  WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                  WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                  ELSE 'autre'
+                              END = :group_label)
+                          )
+                          AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
+                ) ORDER BY "SORT_ORDER", "TOTAL" DESC
+            """
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'fournisseur': fournisseur or None,
+                'product': product or None,
+                'client': client or None,
+                'operateur': operateur or None,
+                'bccb': bccb or None,
+                'zone': zone or None,
+                'ad_org_id': ad_org_id,
+                'group_label': group_label
+            }
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            return [dict(zip(columns, row)) for row in rows]
+    except Exception as e:
+        logger.error(f"Error fetching operator recap: {e}")
+        return {"error": "An error occurred while fetching operator recap."}
+
+
+@app.route('/fetchOperatorRecap', methods=['GET'])
+def fetch_operator():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+    if not ad_org_id:
+        return jsonify({"error": "Missing ad_org_id parameter"}), 400
+
+    data = fetch_operator_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label)
+    return jsonify(data)
+
+
+
+
+def fetch_bccb_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, group_label=None):
+    try:
+        with DB_POOL.acquire() as connection:
+            cursor = connection.cursor()
+            query = """
+                SELECT DOCUMENTNO, DATEORDERED, GRANDTOTAL, 
+                       ROUND(AVG(marge * 100), 2) AS marge
+                FROM (
+                    SELECT det.*
+                    FROM (
+                        SELECT lot.*,  
+                               (lot.priceentered - ((lot.priceentered * NVL(lot.remise_vente, 0)) / 100)) / (1 + (lot.bonus_vente / 100)) AS ventef
+                        FROM (
+                            SELECT 
+                                ol.priceentered, 
+                                (SELECT valuenumber 
+                                 FROM m_attributeinstance 
+                                 WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                                       AND m_attribute_id = 1000504) AS p_revient,
+                                (SELECT valuenumber 
+                                 FROM m_attributeinstance 
+                                 WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                                       AND m_attribute_id = 1000908) AS bonus_vente,
+                                (SELECT valuenumber 
+                                 FROM m_attributeinstance 
+                                 WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                                       AND m_attribute_id = 1001408) AS remise_vente,
+                                c.DOCUMENTNO, 
+                                c.DATEORDERED, 
+                                c.GRANDTOTAL,
+                                CASE 
+                                    WHEN SUM(xf.CONSOMATION) = 0 THEN 0
+                                    WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1)
+                                    ELSE (SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION)
+                                END AS marge
+                            FROM C_Order c
+                            JOIN C_OrderLine ol ON c.C_Order_ID = ol.C_Order_ID 
+                            JOIN M_InOut mi ON mi.C_Order_ID = c.C_Order_ID
+                            JOIN xx_ca_fournisseur xf ON xf.DOCUMENTNO = mi.DOCUMENTNO
+                            JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
+                            JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
+                            JOIN C_BPartner_Location bpl ON bpl.C_BPartner_ID = xf.CLIENTID
+                            JOIN C_SalesRegion sr ON sr.C_SalesRegion_ID = bpl.C_SalesRegion_ID
+                            WHERE c.AD_Org_ID = 1000000 
+                                  AND ol.qtyentered > 0
+                                  AND xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
+                                      AND TO_DATE(:end_date, 'YYYY-MM-DD')
+                                  AND (c.DOCSTATUS = 'CL' OR c.DOCSTATUS = 'CO')
+                                  AND c.C_DocType_ID IN (1000539, 1001408)
+                                  AND (:bccb IS NULL OR UPPER(c.DOCUMENTNO) LIKE UPPER(:bccb) || '%')
+                                  AND (:fournisseur IS NULL OR UPPER(xf.name) LIKE UPPER(:fournisseur) || '%')
+                                  AND (:product IS NULL OR UPPER(xf.product) LIKE UPPER(:product) || '%')
+                                  AND (:client IS NULL OR UPPER(cb.name) LIKE UPPER(:client) || '%')
+                                  AND (:operateur IS NULL OR UPPER(au.name) LIKE UPPER(:operateur) || '%')
+                                  AND (:zone IS NULL OR UPPER(sr.name) LIKE UPPER(:zone) || '%')
+                                  AND (
+                                      :group_label IS NULL OR
+                                      (CASE 
+                                          WHEN cb.c_bp_group_id = 1000003 THEN 'para'
+                                          WHEN cb.c_bp_group_id = 1001330 THEN 'potentiel'
+                                          ELSE 'autre'
+                                      END = :group_label)
+                                  )
+                            GROUP BY c.DOCUMENTNO, c.DATEORDERED, c.GRANDTOTAL, ol.priceentered, ol.m_attributesetinstance_id
+                            ORDER BY c.DOCUMENTNO
+                        ) lot
+                    ) det
+                )
+                GROUP BY DOCUMENTNO, DATEORDERED, GRANDTOTAL
+                ORDER BY DOCUMENTNO
+            """
+            params = {
+                'start_date': start_date,
+                'end_date': end_date,
+                'fournisseur': fournisseur or None,
+                'product': product or None,
+                'client': client or None,
+                'operateur': operateur or None,
+                'bccb': bccb or None,
+                'zone': zone or None,
+                'group_label': group_label
+            }
+
+            cursor.execute(query, params)
             rows = cursor.fetchall()
             columns = [col[0] for col in cursor.description]
-            data = [dict(zip(columns, row)) for row in rows]
-            logger.info("/facture-lines returned %d rows", len(data))
-            return jsonify(data)
+            return [dict(zip(columns, row)) for row in rows]
     except Exception as e:
-        logger.exception("Error in /facture-lines")
-        # Return error message for debugging (remove or mask in production)
-        return jsonify({"error": "An error occurred while fetching facture lines.", "detail": str(e)}), 500
+        logger.error(f"Error fetching BCCB recap: {e}")
+        return {"error": "An error occurred while fetching BCCB recap."}
 
-@app.route('/download-societe-header', methods=['GET'])
-def download_societe_header():
-    """Download header information for societe (org_id=1000000)."""
+
+@app.route('/fetchBCCBRecap', methods=['GET']) 
+def fetch_bccb():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    data = fetch_bccb_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, group_label)
+    return jsonify(data)
+
+
+
+
+@app.route('/download-bccb-product-excel', methods=['GET'])
+def download_bccb_product_excel():
+    bccb = request.args.get('bccb')
+    ad_org_id = request.args.get('ad_org_id', '1000012')
+
+    if not bccb:
+        return jsonify({"error": "Missing BCCB parameter"}), 400
+
+    try:
+        ad_org_id = int(ad_org_id)
+    except ValueError:
+        return jsonify({"error": "ad_org_id must be an integer"}), 400
+
+    # Fetch data
+    data = fetch_bccb_product(bccb, ad_org_id)
+
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    filename = f"BCCB_Product_{bccb}_{today_date}.xlsx"
+
+    return generate_excel_bccb_product(data, filename)
+
+
+def generate_excel_bccb_product(data, filename):
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "BCCB Product Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    # Add headers
+    ws.append(df.columns.tolist())
+    for cell in ws[1]:  # Style header row
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(list(row))  # Convert tuple to list before appending
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="BCCBProductTable", ref=f"A1:{chr(65 + len(df.columns) - 1)}{len(df) + 1}")
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+
+
+
+
+@app.route('/download-fournisseur-excel', methods=['GET'])
+def download_fournisseur_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    try:
+        ad_org_id = int(ad_org_id) if ad_org_id else None  # Convert if provided
+    except ValueError:
+        return jsonify({"error": "ad_org_id must be an integer"}), 400
+
+    # Fetch data
+    data = fetch_fournisseur_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label)
+
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename based on ad_org_id and group_label
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    group_label_part = f"_{group_label}" if group_label else ""
+    if ad_org_id == 1000012:
+        filename = f"FournisseurRecap_facturation{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+    else:
+        filename = f"FournisseurRecap{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_fournisseur(data, filename)
+
+
+def generate_excel_fournisseur(data, filename):
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Fournisseur Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    # Add headers
+    ws.append(df.columns.tolist())
+    for cell in ws[1]:  # Style header row
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(list(row))  # Convert tuple to list before appending
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="FournisseurRecapTable", ref=f"A1:{chr(65 + len(df.columns) - 1)}{len(df) + 1}")
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+
+
+
+
+@app.route('/download-product-excel', methods=['GET'])
+def download_product_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    try:
+        ad_org_id = int(ad_org_id) if ad_org_id else None  # Convert if provided
+    except ValueError:
+        return jsonify({"error": "ad_org_id must be an integer"}), 400
+
+    # Fetch data
+    data = fetch_product_data(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label)
+
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename based on ad_org_id and group_label
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    group_label_part = f"_{group_label}" if group_label else ""
+    if ad_org_id == 1000012:
+        filename = f"ProductRecap_facturation{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+    else:
+        filename = f"ProductRecap{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_product(data, filename)
+
+
+def generate_excel_product(data, filename):
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Product Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    # Add headers
+    ws.append(df.columns.tolist())
+    for cell in ws[1]:  # Style header row
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(list(row))  # Convert tuple to list before appending
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="ProductRecapTable", ref=f"A1:{chr(65 + len(df.columns) - 1)}{len(df) + 1}")
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+
+
+
+@app.route('/download-totalrecap-excel', methods=['GET'])
+def download_totalrecap_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date or not ad_org_id:
+        return jsonify({"error": "Missing start_date, end_date, or ad_org_id parameters"}), 400
+
+    try:
+        ad_org_id = int(ad_org_id)  # Convert to integer
+    except ValueError:
+        return jsonify({"error": "ad_org_id must be an integer"}), 400
+
+    # Fetch data from the database
+    data = fetch_rcap_data(start_date, end_date, ad_org_id, group_label)
+
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename based on ad_org_id and group_label
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    group_label_part = f"_{group_label}" if group_label else ""
+    if ad_org_id == 1000012:
+        filename = f"TotalRecap_facturation{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+    else:
+        filename = f"TotalRecap{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_totalrecap(data, filename)
+
+
+def generate_excel_totalrecap(data, filename):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Total Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    ws.append(df.columns.tolist())
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+    ws.auto_filter.ref = ws.dimensions
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="TotalRecapTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+
+
+
+
+ 
+
+
+
+@app.route('/download-zone-excel', methods=['GET'])
+def download_zone_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    try:
+        ad_org_id = int(ad_org_id) if ad_org_id else None  # Convert if provided
+    except ValueError:
+        return jsonify({"error": "ad_org_id must be an integer"}), 400
+
+    # Fetch data
+    data = fetch_zone_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label)
+
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename based on ad_org_id and group_label
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    group_label_part = f"_{group_label}" if group_label else ""
+    if ad_org_id == 1000012:
+        filename = f"ZoneRecap_facturation{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+    else:
+        filename = f"ZoneRecap{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_zone(data, filename)
+
+
+def generate_excel_zone(data, filename):
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Zone Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    # Add headers
+    ws.append(df.columns.tolist())
+    for cell in ws[1]:  # Style header row
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(list(row))  # Convert tuple to list before appending
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="ZoneRecapTable", ref=f"A1:{chr(65 + len(df.columns) - 1)}{len(df) + 1}")
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+@app.route('/download-client-excel', methods=['GET'])
+def download_client_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    try:
+        ad_org_id = int(ad_org_id) if ad_org_id else None  # Convert if provided
+    except ValueError:
+        return jsonify({"error": "ad_org_id must be an integer"}), 400
+
+    # Fetch data
+    data = fetch_client_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label)
+
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename based on ad_org_id and group_label
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    group_label_part = f"_{group_label}" if group_label else ""
+    if ad_org_id == 1000012:
+        filename = f"ClientRecap_facturation{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+    else:
+        filename = f"ClientRecap{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_client(data, filename)
+
+
+def generate_excel_client(data, filename):
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Client Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    # Add headers
+    ws.append(df.columns.tolist())
+    for cell in ws[1]:  # Style header row
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(list(row))  # Convert tuple to list before appending
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="ClientRecapTable", ref=f"A1:{chr(65 + len(df.columns) - 1)}{len(df) + 1}")
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@app.route('/download-operator-excel', methods=['GET'])
+def download_operator_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+    ad_org_id = request.args.get('ad_org_id')
+    group_label = request.args.get('group_label')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    try:
+        ad_org_id = int(ad_org_id) if ad_org_id else None  # Convert if provided
+    except ValueError:
+        return jsonify({"error": "ad_org_id must be an integer"}), 400
+
+    # Fetch data
+    data = fetch_operator_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone, ad_org_id, group_label)
+
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename based on ad_org_id and group_label
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    group_label_part = f"_{group_label}" if group_label else ""
+    if ad_org_id == 1000012:
+        filename = f"OperatorRecap_facturation{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+    else:
+        filename = f"OperatorRecap{group_label_part}_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_operator(data, filename)
+
+
+def generate_excel_operator(data, filename):
+    if not data or isinstance(data, dict) and "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Operator Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    # Add headers
+    ws.append(df.columns.tolist())
+    for cell in ws[1]:  # Style header row
+        cell.fill = header_fill
+        cell.font = header_font
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(list(row))  # Convert tuple to list before appending
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="OperatorRecapTable", ref=f"A1:{chr(65 + len(df.columns) - 1)}{len(df) + 1}")
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+
+
+
+
+
+
+@app.route('/download-bccb-excel', methods=['GET'])
+def download_bccb_excel():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    fournisseur = request.args.get('fournisseur')
+    product = request.args.get('product')
+    client = request.args.get('client')
+    operateur = request.args.get('operateur')
+    bccb = request.args.get('bccb')
+    zone = request.args.get('zone')
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Missing start_date or end_date parameters"}), 400
+
+    # Fetch data
+    data = fetch_bccb_recap(start_date, end_date, fournisseur, product, client, operateur, bccb, zone)
+
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    # Generate filename
+    today_date = datetime.now().strftime("%d-%m-%Y")
+    filename = f"BCCBRecap_{start_date}_to_{end_date}_{today_date}.xlsx"
+
+    return generate_excel_bccb(data, filename)
+
+def generate_excel_bccb(data, filename):
+    if not data or "error" in data:
+        return jsonify({"error": "No data available"}), 400
+
+    df = pd.DataFrame(data)
+    if df.empty:
+        return jsonify({"error": "No data available"}), 400
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "BCCB Recap"
+
+    # Formatting headers
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    ws.append(df.columns.tolist())
+    for col_idx, cell in enumerate(ws[1], 1):
+        cell.fill = header_fill
+        cell.font = header_font
+    ws.auto_filter.ref = ws.dimensions
+
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
+
+    # Add an Excel table
+    table = Table(displayName="BCCBRecapTable", ref=ws.dimensions)
+    style = TableStyleInfo(
+        name="TableStyleMedium9",
+        showFirstColumn=False,
+        showLastColumn=False,
+        showRowStripes=True,
+        showColumnStripes=False
+    )
+    table.tableStyleInfo = style
+    ws.add_table(table)
+
+    # Save the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+
+ 
+@app.route('/fetchBCCBProduct', methods=['GET'])
+def fetch_bccb_p():
+    bccb = request.args.get('bccb')
+    ad_org_id = request.args.get('ad_org_id')
+
+    if not ad_org_id:
+        return jsonify({"error": "Missing ad_org_id parameter"}), 400
+
+    data = fetch_bccb_product(bccb, ad_org_id)
+    return jsonify(data)
+
+
+
+def fetch_bccb_product(bccb, ad_org_id):
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
-            query = '''
-                select  etebac5_senderid as RIB_SOCIETE,
-                       siren as NAI_SOCIETE,
-                       siret as NIS_SOCIETE,
-                       phone as TELE_societe,
-                        fax as FAX_societe,
-                        taxid as NIF_SOCIETE,
-                        duns as NRC_SOCIETE,
-                        loc.address1 as addresse_societe,
-                        email as EMAIL_SOCIETE,
-                        xx_site as WEBSITE_SOCIETE,
-                        org.description as ACTIVITE_SOCIEETE,
-                        xx_capital as CAPITAL_SOCIEETE
-                 from AD_OrgInfo
-                 LEFT JOIN c_location loc ON loc.c_location_id = AD_OrgInfo.c_location_id
-                 left join AD_Org org on org.ad_org_id=AD_OrgInfo.ad_org_id
-                 where AD_OrgInfo.ad_org_id=1000000
-            '''
-            cursor.execute(query)
-            row = cursor.fetchone()
-            columns = [col[0] for col in cursor.description]
-            data = dict(zip(columns, row)) if row else {}
-            return jsonify(data)
+            query = """
+                SELECT product, qty, remise, marge 
+                FROM (
+                    SELECT det.*, 
+                           ROUND((det.ventef - det.p_revient) / det.p_revient * 100, 2) AS marge 
+                    FROM (
+                        SELECT lot.*, 
+                               (lot.priceentered - ((lot.priceentered * NVL(lot.remise_vente, 0)) / 100)) / 
+                               (1 + (lot.bonus_vente / 100)) AS ventef 
+                        FROM (
+                            SELECT ol.priceentered AS priceentered, 
+                                   ol.qtyentered AS qty, 
+                                   mp.name AS product, 
+                                   ol.discount / 100 AS remise, 
+                                   (SELECT valuenumber FROM m_attributeinstance 
+                                    WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                                          AND m_attribute_id = 1000504) AS p_revient, 
+                                   (SELECT valuenumber FROM m_attributeinstance 
+                                    WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                                          AND m_attribute_id = 1000908) AS bonus_vente, 
+                                   (SELECT valuenumber FROM m_attributeinstance 
+                                    WHERE m_attributesetinstance_id = ol.m_attributesetinstance_id 
+                                          AND m_attribute_id = 1001408) AS remise_vente 
+                            FROM c_orderline ol 
+                            INNER JOIN c_order o ON o.c_order_id = ol.c_order_id 
+                            INNER JOIN m_product mp ON ol.m_product_id = mp.m_product_id 
+                            WHERE ol.qtyentered > 0 
+                                  AND (:bccb IS NULL OR UPPER(o.documentno) LIKE UPPER(:bccb) || '%')
+                                  AND o.AD_Org_ID = :ad_org_id
+                        ) lot
+                    ) det
+                )
+            """
+            
+            params = {
+                'bccb': bccb or None,
+                'ad_org_id': ad_org_id
+            }
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]  # Get column names
+            return [dict(zip(columns, row)) for row in rows]
     except Exception as e:
-        logger.error(f"Error in /download-societe-header: {e}")
-        return jsonify({"error": "An error occurred while fetching societe header."}), 500
-
-
-@app.route('/download-client-header', methods=['GET'])
-def download_client_header():
-    """Download header information for client by C_BPartner_ID (as query param 'bpartner_id')."""
-    bpartner_id = request.args.get('bpartner_id')
-    if not bpartner_id:
-        return jsonify({"error": "bpartner_id query parameter is required"}), 400
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = '''
-                SELECT
-                    bp.DESCRIPTION               AS Activite_client,
-                    bp.XX_RC                     AS RC_client,
-                    bp.XX_NIF                    AS NIF_client,
-                    bp.XX_NIS                    AS NIS_client,
-                    bp.XX_AI                     AS AI_client,
-                    bp.name                      AS Client_Name,
-                    reg.NAME                     AS Region_de_vente,
-                    locc.address1                AS Location_ID_client
-                FROM C_BPartner bp
-                LEFT JOIN C_BPartner_Location loc ON loc.C_BPartner_ID = bp.C_BPartner_ID
-                LEFT JOIN C_SalesRegion reg      ON reg.C_SalesRegion_ID = loc.C_SalesRegion_ID
-                LEFT JOIN c_location locc ON locc.c_location_id = loc.c_location_id
-                WHERE bp.C_BPartner_ID = :bpid
-            '''
-            cursor.execute(query, {"bpid": bpartner_id})
-            row = cursor.fetchone()
-            columns = [col[0] for col in cursor.description]
-            data = dict(zip(columns, row)) if row else {}
-            return jsonify(data)
-    except Exception as e:
-        logger.error(f"Error in /download-client-header: {e}")
-        return jsonify({"error": "An error occurred while fetching client header."}), 500
-
-from io import BytesIO
-from datetime import datetime
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
+        logger.error(f"Error fetching BCCB product data: {e}")
+        return {"error": "An error occurred while fetching BCCB product data."}
 
 
 
-def generate_societe_pdf(data, return_elements=False):
-    elements = []
-    styles = getSampleStyleSheet()
 
-    # --- Styles ---
-    title_style = ParagraphStyle(
-        'Title', parent=styles['Heading1'], fontSize=14,
-        textColor=colors.HexColor('#222222'), spaceAfter=6, fontName='Helvetica-Bold'
-    )
-    subtitle_style = ParagraphStyle(
-        'Subtitle', parent=styles['Normal'], fontSize=10,
-        textColor=colors.HexColor('#555555'), spaceAfter=12
-    )
-    info_style = ParagraphStyle(
-        'Info', parent=styles['Normal'], fontSize=9,
-        textColor=colors.HexColor('#333333'), leading=14
-    )
-
-    # --- Logo ---
-    logo_path = '/opt/lampp/htdocs/bnm_web/assets/log.png'
-    if os.path.exists(logo_path):
-        try:
-            logo_img = Image(logo_path, width=110, height=70)  # Bigger logo
-            logo_img.hAlign = 'LEFT'
-            # Increase negative space to move logo even more left
-            logo_cell = [Spacer(-30, 1), logo_img]
-        except:
-            logo_cell = [Spacer(0, 1), Spacer(110, 70)]
-    else:
-        logo_cell = [Spacer(0, 1), Spacer(110, 70)]
-
-    # --- Left Info ---
-    left_info_html = f"""
-        <b>Rte 05 n°46 AIN SMARA</b><br/>
-        <b>Constantine</b><br/>
-        <b>Tél :</b> {data.get('TELE_societe', '031 97 55 93')}<br/>
-        <b>Fax :</b> {data.get('FAX_societe', '031 97 55 94')}<br/>
-        <b>Email :</b> {data.get('EMAIL_SOCIETE', 'bnmparapharm@gmail.com')}<br/>
-        <b>Site :</b> {data.get('WEBSITE_SOCIETE', 'www.bnm.com')}
-    """
-    left_info_para = Paragraph(left_info_html, info_style)
-
-    # --- Right Info ---
-    right_info_html = f"""
-        <b>RC :</b> {data.get('NRC_SOCIETE', '25/00-0071142 B 15')}<br/>
-        <b>NIF :</b> {data.get('NIF_SOCIETE', '001525007114238')}<br/>
-        <b>NAI :</b> {data.get('NAI_SOCIETE', '25100124031')}<br/>
-        <b>NIS :</b> {data.get('NIS_SOCIETE', '001525100039948')}<br/>
-        <b>RIB :</b> {data.get('RIB_SOCIETE', '00100850030000097130')}<br/>
-        <b>Capital :</b> {data.get('CAPITAL_SOCIEETE', '12 300 000,00 DA')}
-    """
-    right_info_para = Paragraph(right_info_html, info_style)
-
-    # --- Header Layout ---
-    header_table = Table(
-        [[logo_cell, left_info_para, right_info_para]],
-        colWidths=[120, 200, 200]
-    )
-    header_table.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('LEFTPADDING', (0, 0), (0, 0), 0),  # No left padding for logo cell
-        ('LEFTPADDING', (1, 0), (2, 0), 4),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 0)
-    ]))
-    elements.append(header_table)
-    elements.append(Spacer(1, 10))
-
-    # --- Company Name + Activity ---
-    elements.append(Paragraph('<b>SARL BNM PARAPHARM</b>', title_style))
-    elements.append(Paragraph('Distribution en Gros de Produits Parapharmaceutiques', subtitle_style))
-
-    # --- Divider Line ---
-    line = Table([['']], colWidths=[500], rowHeights=[1])
-    line.setStyle(TableStyle([('LINEBELOW', (0, 0), (-1, -1), 1.2, colors.black)]))
-    elements.append(line)
-    elements.append(Spacer(1, 15))
-
-    if return_elements:
-        return elements
-
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30)
-    doc.build(elements)
-    buffer.seek(0)
-    return buffer
-
-
-# ------------------------------
-# 🔹 Generate Client Header PDF – Final Professional Invoice Layout
-# ------------------------------
-
-
-def generate_client_pdf(data, invoice_data=None, return_elements=False):
-    # Register DejaVu Sans font for emoji/icon support
-    # Default font for most content
-    default_font = 'Helvetica'
-    # Register Symbola for icons only
-    symbola_path = '/opt/lampp/htdocs/bnm_web/assets/Symbola.ttf'
-    if os.path.exists(symbola_path):
-        try:
-            pdfmetrics.registerFont(TTFont('Symbola', symbola_path))
-            print("[DEBUG] Symbola font loaded for icons.")
-        except Exception as e:
-            print(f"[DEBUG] Failed to load Symbola: {e}")
-        icon_font = 'Symbola'
-    else:
-        print("[DEBUG] Symbola.ttf not found, using Helvetica for icons.")
-        icon_font = default_font
-
-    elements = []
-    styles = getSampleStyleSheet()
-
-    # --- Styles ---
-    section_title_style = ParagraphStyle(
-        'SectionTitle',
-        fontSize=9,
-        fontName='Helvetica-Bold',
-        textColor=colors.white,
-        leftIndent=6,
-        rightIndent=6,
-        spaceAfter=4
-    )
-
-    content_style = ParagraphStyle(
-        'Content',
-        fontSize=9,
-        leading=13,
-        leftIndent=8,
-        rightIndent=8,
-        spaceAfter=2,
-        textColor=colors.HexColor('#222222')
-    )
-
-    label_style = ParagraphStyle(
-        'Label',
-        fontSize=9,
-        fontName='Helvetica-Bold',
-        textColor=colors.black
-    )
-
-    # --- Helper for case-insensitive key fetching ---
-    def get_field(d, *keys):
-        for k in keys:
-            if k in d:
-                return d[k] or ""
-        for k in keys:
-            for dk in d:
-                if dk.lower() == k.lower():
-                    return d[dk] or ""
-        return ""
-
-    # --- Extract data ---
-    client_name = get_field(data, 'Client_Name')
-    address = get_field(data, 'Location_ID_client')
-    activity = get_field(data, 'Activite_client')
-    rc = get_field(data, 'RC_client')
-    ai = get_field(data, 'AI_client')
-    nif = get_field(data, 'NIF_client')
-    nis = get_field(data, 'NIS_client')
-    region = get_field(data, 'Region_de_vente', 'region_de_vente', 'region')
-    commande = get_field(data, 'Ordre_de_vente', 'ORDRE_DE_VENTE', 'commande')
-    vendeur = get_field(data, 'Vendeur', 'VENDEUR', 'salesrep_name')
-    delai_paiement = get_field(data, 'Delai_de_paiement', 'DELAI_DE_PAIEMENT')
-    mode_paiement = get_field(data, 'Mode_de_paiement', 'MODE_DE_PAIEMENT', 'Sous_methode_de_paiement')
-    print_date = datetime.now().strftime("%d/%m/%Y")
-
-    # --- Region and Print Date at the top with PNG icons ---
-    from reportlab.platypus import Image as RLImage
-    gps_icon_path = '/opt/lampp/htdocs/bnm_web/assets/gps.png'
-    date_icon_path = '/opt/lampp/htdocs/bnm_web/assets/date.png'
-    icon_size = 14  # px
-    # Create icon images if files exist, else fallback to blank
-    if os.path.exists(gps_icon_path):
-        gps_icon = RLImage(gps_icon_path, width=icon_size, height=icon_size)
-    else:
-        gps_icon = Spacer(icon_size, icon_size)
-    if os.path.exists(date_icon_path):
-        date_icon = RLImage(date_icon_path, width=icon_size, height=icon_size)
-    else:
-        date_icon = Spacer(icon_size, icon_size)
-
-    # Compose region/date info as a table row for alignment, with label and value in one Paragraph
-    region_text = f'<b>Région de Vente :</b> {region or "—"}'
-    date_text = f'<b>Date d\'Impression :</b> {print_date}'
-    region_para = Paragraph(region_text, content_style)
-    date_para = Paragraph(date_text, content_style)
-    info_table = Table(
-        [[gps_icon, region_para, Spacer(12, 1), date_icon, date_para]],
-        colWidths=[icon_size+2, None, 12, icon_size+2, None],
-        hAlign='LEFT'
-    )
-    info_table.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 0),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-        ('TOPPADDING', (0, 0), (-1, -1), 0),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-        ('ALIGN', (1, 0), (1, 0), 'LEFT'),
-        ('ALIGN', (4, 0), (4, 0), 'LEFT'),
-    ]))
-    elements.append(info_table)
-    elements.append(Spacer(1, 8))
-
-    # --- Client Info Block ---
-    client_lines = []
-    if client_name:
-        client_lines.append(f"<b>Client :</b> {client_name}")
-    if address:
-        client_lines.append(f"<b>Adresse :</b> {address}")
-    # Add Activité always, even if empty, to ensure it appears in the right place
-    client_lines.append(f"<b>Activité :</b> {activity if activity else '—'}")
-    if rc:
-        client_lines.append(f"<b>N° RC :</b> {rc}")
-    if ai:
-        client_lines.append(f"<b>N° AI :</b> {ai}")
-    if nif:
-        client_lines.append(f"<b>N° NIF :</b> {nif}")
-    if nis:
-        client_lines.append(f"<b>N° NIS :</b> {nis}")
-    # Do not include Commande and Vendeur in client info block; only in Info Facture
-
-    client_content = "<br/>".join(client_lines)
-    client_para = Paragraph(client_content, content_style)
-    # Délai de Paiement as a single row under the client table
-    delai_value = delai_paiement if delai_paiement else '—'
-    delai_paiement_para = Paragraph(f"<b>Délai de Paiement :</b> <b>{delai_value}</b>", content_style)
-    delai_mode_table = Table(
-        [[delai_paiement_para]],
-        colWidths=[260],
-        hAlign='LEFT'
-    )
-    delai_mode_table.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('ALIGN', (0, 0), (0, 0), 'LEFT'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 6),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-        ('TOPPADDING', (0, 0), (-1, -1), 2),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
-    ]))
-
-    # --- Invoice Info Block ---
-    inv_no = invoice_data.get("invoice_no", "—") if invoice_data else "—"
-    inv_date = invoice_data.get("date", "—") if invoice_data else "—"
-    commande = data.get("Ordre_de_vente", "—")
-    vendeur = data.get("Vendeur", "—")
-
-    invoice_lines = [
-        f"<b>N° Facture :</b> {inv_no}",
-        f"<b>Date Facture :</b> {inv_date}",
-        f"<b>Commande :</b> {commande}",
-        f"<b>Vendeur :</b> {vendeur}"
-    ]
-    invoice_content = "<br/>".join(invoice_lines)
-    invoice_para = Paragraph(invoice_content, content_style)
-
-    # --- FACTURÉ À as a big label above the client table ---
-    fact_a_style = ParagraphStyle(
-        'FactureA', parent=styles['Heading2'], fontSize=13, fontName='Helvetica-Bold', textColor=colors.HexColor('#2C3E50'), spaceAfter=8, alignment=0
-    )
-    info_facture_style = ParagraphStyle(
-        'InfoFacture', parent=styles['Heading2'], fontSize=13, fontName='Helvetica-Bold', textColor=colors.HexColor('#2C3E50'), spaceAfter=8, alignment=0
-    )
-    # --- Side-by-side layout: both blocks in the same row ---
-    client_block = []
-    client_block.append(Paragraph("FACTURÉ À", fact_a_style))
-
-    # Build both tables first, then match heights
-
-    # Adjusted widths to fit page and reduced paddings for compactness
-    client_table = Table(
-        [[client_para]],
-        colWidths=[260],  # was 340
-        hAlign='LEFT'
-    )
-    client_table.setStyle(TableStyle([
-        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#2C3E50')),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 6),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-        ('TOPPADDING', (0, 0), (-1, -1), 2),  # reduced
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),  # reduced
-    ]))
-
-    # --- Info Facture Table: Match height to client table ---
-    # Use the invoice_content with all fields (N° Facture, Date Facture, Commande, Vendeur)
-    invoice_para = Paragraph("<br/>".join(invoice_lines), content_style)
-    # Wrap client_table to get its height
-    client_table.wrapOn(None, 0, 0)
-    client_height = client_table._height
-    # Use client_height for invoice_table rowHeights
-    invoice_table = Table(
-        [[invoice_para]],
-        colWidths=[170],
-        rowHeights=[client_height],
-        hAlign='CENTER'
-    )
-    invoice_table.setStyle(TableStyle([
-        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#2C3E50')),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 0),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-        ('TOPPADDING', (0, 0), (-1, -1), 0),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-    ]))
-    # Mode de Paiement as a bold label+value paragraph under Info Facture
-    mode_value = mode_paiement if mode_paiement else '—'
-    mode_paiement_para = Paragraph(f"<b>Mode de Paiement :</b> <b>{mode_value}</b>", content_style)
-
-
-    # Remove height-matching logic for invoice_table to guarantee centering
-
-
-
-    client_block = [Paragraph("FACTURÉ À", fact_a_style), client_table, delai_mode_table, Spacer(1, 4)]
-    mode_value = mode_paiement if mode_paiement else '—'
-    mode_paiement_para = Paragraph(f"<b>Mode de Paiement :</b> <b>{mode_value}</b>", content_style)
-    invoice_block = [Paragraph("Info Facture", info_facture_style), invoice_table, Spacer(1, 2), mode_paiement_para]
-    spacer_col = Spacer(30, 1)  # 30pt wide blank space
-    row_table = Table(
-        [[client_block, spacer_col, invoice_block]],
-        colWidths=[270, 40, 180],  # 40pt space between tables
-        hAlign='LEFT'
-    )
-    row_table.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 0),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-        ('TOPPADDING', (0, 0), (-1, -1), 0),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-    ]))
-    elements.append(row_table)
-    elements.append(Spacer(1, 18))
-    # Add the data lines table (invoice lines) below the header blocks
-    elements.append(build_invoice_lines_table(data, invoice_data))
-    elements.append(Spacer(1, 14))
-
-    # --- (Removed region/print date from bottom, now at top) ---
-    elements.append(Spacer(1, 12))
-
-    # --- Return or Build PDF ---
-    if return_elements:
-        return elements
-
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30)
-    doc.build(elements)
-    buffer.seek(0)
-    return buffer
-# --- Standalone invoice lines table builder ---
-def build_invoice_lines_table(data, invoice_data=None):
-    from reportlab.platypus import Paragraph, Table
-    bold_style = ParagraphStyle('Bold', fontName='Helvetica-Bold', fontSize=8, alignment=1)
-    headers = [
-        Paragraph('N° EXP', bold_style),
-        Paragraph('Désignation', bold_style),
-        Paragraph('QT', bold_style),
-        Paragraph('Lot', bold_style),
-        Paragraph('Peremp', bold_style),
-        Paragraph('Prix U', bold_style),
-        Paragraph('%R', bold_style),
-        Paragraph('PPA', bold_style),
-        Paragraph('Tva', bold_style),
-        Paragraph('TTC', bold_style)
-    ]
-
-    # Get facture/document number from invoice_data or data
-    facture_no = None
-    if invoice_data and 'invoice_no' in invoice_data:
-        facture_no = invoice_data['invoice_no']
-    elif data and ('DOCUMENTNO' in data or 'documentno' in data):
-        facture_no = data.get('DOCUMENTNO') or data.get('documentno')
-    if not facture_no:
-        # fallback: empty table
-        return Table([headers], colWidths=[55, 120, 30, 35, 45, 50, 30, 50, 30, 35, 60])
-
-    # Query DB for invoice lines
-    rows = []
-    try:
-        with DB_POOL.acquire() as conn:
-            cur = conn.cursor()
-            sql = '''
-SELECT 
-    io.DOCUMENTNO AS Expedition,
-    TO_CHAR(io.MovementDate, 'DD/MM/YYYY') AS dateexp,
-    MAX(prod.NAME) AS Article,
-    MAX(masi.LOT) AS Lot,
-    il.C_InvoiceLine_ID,
-    TO_CHAR(MAX(masi.GUARANTEEDATE), 'DD/MM/YYYY') AS Guaranteedate,
-    MAX(
-        (SELECT valuenumber 
-           FROM M_AttributeInstance ai
-          WHERE ai.M_AttributeSetInstance_ID = il.M_AttributeSetInstance_ID 
-            AND ai.M_Attribute_ID = 1000503)
-    ) AS PPA,
-    ROUND(AVG(il.pricelist), 2) AS Prix_Unitaire,
-    SUM(il.QtyInvoiced) AS Quantite,
-    AVG(NVL(col.Discount, 2)) AS Remise,
-    MAX(tax.Rate) AS TVA
-FROM C_InvoiceLine il
-LEFT JOIN M_Product prod ON prod.M_Product_ID = il.M_Product_ID
-LEFT JOIN C_OrderLine col ON col.C_OrderLine_ID = il.C_OrderLine_ID
-LEFT JOIN C_Tax tax ON tax.C_Tax_ID = col.C_Tax_ID
-LEFT JOIN M_InOutLine iol ON iol.M_InOutLine_ID = il.M_InOutLine_ID
-LEFT JOIN M_InOut io ON io.M_InOut_ID = iol.M_InOut_ID
-LEFT JOIN C_BPartner bp ON bp.C_BPartner_ID = io.C_BPartner_ID
-LEFT JOIN C_Invoice inv ON inv.C_Invoice_ID = il.C_Invoice_ID
-LEFT JOIN C_Order ord ON ord.C_Order_ID = col.C_Order_ID
-LEFT JOIN M_AttributeSetInstance masi ON masi.M_AttributeSetInstance_ID = il.M_AttributeSetInstance_ID
-WHERE io.DOCUMENTNO IS NOT NULL
-  AND inv.DOCUMENTNO = :fcture
-GROUP BY 
-    io.DOCUMENTNO,
-    io.MovementDate,
-    prod.NAME,
-    il.C_InvoiceLine_ID
-ORDER BY 
-    io.DOCUMENTNO,
-    prod.NAME
-            '''
-            cur.execute(sql, {"fcture": facture_no})
-            for row in cur.fetchall():
-                (
-                    expedition, dateexp, article, lot, invoice_line_id, guaranteedate, ppa, prix_unitaire, quantite, remise, tva
-                ) = row
-                # Calculate TTC = (Prix Unitaire - (Prix Unitaire * Remise% / 100)) * Quantité
-                try:
-                    prix_unitaire_f = float(prix_unitaire or 0)
-                    remise_f = float(remise or 0)
-                    quantite_f = float(quantite or 0)
-                    prix_remise = prix_unitaire_f - (prix_unitaire_f * remise_f / 100)
-                    ttc = prix_remise * quantite_f
-                except Exception:
-                    ttc = 0
-                # Helper to format numbers: space as thousands sep, dot as decimal
-                def format_number(val, decimals=2):
-                    try:
-                        return f"{float(val):,.{decimals}f}".replace(",", " ")
-                    except Exception:
-                        return val or ''
-
-                # Format remise to 2 decimals
-                remise_fmt = format_number(remise, 2)
-                # Format prix_unitaire, ppa, ttc, quantite
-                prix_unitaire_fmt = format_number(prix_unitaire, 2)
-                ppa_fmt = format_number(ppa, 2)
-                ttc_fmt = format_number(ttc, 2)
-                quantite_fmt = format_number(quantite, 0) if quantite is not None else ''
-                # Ensure TVA is always shown (show '—' if missing or None)
-                tva_fmt = str(tva) if tva not in (None, '', 'None') else '—'
-                # Show Expedition as exp + dateexp
-                expedition_display = f"{expedition or ''} {dateexp or ''}".strip()
-                rows.append([
-                    expedition_display,
-                    article or '',
-                    quantite_fmt,
-                    lot or '',
-                    guaranteedate or '',
-                    prix_unitaire_fmt,
-                    remise_fmt,
-                    ppa_fmt,
-                    tva_fmt,
-                    ttc_fmt
-                ])
-    except Exception as e:
-        # If DB error, return only header row
-        return Table([headers], colWidths=[55, 120, 30, 35, 45, 50, 30, 50, 30, 35, 60])
-
-    data_table = [headers] + rows
-    col_widths = [75, 135, 38, 60, 60, 45, 28, 40, 28, 50]
-    last_expedition = None
-    for i, row in enumerate(data_table):
-        if i == 0:
-            continue
-        if row[0] == last_expedition:
-            row[0] = ''
-        else:
-            last_expedition = row[0]
-        for idx in [0, 1, 3, 4]:
-            if row[idx]:
-                row[idx] = Paragraph(str(row[idx]), ParagraphStyle('wrap', fontName='Helvetica', fontSize=8, alignment=0, wordWrap='CJK'))
-
-    table = Table(data_table, colWidths=col_widths)
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F5F8FA')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1A4C8B')),
-        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-        ('ALIGN', (0, 1), (1, -1), 'LEFT'),
-        ('ALIGN', (3, 1), (4, -1), 'LEFT'),
-        ('ALIGN', (2, 1), (2, -1), 'CENTER'),
-        ('ALIGN', (5, 1), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 8),
-        ('GRID', (0, 0), (-1, -1), 0.7, colors.HexColor('#2C3E50')),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('ROWBACKGROUNDS', (1, 1), (-1, -1), [colors.white, colors.HexColor('#F5F8FA')]),
-    ]))
-    return table
-
-# ------------------------------
-# 🔹 Combined Header PDF Route
-# ------------------------------
-@app.route('/download-header-pdf', methods=['GET'])
-def download_header_pdf():
-    """Download combined Société + Client header as PDF."""
-    include_societe = request.args.get('include_societe', '1') == '1'
-    include_client = request.args.get('include_client', '1') == '1'
-    bpartner_id = request.args.get('bpartner_id')
-    document_no = request.args.get('documentno', '')
-
-    if not include_societe and not include_client:
-        return jsonify({"error": "No sections selected for download."}), 400
-
-    try:
-        buffer = BytesIO()
-        elements = []
-
-        # --- Société Section ---
-        if include_societe:
-            with DB_POOL.acquire() as conn:
-                cur = conn.cursor()
-                cur.execute('''
-                    SELECT etebac5_senderid AS RIB_SOCIETE, siren AS NAI_SOCIETE,
-                           siret AS NIS_SOCIETE, phone AS TELE_societe, fax AS FAX_societe,
-                           taxid AS NIF_SOCIETE, duns AS NRC_SOCIETE, loc.address1 AS ADDRESSE_SOCIETE,
-                           email AS EMAIL_SOCIETE, xx_site AS WEBSITE_SOCIETE,
-                           org.description AS ACTIVITE_SOCIEETE, xx_capital AS CAPITAL_SOCIEETE
-                    FROM AD_OrgInfo
-                    LEFT JOIN c_location loc ON loc.c_location_id = AD_OrgInfo.c_location_id
-                    LEFT JOIN AD_Org org ON org.ad_org_id = AD_OrgInfo.ad_org_id
-                    WHERE AD_OrgInfo.ad_org_id = 1000000
-                ''')
-                row = cur.fetchone()
-                societe_data = dict(zip([c[0] for c in cur.description], row)) if row else {}
-            elements.extend(generate_societe_pdf(societe_data, return_elements=True))
-            # Remove space between societe and client header
-            # elements.append(Spacer(1, 20))
-
-        # --- Client Section ---
-        if include_client and bpartner_id:
-            # Fetch client info as before
-            with DB_POOL.acquire() as conn:
-                cur = conn.cursor()
-                cur.execute('''
-                    SELECT bp.DESCRIPTION AS Activite_client, bp.XX_RC AS RC_client,
-                           bp.XX_NIF AS NIF_client, bp.XX_NIS AS NIS_client, bp.XX_AI AS AI_client,
-                           bp.name AS Client_Name, reg.NAME AS Region_de_vente, locc.address1 AS Location_ID_client
-                    FROM C_BPartner bp
-                    LEFT JOIN C_BPartner_Location loc ON loc.C_BPartner_ID = bp.C_BPartner_ID
-                    LEFT JOIN C_SalesRegion reg ON reg.C_SalesRegion_ID = loc.C_SalesRegion_ID
-                    LEFT JOIN c_location locc ON locc.c_location_id = loc.c_location_id
-                    WHERE bp.C_BPartner_ID = :bpid
-                ''', {"bpid": bpartner_id})
-                row = cur.fetchone()
-                client_data = dict(zip([c[0] for c in cur.description], row)) if row else {}
-
-            # Fetch Vendeur, Commande, and Delai_de_paiement from invoice using documentno
-            vendeur = None
-            commande = None
-            invoice_date = None
-            delai_paiement = None
-            mode_paiement = None
-            if document_no:
-                with DB_POOL.acquire() as conn2:
-                    cur2 = conn2.cursor()
-                    cur2.execute('''
-                        SELECT salesrep.NAME AS Vendeur, ord.DOCUMENTNO AS Ordre_de_vente, c.DATEINVOICED, payterm.NAME AS Delai_de_paiement, zsub.NAME AS Mode_de_paiement
-                        FROM C_Invoice c
-                        LEFT JOIN AD_User salesrep ON salesrep.AD_User_ID = c.SALESREP_ID
-                        LEFT JOIN C_Order ord ON ord.C_Order_ID = c.C_ORDER_ID
-                        LEFT JOIN C_PaymentTerm payterm ON payterm.C_PaymentTerm_ID = c.C_PAYMENTTERM_ID
-                        LEFT JOIN ZSubPaymentRule zsub ON zsub.ZSubPaymentRule_ID = c.ZSUBPAYMENTRULE_ID
-                        WHERE c.DOCUMENTNO = :doc
-                    ''', {"doc": document_no})
-                    row2 = cur2.fetchone()
-                    if row2:
-                        vendeur = row2[0]
-                        commande = row2[1]
-                        invoice_date = row2[2].strftime('%d/%m/%Y') if row2[2] and hasattr(row2[2], 'strftime') else str(row2[2]) if row2[2] else None
-                        delai_paiement = row2[3]
-                        mode_paiement = row2[4]
-            # Add to client_data for PDF
-            if commande:
-                client_data['Ordre_de_vente'] = commande
-            if vendeur:
-                client_data['Vendeur'] = vendeur
-            if delai_paiement:
-                client_data['Delai_de_paiement'] = delai_paiement
-            if mode_paiement:
-                client_data['Mode_de_paiement'] = mode_paiement
-            invoice_data = {"invoice_no": document_no or "—", "date": invoice_date or "—"}
-            elements.extend(generate_client_pdf(client_data, invoice_data, return_elements=True))
-            elements.append(Spacer(1, 20))
-
-        # --- Build PDF ---
-        doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=30, rightMargin=30, topMargin=30, bottomMargin=30)
-        doc.build(elements)
-
-        buffer.seek(0)
-        response = make_response(buffer.read())
-        response.headers['Content-Type'] = 'application/pdf'
-        response.headers['Content-Disposition'] = 'attachment; filename=header_combined.pdf'
-        return response
-
-    except Exception as e:
-        logger.error(f"Error generating PDF: {e}")
-        return jsonify({"error": "Failed to generate header PDF."}), 500
 
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000, debug=True)
-    
-#Both Société + Client	/download-header-pdf?include_societe=1&include_client=1&bpartner_id=1000001&documentno=F001
-#Only Société header	/download-header-pdf?include_societe=1&include_client=0
-#Only Client header	/download-header-pdf?include_societe=0&include_client=1&bpartner_id=1000001
-#127.0.0.1:5000/download-header-pdf?include_societe=1&include_client=1&bpartner_id=1118535&documentno=9926/2025
+    app.run(host='0.0.0.0', port=5000)

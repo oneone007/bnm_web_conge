@@ -720,57 +720,11 @@ $latestDataJson = json_encode($latestData);
 
                 // Helper function to create a row
                 function createRow(label, value, lastUpdate = '-', previousValue = null, weekly = '-', monthly = '-', isSubRow = false, color = '') {
-                    // Resolve theme and adjust colors for better contrast in light mode
-                    const theme = document.documentElement.getAttribute('data-theme') || 'dark';
-
-                    function resolveColorForTheme(inputColor) {
-                        if (!inputColor) return '';
-
-                        // Mapping of weaker/pastel colors to stronger alternatives for light theme
-                        const lightMap = {
-                            'rgba(0, 245, 212, 0.7)': '#009973',
-                            'rgba(155, 93, 229, 0.7)': '#6b3cc8',
-                            'rgba(255, 0, 51, 0.7)': '#cc0029',
-                            '#00f5d4': '#00b38a',
-                            '#0088ff': '#0066cc',
-                            '#9b5de5': '#6b3cc8',
-                            '#ff0033': '#cc0029',
-                            '#ffffff': '#1f2937'
-                        };
-
-                        if (theme === 'light') {
-                            // Try exact match first
-                            if (lightMap[inputColor]) return lightMap[inputColor];
-
-                            // Basic conversions for rgba(...) with alpha
-                            if (inputColor.startsWith('rgba')) {
-                                // fallback to a medium-dark gray if unknown rgba
-                                return '#1f2937';
-                            }
-
-                            // If it's a short hex or other value, return it as-is
-                            return inputColor;
-                        }
-
-                        // Dark theme: keep original color for brand accents
-                        return inputColor;
-                    }
-
-                    const appliedColor = resolveColorForTheme(color);
-                    const baseStyle = appliedColor ? `color: ${appliedColor}` : '';
-
-                    // Default todayChange color should be readable in both themes
-                    let todayChange = { text: '-', color: theme === 'light' ? '#1f2937' : '#ffffff' };
+                    const baseStyle = color ? `color: ${color}` : '';
+                    let todayChange = { text: '-', color: '#ffffff' };
+                    
                     if (previousValue !== null) {
                         todayChange = calculatePercentChange(value, previousValue);
-
-                        // Ensure todayChange color is readable on light background
-                        if (theme === 'light') {
-                            // map white/transparent to dark text
-                            if (!todayChange.color || todayChange.color === '#ffffff') {
-                                todayChange.color = '#1f2937';
-                            }
-                        }
                     }
 
                     return `
@@ -795,7 +749,6 @@ try {
             principale: lastSavedData.stock?.principal,
             depot_reserver: lastSavedData.stock?.depot_reserver,
             hangar: lastSavedData.stock?.hangar,
-            hangar_reception: lastSavedData.stock?.hangar_reception,
             hangar_reserve: lastSavedData.stock?.hangar_reserver
         },
         credit_client: lastSavedData.creance?.creance,
@@ -833,8 +786,6 @@ try {
                     lastSavedData?.stock?.depot_reserver, '-', '-', true, 'rgba(0, 245, 212, 0.7)');
                 html += createRow('Hangar', stockData.hangar, '<?php echo $lastSavedTime; ?>', 
                     lastSavedData?.stock?.hangar, '-', '-', true, 'rgba(0, 245, 212, 0.7)');
-                html += createRow('Hangar Reception', stockData.hangar_reception, '<?php echo $lastSavedTime; ?>', 
-                    lastSavedData?.stock?.hangar_reception, '-', '-', true, 'rgba(0, 245, 212, 0.7)');
                 html += createRow('Hangar Reserve', stockData.hangarréserve, '<?php echo $lastSavedTime; ?>', 
                     lastSavedData?.stock?.hangar_reserve, '-', '-', true, 'rgba(0, 245, 212, 0.7)');
 
@@ -958,7 +909,6 @@ try {
                     principale: stockData.STOCK_principale,
                     depot_reserver: stockData.depot_reserver,
                     hangar: stockData.hangar,
-                    hangar_reception: stockData.hangar_reception,
                     hangar_reserve: stockData.hangarréserve
                 },
                 credit_client: creditData.credit_client,
@@ -1079,7 +1029,7 @@ try {
                 if (!startDateInput.value || !endDateInput.value) {
                     const end = new Date();
                     const start = new Date();
-                    start.setDate(start.getDate() - 7); // Default to last 7 days
+                    start.setDate(start.getDate() - 30); // Default to last 7 days
                     
                     endDateInput.value = end.toISOString().split('T')[0];
                     startDateInput.value = start.toISOString().split('T')[0];

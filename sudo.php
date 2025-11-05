@@ -260,10 +260,10 @@ if ($result) {
 $allPages = [
     'Annual_Recap_A', 'Annual_Recap_V', 'CONFIRMED_ORDERS', 'DETTE_F', 'ETAT_F', 
     'ETAT_F_CUMULE', 'Etatstock', 'Journal_Vente', 'Mouvement_Stock', 'Product', 
-    'Quota', 'Recap_Achat', 'Recap_Vente', 'Recap_Vente_Facturation', 'Rotation', 'analyse_client',
+    'Quota', 'Recap_Achat', 'Recap_Vente', 'Recap_Vente_Facturation', 'Rotation', 
     'bank', 'charge', 'feedback', 'inventory/inv', 'inventory/inv_admin', 'inventory/inv_saisie', 
     'mony', 'portf', 'print', 'recap_achat_facturation', 'recouverement', 'retour',
-    'rot_men_achat', 'rot_men_vente', 'rot_men_global', 'sess', 'simuler', 'sudo', 'AFFECTATION'
+    'rot_men_achat', 'rot_men_vente', 'sess', 'simuler', 'sudo', 'AFFECTATION'
 ];
 
 // Add any missing pages from role access definitions
@@ -697,12 +697,6 @@ sort($allPages);
                         </button>
                     </li>
 
-                    <li class="mr-2">
-                        <button onclick="switchTab('space_cleaner')" class="inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-blue-600 hover:border-blue-600 dark:hover:text-blue-500 tab-button" data-tab="space_cleaner">
-                            <i class="fas fa-broom mr-2"></i> Space Cleaner
-                        </button>
-                    </li>
-
                 </ul>
             </div>
 
@@ -921,15 +915,9 @@ sort($allPages);
                     <div class="mb-6">
                         <h3 class="text-lg font-medium mb-4">Role-Based Access Control</h3>
                         <div class="mb-4">
-                            <?php if (isset($_SESSION['Role']) && in_array($_SESSION['Role'], ['Developer', 'Admin'])): ?>
                             <button id="toggleEditMode" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-300">
                                 <i class="fas fa-edit mr-2"></i> Edit Role Permissions
                             </button>
-                            <?php else: ?>
-                            <div class="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-gray-500 dark:text-gray-400">
-                                <i class="fas fa-lock mr-2"></i> Role permissions can only be edited by Admin or Developer users
-                            </div>
-                            <?php endif; ?>
                             <div id="savePermissionsContainer" class="hidden mt-4">
                                 <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
                                     <div class="flex">
@@ -1037,10 +1025,10 @@ sort($allPages);
                             $completePagesList = [
                                 'Annual_Recap_A', 'Annual_Recap_V', 'CONFIRMED_ORDERS', 'DETTE_F', 'ETAT_F', 
                                 'ETAT_F_CUMULE', 'Etatstock', 'Journal_Vente', 'Mouvement_Stock', 'Product', 
-                                'Quota', 'Recap_Achat', 'Recap_Vente', 'Recap_Vente_Facturation', 'Rotation', 'analyse_client',
+                                'Quota', 'Recap_Achat', 'Recap_Vente', 'Recap_Vente_Facturation', 'Rotation', 
                                 'bank', 'charge', 'feedback', 'inventory/inv', 'inventory/inv_admin', 'inventory/inv_saisie', 
                                 'mony', 'portf', 'print', 'recap_achat_facturation', 'recouverement', 'retour',
-                                'rot_men_achat', 'rot_men_vente', 'sess', 'simuler', 'sudo','rot_men_global', 'AFFECTATION'
+                                'rot_men_achat', 'rot_men_vente', 'sess', 'simuler', 'sudo', 'AFFECTATION'
                             ];
                             sort($completePagesList);
                             
@@ -1092,11 +1080,6 @@ sort($allPages);
 
             <div id="feedback-tab" class="tab-content">
                 <iframe src="feedback" style="width:100%; height:800px; border:none; background:white;" title="Feedback Management"></iframe>
-            </div>
-
-            <!-- Space Cleaner Tab -->
-            <div id="space_cleaner-tab" class="tab-content">
-                <iframe src="space_cleaner" style="width:100%; height:800px; border:none; background:white;" title="Space Cleaner"></iframe>
             </div>
 
             <!-- Create New User Tab -->

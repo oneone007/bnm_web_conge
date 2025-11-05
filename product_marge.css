@@ -726,6 +726,11 @@ html.dark .excel-btn-primary:hover {
     backdrop-filter: blur(10px);
 }
 
+.table-container:hover {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
 .table-container table {
     width: 100%;
     table-layout: auto;
@@ -796,6 +801,14 @@ th, td {
 
 .table-container tbody tr:nth-child(even) {
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.table-container tbody tr:hover {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.table-container tbody tr:hover td {
+    color: inherit;
 }
 
 /* Client Type Styling */
@@ -966,6 +979,14 @@ html.dark .table-container tbody tr {
 
 html.dark .table-container tbody tr:nth-child(even) {
     background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+}
+
+html.dark .table-container tbody tr:hover {
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+}
+
+html.dark .table-container tbody tr:hover td {
+    color: inherit;
 }
 
 html.dark .client-para {

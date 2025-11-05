@@ -1,4 +1,5 @@
 
+
 import oracledb
 from flask import Flask, jsonify, request, send_file, make_response
 from flask_cors import CORS
@@ -37,158 +38,15 @@ DB_POOL = oracledb.create_pool(
     increment=1
 )
 
-# MySQL connection for local database
-def get_localdb_connection():
-    """
-    Get MySQL database connection for local configuration tables.
-    """
-    try:
-        connection = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="",  # Update with your MySQL password if needed
-            database="bnm"
-        )
-        return connection
-    except Exception as e:
-        logger.error(f"Error connecting to local MySQL database: {e}")
-        return None
-
-# Fetch default locators from MySQL database
-def fetch_default_locators_from_db():
-    """
-    Fetch locators from the default_emmplacment table in MySQL.
-    Returns a dictionary with emplacement_id as key and emplacement name as value.
-    Falls back to hardcoded values if database is unavailable.
-    """
-    try:
-        conn = get_localdb_connection()
-        if not conn:
-            logger.warning("Failed to connect to local database, using hardcoded locators")
-            return {
-                1000614: 'Préparation',
-                1001135: 'HANGAR',
-                1001128: 'Dépot_réserve',
-                1001136: 'HANGAR_',
-                1001020: 'Depot_Vente',
-                1000717: 'hangar reception'
-            }
-        
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT emplacement_id, emplacement FROM default_emmplacment ORDER BY emplacement_id")
-        
-        rows = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        
-        if not rows:
-            logger.warning("No locators found in database, using hardcoded locators")
-            return {
-                1000614: 'Préparation',
-                1001135: 'HANGAR',
-                1001128: 'Dépot_réserve',
-                1001136: 'HANGAR_',
-                1001020: 'Depot_Vente',
-                1000717: 'hangar reception'
-            }
-        
-        # Convert to dictionary
-        locators_dict = {row['emplacement_id']: row['emplacement'] for row in rows}
-        logger.info(f"Loaded {len(locators_dict)} locators from database")
-        return locators_dict
-        
-    except Exception as e:
-        logger.error(f"Error fetching locators from database: {e}")
-        # Fallback to hardcoded values
-        return {
-            1000614: 'Préparation',
-            1001135: 'HANGAR',
-            1001128: 'Dépot_réserve',
-            1001136: 'HANGAR_',
-            1001020: 'Depot_Vente',
-            1000717: 'hangar reception'
-        }
-
-# Function to reload configuration from database
-def reload_configuration():
-    """
-    Reload default locators and magasin IDs from database.
-    This allows changes to take effect without restarting Flask.
-    """
-    global default_locators
-    try:
-        default_locators = fetch_default_locators_from_db()
-        logger.info(f"Configuration reloaded successfully: {len(default_locators)} emplacements loaded")
-        return True
-    except Exception as e:
-        logger.error(f"Error reloading configuration: {e}")
-        return False
-
-# Load default locators from database (with fallback to hardcoded)
-default_locators = fetch_default_locators_from_db()
-
-# Helper function to generate CASE statement from default_locators
-def get_locator_case_statement(column_name='m_locator_id', else_value="'Unknown'"):
-    """
-    Generate a SQL CASE statement for locator mapping.
-    
-    Args:
-        column_name: The column name to use in WHEN clauses (default: 'm_locator_id')
-        else_value: The value to return when no match is found (default: "'Unknown'")
-    
-    Returns:
-        A formatted SQL CASE statement string
-    """
-    case_parts = ['CASE']
-    for locator_id, locator_name in default_locators.items():
-        case_parts.append(f"                    WHEN {column_name} = {locator_id} THEN '{locator_name}'")
-    if else_value:
-        case_parts.append(f"                    ELSE {else_value}")
-    case_parts.append('                END')
-    return '\n'.join(case_parts)
-
-# Helper function to get locator IDs as comma-separated string
-def get_locator_ids():
-    """
-    Get comma-separated string of locator IDs from default_locators dictionary.
-    
-    Returns:
-        A string like '1000614, 1001135, 1001128, 1001136, 1001020, 1000717'
-    """
-    return ', '.join(str(loc_id) for loc_id in default_locators.keys())
-
-# Helper function to get magasin IDs as comma-separated string
-def get_magasin_ids():
-    """
-    Get comma-separated string of distinct magasin IDs from default_emmplacment table.
-    Used in queries to filter by default magasins.
-    
-    Returns:
-        A string like '1000100, 1000200, 1000300' or None if error
-    """
-    try:
-        conn = get_localdb_connection()
-        if not conn:
-            logger.warning("Failed to connect to local database for magasin IDs")
-            return None
-        
-        cursor = conn.cursor()
-        cursor.execute("SELECT DISTINCT magasin_id FROM default_emmplacment ORDER BY magasin_id")
-        rows = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        
-        if not rows:
-            logger.warning("No magasin IDs found in default_emmplacment")
-            return None
-        
-        magasin_ids = ', '.join(str(row[0]) for row in rows)
-        logger.info(f"Loaded {len(rows)} distinct magasin IDs: {magasin_ids}")
-        return magasin_ids
-        
-    except Exception as e:
-        logger.error(f"Error fetching magasin IDs: {e}")
-        return None
+# Default locators mapping
+default_locators = {
+    1000614: 'Préparation',
+    1001135: 'HANGAR',
+    1001128: 'Dépot_réserve',
+    1001136: 'HANGAR_',
+    1001020: 'Depot_Vente',
+    1000717: 'hangar reception'
+}
 
 
 
@@ -378,9 +236,7 @@ def fetch_marge_data():
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
-            locator_case = get_locator_case_statement('m_locator_id', None)
-            locator_ids = get_locator_ids()
-            query = f"""
+            query = """
 SELECT
     *
 FROM
@@ -428,7 +284,14 @@ FROM
                     qty_dispo,
                     guaranteedate,
                     ppa,
-                    {locator_case} AS location
+                    CASE 
+                        WHEN m_locator_id = 1000614 THEN 'Préparation'
+                        WHEN m_locator_id = 1001135 THEN 'HANGAR'
+                        WHEN m_locator_id = 1001128 THEN 'Dépot_réserve'
+                        WHEN m_locator_id = 1001136 THEN 'HANGAR_'
+                        WHEN m_locator_id = 1001020 THEN 'Depot_Vente'
+                        WHEN m_locator_id = 1000717 THEN 'hangar reception' 
+                    END AS location
                 FROM
                     (
                         SELECT
@@ -540,7 +403,7 @@ FROM
                                             LEFT JOIN XX_SalesContext sal ON p.XX_SalesContext_ID = sal.XX_SalesContext_ID
                                         WHERE
                                             mati.m_attribute_id = 1000508
-                                            AND mst.m_locator_id IN ({locator_ids})
+                                            AND mst.m_locator_id IN (1001135, 1000614, 1001128, 1001136, 1001020, 1000717)
                                             AND mst.qtyonhand != 0
                                         ORDER BY
                                             p.name
@@ -829,10 +692,8 @@ def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None, n
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
-            locator_case = get_locator_case_statement('ml.M_Locator_ID', "'Unknown'")
-            magasin_ids = get_magasin_ids()
-            
-            query = f"""
+
+            query = """
             SELECT 
                 mati.value AS fournisseur, 
                 m.name,  
@@ -840,12 +701,20 @@ def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None, n
                 SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand) AS prix,
                 SUM(m_storage.qtyonhand - m_storage.QTYRESERVED) AS qty_dispo, 
                 SUM(M_ATTRIBUTEINSTANCE.valuenumber * (m_storage.qtyonhand - m_storage.QTYRESERVED)) AS prix_dispo,
-                
                 SUM(m_storage.QTYRESERVED) AS qty_reserved,
                 ml.M_Locator_ID AS locatorid,
                 m.m_product_id AS productid,
                 1 AS sort_order,
-                {locator_case} AS place
+                CASE 
+                    WHEN ml.M_Locator_ID = 1000614 THEN 'Préparation'
+                    WHEN ml.M_Locator_ID = 1001135 THEN 'HANGAR'
+                    WHEN ml.M_Locator_ID = 1001128 THEN 'Dépot_réserve'
+                    WHEN ml.M_Locator_ID = 1001136 THEN 'HANGAR_'
+                    WHEN ml.M_Locator_ID = 1001020 THEN 'Depot_Vente'
+                    WHEN ml.M_Locator_ID = 1000717 THEN 'Hangar Reception'
+
+                    ELSE 'Unknown' 
+                END AS place
             FROM 
                 M_ATTRIBUTEINSTANCE
             JOIN 
@@ -859,7 +728,6 @@ def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None, n
             WHERE 
                 M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
                 AND m_storage.qtyonhand > 0
-
                 AND mati.m_attribute_id = 1000508
                 AND m_storage.AD_Client_ID = 1000000
             """
@@ -888,18 +756,7 @@ def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None, n
                 """
                 params["magasin"] = magasin
             else:
-                # Use dynamic magasin IDs from default_emmplacment table
-                if magasin_ids:
-                    query += f"""
-                AND m_storage.M_Locator_ID IN (
-                    SELECT M_Locator_ID 
-                    FROM M_Locator 
-                    WHERE M_Warehouse_ID IN ({magasin_ids})
-                )
-                """
-                else:
-                    # Fallback to hardcoded values if database not available
-                    query += """
+                query += """
                 AND m_storage.M_Locator_ID IN (
                     SELECT M_Locator_ID 
                     FROM M_Locator 
@@ -984,18 +841,7 @@ def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None, n
                 )
                 """
             else:
-                # Use dynamic magasin IDs from default_emmplacment table
-                if magasin_ids:
-                    query += f"""
-                AND m_storage.M_Locator_ID IN (
-                    SELECT M_Locator_ID 
-                    FROM M_Locator 
-                    WHERE M_Warehouse_ID IN ({magasin_ids})
-                )
-                """
-                else:
-                    # Fallback to hardcoded values if database not available
-                    query += """
+                query += """
                 AND m_storage.M_Locator_ID IN (
                     SELECT M_Locator_ID 
                     FROM M_Locator 
@@ -1043,89 +889,6 @@ def fetch_stock_data_from_db(fournisseur=None, magasin=None, emplacement=None, n
 
 
 
-@app.route('/fetch-articles-data', methods=['GET'])
-def fetch_articles_data():
-    try:
-        magasin = request.args.get("magasin")
-        name = request.args.get("name")
-
-        # Check required parameters
-        if not magasin or not name:
-            return jsonify({"error": "Missing required parameters: magasin and name"}), 400
-
-        data = fetch_articles_data_from_db(magasin, name)
-        return jsonify(data)
-
-    except Exception as e:
-        logger.error(f"Error fetching articles data: {e}")
-        return jsonify({"error": "Failed to fetch articles data"}), 500
-
-
-def fetch_articles_data_from_db(magasin, name):
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            locator_case = get_locator_case_statement('ml.M_Locator_ID', "'Unknown'")
-
-            query = f"""
-                        SELECT 
-                            m.name,  
-                            NVL(SUM(m_storage.qtyonhand), 0) AS qty,
-                            NVL(SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand), 0) AS prix,
-                            NVL(SUM(m_storage.qtyonhand - m_storage.QTYRESERVED), 0) AS qty_dispo, 
-                            NVL(SUM(M_ATTRIBUTEINSTANCE.valuenumber * (m_storage.qtyonhand - m_storage.QTYRESERVED)), 0) AS prix_dispo,
-                            NVL(SUM(m_storage.QTYRESERVED), 0) AS qty_reserved,
-                            ml.M_Locator_ID AS locatorid,
-                            m.m_product_id AS productid,
-                            1 AS sort_order,
-                            {locator_case} AS place
-                        FROM 
-                            M_ATTRIBUTEINSTANCE
-                        JOIN 
-                            m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
-                        JOIN 
-                            M_PRODUCT m ON m.M_PRODUCT_ID = m_storage.M_PRODUCT_ID
-                        JOIN 
-                            M_Locator ml ON ml.M_Locator_ID = m_storage.M_Locator_ID
-                        INNER JOIN 
-                            m_attributeinstance mati ON m_storage.m_attributesetinstance_id = mati.m_attributesetinstance_id
-                        WHERE 
-                            M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
-                            AND mati.m_attribute_id = 1000508
-                            AND m_storage.AD_Client_ID = 1000000
-                            AND m.name = :name
-                            AND m_storage.M_Locator_ID IN (
-                                SELECT M_Locator_ID 
-                                FROM M_Locator 
-                                WHERE M_Warehouse_ID IN (
-                                    SELECT M_Warehouse_ID 
-                                    FROM M_Warehouse 
-                                    WHERE VALUE = :magasin
-                                )
-                            )
-                        GROUP BY 
-                            m.name, m.m_product_id, ml.M_Locator_ID
-                        ORDER BY 
-                             name
-                        """
-
-            params = {
-                "magasin": magasin,
-                "name": name
-            }
-
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]
-            data = [dict(zip(columns, row)) for row in rows]
-
-            return data
-
-    except Exception as e:
-        logger.error(f"Database error in fetch_articles_data_from_db: {e}")
-        return {"error": "An error occurred while fetching articles data."}
-
-
 
 
 def fetch_desactivated_lot_data_from_db(fournisseur=None, magasin=None, emplacement=None, name=None):
@@ -1135,10 +898,8 @@ def fetch_desactivated_lot_data_from_db(fournisseur=None, magasin=None, emplacem
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
-            locator_case = get_locator_case_statement('ml.M_Locator_ID', "'Unknown'")
-            magasin_ids = get_magasin_ids()
-            
-            query = f"""
+
+            query = """
             SELECT 
                 mati.value AS fournisseur, 
                 m.name,  
@@ -1149,7 +910,14 @@ def fetch_desactivated_lot_data_from_db(fournisseur=None, magasin=None, emplacem
                 ml.M_Locator_ID AS locatorid,
                 m.m_product_id AS productid,
                 1 AS sort_order,
-                {locator_case} AS place
+                CASE 
+                    WHEN ml.M_Locator_ID = 1000614 THEN 'Préparation'
+                    WHEN ml.M_Locator_ID = 1001135 THEN 'HANGAR'
+                    WHEN ml.M_Locator_ID = 1001128 THEN 'Dépot_réserve'
+                    WHEN ml.M_Locator_ID = 1001136 THEN 'HANGAR_'
+                    WHEN ml.M_Locator_ID = 1001020 THEN 'Depot_Vente'
+                    ELSE 'Unknown' 
+                END AS place
             FROM 
                 M_ATTRIBUTEINSTANCE
             JOIN 
@@ -1194,18 +962,7 @@ def fetch_desactivated_lot_data_from_db(fournisseur=None, magasin=None, emplacem
                 """
                 params["magasin"] = magasin
             else:
-                # Use dynamic magasin IDs from default_emmplacment table
-                if magasin_ids:
-                    query += f"""
-                AND m_storage.M_Locator_ID IN (
-                    SELECT M_Locator_ID 
-                    FROM M_Locator 
-                    WHERE M_Warehouse_ID IN ({magasin_ids})
-                )
-                """
-                else:
-                    # Fallback to hardcoded values if database not available
-                    query += """
+                query += """
                 AND m_storage.M_Locator_ID IN (
                     SELECT M_Locator_ID 
                     FROM M_Locator 
@@ -1292,18 +1049,7 @@ def fetch_desactivated_lot_data_from_db(fournisseur=None, magasin=None, emplacem
                 )
                 """
             else:
-                # Use dynamic magasin IDs from default_emmplacment table
-                if magasin_ids:
-                    query += f"""
-                AND m_storage.M_Locator_ID IN (
-                    SELECT M_Locator_ID 
-                    FROM M_Locator 
-                    WHERE M_Warehouse_ID IN ({magasin_ids})
-                )
-                """
-                else:
-                    # Fallback to hardcoded values if database not available
-                    query += """
+                query += """
                 AND m_storage.M_Locator_ID IN (
                     SELECT M_Locator_ID 
                     FROM M_Locator 
@@ -1481,9 +1227,8 @@ def fetch_product_details_data(product_name):
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
-            locator_case = get_locator_case_statement('m_locator_id', None)
-            locator_ids = get_locator_ids()
-            query = f"""
+            
+            query = """
             SELECT
                 *
             FROM
@@ -1535,7 +1280,14 @@ def fetch_product_details_data(product_name):
                                 qty_reserved,
                                 guaranteedate,
                                 ppa,
-                                {locator_case} AS location
+                                CASE 
+                                    WHEN m_locator_id = 1000614 THEN 'Préparation'
+                                    WHEN m_locator_id = 1001135 THEN 'HANGAR'
+                                    WHEN m_locator_id = 1001128 THEN 'Dépot_réserve'
+                                    WHEN m_locator_id = 1001136 THEN 'HANGAR_'
+                                    WHEN m_locator_id = 1001020 THEN 'Depot_Vente'
+                                    wHEN m_locator_id = 1000717 THEN 'hangar reception'
+                                END AS location
                             FROM
                                 (
                                     SELECT
@@ -1680,7 +1432,7 @@ def fetch_product_details_data(product_name):
                                                         LEFT JOIN XX_SalesContext sal ON p.XX_SalesContext_ID = sal.XX_SalesContext_ID
                                                     WHERE
                                                         mati.m_attribute_id = 1000508
-                                                        AND mst.m_locator_id IN ({locator_ids})
+                                                        AND mst.m_locator_id IN (1001135, 1000614, 1001128, 1001136, 1001020, 1000717)
                                                         AND mst.qtyonhand != 0
                                                         AND p.name = :product_name
                                                     ORDER BY
@@ -1732,238 +1484,6 @@ def fetch_product_details_data(product_name):
         logger.error(f"Error fetching product details: {e}")
         return {"error": "An error occurred while fetching product details."}
 
-
-def fetch_Article_product_details_data(product_name, warehouse_id):
-    """
-    Fetch detailed product information similar to the marge data structure,
-    including lot_id (m_attributesetinstance_id).
-    The warehouse_id is now dynamic instead of static (was 1000000).
-    """
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            locator_case = get_locator_case_statement('m_locator_id', None)
-            locator_ids = get_locator_ids()
-
-            query = f"""
-            SELECT
-                *
-            FROM
-                (
-                    SELECT
-                        "source"."FOURNISSEUR" "FOURNISSEUR",
-                        "source"."PRODUCT" "PRODUCT",
-                        "source"."P_ACHAT" "P_ACHAT",
-                        "source"."P_VENTE" "P_VENTE",
-                        "source"."REM_ACHAT" "REM_ACHAT",
-                        "source"."REM_VENTE" "REM_VENTE",
-                        "source"."BON_ACHAT" "BON_ACHAT",
-                        "source"."BON_VENTE" "BON_VENTE",
-                        "source"."REMISE_AUTO" "REMISE_AUTO",
-                        "source"."BONUS_AUTO" "BONUS_AUTO",
-                        "source"."P_REVIENT" "P_REVIENT",
-                        "source"."MARGE" "MARGE",
-                        "source"."LABO" "LABO",
-                        "source"."LOT" "LOT",
-                        "source"."LOT_ACTIVE" "LOT_ACTIVE",
-                        "source"."LOT_ID" "LOT_ID",
-                        "source"."QTY" "QTY",
-                        "source"."QTY_DISPO" "QTY_DISPO",
-                        "source"."QTY_RESERVED" "QTY_RESERVED",
-                        "source"."GUARANTEEDATE" "GUARANTEEDATE",
-                        "source"."PPA" "PPA",
-                        "source"."LOCATION" "LOCATION"
-                    FROM
-                        (
-                            SELECT
-                                DISTINCT fournisseur,
-                                product,
-                                p_achat,
-                                p_vente,
-                                round(rem_achat, 2) AS rem_achat,
-                                rem_vente,
-                                round(bon_achat, 2) AS bon_achat,
-                                bon_vente,
-                                remise_auto,
-                                bonus_auto,
-                                round(p_revient, 2) AS p_revient,
-                                LEAST(round((marge), 2), 100) AS marge,
-                                labo,
-                                lot,
-                                lot_active,
-                                m_attributesetinstance_id AS lot_id,
-                                qty,
-                                qty_dispo,
-                                qty_reserved,
-                                guaranteedate,
-                                ppa,
-                                {locator_case} AS location
-                            FROM
-                                (
-                                    SELECT
-                                        d.*,
-                                        LEAST(
-                                            round(
-                                                (((ventef - ((ventef * nvl(rma, 0)) / 100))) - p_revient) / p_revient * 100,
-                                                2
-                                            ), 
-                                            100
-                                        ) AS marge
-                                    FROM
-                                        (
-                                            SELECT
-                                                det.*,
-                                                (det.p_achat - ((det.p_achat * det.rem_achat) / 100)) / (1 + (det.bon_achat / 100)) p_revient,
-                                                (
-                                                    det.p_vente - ((det.p_vente * nvl(det.rem_vente, 0)) / 100)
-                                                ) / (
-                                                    1 + (
-                                                        CASE
-                                                            WHEN det.bna > 0 THEN det.bna
-                                                            ELSE det.bon_vente
-                                                        END / 100
-                                                    )
-                                                ) ventef
-                                            FROM
-                                                (
-                                                    SELECT
-                                                        p.name product,
-                                                        (
-                                                            SELECT
-                                                                NAME
-                                                            FROM
-                                                                XX_Laboratory
-                                                            WHERE
-                                                                XX_Laboratory_id = p.XX_Laboratory_id
-                                                        ) labo,
-                                                        mst.qtyonhand qty,
-                                                        (mst.qtyonhand - mst.QTYRESERVED) qty_dispo,
-                                                        mst.QTYRESERVED qty_reserved,
-                                                        mst.m_locator_id,
-                                                        mst.m_attributesetinstance_id,
-                                                        mati.value fournisseur,
-                                                        mats.guaranteedate,
-                                                        md.name remise_auto,
-                                                        sal.description bonus_auto,
-                                                        md.flatdiscount rma,
-                                                        TO_NUMBER(
-                                                            CASE
-                                                                WHEN REGEXP_LIKE(sal.name, '^[0-9]+$') THEN sal.name
-                                                                ELSE NULL
-                                                            END
-                                                        ) AS bna,
-                                                        (
-                                                            SELECT valuenumber FROM m_attributeinstance
-                                                            WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
-                                                            AND m_attribute_id = 1000501
-                                                        ) p_achat,
-                                                        (
-                                                            SELECT valuenumber FROM m_attributeinstance
-                                                            WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
-                                                            AND m_attribute_id = 1001009
-                                                        ) rem_achat,
-                                                        (
-                                                            SELECT valuenumber FROM m_attributeinstance
-                                                            WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
-                                                            AND m_attribute_id = 1000808
-                                                        ) bon_achat,
-                                                        (
-                                                            SELECT valuenumber FROM m_attributeinstance
-                                                            WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
-                                                            AND m_attribute_id = 1000502
-                                                        ) p_vente,
-                                                        (
-                                                            SELECT valuenumber FROM m_attributeinstance
-                                                            WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
-                                                            AND m_attribute_id = 1001408
-                                                        ) rem_vente,
-                                                        (
-                                                            SELECT valuenumber FROM m_attributeinstance
-                                                            WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
-                                                            AND m_attribute_id = 1000908
-                                                        ) bon_vente,
-                                                        (
-                                                            SELECT lot FROM m_attributesetinstance
-                                                            WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
-                                                        ) lot,
-                                                        (
-                                                            SELECT isactive FROM m_attributesetinstance
-                                                            WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
-                                                        ) lot_active,
-                                                        (
-                                                            SELECT valuenumber FROM m_attributeinstance
-                                                            WHERE m_attributesetinstance_id = mst.m_attributesetinstance_id
-                                                            AND m_attribute_id = 1000503
-                                                        ) ppa
-                                                    FROM
-                                                        m_product p
-                                                        INNER JOIN m_storage mst ON p.m_product_id = mst.m_product_id
-                                                        INNER JOIN m_attributeinstance mati ON mst.m_attributesetinstance_id = mati.m_attributesetinstance_id
-                                                        INNER JOIN m_attributesetinstance mats ON mst.m_attributesetinstance_id = mats.m_attributesetinstance_id
-                                                        LEFT JOIN C_BPartner_Product cp ON cp.m_product_id = p.m_product_id
-                                                            OR cp.C_BPartner_Product_id IS NULL
-                                                        LEFT JOIN M_DiscountSchema md ON cp.M_DiscountSchema_id = md.M_DiscountSchema_id
-                                                        LEFT JOIN XX_SalesContext sal ON p.XX_SalesContext_ID = sal.XX_SalesContext_ID
-                                                        INNER JOIN m_locator mstl ON mst.m_locator_id = mstl.m_locator_id
-                                                        INNER JOIN M_Warehouse mgs ON mstl.M_Warehouse_ID = mgs.M_Warehouse_ID
-                                                    WHERE
-                                                        mati.m_attribute_id = 1000508
-                                                        AND mst.qtyonhand != 0
-                                                        AND mgs.M_Warehouse_ID = :warehouse_id
-                                                        AND mst.m_locator_id IN ({locator_ids})
-                                                        AND p.name = :product_name
-                                                    ORDER BY
-                                                        p.name
-                                                ) det
-                                            WHERE
-                                                det.rem_achat < 200
-                                        ) d
-                                )
-                            GROUP BY
-                                fournisseur,
-                                product,
-                                p_achat,
-                                p_vente,
-                                rem_achat,
-                                rem_vente,
-                                bon_achat,
-                                bon_vente,
-                                remise_auto,
-                                bonus_auto,
-                                p_revient,
-                                marge,
-                                labo,
-                                lot,
-                                lot_active,
-                                m_attributesetinstance_id,
-                                qty,
-                                qty_dispo,
-                                qty_reserved,
-                                guaranteedate,
-                                ppa,
-                                m_locator_id
-                            ORDER BY
-                                fournisseur
-                        ) "source"
-                )
-            WHERE
-                rownum <= 1048575
-            """
-
-            cursor.execute(query, {
-                "product_name": product_name,
-                "warehouse_id": warehouse_id
-            })
-
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]
-            data = [dict(zip(columns, row)) for row in rows]
-
-            return data
-
-    except Exception as e:
-        logger.error(f"Error fetching product details: {e}")
-        return {"error": "An error occurred while fetching product details."}
 
 
 @app.route('/fetch-product-details', methods=['GET'])
@@ -2084,10 +1604,9 @@ def fetch_magasins_from_db(magasin=None, emplacement=None):
             cursor = connection.cursor()
 
             query = """
-                                SELECT DISTINCT m.value AS MAGASIN,
-                                             m.M_WAREHOUSE_ID AS M_WAREHOUSE_ID
-                                FROM M_Locator ml
-                                JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
+                SELECT DISTINCT m.value AS MAGASIN
+                FROM M_Locator ml
+                JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
                 WHERE m.ISACTIVE = 'Y'
                   AND m.AD_Client_ID = 1000000
                   AND ml.ISACTIVE = 'Y'
@@ -3615,8 +3134,6 @@ def fetch_rotation_product_data():
         logger.error(f"Error fetching product data: {e}")
         return {"error": "An error occurred while fetching product data."}
     
-
-    
 @app.route('/fetch-rotation-product-data', methods=['GET'])
 def fetch_rotation_product_data_endpoint():
     data = fetch_rotation_product_data()
@@ -3769,114 +3286,37 @@ def histogram_route():
     return jsonify(data)
 
 
-def fetch_rotation_product_with_qty_data(name=None):
-    """Return list of active products with aggregated stock quantities.
-       If `name` is provided (string), apply a case-insensitive partial match on product name
-       so the frontend can request suggestions as the user types.
-
-       Aggregates returned:
-       - qty: SUM(m_storage.qtyonhand)
-       - qty_dispo: SUM(m_storage.qtyonhand - NVL(m_storage.qtyreserved,0))
-       - qty_reserved: SUM(NVL(m_storage.qtyreserved,0))
-    """
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            # Try to get default magasin IDs from MySQL table
-            magasin_ids = get_magasin_ids()
-
-            # Base query with join to locator so we can filter by warehouse if needed
-            query_base = """
-            SELECT
-                p.m_product_id AS M_PRODUCT_ID,
-                p.name AS NAME,
-                SUM(nvl(s.qtyonhand,0)) AS QTY,
-                SUM(nvl(s.qtyonhand,0) - nvl(s.qtyreserved,0)) AS QTY_DISPO,
-                SUM(nvl(s.qtyreserved,0)) AS QTY_RESERVED
-            FROM m_product p
-            LEFT JOIN m_storage s ON s.m_product_id = p.m_product_id
-                AND s.ad_client_id = p.ad_client_id
-                AND s.ad_org_id = p.ad_org_id
-            LEFT JOIN M_Locator ml ON ml.M_Locator_ID = s.M_Locator_ID
-            WHERE p.ad_client_id = 1000000
-              AND p.ad_org_id = 1000000
-              AND p.isactive = 'Y'
-            """
-
-            params = {}
-            # If a name filter is provided, use a case-insensitive partial match
-            if name:
-                # Oracle: use LOWER(p.name) LIKE :name
-                query_base += " AND LOWER(p.name) LIKE :name"
-                # match anywhere in the string; frontend will typically send 'abc%'
-                params['name'] = f"%{name.lower()}%"
-
-            if magasin_ids:
-                # magasin_ids is a string like '1000100, 1000200'
-                # restrict to locators whose warehouse is in that set
-                query_base += f" AND ml.M_Warehouse_ID IN ({magasin_ids})"
-
-            query_base += "\n GROUP BY p.m_product_id, p.name ORDER BY p.name"
-
-            cursor.execute(query_base, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]
-            data = [dict(zip(columns, row)) for row in rows]
-            return data
-    except Exception as e:
-        logger.error(f"Error fetching rotation product qty data: {e}")
-        return {"error": "An error occurred while fetching rotation product qty data."}
-
-
-@app.route('/fetch-rotation-product-data-with-qty', methods=['GET'])
-def fetch_rotation_product_with_qty_endpoint():
-    # Read 'name' query parameter for incremental search.
-    # For autocomplete we don't want to return all products when the user hasn't typed anything.
-    name = request.args.get('name')
-
-    # If name is missing or empty, return empty result to avoid heavy queries.
-    if not name or str(name).strip() == "":
-        return jsonify([])
-
-    data = fetch_rotation_product_with_qty_data(name=name)
-    return jsonify(data)
-
-
-
-
 def fetch_historique_rotation(product_id):
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
 
-            locator_ids = get_locator_ids()
-
-            query = f"""
+            query = """
                 WITH Latest_Purchase AS (
                     SELECT 
-                        ml.M_Product_ID,
-                        SUM(ml.qtyentered) AS last_purchase_qty,
-                        io.movementdate AS movement_date,
-                        ROW_NUMBER() OVER (PARTITION BY ml.M_Product_ID ORDER BY io.movementdate DESC) AS rn
+                        cl.M_Product_ID,
+                        SUM(cl.qtyentered) AS last_purchase_qty,
+                        c.dateinvoiced,
+                        ROW_NUMBER() OVER (PARTITION BY cl.M_Product_ID ORDER BY c.dateinvoiced DESC) AS rn
                     FROM 
-                        M_INOUTLINE ml
-                    JOIN M_INOUT io ON io.M_INOUT_ID = ml.M_INOUT_ID
+                        C_InvoiceLine cl
+                    JOIN C_Invoice c ON c.C_Invoice_id = cl.C_Invoice_id
+                    JOIN M_INOUTLINE ml ON ml.M_INOUTLINE_id = cl.M_INOUTLINE_ID
                     WHERE 
-                        io.movementdate BETWEEN TO_DATE('01/01/2020', 'DD/MM/YYYY') AND SYSDATE
-                        AND io.AD_Client_ID = 1000000
-                        AND io.AD_Org_ID = 1000000
-                        AND io.ISSOTRX = 'N'
-                        AND io.DOCSTATUS in ('CO','CL')
-                        AND io.C_DocType_ID=1000013
+                        c.dateinvoiced BETWEEN TO_DATE('01/01/2020', 'DD/MM/YYYY') AND SYSDATE
+                        AND c.AD_Client_ID = 1000000
+                        AND c.AD_Org_ID = 1000000
+                        AND c.ISSOTRX = 'N'
+                        AND c.DOCSTATUS in ('CO','CL')
                         AND ml.M_Locator_ID != 1001020
                     GROUP BY 
-                        ml.M_Product_ID, io.movementdate
+                        cl.M_Product_ID, c.dateinvoiced
                 ),
                 Filtered_Latest_Purchase AS (
                     SELECT 
                         M_Product_ID,
                         last_purchase_qty,
-                        movement_date AS dateinvoiced
+                        dateinvoiced
                     FROM 
                         Latest_Purchase
                     WHERE 
@@ -3895,7 +3335,7 @@ def fetch_historique_rotation(product_id):
                     WHERE 
                         s.AD_Client_ID = 1000000
                         AND m.AD_Client_ID = 1000000
-                        AND s.M_Locator_ID IN ({locator_ids})
+                        AND s.M_Locator_ID IN (1001135, 1000614, 1001128, 1001136, 1000717)
                         AND (:product_id IS NULL OR m.M_PRODUCT_ID = :product_id)
                     GROUP BY 
                         m.M_Product_ID, m.name
@@ -3909,7 +3349,7 @@ def fetch_historique_rotation(product_id):
                     WHERE 
                         M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
                         AND m_storage.qtyonhand > 0
-                        AND m_storage.M_Locator_ID IN ({locator_ids})
+                        AND m_storage.M_Locator_ID IN (1001135, 1000614, 1001128, 1001136, 1000717)
                         AND (:product_id IS NULL OR m_storage.M_Product_ID = :product_id)
                 )
                 SELECT 
@@ -3955,8 +3395,6 @@ def fetch_historique_rotation(product_id):
     except Exception as e:
         logger.error(f"Error fetching historique rotation: {e}")
         return {"error": "An error occurred while fetching historique rotation."}
-
-
 
 
 
@@ -4124,7 +3562,6 @@ purchase_data AS (
         AND xf.AD_Org_ID = 1000000
         AND xf.C_DocType_ID IN (1000013, 1000646)
         AND xf.M_Warehouse_ID != 1000521
-        AND xf.M_Warehouse_ID != 1000315
         AND NOT (xf.docstatus = 'RE' OR xf.docstatus = 'VO')
     JOIN M_INOUTLINE mi ON mi.M_INOUT_ID = xf.M_INOUT_ID
         AND mi.AD_Org_ID = 1000000
@@ -4322,8 +3759,6 @@ ORDER BY
     except Exception as e:
         logger.error(f"Error fetching rotation par mois: {e}")
         return {"error": "An error occurred while fetching rotation data."}
-
-
 
 @app.route('/rotationParMois', methods=['GET'])
 def fetch_rotation():
@@ -4594,11 +4029,10 @@ def download_journal_vente_excel():
     sanitized_client = client.replace(" ", "_").replace("/", "-")
     filename = f"JournalVente_{sanitized_client}_{start_date}_to_{end_date}_{download_datetime}.xlsx"
 
-    return generate_excel_journal(data, filename, start_date, end_date, client)
+    return generate_excel_journal(data, filename)
 
 
-def generate_excel_journal(data, filename, start_date=None, end_date=None, client=None):
-    """Generate Journal Vente Excel with a header using request parameters for period and client."""
+def generate_excel_journal(data, filename):
     if not data or "error" in data:
         return jsonify({"error": "No data available"}), 400
 
@@ -4610,133 +4044,26 @@ def generate_excel_journal(data, filename, start_date=None, end_date=None, clien
     ws = wb.active
     ws.title = "Journal Vente"
 
-    # Local imports
-    from openpyxl.drawing.image import Image as XLImage
-    from openpyxl.styles import Font, Alignment, Border, Side
-    from openpyxl.utils import get_column_letter
-    from pathlib import Path
-
-    data_columns = max(1, len(df.columns))
-    header_height = 8
-
-    # set column widths
-    default_widths = [18, 10, 12, 12, 14, 14, 10, 10, 12, 12, 12, 10, 8, 8, 8]
-    for c in range(1, data_columns + 1):
-        w = default_widths[c - 1] if c - 1 < len(default_widths) else 12
-        ws.column_dimensions[get_column_letter(c)].width = w
-
-    # logo
-    try:
-        logo_path = Path(__file__).with_name('log.png')
-        if logo_path.exists():
-            img = XLImage(str(logo_path))
-            img.width = 160
-            img.height = 80
-            img.anchor = 'A1'
-            ws.add_image(img)
-    except Exception:
-        pass
-
-    thin = Side(border_style="thin", color="000000")
-    border_bottom = Border(bottom=thin)
-
-    # left title under logo
-    left_end = min(5, data_columns)
-    ws.merge_cells(start_row=1, start_column=3, end_row=2, end_column=left_end)
-    c1 = ws.cell(row=1, column=3)
-    c1.value = "BNM PARAPHARM"
-    c1.font = Font(size=14, bold=True)
-    c1.alignment = Alignment(horizontal="left", vertical="top")
-
-    # contact block
-    center_left_start = 6
-    center_left_end = min(9, max(6, data_columns - 4))
-    if center_left_end >= center_left_start:
-        ws.merge_cells(start_row=1, start_column=center_left_start, end_row=3, end_column=center_left_end)
-        leftinfo = ws.cell(row=1, column=center_left_start)
-        leftinfo.value = (
-            "RTE NATIONALE N 05 N 46 Ain\n"
-            "Constantine\n"
-            "Tél : 031 97 55 93\n"
-            "Fax : 031 97 55 94\n"
-            "Email : bnm.parapharm@gmail.com\n"
-            "Site : www.bnm.com"
-        )
-        leftinfo.alignment = Alignment(wrap_text=True, horizontal="left", vertical="top")
-
-    # right block
-    right_start = max(center_left_end + 1, data_columns - 4)
-    right_start = min(right_start, data_columns)
-    right_end = data_columns
-    if right_start <= right_end:
-        ws.merge_cells(start_row=1, start_column=right_start, end_row=3, end_column=right_end)
-        reg = ws.cell(row=1, column=right_start)
-        reg.value = (
-            "RC : 25/00-0071142 B 15\n"
-            "NIF : 001525007114238\n"
-            "NAI : 25100124031\n"
-            "NIS : 001525100039948\n"
-            "RIB : 001008500300000097130\n"
-            "Capital : 12 300 000,00 DA"
-        )
-        reg.alignment = Alignment(wrap_text=True, horizontal="right", vertical="top")
-
-    # separator
-    for col in range(1, data_columns + 1):
-        ws.cell(row=4, column=col).border = border_bottom
-
-    # title and period
-    title_end = max(1, data_columns - 1)
-    ws.merge_cells(start_row=5, start_column=1, end_row=5, end_column=title_end)
-    title = ws.cell(row=5, column=1)
-    title.value = "JOURNAL DES VENTES GLOBAL"
-    title.font = Font(size=16, bold=True)
-    title.alignment = Alignment(horizontal="center")
-
-    period_end = max(1, data_columns - 1)
-    ws.merge_cells(start_row=6, start_column=1, end_row=6, end_column=period_end)
-    period = ws.cell(row=6, column=1)
-    if start_date and end_date:
-        period.value = f"PERIODE    {start_date}    AU    {end_date}"
-    else:
-        period.value = "PERIODE    01/10/2025    AU    21/10/2025"
-    period.alignment = Alignment(horizontal="center")
-
-    # page indicator (use simple page text)
-    page_cell = ws.cell(row=6, column=data_columns)
-    page_cell.value = "Page : 1"
-    page_cell.alignment = Alignment(horizontal="right")
-
-    # organisation
-    ws.merge_cells(start_row=8, start_column=1, end_row=8, end_column=min(3, data_columns))
-    org_label = ws.cell(row=8, column=1)
-    org_label.value = "Organisation :"
-    org_label.font = Font(bold=True)
-    ws.merge_cells(start_row=8, start_column=4, end_row=8, end_column=min(12, data_columns))
-    org_val = ws.cell(row=8, column=4)
-    org_val.value = client if client else "BNM PARAPHARM"
-    org_val.alignment = Alignment(horizontal="left")
-
-    # write DataFrame header and rows after header_height
+    # Formatting headers
     header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
     header_font = Font(color="FFFFFF", bold=True)
 
-    start_row = header_height + 1
-    for j, col_name in enumerate(df.columns, start=1):
-        cell = ws.cell(row=start_row, column=j, value=str(col_name))
+    # Add headers
+    ws.append(df.columns.tolist())
+    for col_idx, cell in enumerate(ws[1], 1):
         cell.fill = header_fill
         cell.font = header_font
+    ws.auto_filter.ref = ws.dimensions
 
-    for i, row in enumerate(df.itertuples(index=False, name=None), start=start_row + 1):
-        for j, val in enumerate(row, start=1):
-            ws.cell(row=i, column=j, value=val)
+    # Add data rows with alternating row colors
+    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+        ws.append(row)
+        if row_idx % 2 == 0:
+            for cell in ws[row_idx]:
+                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
 
-    last_row = start_row + len(df)
-    last_col_letter = get_column_letter(data_columns)
-    ws.auto_filter.ref = f"A{start_row}:{last_col_letter}{last_row}"
-
-    table_ref = f"A{start_row}:{last_col_letter}{last_row}"
-    table = Table(displayName="JournalVenteTable", ref=table_ref)
+    # Add an Excel table
+    table = Table(displayName="JournalVenteTable", ref=ws.dimensions)
     style = TableStyleInfo(
         name="TableStyleMedium9",
         showFirstColumn=False,
@@ -4747,10 +4074,12 @@ def generate_excel_journal(data, filename, start_date=None, end_date=None, clien
     table.tableStyleInfo = style
     ws.add_table(table)
 
+    # Save the file in memory
     output = BytesIO()
     wb.save(output)
     output.seek(0)
 
+    # Send the file to the client
     return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
@@ -4984,7 +4313,6 @@ def fetch_order_confirmed():
                     SELECT 
                         CAST(org.name AS VARCHAR2(300)) AS organisation,
                         CAST(co.documentno AS VARCHAR2(50)) AS ndocument,
-                        CAST(co.description AS VARCHAR2(300)) AS description,
                         CAST(cb.name AS VARCHAR2(300)) AS tier,
                         co.dateordered AS datecommande,
                         CAST(us.name AS VARCHAR2(100)) AS vendeur,
@@ -5013,9 +4341,8 @@ def fetch_order_confirmed():
                     UNION ALL
                     
                     SELECT 
-                        CAST(NULL AS VARCHAR2(300)) AS organisation,
+                        CAST('Total' AS VARCHAR2(300)) AS organisation,
                         CAST(NULL AS VARCHAR2(50)) AS ndocument,
-                        CAST('Total' AS VARCHAR2(300)) AS description,
                         CAST(NULL AS VARCHAR2(300)) AS tier,
                         NULL AS datecommande,
                         CAST(NULL AS VARCHAR2(100)) AS vendeur,
@@ -5056,8 +4383,6 @@ def fetch_order_confirmed():
         logging.error(f"Error fetching order confirmed: {e}")
         return {"error": "An error occurred while fetching order confirmed."}
 
-
-
 @app.route('/order_confirmed', methods=['GET'])
 def get_order_confirmed():
     result = fetch_order_confirmed()
@@ -5069,71 +4394,39 @@ def get_order_confirmed():
 # Updated function that returns only the total price
 def fetch_total_stock_price():
     try:
-        # Get dynamic magasin IDs from database
-        magasin_ids = get_magasin_ids()
-        
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
 
-            # Use dynamic magasin filtering if available, otherwise fallback to hardcoded values
-            if magasin_ids:
-                query = f"""
-                SELECT 
-                    SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand) AS prix_total
-                FROM 
-                    M_ATTRIBUTEINSTANCE
-                JOIN 
-                    m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
-                JOIN 
-                    M_PRODUCT m ON m.M_PRODUCT_ID = m_storage.M_PRODUCT_ID
-                JOIN 
-                    M_Locator ml ON ml.M_Locator_ID = m_storage.M_Locator_ID
-                INNER JOIN 
-                    m_attributeinstance mati ON m_storage.M_ATTRIBUTEsetINSTANCE_id = mati.M_ATTRIBUTEsetINSTANCE_id
-                WHERE 
-                    M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
-                    AND m_storage.qtyonhand > 0
-                    AND mati.m_attribute_id = 1000508
-                    AND m_storage.AD_Client_ID = 1000000
-                    AND m_storage.M_Locator_ID IN (
-                        SELECT M_Locator_ID 
-                        FROM M_Locator 
-                        WHERE M_Warehouse_ID IN ({magasin_ids})
-                    )
-                """
-            else:
-                # Fallback to hardcoded magasin values
-                logger.warning("Using fallback hardcoded magasin values in fetch_total_stock_price()")
-                query = """
-                SELECT 
-                    SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand) AS prix_total
-                FROM 
-                    M_ATTRIBUTEINSTANCE
-                JOIN 
-                    m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
-                JOIN 
-                    M_PRODUCT m ON m.M_PRODUCT_ID = m_storage.M_PRODUCT_ID
-                JOIN 
-                    M_Locator ml ON ml.M_Locator_ID = m_storage.M_Locator_ID
-                INNER JOIN 
-                    m_attributeinstance mati ON m_storage.M_ATTRIBUTEsetINSTANCE_id = mati.M_ATTRIBUTEsetINSTANCE_id
-                WHERE 
-                    M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
-                    AND m_storage.qtyonhand > 0
-                    AND mati.m_attribute_id = 1000508
-                    AND m_storage.AD_Client_ID = 1000000
-                    AND m_storage.M_Locator_ID IN (
-                        SELECT M_Locator_ID 
-                        FROM M_Locator 
-                        WHERE M_Warehouse_ID IN (
-                            SELECT M_Warehouse_ID 
-                            FROM M_Warehouse 
-                            WHERE VALUE IN (
-                                'HANGAR', '1-Dépôt Principal', '8-Dépot réserve', '88-Dépot Hangar réserve'
-                            )
+            query = """
+            SELECT 
+                SUM(M_ATTRIBUTEINSTANCE.valuenumber * m_storage.qtyonhand) AS prix_total
+            FROM 
+                M_ATTRIBUTEINSTANCE
+            JOIN 
+                m_storage ON m_storage.M_ATTRIBUTEsetINSTANCE_id = M_ATTRIBUTEINSTANCE.M_ATTRIBUTEsetINSTANCE_id
+            JOIN 
+                M_PRODUCT m ON m.M_PRODUCT_ID = m_storage.M_PRODUCT_ID
+            JOIN 
+                M_Locator ml ON ml.M_Locator_ID = m_storage.M_Locator_ID
+            INNER JOIN 
+                m_attributeinstance mati ON m_storage.M_ATTRIBUTEsetINSTANCE_id = mati.M_ATTRIBUTEsetINSTANCE_id
+            WHERE 
+                M_ATTRIBUTEINSTANCE.M_Attribute_ID = 1000504
+                AND m_storage.qtyonhand > 0
+                AND mati.m_attribute_id = 1000508
+                AND m_storage.AD_Client_ID = 1000000
+                AND m_storage.M_Locator_ID IN (
+                    SELECT M_Locator_ID 
+                    FROM M_Locator 
+                    WHERE M_Warehouse_ID IN (
+                        SELECT M_Warehouse_ID 
+                        FROM M_Warehouse 
+                        WHERE VALUE IN (
+                            'HANGAR', '1-Dépôt Principal', '8-Dépot réserve', '88-Dépot Hangar réserve'
                         )
                     )
-                """
+                )
+            """
 
             cursor.execute(query)
             result = cursor.fetchone()
@@ -5470,7 +4763,7 @@ ORDER BY name
     
 
 
- 
+
 
 
 
@@ -6996,23 +6289,8 @@ def calculate_stock_initial_for_multiple_emplacements(start_date, product, fourn
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
             
-            # Fetch emplacements from default_emmplacment table
-            try:
-                mysql_conn = get_localdb_connection()
-                if mysql_conn:
-                    mysql_cursor = mysql_conn.cursor()
-                    mysql_cursor.execute("SELECT DISTINCT emplacement FROM default_emmplacment ORDER BY emplacement")
-                    emplacements = [row[0] for row in mysql_cursor.fetchall()]
-                    mysql_cursor.close()
-                    mysql_conn.close()
-                else:
-                    # Fallback to hardcoded values if MySQL connection fails
-                    emplacements = ['Préparation', 'HANGAR', 'Dépot Hangar réserve', 'Dépot réserve']
-            except Exception as e:
-                logger.error(f"Error fetching emplacements from MySQL: {e}")
-                # Fallback to hardcoded values
-                emplacements = ['Préparation', 'HANGAR', 'Dépot Hangar réserve', 'Dépot réserve']
-            
+            # Define the main emplacements
+            emplacements = ['Préparation', 'HANGAR', 'Dépot Hangar réserve', 'Dépot réserve']
             total_stock_initial = 0
             emplacement_breakdown = {}
             
@@ -7076,8 +6354,6 @@ def calculate_stock_initial_for_multiple_emplacements(start_date, product, fourn
             'breakdown': {}
         }
 
-
-
 def fetch_stock_movement_data(start_date=None, end_date=None, product=None, fournisseur=None, emplacement=None, v2_mode=False):
     try:
         with DB_POOL.acquire() as connection:
@@ -7085,64 +6361,19 @@ def fetch_stock_movement_data(start_date=None, end_date=None, product=None, four
             
             # For empty or None emplacement, we want to fetch all main locations
             if emplacement == '' or emplacement is None:
-                # Fetch emplacements and emplacement_ids from default_emmplacment table
-                try:
-                    mysql_conn = get_localdb_connection()
-                    if mysql_conn:
-                        mysql_cursor = mysql_conn.cursor()
-                        mysql_cursor.execute("SELECT DISTINCT emplacement, emplacement_id FROM default_emmplacment ORDER BY emplacement")
-                        emplacement_data = mysql_cursor.fetchall()
-                        default_emplacements = [row[0] for row in emplacement_data]
-                        emplacement_ids = [row[1] for row in emplacement_data]
-                        mysql_cursor.close()
-                        mysql_conn.close()
-                    else:
-                        # Fallback to hardcoded values if MySQL connection fails
-                        default_emplacements = ['Préparation', 'HANGAR', 'Dépot Hangar réserve', 'Dépot réserve', 'hangar reception']
-                        emplacement_ids = [1001135, 1000614, 1001136, 1001128]  # Fallback IDs
-                except Exception as e:
-                    logger.error(f"Error fetching emplacements from MySQL: {e}")
-                    # Fallback to hardcoded values
-                    default_emplacements = ['Préparation', 'HANGAR', 'Dépot Hangar réserve', 'Dépot réserve', 'hangar reception']
-                    emplacement_ids = [1001135, 1000614, 1001136, 1001128]  # Fallback IDs
-                
                 # Calculate stock initial separately for multiple emplacements
                 stock_initial_result = calculate_stock_initial_for_multiple_emplacements(start_date, product, fournisseur, v2_mode)
                 calculated_stock_initial = stock_initial_result['total']
                 emplacement_breakdown = stock_initial_result['breakdown']
                 
-                # Build dynamic emplacement condition from database
-                emplacement_conditions = []
-                for emp in default_emplacements:
-                    emplacement_conditions.append(f"l.value LIKE '{emp}%'")
-                
-                emplacement_condition = f"""
-                AND ({' OR '.join(emplacement_conditions)})
+                emplacement_condition = """
+                AND (l.value LIKE 'Préparation%' OR l.value LIKE 'HANGAR%' OR l.value LIKE 'Dépot Hangar réserve%' OR l.value LIKE 'Dépot réserve%')
                 """
                 # Use the calculated stock initial instead of subquery
                 stock_initial_value = str(calculated_stock_initial)
                   # Exclude internal transfers when no specific emplacement is selected
                 movement_line_condition = ""
-                
-                # Build dynamic internal transfer exclusion condition from database
-                if len(emplacement_ids) >= 2:
-                    transfer_conditions = []
-                    # Generate all possible combinations of transfers between emplacement_ids
-                    for i, id1 in enumerate(emplacement_ids):
-                        for j, id2 in enumerate(emplacement_ids):
-                            if i != j:  # Don't create condition for same locator
-                                transfer_conditions.append(f"(ml.M_Locator_ID = {id1} AND ml.M_LocatorTo_ID = {id2})")
-                    
-                    internal_transfer_condition = f"""
-                AND NOT (
-                    t.M_MovementLine_ID IS NOT NULL AND (
-                        {' OR '.join(transfer_conditions)}
-                    )
-                )
-                """
-                else:
-                    # Fallback to original hardcoded condition if not enough IDs
-                    internal_transfer_condition = """
+                internal_transfer_condition = """
                 AND NOT (
                     t.M_MovementLine_ID IS NOT NULL AND (
                         (ml.M_Locator_ID = 1001135 AND ml.M_LocatorTo_ID = 1000614) OR
@@ -7298,8 +6529,6 @@ def fetch_stock_movement_data(start_date=None, end_date=None, product=None, four
     except Exception as e:
         logger.error(f"Database error in fetch_stock_movement_data: {e}")
         return {"error": "An error occurred while fetching stock movement data."}
-
-
 
 @app.route('/fetch-stock-movement-data', methods=['GET'])
 def fetch_stock_movement():
@@ -7538,28 +6767,6 @@ def fetch_emplacements_stock():
     except Exception as e:
         logger.error(f"Error fetching emplacements: {e}")
         return jsonify({"error": "Could not fetch emplacement list"}), 500
-
-@app.route('/fetch-emplacements-default')
-def fetch_emplacements_default():
-    try:
-        # Fetch from MySQL default_emmplacment table for dropdown text
-        mysql_conn = get_localdb_connection()
-        if mysql_conn:
-            mysql_cursor = mysql_conn.cursor()
-            mysql_cursor.execute("SELECT DISTINCT emplacement FROM default_emmplacment ORDER BY emplacement")
-            rows = mysql_cursor.fetchall()
-            mysql_cursor.close()
-            mysql_conn.close()
-            
-            # Format as expected by frontend
-            data = [{"EMPLACEMENT": row[0]} for row in rows]
-            return jsonify(data)
-        else:
-            logger.error("Could not connect to MySQL database")
-            return jsonify({"error": "Could not connect to database"}), 500
-    except Exception as e:
-        logger.error(f"Error fetching emplacements from default_emmplacment: {e}")
-        return jsonify({"error": "Could not fetch emplacement list"}), 500
     
 
 
@@ -7772,7 +6979,7 @@ def fetch_rotation_achat():
     if fournisseur_param:
         fournisseurs = [f.strip() for f in fournisseur_param.split(',') if f.strip()]
     else:
-        fournisseurs = None
+        return jsonify({"error": "At least one supplier is required"}), 400
 
     try:
         # Split the years string into a list and convert to integers
@@ -7789,36 +6996,25 @@ def fetch_rotation_achat():
 
 def fetch_rotation_monthly_achat(year_list, fournisseurs, product_id=None):
     try:
-        # Get dynamic magasin IDs
-        magasin_ids = get_magasin_ids()
-        if not magasin_ids:
-            # Fallback to default warehouses if get_magasin_ids fails
-            magasin_ids = '1000724, 1000000, 1000720, 1000725, 1000520, 1000717, 1000521'
-            logger.warning(f"Using fallback magasin IDs: {magasin_ids}")
-        
         # Acquire a connection from the pool
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
 
             # Build the supplier condition
-            if fournisseurs is not None:
-                if isinstance(fournisseurs, str):
-                    fournisseurs = [fournisseurs]
+            if isinstance(fournisseurs, str):
+                fournisseurs = [fournisseurs]
 
-                supplier_conditions = []
-                for i, f in enumerate(fournisseurs):
-                    bind_var = f'fournisseur_{i}'
-                    supplier_conditions.append(f"UPPER(cb.name) LIKE UPPER(:{bind_var}) || '%'")
+            supplier_conditions = []
+            for i, f in enumerate(fournisseurs):
+                bind_var = f'fournisseur_{i}'
+                supplier_conditions.append(f"UPPER(cb.name) LIKE UPPER(:{bind_var}) || '%'")
 
-                supplier_condition = ' OR '.join(supplier_conditions) if supplier_conditions else '1=0'
-            else:
-                # If fournisseurs is None, fetch all suppliers
-                supplier_condition = '1=1'
+            supplier_condition = ' OR '.join(supplier_conditions) if supplier_conditions else '1=0'
 
             # Create the years parameter list
             year_placeholders = ', '.join([f':year_{i}' for i in range(len(year_list))])
             
-            query = f"""
+            query = """
                 WITH monthly_data AS (
                     SELECT 
                         TO_CHAR(xf.MOVEMENTDATE, 'YYYY') AS year,
@@ -7841,13 +7037,13 @@ def fetch_rotation_monthly_achat(year_list, fournisseurs, product_id=None):
                         JOIN C_BPartner cb ON cb.C_BPARTNER_ID = xf.C_BPARTNER_ID
                         JOIN M_PRODUCT m ON m.M_PRODUCT_id = mi.M_PRODUCT_id
                     WHERE 
-                        TO_CHAR(xf.MOVEMENTDATE, 'YYYY') IN ({year_placeholders})
+                        TO_CHAR(xf.MOVEMENTDATE, 'YYYY') IN (""" + year_placeholders + """)
                         AND xf.AD_Org_ID = 1000000
                         AND xf.C_DocType_ID IN (1000013, 1000646)
                         AND ma.M_Attribute_ID = 1000504
                         AND xf.DOCSTATUS = 'CO'
-                        AND xf.M_Warehouse_ID IN ({magasin_ids})
-                        AND ({supplier_condition})
+                        AND xf.M_Warehouse_ID IN (1000724, 1000000, 1000720, 1000725, 1000520)
+                        AND (""" + supplier_condition + """)
                         AND (:product_id IS NULL OR m.M_PRODUCT_ID = :product_id)
                     GROUP BY 
                         TO_CHAR(xf.MOVEMENTDATE, 'YYYY'),
@@ -7863,10 +7059,9 @@ def fetch_rotation_monthly_achat(year_list, fournisseurs, product_id=None):
             # Prepare parameters
             params = {'product_id': product_id}
             
-            # Add supplier parameters only if fournisseurs is not None
-            if fournisseurs is not None:
-                for i, f in enumerate(fournisseurs):
-                    params[f'fournisseur_{i}'] = f
+            # Add supplier parameters
+            for i, f in enumerate(fournisseurs):
+                params[f'fournisseur_{i}'] = f
 
             # Add year parameters
             for i, year in enumerate(year_list):
@@ -7918,9 +7113,6 @@ def fetch_rotation_monthly_achat(year_list, fournisseurs, product_id=None):
     except Exception as e:
         logger.error(f"Error fetching product recap achat: {e}")
         return {"error": "An error occurred while fetching product recap achat."}
-
-
-
 
 def fetch_fournisseur_by_product(product_id):
     try:
@@ -13081,9 +12273,8 @@ def simulation_fetch_product_details_data(product_name, client_type=None):
     try:
         with DB_POOL.acquire() as connection:
             cursor = connection.cursor()
-            locator_case = get_locator_case_statement('m_locator_id', None)
-            locator_ids = get_locator_ids()
-            query = f"""
+            
+            query = """
             SELECT
                 *
             FROM
@@ -13136,7 +12327,14 @@ def simulation_fetch_product_details_data(product_name, client_type=None):
                                 qty_dispo,
                                 guaranteedate,
                                 ppa,
-                                {locator_case} AS location,
+                                CASE 
+                                    WHEN m_locator_id = 1000614 THEN 'Préparation'
+                                    WHEN m_locator_id = 1001135 THEN 'HANGAR'
+                                    WHEN m_locator_id = 1001128 THEN 'Dépot_réserve'
+                                    WHEN m_locator_id = 1001136 THEN 'HANGAR_'
+                                    WHEN m_locator_id = 1001020 THEN 'Depot_Vente'
+                                    WHEN m_locator_id = 1000717 THEN 'hangar reception'
+                                END AS location,
                                 c_bp_group_id,
                                 CASE 
                                     WHEN c_bp_group_id = 1001330 THEN 'Client Potentiel'
@@ -13287,7 +12485,7 @@ def simulation_fetch_product_details_data(product_name, client_type=None):
                                                         LEFT JOIN XX_SalesContext sal ON p.XX_SalesContext_ID = sal.XX_SalesContext_ID
                                                     WHERE
                                                         mati.m_attribute_id = 1000508
-                                                        AND mst.m_locator_id IN ({locator_ids})
+                                                        AND mst.m_locator_id IN (1001135, 1000614, 1001128, 1001136, 1001020, 1000717)
                                                         AND mst.qtyonhand != 0
                                                         AND p.name = :product_name
                                                         AND (:client_type IS NULL OR 
@@ -13344,39 +12542,6 @@ def simulation_fetch_product_details_data(product_name, client_type=None):
     except Exception as e:
         logger.error(f"Error fetching product details: {e}")
         return {"error": "An error occurred while fetching product details."}
-
-
-@app.route('/fetch-article-product-details', methods=['GET'])
-def fetch_article_product_details():
-    """HTTP JSON endpoint that returns article product details.
-
-    Query params:
-      - product_name (required)
-      - warehouse_id (required, integer)
-    """
-    # Validate DB connection
-    if not test_db_connection():
-        return jsonify({"error": "Database connection failed"}), 500
-
-    product_name = request.args.get('product_name', '').strip()
-    warehouse_id = request.args.get('warehouse_id')
-
-    if not product_name:
-        return jsonify({"error": "Missing required parameter: product_name"}), 400
-    if not warehouse_id:
-        return jsonify({"error": "Missing required parameter: warehouse_id"}), 400
-
-    try:
-        warehouse_id_int = int(warehouse_id)
-    except ValueError:
-        return jsonify({"error": "Invalid warehouse_id: must be an integer"}), 400
-
-    data = fetch_Article_product_details_data(product_name, warehouse_id_int)
-    if not data or isinstance(data, dict) and data.get('error'):
-        return jsonify(data), 500 if isinstance(data, dict) and data.get('error') else 200
-
-    return jsonify(data)
-
 
 
 
@@ -13581,1824 +12746,5 @@ def update_monthly_goal():
         }), 500
 
 
-@app.route('/reload_config', methods=['POST', 'GET'])
-def reload_config():
-    """
-    Reload default emplacements and magasins from database without restarting Flask.
-    This endpoint allows changes made via manage_default_emplacements.php to take effect immediately.
-    """
-    try:
-        success = reload_configuration()
-        
-        if success:
-            # Get current counts
-            locator_count = len(default_locators)
-            magasin_ids = get_magasin_ids()
-            magasin_count = len(magasin_ids.split(', ')) if magasin_ids else 0
-            
-            return jsonify({
-                'success': True,
-                'message': 'Configuration reloaded successfully',
-                'emplacements_loaded': locator_count,
-                'magasins_loaded': magasin_count,
-                'emplacement_ids': list(default_locators.keys()),
-                'magasin_ids': magasin_ids
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to reload configuration'
-            }), 500
-            
-    except Exception as e:
-        logger.error(f"Error in reload_config endpoint: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/all_locators', methods=['GET'])
-def all_locators():
-    """
-    Fetch all active locators from Oracle database with magasin information.
-    Returns a list of locators with their IDs, names, and warehouse (magasin) information.
-    """
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT ml.value AS EMPLACEMENT,
-                       m.value AS MAGASIN,
-                       ml.M_Locator_ID AS EMPLACEMENT_ID,
-                       m.M_Warehouse_ID AS MAGASIN_ID
-                FROM M_Locator ml
-                JOIN M_Warehouse m ON m.M_WAREHOUSE_ID = ml.M_WAREHOUSE_ID
-                WHERE m.ISACTIVE = 'Y'
-                  AND m.AD_Client_ID = 1000000
-                  AND ml.ISACTIVE = 'Y'
-                  AND ml.AD_Client_ID = 1000000
-                ORDER BY m.value, ml.value
-            """
-            cursor.execute(query)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]
-            data = [dict(zip(columns, row)) for row in rows]
-            
-            # Group by magasin
-            grouped = {}
-            for row in data:
-                magasin = row['MAGASIN']
-                magasin_id = row['MAGASIN_ID']
-                
-                if magasin not in grouped:
-                    grouped[magasin] = {
-                        'magasin': magasin,
-                        'magasin_id': magasin_id,
-                        'emplacements': []
-                    }
-                
-                grouped[magasin]['emplacements'].append({
-                    'EMPLACEMENT': row['EMPLACEMENT'],
-                    'EMPLACEMENT_ID': row['EMPLACEMENT_ID']
-                })
-            
-            # Convert to list and sort by magasin name
-            result = sorted(grouped.values(), key=lambda x: x['magasin'])
-            
-            return jsonify(result)
-            
-    except Exception as e:
-        logger.error(f"Error fetching all locators: {e}")
-        return jsonify({
-            'success': False,
-            'error': 'An error occurred while fetching locators.'
-        }), 500
-
-
-@app.route('/default_emplacements', methods=['GET'])
-def get_default_emplacements():
-    """
-    Fetch all default emplacements from MySQL database.
-    Returns a list of default emplacements with their IDs, names, and magasin information.
-    """
-    try:
-        connection = get_localdb_connection()
-        if not connection:
-            return jsonify({
-                'success': False,
-                'error': 'Database connection failed'
-            }), 500
-        
-        cursor = connection.cursor(dictionary=True)
-        query = """
-            SELECT default_locators_id, emplacement, emplacement_id, magasin, magasin_id
-            FROM default_emmplacment
-            ORDER BY magasin, emplacement
-        """
-        cursor.execute(query)
-        data = cursor.fetchall()
-        cursor.close()
-        connection.close()
-        
-        return jsonify(data)
-        
-    except Exception as e:
-        logger.error(f"Error fetching default emplacements: {e}")
-        return jsonify({
-            'success': False,
-            'error': 'An error occurred while fetching default emplacements.'
-        }), 500
-
-
-@app.route('/add_emplacement', methods=['POST'])
-def add_emplacement():
-    """
-    Add a new default emplacement to MySQL database.
-    """
-    try:
-        data = request.get_json()
-        emplacement = data.get('emplacement')
-        emplacement_id = data.get('emplacement_id')
-        magasin = data.get('magasin')
-        magasin_id = data.get('magasin_id')
-        
-        if not all([emplacement, emplacement_id, magasin, magasin_id]):
-            return jsonify({
-                'success': False,
-                'message': 'Tous les champs sont requis'
-            }), 400
-        
-        connection = get_localdb_connection()
-        if not connection:
-            return jsonify({
-                'success': False,
-                'message': 'Échec de connexion à la base de données'
-            }), 500
-        
-        cursor = connection.cursor()
-        
-        # Check if already exists
-        check_query = """
-            SELECT COUNT(*) as count FROM default_emmplacment 
-            WHERE emplacement_id = %s
-        """
-        cursor.execute(check_query, (emplacement_id,))
-        result = cursor.fetchone()
-        
-        if result[0] > 0:
-            cursor.close()
-            connection.close()
-            return jsonify({
-                'success': False,
-                'message': 'Cet emplacement existe déjà dans les emplacements par défaut'
-            }), 400
-        
-        # Insert new default emplacement
-        insert_query = """
-            INSERT INTO default_emmplacment (emplacement, emplacement_id, magasin, magasin_id)
-            VALUES (%s, %s, %s, %s)
-        """
-        cursor.execute(insert_query, (emplacement, emplacement_id, magasin, magasin_id))
-        connection.commit()
-        cursor.close()
-        connection.close()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Emplacement ajouté avec succès'
-        })
-        
-    except Exception as e:
-        logger.error(f"Error adding emplacement: {e}")
-        return jsonify({
-            'success': False,
-            'message': 'Une erreur est survenue lors de l\'ajout'
-        }), 500
-
-
-@app.route('/remove_emplacement', methods=['POST'])
-def remove_emplacement():
-    """
-    Remove a default emplacement from MySQL database.
-    """
-    try:
-        data = request.get_json()
-        id_to_remove = data.get('id')
-        
-        if not id_to_remove:
-            return jsonify({
-                'success': False,
-                'message': 'ID requis'
-            }), 400
-        
-        connection = get_localdb_connection()
-        if not connection:
-            return jsonify({
-                'success': False,
-                'message': 'Échec de connexion à la base de données'
-            }), 500
-        
-        cursor = connection.cursor()
-        
-        # Delete the emplacement
-        delete_query = """
-            DELETE FROM default_emmplacment 
-            WHERE default_locators_id = %s
-        """
-        cursor.execute(delete_query, (id_to_remove,))
-        connection.commit()
-        
-        if cursor.rowcount == 0:
-            cursor.close()
-            connection.close()
-            return jsonify({
-                'success': False,
-                'message': 'Emplacement non trouvé'
-            }), 404
-        
-        cursor.close()
-        connection.close()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Emplacement retiré avec succès'
-        })
-        
-    except Exception as e:
-        logger.error(f"Error removing emplacement: {e}")
-        return jsonify({
-            'success': False,
-            'message': 'Une erreur est survenue lors de la suppression'
-        }), 500
-
-#-----------------------------  DATA BASE CLEAR PART -----------------------------#
-
-@app.route('/name_cleaner/get_all_issues', methods=['GET'])
-def get_all_issues():
-    """
-    Get C_BPartner records with more than 2 consecutive spaces, leading or trailing spaces
-    """
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT
-                    C_BPartner_ID,
-                    Name,
-                    Description
-                FROM
-                    C_BPartner
-                WHERE
-                    (REGEXP_LIKE(Name,'[[:space:]]{2,}')
-                     OR REGEXP_LIKE(Name, '^ ')
-                     OR REGEXP_LIKE(Name, ' $'))
-                    AND AD_Client_ID = 1000000
-                    AND AD_Org_ID = 1000000
-                ORDER BY
-                    Name
-            """
-            cursor.execute(query)
-            result = []
-            for row in cursor.fetchall():
-                name = row[1] if row[1] else ''
-                issues = []
-                
-                # Detect specific issues
-                if name.startswith(' '):
-                    issues.append('Leading space')
-                if name.endswith(' '):
-                    issues.append('Trailing space')
-                if '  ' in name:
-                    issues.append('Multiple spaces')
-                
-                result.append({
-                    'id': row[0],
-                    'name': row[1],
-                    'description': row[2],
-                    'issues': ', '.join(issues)
-                })
-            
-            return jsonify({
-                'success': True,
-                'count': len(result),
-                'data': result
-            })
-    except Exception as e:
-        logger.error(f"Error fetching all issues: {e}")
-        return jsonify({'error': 'Could not fetch data'}), 500
-
-
-@app.route('/name_cleaner/get_leading_spaces', methods=['GET'])
-def get_leading_spaces():
-    """
-    Get C_BPartner records that start with a space or plus sign
-    """
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = r"""
-                SELECT
-                    C_BPartner_ID,
-                    Name
-                FROM
-                    C_BPartner
-                WHERE
-                    (REGEXP_LIKE(Name, '^ ')
-                     OR REGEXP_LIKE(Name, '^\\+'))
-                    AND AD_Client_ID = 1000000
-                    AND AD_Org_ID = 1000000
-                ORDER BY
-                    Name
-            """
-            cursor.execute(query)
-            result = [{'id': row[0], 'name': row[1], 'issue': 'Leading space/plus'} for row in cursor.fetchall()]
-            return jsonify({
-                'success': True,
-                'count': len(result),
-                'data': result
-            })
-    except Exception as e:
-        logger.error(f"Error fetching leading spaces: {e}")
-        return jsonify({'error': 'Could not fetch data'}), 500
-
-
-@app.route('/name_cleaner/clean_leading_spaces', methods=['POST'])
-def clean_leading_spaces():
-    """
-    Remove leading spaces from C_BPartner Name field
-    WARNING: This will modify data!
-    """
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                UPDATE C_BPartner
-                SET Name = LTRIM(Name)
-                WHERE REGEXP_LIKE(Name, '^ ')
-                    AND AD_Client_ID = 1000000
-                    AND AD_Org_ID = 1000000
-            """
-            cursor.execute(query)
-            row_count = cursor.rowcount
-            connection.commit()
-            cursor.close()
-            
-            return jsonify({
-                'success': True,
-                'message': f'Successfully cleaned {row_count} record(s) with leading spaces',
-                'count': row_count
-            })
-    except Exception as e:
-        logger.error(f"Error cleaning leading spaces: {e}")
-        return jsonify({'error': 'Could not update data'}), 500
-
-
-@app.route('/name_cleaner/get_trailing_spaces', methods=['GET'])
-def get_trailing_spaces():
-    """
-    Get C_BPartner records that end with spaces
-    """
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT
-                    C_BPartner_ID,
-                    Name
-                FROM
-                    C_BPartner
-                WHERE
-                    REGEXP_LIKE(Name, ' $')
-                    AND AD_Client_ID = 1000000
-                    AND AD_Org_ID = 1000000
-                ORDER BY
-                    Name
-            """
-            cursor.execute(query)
-            result = [{'id': row[0], 'name': row[1], 'issue': 'Trailing space'} for row in cursor.fetchall()]
-            return jsonify({
-                'success': True,
-                'count': len(result),
-                'data': result
-            })
-    except Exception as e:
-        logger.error(f"Error fetching trailing spaces: {e}")
-        return jsonify({'error': 'Could not fetch data'}), 500
-
-
-@app.route('/name_cleaner/clean_trailing_spaces', methods=['POST'])
-def clean_trailing_spaces():
-    """
-    Remove trailing spaces from C_BPartner Name field
-    WARNING: This will modify data!
-    """
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                UPDATE C_BPartner
-                SET Name = RTRIM(Name)
-                WHERE REGEXP_LIKE(Name, ' $')
-                    AND AD_Client_ID = 1000000
-                    AND AD_Org_ID = 1000000
-            """
-            cursor.execute(query)
-            row_count = cursor.rowcount
-            connection.commit()
-            cursor.close()
-            
-            return jsonify({
-                'success': True,
-                'message': f'Successfully cleaned {row_count} record(s) with trailing spaces',
-                'count': row_count
-            })
-    except Exception as e:
-        logger.error(f"Error cleaning trailing spaces: {e}")
-        return jsonify({'error': 'Could not update data'}), 500
-
-
-@app.route('/name_cleaner/get_multiple_spaces', methods=['GET'])
-def get_multiple_spaces():
-    """
-    Get C_BPartner records with 2 or more consecutive spaces
-    """
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT
-                    C_BPartner_ID,
-                    Value,
-                    Name,
-                    Description
-                FROM
-                    C_BPartner
-                WHERE
-                    REGEXP_LIKE(Name, '[[:space:]]{2,}')
-                    AND AD_Client_ID = 1000000
-                    AND AD_Org_ID = 1000000
-                ORDER BY
-                    Name
-            """
-            cursor.execute(query)
-            result = [
-                {
-                    'id': row[0],
-                    'value': row[1],
-                    'name': row[2],
-                    'description': row[3],
-                    'issue': 'Multiple spaces'
-                } for row in cursor.fetchall()
-            ]
-            return jsonify({
-                'success': True,
-                'count': len(result),
-                'data': result
-            })
-    except Exception as e:
-        logger.error(f"Error fetching multiple spaces: {e}")
-        return jsonify({'error': 'Could not fetch data'}), 500
-
-
-@app.route('/name_cleaner/clean_multiple_spaces', methods=['POST'])
-def clean_multiple_spaces():
-    """
-    Replace multiple consecutive spaces with single space in C_BPartner Name field
-    WARNING: This will modify data!
-    """
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                UPDATE C_BPartner
-                SET Name = REGEXP_REPLACE(Name, '[[:space:]]{2,}', ' ')
-                WHERE REGEXP_LIKE(Name, '[[:space:]]{2,}')
-                    AND AD_Client_ID = 1000000
-                    AND AD_Org_ID = 1000000
-            """
-            cursor.execute(query)
-            row_count = cursor.rowcount
-            connection.commit()
-            cursor.close()
-            
-            return jsonify({
-                'success': True,
-                'message': f'Successfully cleaned {row_count} record(s) with multiple spaces',
-                'count': row_count
-            })
-    except Exception as e:
-        logger.error(f"Error cleaning multiple spaces: {e}")
-        return jsonify({'error': 'Could not update data'}), 500
-
-
-@app.route('/name_cleaner/clean_all', methods=['POST'])
-def clean_all():
-    """
-    Clean all naming issues at once (leading, trailing, and multiple spaces)
-    WARNING: This will modify data!
-    """
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            results = []
-            total_cleaned = 0
-            
-            # Clean leading spaces
-            query1 = """
-                UPDATE C_BPartner
-                SET Name = LTRIM(Name)
-                WHERE REGEXP_LIKE(Name, '^ ')
-                    AND AD_Client_ID = 1000000
-                    AND AD_Org_ID = 1000000
-            """
-            cursor.execute(query1)
-            count1 = cursor.rowcount
-            results.append(f'Leading spaces: {count1} records')
-            total_cleaned += count1
-            
-            # Clean trailing spaces
-            query2 = """
-                UPDATE C_BPartner
-                SET Name = RTRIM(Name)
-                WHERE REGEXP_LIKE(Name, ' $')
-                    AND AD_Client_ID = 1000000
-                    AND AD_Org_ID = 1000000
-            """
-            cursor.execute(query2)
-            count2 = cursor.rowcount
-            results.append(f'Trailing spaces: {count2} records')
-            total_cleaned += count2
-            
-            # Clean multiple spaces
-            query3 = """
-                UPDATE C_BPartner
-                SET Name = REGEXP_REPLACE(Name, '[[:space:]]{2,}', ' ')
-                WHERE REGEXP_LIKE(Name, '[[:space:]]{2,}')
-                    AND AD_Client_ID = 1000000
-                    AND AD_Org_ID = 1000000
-            """
-            cursor.execute(query3)
-            count3 = cursor.rowcount
-            results.append(f'Multiple spaces: {count3} records')
-            total_cleaned += count3
-            
-            connection.commit()
-            cursor.close()
-            
-            return jsonify({
-                'success': True,
-                'message': f'Successfully cleaned {total_cleaned} record(s) in total',
-                'details': results,
-                'count': total_cleaned
-            })
-    except Exception as e:
-        logger.error(f"Error cleaning all: {e}")
-        return jsonify({'error': 'Could not update data'}), 500
-
- 
- 
-
-
-
-# Operator-Client-Supplier Analysis API endpoints
-@app.route('/operator-client-supplier-analysis', methods=['GET'])
-def get_operator_client_supplier_analysis():
-    """Get operators with date range filtering and role-based access control"""
-    try:
-        # Get parameters from request
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-        user_role = request.args.get('user_role', 'Vente')  # Default role
-        username = request.args.get('username', '')
-        
-        # Validate date parameters
-        if not start_date or not end_date:
-            return jsonify({"error": "start_date and end_date are required"}), 400
-        
-        # Check role permissions - Admin, Developer, Sup Vente see all; others see filtered
-        if user_role in ['Admin', 'Developer', 'Sup Vente']:
-            operator_filter = None
-        else:
-            # For other roles, filter based on username with special cases
-            username_to_operator = {
-                            'mouad': 'KERMICHE',
-                            'abderahman': 'BOULKROUN',
-                            'amine': 'AMINE',
-                            'anwar': 'ANWAR',
-                            'billel': 'BOUSBIAT',
-                            'karim': 'KARIM',
-                            'mohcen': 'MOHCEN',
-                            'yacine': 'YACINE',
-                            'zakaria': 'BOUGHABA',
-                            'mehdi': 'BENNIA'
-                        }
-                        
-            operator_filter = username_to_operator.get(username.lower(), username)  
-        data = fetch_operators_analysis(start_date, end_date, operator_filter)
-        return jsonify(data)
-        
-    except Exception as e:
-        logger.error(f"Error in operator-client-supplier analysis: {e}")
-        return jsonify({"error": "Failed to fetch operator analysis data"}), 500
-
-
-@app.route('/operator-clients-analysis', methods=['GET'])
-def get_operator_clients_analysis():
-    """Get clients for a specific operator"""
-    try:
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-        operator = request.args.get('operator')
-        
-        if not all([start_date, end_date, operator]):
-            return jsonify({"error": "start_date, end_date, and operator are required"}), 400
-        
-        data = fetch_operator_clients_analysis(start_date, end_date, operator)
-        return jsonify(data)
-        
-    except Exception as e:
-        logger.error(f"Error in operator-clients analysis: {e}")
-        return jsonify({"error": "Failed to fetch operator clients data"}), 500
-
-@app.route('/operator-client-suppliers-analysis', methods=['GET'])
-def get_operator_client_suppliers_analysis():
-    """Get suppliers for a specific operator-client combination"""
-    try:
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-        operator = request.args.get('operator')
-        client = request.args.get('client')
-        
-        if not all([start_date, end_date, operator, client]):
-            return jsonify({"error": "start_date, end_date, operator, and client are required"}), 400
-        
-        data = fetch_operator_client_suppliers_analysis(start_date, end_date, operator, client)
-        return jsonify(data)
-        
-    except Exception as e:
-        logger.error(f"Error in operator-client-suppliers analysis: {e}")
-        return jsonify({"error": "Failed to fetch operator client suppliers data"}), 500
-
-@app.route('/operator-client-supplier-detailed-results', methods=['GET'])
-def get_operator_client_supplier_detailed_results():
-    """Get detailed transaction results for operator-client-supplier combination"""
-    try:
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-        operator = request.args.get('operator')
-        client = request.args.get('client')
-        supplier = request.args.get('supplier')
-        
-        if not all([start_date, end_date, operator, client, supplier]):
-            return jsonify({"error": "start_date, end_date, operator, client, and supplier are required"}), 400
-        
-        data = fetch_operator_client_supplier_detailed_results(start_date, end_date, operator, client, supplier)
-        return jsonify(data)
-        
-    except Exception as e:
-        logger.error(f"Error in detailed results analysis: {e}")
-        return jsonify({"error": "Failed to fetch detailed results"}), 500
-
-@app.route('/operator-client-supplier-monthly-sales', methods=['GET'])
-def get_operator_client_supplier_monthly_sales():
-    """Get monthly sales data for operator-client-supplier combination"""
-    try:
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-        operator = request.args.get('operator')
-        client = request.args.get('client')
-        supplier = request.args.get('supplier')
-        
-        if not all([start_date, end_date, operator, client, supplier]):
-            return jsonify({"error": "start_date, end_date, operator, client, and supplier are required"}), 400
-        
-        data = fetch_operator_client_supplier_monthly_sales(start_date, end_date, operator, client, supplier)
-        return jsonify(data)
-        
-    except Exception as e:
-        logger.error(f"Error in monthly sales analysis: {e}")
-        return jsonify({"error": "Failed to fetch monthly sales data"}), 500
-
-@app.route('/operator-client-supplier-monthly-details', methods=['GET'])
-def get_operator_client_supplier_monthly_details():
-    """Get detailed sales for a specific month"""
-    try:
-        year = request.args.get('year')
-        month = request.args.get('month')
-        operator = request.args.get('operator')
-        client = request.args.get('client')
-        supplier = request.args.get('supplier')
-        
-        if not all([year, month, operator, client, supplier]):
-            return jsonify({"error": "year, month, operator, client, and supplier are required"}), 400
-        
-        data = fetch_operator_client_supplier_monthly_details(year, month, operator, client, supplier)
-        return jsonify(data)
-        
-    except Exception as e:
-        logger.error(f"Error in monthly details analysis: {e}")
-        return jsonify({"error": "Failed to fetch monthly details"}), 500
-
-@app.route('/download-operator-client-supplier-excel', methods=['GET'])
-def download_operator_client_supplier_excel():
-    """Download Excel file for operator-client-supplier analysis"""
-    try:
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-        operator = request.args.get('operator')
-        client = request.args.get('client')
-        supplier = request.args.get('supplier')
-        
-        if not all([start_date, end_date, operator, client, supplier]):
-            return jsonify({"error": "start_date, end_date, operator, client, and supplier are required"}), 400
-        
-        # Fetch detailed data
-        data = fetch_operator_client_supplier_detailed_results(start_date, end_date, operator, client, supplier)
-        
-        if not data or "error" in data:
-            return jsonify({"error": "No data available for Excel export"}), 400
-        
-        # Generate Excel file
-        today_date = datetime.now().strftime("%d-%m-%Y")
-        filename = f"OperatorClientSupplier_{operator}_{client}_{supplier}_{start_date}_to_{end_date}_{today_date}.xlsx"
-        
-        return generate_excel_operator_analysis(data, filename)
-        
-    except Exception as e:
-        logger.error(f"Error generating Excel: {e}")
-        return jsonify({"error": "Failed to generate Excel file"}), 500
-
-# Database functions for operator-client-supplier analysis
-def fetch_operators_analysis(start_date, end_date, operator_filter=None):
-    """Fetch operators with sales data for the given date range"""
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            
-            query = """
-                SELECT 
-                    au.name AS OPERATEUR,
-                    COUNT(DISTINCT xf.CLIENTID) AS NOMBRE_CLIENTS,
-                    COUNT(DISTINCT xf.M_PRODUCT_ID) AS NOMBRE_PRODUITS,
-                    SUM(xf.QTYENTERED) AS QTY_TOTALE,
-                    SUM(xf.TOTALLINE) AS CHIFFRE_AFFAIRES,
-                    ROUND(AVG(
-                        CASE 
-                            WHEN xf.CONSOMATION = 0 THEN 0
-                            WHEN xf.CONSOMATION < 0 THEN ((xf.TOTALLINE - xf.CONSOMATION) / xf.CONSOMATION * -1) * 100
-                            ELSE ((xf.TOTALLINE - xf.CONSOMATION) / xf.CONSOMATION) * 100
-                        END
-                    ), 2) AS MARGE_MOYENNE
-                FROM xx_ca_fournisseur xf
-                JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
-                WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                      AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                      AND xf.AD_Org_ID = 1000000
-                      AND xf.DOCSTATUS != 'RE'
-                      AND au.c_bpartner_id IN (1121780,1122143,1118392,1122144,1119089,1111429,1122761,1122868,1122142,1143361)
-            """
-            
-            params = {
-                'start_date': start_date,
-                'end_date': end_date
-            }
-            
-            if operator_filter:
-                query += " AND au.name LIKE :operator_filter || '%'"
-                params['operator_filter'] = operator_filter
-            
-            query += """
-                GROUP BY au.name
-                ORDER BY SUM(xf.TOTALLINE) DESC
-            """
-            
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in rows]
-            
-    except Exception as e:
-        logger.error(f"Error fetching operators analysis: {e}")
-        return {"error": "An error occurred while fetching operators analysis."}
-
-def fetch_operator_clients_analysis(start_date, end_date, operator):
-    """Fetch clients for a specific operator"""
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            
-            query = """
-                SELECT 
-                    cb.name AS CLIENT,
-                    COUNT(DISTINCT xf.M_PRODUCT_ID) AS NOMBRE_PRODUITS,
-                    SUM(xf.QTYENTERED) AS QTY_TOTALE,
-                    SUM(xf.TOTALLINE) AS CHIFFRE_AFFAIRES,
-                    ROUND(AVG(
-                        CASE 
-                            WHEN xf.CONSOMATION = 0 THEN 0
-                            WHEN xf.CONSOMATION < 0 THEN ((xf.TOTALLINE - xf.CONSOMATION) / xf.CONSOMATION * -1) * 100
-                            ELSE ((xf.TOTALLINE - xf.CONSOMATION) / xf.CONSOMATION) * 100
-                        END
-                    ), 2) AS MARGE_MOYENNE
-                FROM xx_ca_fournisseur xf
-                JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
-                JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
-                WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                      AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                      AND xf.AD_Org_ID = 1000000
-                      AND xf.DOCSTATUS != 'RE'
-                      AND au.c_bpartner_id IN (1121780,1122143,1118392,1122144,1119089,1111429,1122761,1122868,1122142,1143361)
-                      AND au.name = :operator
-                GROUP BY cb.name
-                ORDER BY SUM(xf.TOTALLINE) DESC
-            """
-            
-            params = {
-                'start_date': start_date,
-                'end_date': end_date,
-                'operator': operator
-            }
-            
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in rows]
-            
-    except Exception as e:
-        logger.error(f"Error fetching operator clients analysis: {e}")
-        return {"error": "An error occurred while fetching operator clients analysis."}
-
-def fetch_operator_client_suppliers_analysis(start_date, end_date, operator, client):
-    """Fetch suppliers for a specific operator-client combination"""
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            
-            query = """
-                SELECT 
-                    xf.name AS FOURNISSEUR,
-                    COUNT(DISTINCT xf.M_PRODUCT_ID) AS NOMBRE_PRODUITS,
-                    SUM(xf.QTYENTERED) AS QTY_TOTALE,
-                    SUM(xf.TOTALLINE) AS CHIFFRE_AFFAIRES,
-                    ROUND(AVG(
-                        CASE 
-                            WHEN xf.CONSOMATION = 0 THEN 0
-                            WHEN xf.CONSOMATION < 0 THEN ((xf.TOTALLINE - xf.CONSOMATION) / xf.CONSOMATION * -1) * 100
-                            ELSE ((xf.TOTALLINE - xf.CONSOMATION) / xf.CONSOMATION) * 100
-                        END
-                    ), 2) AS MARGE_MOYENNE
-                FROM xx_ca_fournisseur xf
-                JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
-                JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
-                WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                      AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                      AND xf.AD_Org_ID = 1000000
-                      AND xf.DOCSTATUS != 'RE'
-                      AND au.c_bpartner_id IN (1121780,1122143,1118392,1122144,1119089,1111429,1122761,1122868,1122142,1143361)
-                      AND au.name = :operator
-                      AND cb.name = :client
-                GROUP BY xf.name
-                ORDER BY SUM(xf.TOTALLINE) DESC
-            """
-            
-            params = {
-                'start_date': start_date,
-                'end_date': end_date,
-                'operator': operator,
-                'client': client
-            }
-            
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in rows]
-            
-    except Exception as e:
-        logger.error(f"Error fetching operator client suppliers analysis: {e}")
-        return {"error": "An error occurred while fetching operator client suppliers analysis."}
-
-def fetch_operator_client_supplier_monthly_sales(start_date, end_date, operator, client, supplier):
-    """Fetch monthly sales data for operator-client-supplier combination"""
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            
-            query = """
-                SELECT 
-                    TO_CHAR(xf.MOVEMENTDATE, 'YYYY') AS YEAR,
-                    TO_CHAR(xf.MOVEMENTDATE, 'MM') AS MONTH,
-                    TO_CHAR(xf.MOVEMENTDATE, 'Month YYYY') AS MONTH_NAME,
-                    COUNT(DISTINCT xf.M_PRODUCT_ID) AS NOMBRE_PRODUITS,
-                    SUM(xf.QTYENTERED) AS QTY_TOTALE,
-                    SUM(xf.TOTALLINE) AS CHIFFRE_AFFAIRES,
-                    SUM(xf.CONSOMATION) AS PRIX_REVIENT_TOTAL,
-                    ROUND(SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION), 2) AS BENEFICE_TOTAL,
-                    ROUND(
-                        CASE 
-                            WHEN SUM(xf.CONSOMATION) = 0 THEN 0
-                            WHEN SUM(xf.CONSOMATION) < 0 THEN ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION) * -1) * 100
-                            ELSE ((SUM(xf.TOTALLINE) - SUM(xf.CONSOMATION)) / SUM(xf.CONSOMATION)) * 100
-                        END
-                    , 2) AS MARGE_PERCENT
-                FROM xx_ca_fournisseur xf
-                JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
-                JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
-                WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                      AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                      AND xf.AD_Org_ID = 1000000
-                      AND xf.DOCSTATUS != 'RE'
-                      AND au.c_bpartner_id IN (1121780,1122143,1118392,1122144,1119089,1111429,1122761,1122868,1122142,1143361)
-                      AND au.name = :operator
-                      AND cb.name = :client
-                      AND xf.name = :supplier
-                GROUP BY TO_CHAR(xf.MOVEMENTDATE, 'YYYY'), TO_CHAR(xf.MOVEMENTDATE, 'MM'), TO_CHAR(xf.MOVEMENTDATE, 'Month YYYY')
-                ORDER BY TO_CHAR(xf.MOVEMENTDATE, 'YYYY'), TO_CHAR(xf.MOVEMENTDATE, 'MM')
-            """
-            
-            params = {
-                'start_date': start_date,
-                'end_date': end_date,
-                'operator': operator,
-                'client': client,
-                'supplier': supplier
-            }
-            
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in rows]
-            
-    except Exception as e:
-        logger.error(f"Error fetching monthly sales data: {e}")
-        return {"error": "An error occurred while fetching monthly sales data."}
-
-def fetch_operator_client_supplier_monthly_details(year, month, operator, client, supplier):
-    """Fetch detailed sales for a specific month"""
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            
-            # Create start and end dates for the specific month
-            start_date = f"{year}-{month.zfill(2)}-01"
-            
-            # Calculate last day of month
-            if int(month) == 12:
-                next_month = 1
-                next_year = int(year) + 1
-            else:
-                next_month = int(month) + 1
-                next_year = int(year)
-            
-            from datetime import datetime, timedelta
-            last_day = datetime(next_year, next_month, 1) - timedelta(days=1)
-            end_date = last_day.strftime("%Y-%m-%d")
-            
-            query = """
-                SELECT 
-                    xf.MOVEMENTDATE AS DATE_MOUVEMENT,
-                    xf.DOCUMENTNO AS NUMERO_DOCUMENT,
-                    xf.product AS PRODUIT,
-                    xf.QTYENTERED AS QUANTITE,
-                    xf.TOTALLINE AS MONTANT,
-                    xf.discount AS REMISE,
-                    au.name AS OPERATEUR,
-                    cb.name AS CLIENT,
-                    xf.name AS FOURNISSEUR
-                FROM xx_ca_fournisseur xf
-                JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
-                JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
-                WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                      AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                      AND xf.AD_Org_ID = 1000000
-                      AND xf.DOCSTATUS != 'RE'
-                      AND au.c_bpartner_id IN (1121780,1122143,1118392,1122144,1119089,1111429,1122761,1122868,1122142,1143361)
-                      AND au.name = :operator
-                      AND cb.name = :client
-                      AND xf.name = :supplier
-                ORDER BY xf.MOVEMENTDATE DESC, xf.TOTALLINE DESC
-            """
-            
-            params = {
-                'start_date': start_date,
-                'end_date': end_date,
-                'operator': operator,
-                'client': client,
-                'supplier': supplier
-            }
-            
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in rows]
-            
-    except Exception as e:
-        logger.error(f"Error fetching monthly details: {e}")
-        return {"error": "An error occurred while fetching monthly details."}
-
-def fetch_operator_client_supplier_detailed_results(start_date, end_date, operator, client, supplier):
-    """Fetch detailed transaction results for operator-client-supplier combination"""
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            
-            query = """
-                SELECT 
-                    xf.MOVEMENTDATE AS DATE_MOUVEMENT,
-                    xf.DOCUMENTNO AS NUMERO_DOCUMENT,
-                    xf.product AS PRODUIT,
-                    xf.QTYENTERED AS QUANTITE,
-                    xf.TOTALLINE AS MONTANT,
-                    xf.CONSOMATION AS PRIX_REVIENT,
-                    xf.discount AS REMISE,
-                    
-                    ROUND(
-                        CASE 
-                            WHEN xf.CONSOMATION = 0 THEN 0
-                            WHEN xf.CONSOMATION < 0 THEN ((xf.TOTALLINE - xf.CONSOMATION) / xf.CONSOMATION * -1) * 100
-                            ELSE ((xf.TOTALLINE - xf.CONSOMATION) / xf.CONSOMATION) * 100
-                        END
-                    , 2) AS MARGE_PERCENT,
-                    ROUND(xf.TOTALLINE - xf.CONSOMATION, 2) AS BENEFICE,
-                    au.name AS OPERATEUR,
-                    cb.name AS CLIENT,
-                    xf.name AS FOURNISSEUR
-                FROM xx_ca_fournisseur xf
-                JOIN AD_User au ON au.AD_User_ID = xf.SALESREP_ID
-                JOIN C_BPartner cb ON cb.C_BPartner_ID = xf.CLIENTID
-                WHERE xf.MOVEMENTDATE BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                      AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                      AND xf.AD_Org_ID = 1000000
-                      AND xf.DOCSTATUS != 'RE'
-                      AND au.c_bpartner_id IN (1121780,1122143,1118392,1122144,1119089,1111429,1122761,1122868,1122142,1143361)
-                      AND au.name = :operator
-                      AND cb.name = :client
-                      AND xf.name = :supplier
-                ORDER BY xf.MOVEMENTDATE DESC, xf.TOTALLINE DESC
-            """
-            
-            params = {
-                'start_date': start_date,
-                'end_date': end_date,
-                'operator': operator,
-                'client': client,
-                'supplier': supplier
-            }
-            
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in rows]
-            
-    except Exception as e:
-        logger.error(f"Error fetching detailed results: {e}")
-        return {"error": "An error occurred while fetching detailed results."}
-
-def generate_excel_operator_analysis(data, filename):
-    """Generate Excel file for operator analysis data"""
-    if not data or "error" in data:
-        return jsonify({"error": "No data available"}), 400
-
-    df = pd.DataFrame(data)
-    if df.empty:
-        return jsonify({"error": "No data available"}), 400
-
-    # Remove unwanted columns
-    columns_to_remove = ['NUMERO_DOCUMENT', 'PRIX_REVIENT', 'MARGE_PERCENT', 'BENEFICE']
-    df = df.drop(columns=[col for col in columns_to_remove if col in df.columns], errors='ignore')
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Operator Analysis"
-
-    # Formatting headers
-    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
-    header_font = Font(color="FFFFFF", bold=True)
-
-    ws.append(df.columns.tolist())
-    for col_idx, cell in enumerate(ws[1], 1):
-        cell.fill = header_fill
-        cell.font = header_font
-    ws.auto_filter.ref = ws.dimensions
-
-    # Add data rows with alternating row colors
-    for row_idx, row in enumerate(df.itertuples(index=False), start=2):
-        ws.append(row)
-        if row_idx % 2 == 0:
-            for cell in ws[row_idx]:
-                cell.fill = PatternFill(start_color="EAEAEA", end_color="EAEAEA", fill_type="solid")
-
-    # Add an Excel table
-    table = Table(displayName="OperatorAnalysisTable", ref=ws.dimensions)
-    style = TableStyleInfo(
-        name="TableStyleMedium9",
-        showFirstColumn=False,
-        showLastColumn=False,
-        showRowStripes=True,
-        showColumnStripes=False
-    )
-    table.tableStyleInfo = style
-    ws.add_table(table)
-
-    # Save the Excel file in memory
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-
-    return send_file(output, as_attachment=True, download_name=filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-
-@app.route('/fetch-space-start', methods=['GET'])
-def fetch_space_start():
-    """Fetch C_BPartner records that start with a space or plus sign."""
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-            SELECT
-                C_BPartner_ID,
-                Name
-            FROM
-                C_BPartner
-            WHERE
-                (REGEXP_LIKE(Name, '^ ')
-                 OR REGEXP_LIKE(Name, '^\\+'))
-                AND AD_Client_ID = 1000000
-                AND AD_Org_ID = 1000000
-            ORDER BY
-                Name
-            """
-            cursor.execute(query)
-            rows = cursor.fetchall()
-            columns = [desc[0] for desc in cursor.description]
-            result = [dict(zip(columns, row)) for row in rows]
-            return jsonify(result)
-    except Exception as e:
-        logger.error(f"Error fetching space start data: {e}")
-        return jsonify({"error": "An error occurred while fetching data."}), 500
-
-
-@app.route('/fetch-space-end', methods=['GET'])
-def fetch_space_end():
-    """Fetch C_BPartner records that end with spaces."""
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-            SELECT
-                C_BPartner_ID,
-                Name
-            FROM
-                C_BPartner
-            WHERE
-                REGEXP_LIKE(Name, ' $')
-                AND AD_Client_ID = 1000000
-                AND AD_Org_ID = 1000000
-            ORDER BY
-                Name
-            """
-            cursor.execute(query)
-            rows = cursor.fetchall()
-            columns = [desc[0] for desc in cursor.description]
-            result = [dict(zip(columns, row)) for row in rows]
-            return jsonify(result)
-    except Exception as e:
-        logger.error(f"Error fetching space end data: {e}")
-        return jsonify({"error": "An error occurred while fetching data."}), 500
-
-
-@app.route('/fetch-space-multiple', methods=['GET'])
-def fetch_space_multiple():
-    """Fetch C_BPartner records with 2 or more consecutive spaces."""
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-            SELECT
-                C_BPartner_ID,
-                Name
-            FROM
-                C_BPartner
-            WHERE
-                REGEXP_LIKE(Name, '[[:space:]]{2,}')
-                AND AD_Client_ID = 1000000
-                AND AD_Org_ID = 1000000
-            ORDER BY
-                Name
-            """
-            cursor.execute(query)
-            rows = cursor.fetchall()
-            columns = [desc[0] for desc in cursor.description]
-            result = [dict(zip(columns, row)) for row in rows]
-            return jsonify(result)
-    except Exception as e:
-        logger.error(f"Error fetching space multiple data: {e}")
-        return jsonify({"error": "An error occurred while fetching data."}), 500
-
-
-@app.route('/update-space-start', methods=['POST'])
-def update_space_start():
-    """Update C_BPartner records to remove leading spaces."""
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-            UPDATE C_BPartner
-            SET Name = LTRIM(Name)
-            WHERE REGEXP_LIKE(Name, '^ ')
-                AND AD_Client_ID = 1000000
-                AND AD_Org_ID = 1000000
-            """
-            cursor.execute(query)
-            connection.commit()
-            return jsonify({"message": f"Updated {cursor.rowcount} records."})
-    except Exception as e:
-        logger.error(f"Error updating space start: {e}")
-        return jsonify({"error": "An error occurred while updating data."}), 500
-
-
-@app.route('/update-space-end', methods=['POST'])
-def update_space_end():
-    """Update C_BPartner records to remove trailing spaces."""
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-            UPDATE C_BPartner
-            SET Name = RTRIM(Name)
-            WHERE REGEXP_LIKE(Name, ' $')
-                AND AD_Client_ID = 1000000
-                AND AD_Org_ID = 1000000
-            """
-            cursor.execute(query)
-            connection.commit()
-            return jsonify({"message": f"Updated {cursor.rowcount} records."})
-    except Exception as e:
-        logger.error(f"Error updating space end: {e}")
-        return jsonify({"error": "An error occurred while updating data."}), 500
-
-
-@app.route('/update-space-multiple', methods=['POST'])
-def update_space_multiple():
-    """Update C_BPartner records to replace multiple consecutive spaces with single space."""
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-            UPDATE C_BPartner
-            SET Name = REGEXP_REPLACE(Name, '[[:space:]]{2,}', ' ')
-            WHERE REGEXP_LIKE(Name, '[[:space:]]{2,}')
-                AND AD_Client_ID = 1000000
-                AND AD_Org_ID = 1000000
-            """
-            cursor.execute(query)
-            connection.commit()
-            return jsonify({"message": f"Updated {cursor.rowcount} records."})
-    except Exception as e:
-        logger.error(f"Error updating space multiple: {e}")
-        return jsonify({"error": "An error occurred while updating data."}), 500
-
-
-@app.route('/fetch-product-space-start', methods=['GET'])
-def fetch_product_space_start():
-    """Fetch M_Product records that start with a space."""
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-            SELECT
-                M_Product_ID,
-                Name
-            FROM
-                M_Product
-            WHERE
-                REGEXP_LIKE(Name, '^ ')
-                AND AD_Client_ID = 1000000
-                AND AD_Org_ID = 1000000
-            ORDER BY
-                Name
-            """
-            cursor.execute(query)
-            rows = cursor.fetchall()
-            columns = [desc[0] for desc in cursor.description]
-            result = [dict(zip(columns, row)) for row in rows]
-            return jsonify(result)
-    except Exception as e:
-        logger.error(f"Error fetching product space start data: {e}")
-        return jsonify({"error": "An error occurred while fetching data."}), 500
-
-
-@app.route('/fetch-product-space-end', methods=['GET'])
-def fetch_product_space_end():
-    """Fetch M_Product records that end with spaces."""
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-            SELECT
-                M_Product_ID,
-                Name
-            FROM
-                M_Product
-            WHERE
-                REGEXP_LIKE(Name, ' $')
-                AND AD_Client_ID = 1000000
-                AND AD_Org_ID = 1000000
-            ORDER BY
-                Name
-            """
-            cursor.execute(query)
-            rows = cursor.fetchall()
-            columns = [desc[0] for desc in cursor.description]
-            result = [dict(zip(columns, row)) for row in rows]
-            return jsonify(result)
-    except Exception as e:
-        logger.error(f"Error fetching product space end data: {e}")
-        return jsonify({"error": "An error occurred while fetching data."}), 500
-
-
-@app.route('/fetch-product-space-multiple', methods=['GET'])
-def fetch_product_space_multiple():
-    """Fetch M_Product records with 2 or more consecutive spaces."""
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-            SELECT
-                M_Product_ID,
-                Name
-            FROM
-                M_Product
-            WHERE
-                REGEXP_LIKE(Name, '[[:space:]]{2,}')
-                AND AD_Client_ID = 1000000
-                AND AD_Org_ID = 1000000
-            ORDER BY
-                Name
-            """
-            cursor.execute(query)
-            rows = cursor.fetchall()
-            columns = [desc[0] for desc in cursor.description]
-            result = [dict(zip(columns, row)) for row in rows]
-            return jsonify(result)
-    except Exception as e:
-        logger.error(f"Error fetching product space multiple data: {e}")
-        return jsonify({"error": "An error occurred while fetching data."}), 500
-
-
-@app.route('/update-product-space-start', methods=['POST'])
-def update_product_space_start():
-    """Update M_Product records to remove leading spaces."""
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-            UPDATE M_Product
-            SET Name = LTRIM(Name)
-            WHERE REGEXP_LIKE(Name, '^ ')
-                AND AD_Client_ID = 1000000
-                AND AD_Org_ID = 1000000
-            """
-            cursor.execute(query)
-            connection.commit()
-            return jsonify({"message": f"Updated {cursor.rowcount} records."})
-    except Exception as e:
-        logger.error(f"Error updating product space start: {e}")
-        return jsonify({"error": "An error occurred while updating data."}), 500
-
-
-@app.route('/update-product-space-end', methods=['POST'])
-def update_product_space_end():
-    """Update M_Product records to remove trailing spaces."""
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-            UPDATE M_Product
-            SET Name = RTRIM(Name)
-            WHERE REGEXP_LIKE(Name, ' $')
-                AND AD_Client_ID = 1000000
-                AND AD_Org_ID = 1000000
-            """
-            cursor.execute(query)
-            connection.commit()
-            return jsonify({"message": f"Updated {cursor.rowcount} records."})
-    except Exception as e:
-        logger.error(f"Error updating product space end: {e}")
-        return jsonify({"error": "An error occurred while updating data."}), 500
-
-
-@app.route('/update-product-space-multiple', methods=['POST'])
-def update_product_space_multiple():
-    """Update M_Product records to replace multiple consecutive spaces with single space."""
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-            UPDATE M_Product
-            SET Name = REGEXP_REPLACE(Name, '[[:space:]]{2,}', ' ')
-            WHERE REGEXP_LIKE(Name, '[[:space:]]{2,}')
-                AND AD_Client_ID = 1000000
-                AND AD_Org_ID = 1000000
-            """
-            cursor.execute(query)
-            connection.commit()
-            return jsonify({"message": f"Updated {cursor.rowcount} records."})
-    except Exception as e:
-        logger.error(f"Error updating product space multiple: {e}")
-        return jsonify({"error": "An error occurred while updating data."}), 500
-
-
-
-
-@app.route('/history_articles')
-def history_articles():
-    """Return invoice history for a product name.
-    Query params:
-      - product_name (required)
-    """
-    product_name = request.args.get('product_name', '').strip()
-    if not product_name:
-        return jsonify({"error": "product_name parameter is required"}), 400
-
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT
-                    invl.QTYINVOICED      AS QTY_FACTURE,
-                    ROUND(invl.PRICEENTERED, 2) AS PRIX_UNITAIRE,
-                    CASE 
-                      WHEN invl.PRICELIST IS NULL OR invl.PRICELIST = 0 THEN NULL
-                      ELSE ROUND(((invl.PRICELIST - ROUND(invl.PRICEENTERED,2)) / invl.PRICELIST) * 100, 2)
-                    END AS DISCOUNT_PCT,
-                    inv.DOCUMENTNO        AS DOCUMENT,
-                    dt.NAME               AS DOCUMENT_TYPE,
-                    bp.NAME               AS TIERS,
-                    inv.DATEINVOICED      AS DATE_INVOICE,
-                    mast.LOT AS LOT
-                FROM C_InvoiceLine invl
-                JOIN C_Invoice     inv ON inv.C_Invoice_ID = invl.C_Invoice_ID
-                JOIN M_Product     p   ON p.M_PRODUCT_ID   = invl.M_PRODUCT_ID
-                JOIN C_DocType     dt  ON dt.C_DocType_ID  = inv.C_DocType_ID
-                JOIN C_BPartner    bp  ON bp.C_BPartner_ID = inv.C_BPartner_ID
-                LEFT JOIN M_AttributeSetInstance mast ON mast.M_AttributeSetInstance_ID = invl.M_AttributeSetInstance_ID
-                WHERE UPPER(p.NAME) = UPPER(:product_name)
-                ORDER BY inv.DATEINVOICED DESC, inv.DOCUMENTNO
-            """
-            # use named bind for product_name (works with cx_Oracle and similar DB-API drivers)
-            cursor.execute(query, {'product_name': product_name})
-
-            cols = [d[0] for d in cursor.description]
-            rows = [dict(zip(cols, row)) for row in cursor.fetchall()]
-            return jsonify(rows)
-    except Exception as e:
-        logger.error(f"Error fetching history_articles for {product_name}: {e}")
-        return jsonify({"error": "Could not fetch history articles"}), 500
-
-
-
-
-
-
-@app.route('/fetchInvoiceSales', methods=['GET'])
-def fetch_invoice_sales():
-    """
-    Fetch sold quantity and client name from C_Invoice table.
-    Supports specific date or date range filtering.
-    
-    Query Parameters:
-    - start_date: Start date (YYYY-MM-DD) - required
-    - end_date: End date (YYYY-MM-DD) - optional, defaults to start_date if not provided
-    - product_id: Product ID - optional
-    - product: Product name - optional
-    """
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    product_id = request.args.get('product_id')
-    product = request.args.get('product')
-    
-    # Validate required parameters
-    if not start_date:
-        return jsonify({"error": "Missing start_date parameter"}), 400
-    
-    # If end_date is not provided, use start_date (single date query)
-    if not end_date:
-        end_date = start_date
-    
-    data = get_invoice_sales_data(start_date, end_date, product_id, product)
-    return jsonify(data)
-
-
-def get_invoice_sales_data(start_date, end_date, product_id=None, product=None):
-    """
-    Query C_Invoice to get sold quantity and client name with warehouse information.
-    Returns a list of dictionaries with CLIENT, QTY, and WAREHOUSE fields.
-    Filters by C_DocType_ID 1000650 or 1000639 only.
-    For C_DocType_ID 1000650: quantity is negative (returns)
-    For C_DocType_ID 1000639: quantity is positive (sales)
-    """
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-                SELECT 
-                    CAST(bp.name AS VARCHAR2(100)) AS "CLIENT",
-                    CAST(mw.name AS VARCHAR2(100)) AS "WAREHOUSE",
-                    SUM(
-                        CASE 
-                            WHEN inv.C_DocType_ID = 1000650 THEN il.QTYINVOICED * -1
-                            WHEN inv.C_DocType_ID = 1000639 THEN il.QTYINVOICED
-                            ELSE 0
-                        END
-                    ) AS "QTY"
-                FROM C_Invoice inv
-                JOIN C_InvoiceLine il ON inv.C_Invoice_ID = il.C_Invoice_ID
-                JOIN C_BPartner bp ON inv.C_BPartner_ID = bp.C_BPartner_ID
-                JOIN M_Product p ON il.M_Product_ID = p.M_Product_ID
-                JOIN C_Order co ON inv.C_Order_ID = co.C_Order_ID
-                JOIN M_Warehouse mw ON co.M_Warehouse_ID = mw.M_Warehouse_ID
-                WHERE inv.DATEINVOICED BETWEEN TO_DATE(:start_date, 'YYYY-MM-DD') 
-                      AND TO_DATE(:end_date, 'YYYY-MM-DD')
-                      AND inv.AD_Org_ID = 1000000
-                      AND inv.C_DocType_ID IN (1000650, 1000639)
-                      AND inv.DOCSTATUS IN ('CO', 'CL')
-                      AND inv.ISSOTRX = 'Y'
-                      AND bp.C_BPartner_ID != 1121240
-                      AND (:product_id IS NULL OR p.M_Product_ID = :product_id)
-                      AND (:product IS NULL OR UPPER(p.NAME) LIKE UPPER(:product) || '%')
-                GROUP BY bp.name, mw.name
-                ORDER BY SUM(
-                    CASE 
-                        WHEN inv.C_DocType_ID = 1000650 THEN il.QTYINVOICED * -1
-                        WHEN inv.C_DocType_ID = 1000639 THEN il.QTYINVOICED
-                        ELSE 0
-                    END
-                ) DESC
-            """
-            
-            params = {
-                'start_date': start_date,
-                'end_date': end_date,
-                'product_id': product_id or None,
-                'product': product or None
-            }
-            
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]
-            
-            result = [dict(zip(columns, row)) for row in rows]
-            
-            # Add total row
-            if result:
-                total_qty = sum(row['QTY'] for row in result if row['QTY'] is not None)
-                result.append({
-                    'CLIENT': 'Total',
-                    'WAREHOUSE': '',
-                    'QTY': total_qty
-                })
-            
-            return result
-            
-    except Exception as e:
-        logger.error(f"Error fetching invoice sales data: {e}")
-        return {"error": f"An error occurred while fetching invoice sales: {str(e)}"}
-
-
-
-
-@app.route('/factures', methods=['GET'])
-def factures():
-    """Return invoice (facture) details by DOCUMENTNO.
-
-    Query params:
-      - documentno (required): the invoice/document number to fetch
-
-    Returns JSON list (usually single object) with the selected invoice fields.
-    """
-    documentno = request.args.get('documentno')
-    if not documentno:
-        return jsonify({"error": "documentno query parameter is required"}), 400
-
-    try:
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-            query = """
-SELECT
-    orgtrx.NAME                                 AS Organisation_Trx,
-    c.TOTALLINES,
-    c.GRANDTOTAL,
-    doctype.NAME                                AS Code_journal,
-    c.DOCSTATUS,
-    CASE c.DOCSTATUS
-        WHEN 'CL' THEN 'Clôturé'
-        WHEN 'CO' THEN 'Achevé'
-        WHEN 'DR' THEN 'Brouillon'
-        WHEN 'IN' THEN 'Inactif'
-        WHEN 'RE' THEN 'Extourné'
-        WHEN 'VO' THEN 'Annulé'
-        ELSE c.DOCSTATUS
-    END                                          AS Statut_document,
-    c.DOCACTION,
-    c.ISPAID,
-    c.C_INVOICE_ID,
-    client.NAME                                  AS Société,
-    org.NAME                                     AS Organisation,
-    ord.DOCUMENTNO                               AS Ordre_de_vente,
-    c.DATEORDERED,
-    c.DOCUMENTNO,
-    c.POREFERENCE,
-    c.DESCRIPTION,
-    doctypetarget.NAME                           AS Type_document,
-    c.DATEINVOICED,
-    c.DATEACCT,
-    partner.NAME                                 AS Client,
-    usr.NAME                                     AS Contact,
-    pricelist.NAME                               AS Tarif,
-    curr.ISO_CODE                                AS Devise,
-    bploc.NAME                                   AS Adresse_du_tiers,
-    salesrep.NAME                                AS Vendeur,
-    c.PAYMENTRULE,
-    CASE c.PAYMENTRULE
-        WHEN 'P' THEN 'A credit'
-        WHEN 'B' THEN 'Espece'
-        WHEN 'S' THEN 'Cheque'
-        WHEN 'D' THEN 'Debit immediat'
-        WHEN 'T' THEN 'Virement'
-        WHEN 'K' THEN 'Carte de credit'
-        WHEN 'V' THEN 'Versement'
-        ELSE c.PAYMENTRULE
-    END                                          AS PaymentRuleLabel,
-    c.DOCACTION,
-    CASE UPPER(NVL(c.DOCACTION,'-'))
-        WHEN 'VO' THEN 'Annuler'
-        WHEN 'RC' THEN 'Corriger'
-        WHEN 'PR' THEN 'Réserver'
-        WHEN 'CO' THEN 'Traiter'
-        WHEN 'CL' THEN 'Clôturer'
-        WHEN '--'  THEN 'Pas d_action'
-        ELSE c.DOCACTION
-    END                                          AS Action_Status,
-    zsub.NAME                                    AS Sous_methode_de_paiement,
-    c.ISSELFSERVICE,
-    payterm.NAME                                 AS Delai_de_paiement
-FROM C_Invoice c
-LEFT JOIN AD_Client client               ON client.AD_Client_ID = c.AD_CLIENT_ID
-LEFT JOIN AD_Org org                     ON org.AD_Org_ID = c.AD_ORG_ID
-LEFT JOIN AD_Org orgtrx                  ON orgtrx.AD_Org_ID = c.AD_ORGTRX_ID
-LEFT JOIN C_Order ord                    ON ord.C_Order_ID = c.C_ORDER_ID
-LEFT JOIN C_DocType doctype              ON doctype.C_DocType_ID = c.C_DOCTYPE_ID
-LEFT JOIN C_DocType doctypetarget        ON doctypetarget.C_DocType_ID = c.C_DOCTYPETARGET_ID
-LEFT JOIN C_BPartner partner             ON partner.C_BPartner_ID = c.C_BPARTNER_ID
-LEFT JOIN AD_User usr                    ON usr.AD_User_ID = c.AD_USER_ID
-LEFT JOIN AD_User salesrep               ON salesrep.AD_User_ID = c.SALESREP_ID
-LEFT JOIN M_PriceList pricelist          ON pricelist.M_PriceList_ID = c.M_PRICELIST_ID
-LEFT JOIN C_Currency curr                ON curr.C_Currency_ID = c.C_CURRENCY_ID
-LEFT JOIN C_PaymentTerm payterm          ON payterm.C_PaymentTerm_ID = c.C_PAYMENTTERM_ID
-LEFT JOIN ZSubPaymentRule zsub           ON zsub.ZSubPaymentRule_ID = c.ZSUBPAYMENTRULE_ID
-LEFT JOIN C_BPartner_Location bploc ON bploc.C_BPartner_Location_ID = c.C_BPartner_Location_ID
-
-WHERE c.DOCUMENTNO = :documentno
-"""
-
-            cursor.execute(query, {"documentno": documentno})
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]
-            data = [dict(zip(columns, row)) for row in rows]
-            return jsonify(data)
-    except Exception as e:
-        logger.error(f"Error in /factures: {e}")
-        return jsonify({"error": "An error occurred while fetching facture."}), 500
-
-
-
-
-@app.route('/facture-lines', methods=['GET'])
-def facture_lines_route():
-    """Return invoice lines for a given invoice.
-
-    Query params:
-      - invoiceid : C_Invoice_ID (preferred)
-      - documentno: invoice DOCUMENTNO (optional, will be resolved to invoice id)
-    """
-    invoiceid = request.args.get('invoiceid')
-    documentno = request.args.get('documentno')
-
-    if not invoiceid and not documentno:
-        return jsonify({"error": "invoiceid or documentno query parameter is required"}), 400
-
-    try:
-        logger.info(f"/facture-lines called with invoiceid={invoiceid} documentno={documentno}")
-        with DB_POOL.acquire() as connection:
-            cursor = connection.cursor()
-
-            # If documentno provided, resolve to invoice id
-            if not invoiceid and documentno:
-                cursor.execute("SELECT C_Invoice_ID FROM C_Invoice WHERE DOCUMENTNO = :doc", {"doc": documentno})
-                row = cursor.fetchone()
-                if not row:
-                    logger.info("No invoice found for documentno=%s", documentno)
-                    return jsonify({"error": "No invoice found with that documentno"}), 404
-                invoiceid = row[0]
-
-            # Try to coerce invoiceid to integer if possible
-            try:
-                invoiceid_param = int(invoiceid)
-            except Exception:
-                invoiceid_param = invoiceid  # leave as-is; the DB driver can accept string binds
-
-            query = """
-SELECT
-    il.C_InvoiceLine_ID,
-    il.A_Asset_ID,
-    asset.NAME                             AS Immobilisation,
-    il.AD_Client_ID,
-    cli.NAME                                AS Société,
-    il.AD_Org_ID,
-    org.NAME                                AS Organisation,
-    il.C_Invoice_ID,
-    inv.DOCUMENTNO                          AS Facture,
-        il.Line,
-
-        -- Replaced M_InOutLine_ID with composed delivery info
-        NVL(TO_CHAR(iol.Line), '')
-            || '_' || NVL(TO_CHAR(iol.MovementQty), '')
-            || '_' || NVL(prod.NAME, '')
-            || '_' || NVL(io.DOCUMENTNO, '')
-            || ' - ' || NVL(TO_CHAR(io.MovementDate, 'DD/MM/YYYY'), '')
-            || ' - ' || NVL(ord.DOCUMENTNO, '')
-            || ' - ' || NVL(TO_CHAR(ord.DateOrdered, 'DD/MM/YYYY'), '')
-            || ' - ' || NVL(bp.NAME, '')
-            AS Ligne_livraison,
-
-    -- Replaced il.C_OrderLine_ID with composed field
-    NVL(TO_CHAR(col.Line),'')
-        || '_' || NVL(prod.NAME,'')
-        || '_' || NVL(ord.DOCUMENTNO,'')
-        || ' - ' || NVL(TO_CHAR(ord.DATEORDERED,'DD/MM/YYYY'),'')
-        || '_' || NVL(TO_CHAR(il.LineNetAmt,'FM999G999G999D00','NLS_NUMERIC_CHARACTERS = ''.,'''),'0,00')
-        AS Ligne_commande_de_vente,
-
-    il.M_Product_ID,
-    prod.NAME                               AS Article,
-    il.C_Charge_ID,
-    chg.NAME                                AS Charge,
-    il.M_AttributeSetInstance_ID,
-    masi.DESCRIPTION                        AS Lot,
-    il.S_ResourceAssignment_ID,
-    il.DESCRIPTION,
-    il.QtyInvoiced,
-    il.QtyEntered,
-    il.C_UOM_ID,
-    uom_trl.NAME                            AS Unité,
-    il.PriceEntered,
-    il.PriceActual,
-    il.PriceList,
-    il.C_Tax_ID,
-    tx.NAME                                 AS TVA,
-    il.AD_OrgTrx_ID,
-    orgtrx.NAME                             AS Organisation_Trx,
-    il.LineNetAmt,
-    il.IsDescription,
-    il.IsPrinted,
-    il.Repricing,
-    il.XX_BLInvoiceLine_ID
-FROM C_InvoiceLine il
-LEFT JOIN C_Invoice                   inv    ON inv.C_Invoice_ID   = il.C_Invoice_ID
-LEFT JOIN A_Asset                     asset  ON asset.A_Asset_ID    = il.A_Asset_ID
-LEFT JOIN AD_Client                   cli    ON cli.AD_Client_ID   = il.AD_Client_ID
-LEFT JOIN AD_Org                      org    ON org.AD_Org_ID      = il.AD_Org_ID
-LEFT JOIN M_Product                   prod   ON prod.M_Product_ID  = il.M_Product_ID
-LEFT JOIN C_Charge                    chg    ON chg.C_Charge_ID    = il.C_Charge_ID
-LEFT JOIN M_AttributeSetInstance      masi   ON masi.M_AttributeSetInstance_ID = il.M_AttributeSetInstance_ID
-LEFT JOIN C_UOM                       uom    ON uom.C_UOM_ID      = il.C_UOM_ID
-LEFT JOIN C_UOM_TRL                   uom_trl ON uom_trl.C_UOM_ID  = uom.C_UOM_ID
-LEFT JOIN C_Tax                       tx     ON tx.C_Tax_ID       = il.C_Tax_ID
-LEFT JOIN AD_Org                      orgtrx ON orgtrx.AD_Org_ID   = il.AD_OrgTrx_ID
-LEFT JOIN C_OrderLine                 col    ON col.C_OrderLine_ID = il.C_OrderLine_ID
-LEFT JOIN C_Order                     ord    ON ord.C_Order_ID     = col.C_Order_ID
-LEFT JOIN M_InOutLine                 iol    ON iol.M_InOutLine_ID = il.M_InOutLine_ID
-LEFT JOIN M_InOut                     io     ON io.M_InOut_ID      = iol.M_InOut_ID
-LEFT JOIN C_BPartner                  bp     ON bp.C_BPartner_ID   = io.C_BPartner_ID
-WHERE il.C_Invoice_ID = :invoiceid
-ORDER BY il.Line
-"""
-
-            logger.info("Executing facture-lines query for invoiceid=%s", invoiceid_param)
-            cursor.execute(query, {"invoiceid": invoiceid_param})
-            rows = cursor.fetchall()
-            columns = [col[0] for col in cursor.description]
-            data = [dict(zip(columns, row)) for row in rows]
-            logger.info("/facture-lines returned %d rows", len(data))
-            return jsonify(data)
-    except Exception as e:
-        logger.exception("Error in /facture-lines")
-        # Return error message for debugging (remove or mask in production)
-        return jsonify({"error": "An error occurred while fetching facture lines.", "detail": str(e)}), 500
-
-
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
-    
-    

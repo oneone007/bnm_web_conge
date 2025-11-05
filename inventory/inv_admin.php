@@ -249,35 +249,6 @@ $inventories = [];
             box-shadow: 0 4px 8px rgba(34, 197, 94, 0.3);
             transform: translateY(-1px);
         }
-
-        /* Pagination Styles */
-        #paginationControls {
-            background: linear-gradient(135deg, var(--gray-50) 0%, #ffffff 100%);
-            border: 1px solid var(--gray-200);
-            border-radius: 12px;
-            margin-top: 2rem;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        #paginationControls button {
-            transition: all 0.2s ease;
-            font-weight: 500;
-        }
-
-        #paginationControls button:not(:disabled):hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        #paginationControls button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        #paginationControls .text-sm {
-            font-weight: 600;
-            color: var(--gray-700);
-        }
         .btn-done:disabled {
             background: var(--gray-400);
             cursor: not-allowed;
@@ -627,7 +598,7 @@ $inventories = [];
                     🔄 Clear all filters
                 </a>
                 <span class="text-gray-500 text-sm ml-4">
-                    Loading inventories...
+                    Showing <?= count($inventories) ?> record(s)
                 </span>
             </div>
         </div>
@@ -783,11 +754,6 @@ $inventories = [];
             product_search: urlParams.get('product_search') || ''
         };
 
-        // Pagination state
-        let currentPage = 1;
-        const pageSize = 20; // Show 20 records per page
-        let allInventories = []; // Store all records for pagination
-
         // Sudo mode flag
         window.sudoMode = false;
         // Intercept search form submit for sudo911
@@ -845,8 +811,7 @@ $inventories = [];
                 if (filters.status && filters.status !== 'all') {
                     queryParams.push('status=' + encodeURIComponent(filters.status));
                 }
-                // Set a very high limit to get ALL records for pagination
-                queryParams.push('limit=10000'); // Get up to 10,000 records for admin view
+                queryParams.push('limit=100'); // Get more records for admin view
                 queryParams.push('offset=0');
                 
                 const queryString = queryParams.length > 0 ? '?' + queryParams.join('&') : '';
@@ -866,9 +831,6 @@ $inventories = [];
                 
                 let inventories = apiResult.inventories || [];
                 
-                // Store all inventories for pagination
-                allInventories = inventories;
-                
                 // Apply product search filter first if specified
                 if (filters.product_search) {
                     try {
@@ -880,11 +842,9 @@ $inventories = [];
                                 const matchingInventoryIds = productResult.inventories.map(inv => inv.id);
                                 // Filter inventories to only include those with matching products
                                 inventories = inventories.filter(inv => matchingInventoryIds.includes(inv.id));
-                                allInventories = inventories; // Update allInventories with filtered results
                             } else {
                                 // No products found, show empty results
                                 inventories = [];
-                                allInventories = [];
                             }
                         }
                     } catch (error) {
@@ -895,7 +855,7 @@ $inventories = [];
                 
                 // Apply additional filters (date and search) since Python API doesn't support them yet
                 if (filters.date_from || filters.date_to || filters.search) {
-                    inventories = allInventories.filter(inventory => {
+                    inventories = inventories.filter(inventory => {
                         // Date filter
                         if (filters.date_from || filters.date_to) {
                             const createdDate = new Date(inventory.created_at).toISOString().split('T')[0];
@@ -915,14 +875,26 @@ $inventories = [];
                         
                         return true;
                     });
-                    allInventories = inventories; // Update allInventories with filtered results
                 }
                 
-                // Reset to first page when filters change
-                currentPage = 1;
+                // Hide loading state
+                loadingState.classList.add('hidden');
                 
-                // Display current page
-                displayCurrentPage();
+                // Update results count
+                const resultsCount = document.querySelector('.text-gray-500.text-sm.ml-4');
+                if (resultsCount) {
+                    resultsCount.textContent = `Showing ${inventories.length} record(s)`;
+                }
+                
+                if (inventories.length === 0) {
+                    // Show empty state
+                    emptyState.classList.remove('hidden');
+                } else {
+                    // Render inventories
+                    inventories.forEach(inventory => {
+                        renderInventoryCard(inventory, container);
+                    });
+                }
                 
                 console.log('✅ Inventories loaded successfully:', inventories.length);
                 
@@ -934,146 +906,6 @@ $inventories = [];
                 errorState.classList.remove('hidden');
                 document.getElementById('errorMessage').textContent = error.message;
             }
-        }
-        
-        // Display current page of inventories
-        function displayCurrentPage() {
-            const loadingState = document.getElementById('loadingState');
-            const errorState = document.getElementById('errorState');
-            const emptyState = document.getElementById('emptyState');
-            const container = document.getElementById('inventoriesContainer');
-            
-            // Hide loading state
-            loadingState.classList.add('hidden');
-            errorState.classList.add('hidden');
-            emptyState.classList.add('hidden');
-            
-            // Remove existing inventory cards
-            const existingCards = container.querySelectorAll('.inventory-card');
-            existingCards.forEach(card => card.remove());
-            
-            // Calculate pagination
-            const totalRecords = allInventories.length;
-            const totalPages = Math.ceil(totalRecords / pageSize);
-            const startIndex = (currentPage - 1) * pageSize;
-            const endIndex = Math.min(startIndex + pageSize, totalRecords);
-            const currentPageInventories = allInventories.slice(startIndex, endIndex);
-            
-            // Update results count with pagination info
-            const resultsCount = document.querySelector('.text-gray-500.text-sm.ml-4');
-            if (resultsCount) {
-                if (totalRecords === 0) {
-                    resultsCount.textContent = 'No records found';
-                } else {
-                    resultsCount.textContent = `Showing ${startIndex + 1}-${endIndex} of ${totalRecords} record(s) (Page ${currentPage} of ${totalPages})`;
-                }
-            }
-            
-            if (currentPageInventories.length === 0) {
-                // Show empty state
-                emptyState.classList.remove('hidden');
-            } else {
-                // Render current page inventories
-                currentPageInventories.forEach(inventory => {
-                    renderInventoryCard(inventory, container);
-                });
-                
-                // Add pagination controls
-                addPaginationControls(totalPages);
-            }
-        }
-        
-        // Add pagination controls
-        function addPaginationControls(totalPages) {
-            // Remove existing pagination
-            const existingPagination = document.getElementById('paginationControls');
-            if (existingPagination) {
-                existingPagination.remove();
-            }
-            
-            if (totalPages <= 1) return; // No need for pagination if only one page
-            
-            const container = document.getElementById('inventoriesContainer');
-            const paginationDiv = document.createElement('div');
-            paginationDiv.id = 'paginationControls';
-            paginationDiv.className = 'flex items-center justify-between bg-white px-4 py-3 sm:px-6 mt-6 border-t border-gray-200';
-            
-            // Previous button
-            const prevButton = document.createElement('button');
-            prevButton.className = `relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md ${
-                currentPage === 1 
-                    ? 'text-gray-300 cursor-not-allowed' 
-                    : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-            }`;
-            prevButton.innerHTML = '← Previous';
-            prevButton.disabled = currentPage === 1;
-            prevButton.onclick = () => {
-                if (currentPage > 1) {
-                    currentPage--;
-                    displayCurrentPage();
-                }
-            };
-            
-            // Page info
-            const pageInfo = document.createElement('div');
-            pageInfo.className = 'text-sm text-gray-700';
-            pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-            
-            // Next button
-            const nextButton = document.createElement('button');
-            nextButton.className = `relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md ${
-                currentPage === totalPages 
-                    ? 'text-gray-300 cursor-not-allowed' 
-                    : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-            }`;
-            nextButton.innerHTML = 'Next →';
-            nextButton.disabled = currentPage === totalPages;
-            nextButton.onclick = () => {
-                if (currentPage < totalPages) {
-                    currentPage++;
-                    displayCurrentPage();
-                }
-            };
-            
-            // Page number buttons
-            const pageNumbers = document.createElement('div');
-            pageNumbers.className = 'flex items-center space-x-1';
-            
-            // Calculate which page numbers to show
-            let startPage = Math.max(1, currentPage - 2);
-            let endPage = Math.min(totalPages, currentPage + 2);
-            
-            // Adjust if we're near the beginning or end
-            if (endPage - startPage < 4) {
-                if (startPage === 1) {
-                    endPage = Math.min(totalPages, startPage + 4);
-                } else if (endPage === totalPages) {
-                    startPage = Math.max(1, endPage - 4);
-                }
-            }
-            
-            // Add page number buttons
-            for (let i = startPage; i <= endPage; i++) {
-                const pageBtn = document.createElement('button');
-                pageBtn.className = `relative inline-flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-                    i === currentPage 
-                        ? 'text-blue-600 bg-blue-50 border border-blue-300' 
-                        : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-                }`;
-                pageBtn.textContent = i;
-                pageBtn.onclick = () => {
-                    currentPage = i;
-                    displayCurrentPage();
-                };
-                pageNumbers.appendChild(pageBtn);
-            }
-            
-            paginationDiv.appendChild(prevButton);
-            paginationDiv.appendChild(pageNumbers);
-            paginationDiv.appendChild(pageInfo);
-            paginationDiv.appendChild(nextButton);
-            
-            container.appendChild(paginationDiv);
         }
         
         // Render a single inventory card

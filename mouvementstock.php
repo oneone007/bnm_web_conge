@@ -486,7 +486,7 @@ require_once 'check_permission.php';
         <div class="dropdown-container bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md mb-4">
             <label for="emplacementDropdown" class="block text-sm font-semibold text-gray-900 dark:text-white mb-2">Emplacement</label>
             <select id="emplacementDropdown" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                <!-- Options will be dynamically loaded from default_emmplacment table -->
+                <option value="">Default (Préparation + Hangar + Réserve)</option>
             </select>
         </div>        <!-- Refresh and Export Buttons -->
         <div class="flex gap-4 mb-4">
@@ -505,7 +505,7 @@ require_once 'check_permission.php';
                     <img src="assets/excel.png" alt="Excel Icon" class="excelIcon" />
                     <div class="text">&nbsp;Download</div>
                 </div>
-            </button> 
+            </button>
         </div>
 
         <!-- Product Summary Section (hidden by default) -->
@@ -515,9 +515,24 @@ require_once 'check_permission.php';
                 <div class="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg border border-blue-200 dark:border-blue-700">
                     <div class="text-sm text-blue-600 dark:text-blue-400 font-medium">Stock Initial</div>
                     <div id="stock-initial" class="text-xl font-bold text-blue-700 dark:text-blue-300">0</div>
-                    <!-- Emplacement breakdown inside Stock Initial card - Dynamic content -->
+                    <!-- Emplacement breakdown inside Stock Initial card -->
                     <div id="emplacement-breakdown-inline" class="mt-2 space-y-1" style="display: none;">
-                        <!-- Dynamic emplacement breakdown will be populated here by JavaScript -->
+                        <div class="text-xs text-blue-500 dark:text-blue-400">
+                            <span class="font-medium">Stock Préparation</span>
+                            <span id="preparation-stock-inline" class="float-right font-bold">0</span>
+                        </div>
+                        <div class="text-xs text-blue-500 dark:text-blue-400">
+                            <span class="font-medium">Stock HANGAR</span>
+                            <span id="hangar-stock-inline" class="float-right font-bold">0</span>
+                        </div>
+                        <div class="text-xs text-blue-500 dark:text-blue-400">
+                            <span class="font-medium">Stock Dépot Hangar réserve</span>
+                            <span id="depot-hangar-stock-inline" class="float-right font-bold">0</span>
+                        </div>
+                        <div class="text-xs text-blue-500 dark:text-blue-400">
+                            <span class="font-medium">Stock Dépot réserve</span>
+                            <span id="depot-reserve-stock-inline" class="float-right font-bold">0</span>
+                        </div>
                     </div>
                 </div>
                 <div class="bg-green-50 dark:bg-green-900/30 p-3 rounded-lg border border-green-200 dark:border-green-700">
@@ -686,27 +701,12 @@ require_once 'check_permission.php';
         async function loadEmplacements() {
             const dropdown = document.getElementById("emplacementDropdown");
             try {
-                // Fetch from both endpoints
-                const [stockResponse, defaultResponse] = await Promise.all([
-                    fetch(API_CONFIG.getApiUrl("/fetch-emplacements-stock")),
-                    fetch(API_CONFIG.getApiUrl("/fetch-emplacements-default"))
-                ]);
-                
-                if (!stockResponse.ok || !defaultResponse.ok) {
-                    throw new Error("Failed to load emplacements");
-                }
-                
-                const stockData = await stockResponse.json();
-                const defaultData = await defaultResponse.json();
-                
-                // Build dynamic default option text from default_emmplacment table
-                const emplacementNames = defaultData.map(emp => emp.EMPLACEMENT).join(' + ');
-                const defaultText = emplacementNames ? `Default (${emplacementNames})` : 'Default (All Emplacements)';
-                
-                dropdown.innerHTML = `<option value="">${defaultText}</option>`;
-                
-                // Populate dropdown options from stock endpoint
-                stockData.forEach(emplacement => {
+                const url = API_CONFIG.getApiUrl("/fetch-emplacements-stock");
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("Failed to load emplacements");
+                const data = await response.json();
+                dropdown.innerHTML = '<option value="">Default (Préparation + Hangar + Réserve)</option>';
+                data.forEach(emplacement => {
                     const option = document.createElement("option");
                     option.value = emplacement.EMPLACEMENT;
                     option.textContent = emplacement.EMPLACEMENT || "Unknown";
@@ -997,28 +997,17 @@ require_once 'check_permission.php';
                 // Show emplacement breakdown section inside Stock Initial card
                 breakdownSection.style.display = "block";
                 
-                // Clear existing content
-                breakdownSection.innerHTML = "";
-                
-                // Dynamically create breakdown elements for each emplacement
-                Object.entries(emplacementBreakdown).forEach(([emplacementName, stockValue]) => {
-                    const breakdownDiv = document.createElement("div");
-                    breakdownDiv.className = "text-xs text-blue-500 dark:text-blue-400";
+                // Update each emplacement stock with inline elements
+                document.getElementById("preparation-stock-inline").textContent = 
+                    formatNumber(emplacementBreakdown['Préparation'] || 0);
+                document.getElementById("hangar-stock-inline").textContent = 
+                    formatNumber(emplacementBreakdown['HANGAR'] || 0);
+                document.getElementById("depot-hangar-stock-inline").textContent = 
+                    formatNumber(emplacementBreakdown['Dépot Hangar réserve'] || 0);
+                document.getElementById("depot-reserve-stock-inline").textContent = 
+                    formatNumber(emplacementBreakdown['Dépot réserve'] || 0);
                     
-                    const labelSpan = document.createElement("span");
-                    labelSpan.className = "font-medium";
-                    labelSpan.textContent = `Stock ${emplacementName}`;
-                    
-                    const valueSpan = document.createElement("span");
-                    valueSpan.className = "float-right font-bold";
-                    valueSpan.textContent = formatNumber(stockValue || 0);
-                    
-                    breakdownDiv.appendChild(labelSpan);
-                    breakdownDiv.appendChild(valueSpan);
-                    breakdownSection.appendChild(breakdownDiv);
-                });
-                    
-                console.log("Updated dynamic emplacement breakdown display:", emplacementBreakdown);
+                console.log("Updated inline emplacement breakdown display:", emplacementBreakdown);
             } else {
                 // Hide emplacement breakdown section
                 breakdownSection.style.display = "none";

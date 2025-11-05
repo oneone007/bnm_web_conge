@@ -15,9 +15,22 @@ $username = $_SESSION['username'] ?? 'Guest';
 $Role = $_SESSION['Role'] ?? 'Uknown'; // Default role as 'user'
 
 // Define allowed pages for specific roles (add more as needed)
-// Use shared loader from navigation_helper.php
-$role_allowed_pages = load_permissions();
+$role_allowed_pages = [];
+$permissionsJsonPath = __DIR__ . '/permissions.json';
+if (file_exists($permissionsJsonPath)) {
+    $jsonContent = file_get_contents($permissionsJsonPath);
+    if ($jsonContent !== false) {
+        $role_allowed_pages = json_decode($jsonContent, true);
+    }
+}
 
+// If JSON reading fails, set default permissions
+if (empty($role_allowed_pages)) {
+    $role_allowed_pages = [
+        'Admin' => 'all',
+        'Developer' => 'all'
+    ];
+}
 
 function is_page_allowed($page, $role, $role_allowed_pages) {
     if (($role_allowed_pages[$role] ?? null) === 'all') {
@@ -27,7 +40,47 @@ function is_page_allowed($page, $role, $role_allowed_pages) {
     return in_array($page, $allowed);
 }
 
+// Role-based access control (example)
+if ($Role !== 'admin' && basename($_SERVER['PHP_SELF']) === 'AdminDashboard.php') {
+    header("Location: Main"); // Redirect non-admin users away from admin pages
+    exit();
+}
 
+$host = 'localhost'; // Change if needed
+$user = 'root'; // Change if needed
+$pass = ''; // Change if needed
+$dbname = 'bnm'; // Your database name
+
+$conn = new mysqli($host, $user, $pass, $dbname);
+
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Handle the rating submission if it's sent via POST
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['rating'])) {
+    $rating = intval($_POST['rating']);
+
+    // Ensure that the user is logged in
+    if (isset($_SESSION['user_id'])) {
+        $user_id = $_SESSION['user_id'];  // Assuming user_id is stored in session
+
+        // Update the rating for the logged-in user
+        $sql = "UPDATE users SET rating = ? WHERE id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ii", $rating, $user_id);
+
+        if ($stmt->execute()) {
+            echo "Rating updated successfully!";
+        } else {
+            echo "Error: " . $stmt->error;
+        }
+
+        $stmt->close();
+    } else {
+        echo "You must be logged in to submit a rating.";
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
